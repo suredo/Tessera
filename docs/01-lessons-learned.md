@@ -1,8 +1,8 @@
 # Lessons learned from the Harness POC
 
-Status: draft 0.3 · 2026-10-11 · Covers the whole POC, from the first Codex runs on 2026-10-08 to the last live planner run on 2026-10-11. Mitigation classifications below describe Tessera's plan, not completed implementation.
+Status: draft 0.4 · 2026-10-11 · Covers the whole POC, from the first Codex runs on 2026-10-08 to the last live planner run on 2026-10-11.
 
-This document records POC observations, failures and proposed Tessera mitigations. Requirement IDs point to [02-spec.md](02-spec.md) and [04-engineering-practices.md](04-engineering-practices.md). The ambition is to prevent or automatically catch at least 90% of these failure cases; implementation and measurements must establish progress toward it. The [coverage count](#coverage) measures mapped plans only.
+This document records POC observations, failures and proposed Tessera mitigations. Requirement IDs point to [02-spec.md](02-spec.md) and [04-engineering-practices.md](04-engineering-practices.md). The ambition is to prevent or automatically catch at least 90% of these failure cases; the [coverage count](#coverage) measures mapped plans, not prevention.
 
 ---
 
@@ -118,7 +118,7 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-41 | Research was expensive and variable: 34–85 s and up to 90k input tokens per call. | Open-ended web reading | SIM-04 (budget, cache per engine) | R |
 | L-42 | Research returned a malformed reference check, which rejected the whole result, and the generation model could not repair research checks. | Validation only at merge time | SIM-04 (validate and repair research checks before code; fail explicitly if required coverage cannot be recovered) | D |
 | L-43 | Web pages can carry instructions (prompt injection). | Untrusted text in prompts | SEC-02, CLI-03 | R |
-| L-44 | Claude's later engine/research session could not verify Codex web search. Earlier POC workflows did use Codex. | Feature-specific verification unavailable in that session | CLI-01 (product-provider research compatibility checked separately from Codex's development role) | D |
+| L-44 | Codex web search was never verified as a research provider: the later engine/research session could not check it. | Feature-specific verification unavailable in that session | CLI-01 (each provider's research support gets its own contract tests and probe) | D |
 
 ### 3.4 CLI provider
 
@@ -179,10 +179,10 @@ These need evidence in Tessera, not assumptions:
 - **Success rate at scale.** Every live result was a single run or two repeats. Measure first-attempt pass rates over the agreed real-life scenarios (TEST-05).
 - **Cost per useful tool.** Calls and tokens are known per run, but not what "a working tool" costs on average.
 - **Does verification generalize?** Two behavior suites existed (study, flow). Whether a small set of verification profiles covers most real requests is unknown.
-- **Codex research integration.** Earlier student and generation workflows used Codex live. Claude could not verify its web-search/research integration in the later session; that feature remains unverified. Codex continues as a development, review, execution and testing assistant. A Tessera product adapter still needs its own contract tests and approved live probe.
+- **Codex research integration.** Codex generated tools live in the POC, but its web search was never verified for research. Tessera's Codex adapter (M3) gets its own contract tests and probe; research support is checked separately when engines arrive (M5).
 - **Real users.** Every request was written by the team. Nobody outside it has used the product.
-- **Plan allowance in daily use.** Tessera uses the signed-in Claude plan (A3). How far that allowance stretches with daily use is unknown; the internal alpha (A35) measures it.
-- **Do people understand the lifecycle?** Observe the internal alpha and a few invited outside testers during M2/M3, then broader trials in M6. Test Continue, defaults-only Use again, incompatible restoration warnings, finding saved tools and trash without coaching.
+- **Plan allowance in daily use.** For now Tessera uses the signed-in Claude Code and Codex CLIs on your machine (A3). How far the plan allowance stretches with daily use and evaluation runs is unknown; the internal alpha (A35) measures it. Before other people run Tessera, connections move to API keys or their own provider account (A47).
+- **Do people understand the lifecycle?** Observe the internal alpha and a few invited outside testers in observed sessions on your machine during M2/M3, then broader trials in M6. Test Continue, defaults-only Use again, incompatible restoration warnings, finding saved tools and trash without coaching.
 
 ---
 
@@ -195,6 +195,6 @@ These need evidence in Tessera, not assumptions:
 | A: accepted, documented | 1 | 1% |
 | **Total** | **69** | |
 
-**68 of 69 issues (about 99%) have a mapped mitigation requirement; 55 (about 80%) target a structural control.** This measures planning coverage, not implemented protection, success rate or proven prevention. The earlier 90% ambition is a target to evaluate, not a result established by this table.
+**68 of 69 issues (about 99%) have a mapped mitigation requirement; 55 (about 80%) target a structural control.** This is planning coverage; the 90% ambition is measured in Tessera, not established here.
 
 Track implementation separately for every lesson: **proposed → implemented → verified**, with its milestone, code/PR reference, regression evidence and remaining limits. Keep the historical D/R/A classification stable. The milestone report must not count deferred M5/M6 work as resolved for M4. Live evaluations measure residual failures; an offline test named after a requirement does not by itself prove semantic correctness across arbitrary requests.

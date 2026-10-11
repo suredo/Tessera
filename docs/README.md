@@ -1,6 +1,6 @@
 # POC results: from Harness to Tessera
 
-Status: **draft 0.3 · 2026-10-11 · reconciled after review and user decisions.** These are target requirements, not an implemented Tessera release. Remaining open decisions are listed in [05-open-decisions.md](05-open-decisions.md#questions-for-you); none blocks starting M0.
+Status: **draft 0.4 · 2026-10-11 · revised after the first full review** (GitHub Free, local CLI connections, binary assets, re-derived live budgets). These are target requirements, not an implemented Tessera release. Remaining open decisions are listed in [05-open-decisions.md](05-open-decisions.md#questions-for-you); none blocks starting M0.
 
 The Harness POC demonstrated that an AI can build and keep changing useful tools from everyday requests inside a sandbox, and recorded passing checks for specific boundaries and workflows. It did not establish general security or a reliable success rate across arbitrary requests. This folder turns those three days of evidence into the starting documents for **Tessera**: an environment where people get the interface they need by creating it or opening one they saved. Each tool is one piece of their environment, like a tile in a mosaic.
 
@@ -8,21 +8,24 @@ The Harness POC demonstrated that an AI can build and keep changing useful tools
 
 | # | Document | What it gives you |
 | --- | --- | --- |
-| 1 | [01-lessons-learned.md](01-lessons-learned.md) | What worked and must be kept. Then 69 issues with root cause and proposed mitigation. 68 have a mapped mitigation; 55 target a structural control. These are planning counts, not demonstrated prevention rates. |
-| 2 | [02-spec.md](02-spec.md) | The product and its rules: principles, architecture, and numbered requirements (contracts, generation, runtime, data, verification, CLI adapter, observability, security, UX, later simulations, testing), plus release acceptance criteria. |
-| 3 | [03-roadmap.md](03-roadmap.md) | Milestones M0–M6 in build order, with deliverables, exit criteria, what to port from the POC, and live-call budgets (about 150 calls to the first release, mostly acceptance scenarios; internal alpha for you after M2). |
-| 4 | [04-engineering-practices.md](04-engineering-practices.md) | How we work: GitHub and CI, TypeScript standards, AI-assistant rules and templates, the five-layer test pyramid, the live evaluation protocol, documentation structure. |
-| 5 | [05-open-decisions.md](05-open-decisions.md) | Accepted decisions, including reuse, restoration, development roles and research order; remaining choices are progress streaming, engine modularity, simulation presentation and outside data sources. |
+| 1 | [01-lessons-learned.md](01-lessons-learned.md) | What worked and must be kept. Then 69 issues with root cause and proposed mitigation. 68 have a mapped mitigation; 55 target a structural control. |
+| 2 | [02-spec.md](02-spec.md) | The product and its rules: principles, architecture, and numbered requirements (contracts, generation, runtime, data, verification, provider adapters, observability, security, UX, later simulations, testing), plus release acceptance criteria. |
+| 3 | [03-roadmap.md](03-roadmap.md) | Milestones M0–M6 in build order, with deliverables, exit criteria, what to port from the POC, and live-call budgets derived per scenario run (about 270 calls to the first release; internal alpha for you after M2). |
+| 4 | [04-engineering-practices.md](04-engineering-practices.md) | How we work: GitHub and CI, TypeScript standards, AI-assistant rules and templates, the five-layer test pyramid, the live evaluation protocol, documentation and evidence structure. |
+| 5 | [05-open-decisions.md](05-open-decisions.md) | The decision log (A1–A49) and the remaining choices: progress streaming, engine modularity, simulation presentation and outside data sources. |
 | 6 | [06-test-scenarios.md](06-test-scenarios.md) | Real-life test scenarios: what a scenario is, the eight journeys every set must cover (first run to hands-on), three platform scenarios, a catalogue of 17 test apps (simple, medium, advanced; modularity later), how replay stays honest, the scenario file format, judging (host facts, AI review, your verdict) and which scenarios run at each milestone. |
-| — | [reference/](reference/) | Copies of the two POC designs Tessera ports: the [UI standard](reference/ui-standard.md) and the [simulation engines plan](reference/simulation-engines-plan.md), including the live run findings. |
+| — | [poc/](poc/) | Historical copies of the two POC designs Tessera ports: the [UI standard](poc/ui-standard.md) and the [simulation engines plan](poc/simulation-engines-plan.md), including the live run findings. |
 
-## Decisions so far
+## Key decisions
 
-Name: **Tessera** · an environment for UIs on demand: create one now or open a saved one · **no built-in tools: every tool is created by the person** · local-first web app, Windows first with a launcher and setup check · always auto-saved, named library, find saved tools by asking, saved tools follow their latest version, trash with 30-day restore · SQLite on the local server · signed-in CLIs, Claude Code first, default routing Haiku/Sonnet · Node 22, pnpm, Vite, zod, TypeScript, React 19 with the React Compiler · English first, translatable · two-pass generation for big tools (to measure) · hidden test hooks for verification · saved tools open as Continue or Use again · scenarios judged by host facts, an AI technical review (with screenshot access to its run folder) and your verdict, a few in Portuguese · a few vetted sandbox libraries (charts, then 3D) · image editor as the first editing app · fresh build using the POC as reference · a 3-call spike in M0, internal alpha after M2, sign-off after every milestone · simulation engines in a later milestone · private GitHub repo with CI, solo with Claude Code and Codex both writing and reviewing each other's work, small pull requests that you merge.
+- **Product:** an environment for UIs on demand. No built-in tools: every tool is created by the person. A local-first web app, Windows first, with a launcher and a setup check.
+- **Saving:** always auto-saved, a named library, saved tools found by asking and opened as Continue or Use again, trash with 30-day restore. SQLite holds records; images and other binary files live in a content-addressed file store beside it.
+- **Models, for now:** the signed-in Claude Code CLI (from M2) and Codex CLI (from M3) on your machine, for local development and testing. Before anyone else runs Tessera, connections move to API keys or the person's own provider account; other providers (z.ai, Kimi, Grok and others) come later.
+- **Stack:** Node 22, pnpm, Vite, zod, TypeScript, React 19 with the React Compiler. English first, translatable.
+- **Way of working:** a private repository on GitHub Free with CI on every pull request; solo, with Claude Code and Codex writing and reviewing each other's work; small pull requests that you merge.
+- **Evaluation:** real-life scenarios judged by host facts, an AI technical review and your verdict, a few in Portuguese. Sign-off after every milestone.
 
-Still open: outside data sources (decided at the start of M4), and three later technical choices. See [05-open-decisions.md](05-open-decisions.md#questions-for-you).
-
-**Clarified product rules:** Use again retains reusable defaults only, never original-session entries. Restoring an older interface preserves current data; incompatible conversions show a loss warning/preview and require confirmation, with a recovery snapshot retained. Research precedes engine implementation code. Codex and Claude Code both develop, review, run and test the project; Claude's inability to check a Codex feature is not evidence that Codex was absent or untested throughout the POC. Claude Code remains the first product provider, with Codex product integration scheduled separately.
+All decisions, with their reasons, are in [05-open-decisions.md](05-open-decisions.md). Still open: outside data sources (decided at the start of M4) and three later technical choices.
 
 ## How the documents connect
 
@@ -31,6 +34,10 @@ Still open: outside data sources (decided at the start of M4), and three later t
 - The roadmap lists which requirements each milestone delivers.
 - Tests and pull requests use those IDs to show which control addresses a failure, what evidence exists and what remains unverified.
 
+## How to read the numbers
+
+Counts in these documents are planning figures or historical summaries. A mapped mitigation is a plan, not proof that the failure is prevented. A live-call budget is an envelope to reconcile before each run, not a promise of coverage. POC results summarize runs whose raw evidence is not in this folder. Tessera tracks every lesson and requirement as proposed → implemented → verified (`ENG-17`).
+
 ## This folder stands alone
 
-These documents summarize the Harness POC and can be read without it. The reference copies distinguish historical implementation from Tessera's target requirements; the spec and accepted decisions take precedence. Recorded counts are historical summaries, not independently reproducible evidence in this folder. M0 should preserve a sanitized evidence index and available portable fixtures alongside these documents; missing raw evidence must remain identified as unavailable rather than reconstructed.
+These documents summarize the Harness POC and can be read without it. The copies in [poc/](poc/) are historical; the spec and the decision log take precedence. M0 adds a sanitized evidence index and any available portable fixtures; missing raw evidence stays marked unavailable rather than reconstructed.

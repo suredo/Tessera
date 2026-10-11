@@ -1,6 +1,6 @@
 # Real-life test scenarios
 
-Status: draft 0.3 · 2026-10-11 · Target evaluation design. Requirements refer to [02-spec.md](02-spec.md). These apps are test examples only; the simulated person creates them from nothing.
+Status: draft 0.4 · 2026-10-11 · Target evaluation design. Requirements refer to [02-spec.md](02-spec.md). These apps are test examples only; the simulated person creates them from nothing.
 
 ---
 
@@ -39,7 +39,7 @@ Each scenario covers several journeys. By M4 the set must cover all J0–J7. M2 
 | J4 | **A second, unrelated tool** | It opens separately; the first is untouched (`GEN-01`) | An unrelated request overwrote the current tool |
 | J5 | **Mistakes:** undo interface, undo data, restore an older version, delete and restore from the trash | Undo and restore are safe and exact; nothing is lost (`DATA-04`, `DATA-09`) | Undo had to refuse overwriting newer work |
 | J6 | **Limits:** ambiguous, impossible, cancel, very big | Honest answers, no invented data, recoverable (`GEN-08`, `GEN-17`, `UX-03`) | Fake success messages; 2-minute silent waits |
-| J7 | **Hands-on:** use the tool's own controls, then change the same data through chat, and the reverse | Controls and chat act on the same saved data and never contradict each other (`DATA-02`) | Chat edits once changed the wrong record; a seeded write raced a user change |
+| J7 | **Hands-on:** use the tool's own controls, then change the same data through chat, and the reverse, including a chat change prepared while the person edits a different record | Controls and chat act on the same saved data and never contradict each other; unrelated edits never block each other (`DATA-02`) | Chat edits once changed the wrong record; a seeded write raced a user change |
 
 ---
 
@@ -72,7 +72,7 @@ These have no app of their own. They test Tessera around the tools.
 
 | ID | App | Opening request (example) | Exercises | Profile | Needs |
 | --- | --- | --- | --- | --- | --- |
-| T7 | Movie and video finder | "Find old science-fiction films I can watch and let me keep a watchlist." | Searching an outside source, filter and sort, compare, watchlist, preview | Search results with selection | `CAP-02` data provider (source decided at the start of M4, D11) |
+| T7 | Movie and video finder | "Find old science-fiction films I can watch and let me keep a watchlist." | Searching an outside source, filter and sort, compare, watchlist, thumbnails delivered as assets, opening a video on its own site | Search results with selection | `CAP-02` data provider (source decided at the start of M4, D11); `DATA-11` assets |
 | T8 | Article finder | "Find recent articles about sleep and memory and let me save the ones I want to read." | Search, save, tag, reading notes | Search results with selection | `CAP-02` (source decided with D11) |
 | T9 | Research board | "Research whether standing desks help with back pain and show me the sources and what they say." | Cited findings, comparing sources, honest limits | Cited findings | `CAP-02` plus the research stage (M5) |
 | T10 | Study planner (PT variant too) | "My exam is in two weeks. Help me organize topics; I study evenings, never Fridays. Later I'll paste notes to make flashcards." | Rules enforced, notes to cards, mixed requests, next day | Scheduling with rules, notes to cards | `RUN-07` clock |
@@ -84,7 +84,7 @@ These have no app of their own. They test Tessera around the tools.
 | ID | App | Opening request (example) | Exercises | Profile | Needs |
 | --- | --- | --- | --- | --- | --- |
 | T13 | Drawing board | "A simple drawing board where I can sketch with the mouse." | Pointer input, shapes, undo, "remove the red line" through chat | Smoke only, at first | — |
-| T14 | Image editor | "Let me open a photo, crop it, add arrows and text, and save it." | Opening a file, canvas editing, export. **The first editing app tested** (A26) | Editing with files in and out | `CAP-03` file import and export |
+| T14 | Image editor | "Let me open a photo, crop it, add arrows and text, and save it." | Opening a file, canvas editing, export. **The first editing app tested** (A26) | Editing with files in and out | `CAP-03` file import and export; `DATA-11` assets |
 | T15 | Document editor | "A simple editor for my notes with headings, lists and an outline on the side." | Rich text editing, structure, export. Tested after the image editor | Editing | `CAP-03` export |
 | T16 | 2D simulation | "Will my party layout work for 120 guests? Where will lines form?" | Engines, research, run and compare, flow check (M5) | Simulation with a run control | Engines (M5); chart library (`CAP-04`) |
 | T17 | 3D viewer or simulation | "Show the solar system in 3D and let me speed time up or down." | WebGL, animation, pause and speed, performance | Simulation with a run control | three.js as a vetted library (`CAP-04`, M5) |
@@ -150,7 +150,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 
 **Expectations** are host-verified facts (section 5.1). For tools that match no profile, data expectations are limited to "unchanged" or "changed", compared by content hash, plus the smoke check.
 
-T1 entries came from the original session request, so Use again excludes them. Add a defaults fixture with categories/units that survive reuse, while entries, completed flags and examples do not. M1 scripted restore cases also cover: compatible old code retaining today's data; incompatible conversion previewing affected fields/records; cancellation retaining everything; confirmation keeping a recovery snapshot; failed migration; and a write/crash during activation (`DATA-10`).
+T1 entries came from the original session request, so Use again excludes them. Add a defaults fixture with categories/units that survive reuse, while entries, completed flags and examples do not. M1 scripted restore cases also cover: compatible old code retaining today's data; incompatible conversion previewing affected fields/records; cancellation retaining everything; confirmation keeping a recovery snapshot; failed migration; and a write/crash during activation (`DATA-10`). M1 asset cases also cover replacing a photo with a cropped copy, running cleanup and restarting, then undoing the crop: the original must come back (`DATA-04`, `DATA-11`).
 
 ---
 
@@ -182,7 +182,7 @@ After a live run, a separate reviewer model receives the requests, the final sou
 | `code-red-flags` | Startup data writes, reading the system clock instead of the host clock, ignored errors, unbounded loops |
 | `coherence` | Does each change build on the last, or does the tool lose or reinvent parts? |
 
-The reviewer sees approved screenshots through enforced read-only run-folder access, or approved image inputs with file tools disabled if that boundary cannot be enforced (`CLI-08`). It applies the same rubric whichever model built the tool. Its opinion supplements observed checks and cannot upgrade untested behavior to verified behavior.
+The reviewer receives approved screenshots as image inputs and has no file tools (`CLI-08`). It applies the same rubric whichever model built the tool. Its opinion supplements observed checks and cannot upgrade untested behavior to verified behavior.
 
 ### 5.3 Your final verdict (`EVAL-04`)
 
@@ -195,12 +195,12 @@ Each live evaluation produces a report with the video, screenshots per step, hos
 | Milestone | Live set | Why these |
 | --- | --- | --- |
 | M2 (pipeline) | T1, T6, T13, plus a short J6 run (ambiguous, impossible, cancel), without `do` steps (they need verification profiles, from M3). P1 clean setup once in Windows Sandbox | Creation, data, edits and honesty across simple and advanced tiers; first run |
-| M3 (verification) | T1, T2 (PT), T3, T5 without export, T10; one unmatched-profile tool | Initial list, filtering, chart, form, scheduling and cards profiles. Unmatched tool stays behavior-unverified. Include changing/removing a scheduling policy. |
+| M3 (verification) | T1, T2 (PT), T3, T5 without export, T10; one unmatched-profile tool | Initial list, filtering, chart, form, scheduling and cards profiles. The unmatched tool tests acceptance checks from the request (`VER-09`). Include changing/removing a scheduling policy. |
 | M4 (first release) | T1, T3, T4, T5, T7, T10, T11, T12, T13, T14; T2 and T10 in Portuguese; P1 and P2 | 12 app runs plus 2 platform runs, covering J0–J7. New profiles: items over time (T4), files-in/out editing (T14), search/selection (T7). T12 also exercises time rules. Drawing stays smoke-only. T5 export starts here. |
 | M5 (engines) | T9, T16, T17 | Research, engines, simulation profile |
-| M6 (hardening) | M4 set across the model matrix | Consistency whichever model builds the tool |
+| M6 (hardening) | M4 set across the model matrix (Claude Code models and Codex); T8 article finder; T15 document editor | Consistency whichever model builds the tool; the remaining catalogue apps |
 
-P3 runs scripted in CI from M1. The [roadmap envelopes](03-roadmap.md#live-budget-summary) must be reconciled against per-stage calls for every required run and review before approval. They are not a promise that a fixed number of calls covers every journey.
+P3 runs scripted in CI from M1. The [roadmap envelopes](03-roadmap.md#live-budget-summary) must be reconciled against per-stage calls for every required run and review before approval.
 
 ---
 
@@ -214,7 +214,9 @@ P3 runs scripted in CI from M1. The [roadmap envelopes](03-roadmap.md#live-budge
 | Test apps | Tiered catalogue; modularity later (A24) |
 | Charts and 3D | A few vetted libraries in the sandbox (A25) |
 | First editing app | Image editor (A26) |
-| Reviewer screenshots | Enforced read-only run-folder access or approved image inputs without file tools (A27, CLI-08) |
+| Reviewer screenshots | Approved screenshots as image inputs; no file tools (A27, CLI-08) |
+| Images and files in tools | A content-addressed asset store in the data folder (A48, DATA-11) |
+| Tools matching no profile | Acceptance checks from the request, as an M3 experiment (A49, VER-09) |
 | First attempt | No retry or rephrasing by the person; automatic repairs allowed, counted and reported (A40) |
 | M4 profiles | Items over time, editing with files in/out and search results with selection (A41) |
 | Outside data sources | Decided at the start of M4, so T7 stays in the release acceptance (A42, D11) |

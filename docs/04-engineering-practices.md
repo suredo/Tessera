@@ -1,6 +1,6 @@
 # Engineering practices
 
-Status: draft 0.3 · 2026-10-11 · Target practices. Claude Code and Codex both develop, review, run the app and execute tests. Rules have stable IDs; never renumber them (`ENG-17`).
+Status: draft 0.4 · 2026-10-11 · Target practices. Rules have stable IDs; never renumber them (`ENG-17`).
 
 ---
 
@@ -8,8 +8,8 @@ Status: draft 0.3 · 2026-10-11 · Target practices. Claude Code and Codex both 
 
 | ID | Rule |
 | --- | --- |
-| ENG-01 | **Git from the first commit, in a private GitHub repository** (A16). One topic per branch (`feat/…`, `fix/…`, `docs/…`, `chore/…`). Commits follow Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`). GitHub milestones M0–M6 match the [roadmap](03-roadmap.md), and every issue belongs to one. |
-| ENG-02 | **CI on every pull request.** CI runs on Windows (`PLAT-01`). Required checks: typecheck, lint, format check, unit tests, CLI contract tests, scripted end-to-end tests (Playwright, Chrome and Edge), host accessibility checks (`APP-11`), documentation link check, prompt-size budgets (`GEN-03`), the requirement-coverage report (`ENG-17`), and the rule-file check (`ENG-05`). CI never makes live model calls. Dependabot security alerts and update proposals are on. |
+| ENG-01 | **Git from the first commit, in a private GitHub repository on GitHub Free** (A16). One topic per branch (`feat/…`, `fix/…`, `docs/…`, `chore/…`). Commits follow Conventional Commits (`feat:`, `fix:`, `test:`, `docs:`, `chore:`, `refactor:`). GitHub milestones M0–M6 match the [roadmap](03-roadmap.md), and every issue belongs to one. |
+| ENG-02 | **CI on every pull request.** Required checks: typecheck, lint, format check, unit tests, CLI contract tests, scripted end-to-end tests (Playwright, Chrome and Edge), host accessibility checks (`APP-11`), documentation link check, prompt-size budgets (`GEN-03`), the requirement-coverage report (`ENG-17`), and the rule-file check (`ENG-05`). CI never makes live model calls. The fast checks run on Linux runners. One Windows job runs the platform tests and the Playwright suites with the accessibility checks (`PLAT-01`). Windows minutes use up a private repository's monthly Actions allowance faster than Linux minutes, so keep that job lean and report Actions usage in each milestone report. If the allowance gets tight, run the Windows job only on pull requests that touch runtime, platform or web code. Dependabot security alerts and update proposals are on. |
 | ENG-03 | **Not in a synced folder.** The repository lives outside OneDrive, Dropbox and similar (for example `C:\dev\tessera`). GitHub is the backup. Sync tools can lock or replace files mid-write. |
 | ENG-23 | **Releases.** Semantic versioning; `v0.1.0` is the first release (M4). The changelog is generated from Conventional Commits at each release and reviewed by hand. Releases are tags on `main`. |
 
@@ -26,13 +26,13 @@ Dependencies: allowed, but small and justified in the pull request. Prefer well-
 
 ## 3. Working with AI assistants
 
-Both Claude Code and Codex develop, review, run the app and execute tests/evaluations (A37). Approved live budgets apply equally to both. The first product release uses Claude Code as its provider; that does not limit Codex's development role.
+Both Claude Code and Codex develop, review, run the app and execute tests/evaluations (A37). Approved live budgets apply equally to both.
 
 | ID | Rule |
 | --- | --- |
 | ENG-05 | **One rules file for every assistant.** `AGENTS.md` is the single source of rules: what the project is, how to run checks, the non-negotiables (section 3.1), where the spec and ADRs live. It stays under about 100 lines. `CLAUDE.md` contains only the import line `@AGENTS.md`, so Claude Code reads the same rules, and CI fails if `CLAUDE.md` contains anything else. No long handoff documents: the pull request description is the handoff. |
 | ENG-06 | **Every task starts from a brief with acceptance criteria.** Use the template in section 3.2. The criteria name spec requirement IDs. Tests that show the criteria are met are written in the same pull request. |
-| ENG-15 | **Review and merge** (A36). Every pull request gets an AI review by **the other assistant**: Codex reviews Claude Code's work and the reverse. If the other is unavailable, a fresh session of the same assistant reviews it. The review follows the checklist in section 3.4 and is posted on the pull request. The product owner reads the summary and review, then merges. Branch protection on `main` requires passing CI and a linear history, not an approval (a solo owner cannot approve their own pull requests). |
+| ENG-15 | **Review and merge** (A36). Every pull request gets an AI review by **the other assistant**: Codex reviews Claude Code's work and the reverse. If the other is unavailable, a fresh session of the same assistant reviews it. The review follows the checklist in section 3.4 and is posted on the pull request. The product owner reads the summary and review, then merges. GitHub Free offers no branch protection or rulesets for private repositories, so the rules are kept by setup and habit: `main` changes only through pull requests; the repository allows squash merges only, which keeps history linear; a local pre-push hook, installed by the setup script, refuses direct pushes to `main`; and the product owner merges only when CI is green and the review is posted. Assistants never push to `main` and never merge. |
 | ENG-21 | **Small pull requests** (A39). One requirement or a small group per pull request, around 400 changed lines excluding tests, fixtures and generated files. Larger work is split, with a short plan in the first issue or pull request. |
 | ENG-22 | **Model matched to task** (A38). Development assistants use lighter, cheaper models for bounded or mechanical work (renames, tests from a clear spec, docs updates) and stronger models for design, difficult bugs and reviews. This only affects development; the product's routing is `CLI-09`. |
 
@@ -128,13 +128,14 @@ The POC showed that offline tests can pass while live behavior fails (L-08). The
 | --- | --- |
 | ENG-07 | Live model calls follow this protocol. |
 
-1. **Plan:** list required scenarios, AI-dependent versus deterministic steps, calls per stage, repair reserves and reviewer calls. Reconcile with the roadmap envelope and approve the actual hard cap. Freeze scoring denominators; blocked required steps remain counted. No automatic budget increase.
+1. **Plan:** list required scenarios, AI-dependent versus deterministic steps, calls per stage, repair reserves, reviewer calls and expected tokens. Reconcile with the roadmap envelope and approve the actual hard cap. Schedule large runs to fit the plan's usage windows. Freeze scoring denominators; blocked required steps remain counted. No automatic budget increase.
 2. **Rehearse:** run the exact script in dry-run mode, with canned replies and zero cost (`OBS-02`). Fix script problems first.
 3. **Run:** use a separate port and the evaluation data folder, never the person's real data (`ENG-19`). The budget guard refuses calls past the cap.
 4. **Stop rules:**
    - **Step 1 fails:** stop the run. Later steps would only spend calls with nothing to build on.
    - **A step fails twice:** stop that step, fix the cause offline, and ask before spending more.
-   - **Provider errors** (limits, sign-in): stop.
+   - **Provider errors** (sign-in, unavailable model): stop.
+   - **Usage limit reached:** pause. Resume the remaining scenarios after the limit resets, without re-running scenarios that already finished.
 5. **Record:** keep the call ledger, request log, diagnostics, screenshots, video and a short written result, with the cost: calls, input tokens (cached), output tokens and model seconds.
 6. **Learn:** every defect gets a lessons entry, a replay test (`ENG-13`) and a fix.
 
@@ -152,8 +153,8 @@ Reference costs from the POC (Claude Sonnet 5.5, medium effort):
 
 | Kind | Location | Rule |
 | --- | --- | --- |
-| Reference | `docs/reference/` (spec, contracts, UI standard, architecture) | The spec labels target requirements and delivery status. Implementation references describe current behavior only. Historical POC copies are labelled and subordinate to spec/ADRs. Update with code; version/status metadata is allowed, but dated execution reports stay separate. |
-| Decisions (ADRs) | `docs/adr/NNNN-title.md` | One decision per file: context, decision, consequences. Never edited afterwards; superseded by a new ADR. |
+| Reference | The planning set in `docs/` (01–06) now; `docs/reference/` for implementation references (contracts, architecture) once code exists | The spec labels target requirements and delivery status. Implementation references describe current behavior only. Historical POC copies live in `docs/poc/`, are labelled, and are subordinate to the spec and decisions. Update with code; version/status metadata is allowed, but dated execution reports stay separate. |
+| Decisions | [05-open-decisions.md](05-open-decisions.md) for A1–A49; `docs/adr/NNNN-title.md` for new decisions from M0 on | The decision log stays as it is. Each new decision gets one ADR: context, decision, consequences. Never edited afterwards; superseded by a new ADR. |
 | Evaluations and milestone reports | `evals/reports/YYYY-MM-DD-name.md` | Dated results of live runs, and each milestone's closing report (delivered, exit criteria, live costs, open issues) with the product owner's sign-off. Historical: never updated to look current. |
 | Changelog | `CHANGELOG.md` | What changed per release (`ENG-23`). |
 
@@ -165,10 +166,21 @@ On import, preserve a sanitized evidence index (run/date, provider, scope, measu
 
 | ID | Rule |
 | --- | --- |
-| ENG-10 | **Test outputs** (videos, screenshots, logs) go to a gitignored `test-output/` folder, and runs older than the last few are pruned automatically. Evidence worth keeping (live evaluation reports, replay fixtures) is committed in `evals/` in a sanitized, portable form. Nothing needed to reproduce a test lives only on one machine. |
+| ENG-10 | **Test outputs and evidence.** Test outputs (videos, screenshots, logs) go to a gitignored `test-output/` folder, and runs older than the last few are pruned automatically. Evidence worth keeping (live evaluation reports, replay fixtures) is committed in `evals/` in a sanitized, portable form. Nothing needed to reproduce a test lives only on one machine. Images and video follow the rules below, so the repository stays small (A48). |
 | ENG-19 | **Secrets and data separation.** No credentials, API keys, tokens or personal data are ever committed; CLI sign-ins are never copied. Fixtures and replay exports are sanitized before committing. Development, automated tests and live evaluations each use their own data folder, chosen by configuration; none ever touches the real user data folder (`PLAT-04`). A pre-commit check and CI scan for likely secrets. |
+
+### 8.1 Images and video in the repository
+
+| What | Where | Rule |
+| --- | --- | --- |
+| Screenshots cited by a report | `evals/reports/<report>/` | Only the ones the report cites, as WebP or optimized PNG, aimed at under 300 KB each |
+| Videos and full screenshot sets | A GitHub release per milestone (`evidence-m2`, …) | Never committed. Zipped and attached to the release; the milestone report links to it |
+| Test fixture images | `evals/fixtures/assets/` | Small, generated or owned by you, with metadata (such as photo location) stripped |
+| Images in docs | `docs/images/` | Diagrams as SVG or Mermaid in Markdown where possible; screenshots as WebP |
+
+The pre-commit check refuses video files and any image over 1 MB. Git LFS is not used for now. The running app's own images (photos people open in tools) never go in the repository: they live in the asset store in the user data folder (`DATA-11`).
 
 ## 9. Issue and lesson tracking
 
 - GitHub Issues for bugs and tasks, labelled by area (`gen`, `runtime`, `data`, `ver`, `cli`, `ux`, `app`, `docs`) and assigned to a milestone (`ENG-01`).
-- The lessons document continues in Tessera as `docs/lessons.md`. New lessons get IDs and a mitigation requirement, just like the POC catalogue.
+- The lessons document continues as [01-lessons-learned.md](01-lessons-learned.md). New lessons get IDs and a mitigation requirement, just like the POC catalogue.
