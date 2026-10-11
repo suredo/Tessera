@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Host app"
+description: "What the person sees and can do: main screen, workspaces, library, versions, trash, details (APP-01 to APP-11)."
+tags: [spec, host-app, ui]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Host app (`APP`)
 
 What the person sees and can do. Visual design follows the same UI standard as generated tools, adapted for the host (`VER-06`).

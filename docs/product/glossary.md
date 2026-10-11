@@ -1,3 +1,11 @@
+---
+type: Glossary
+title: "Key concepts"
+description: "The terms used across the docs: host, tool, workspace, version, data, asset, saved tool, trash, verification profile, capability, stage."
+tags: [product, glossary]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Key concepts
 
 | Term | Meaning |

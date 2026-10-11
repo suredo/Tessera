@@ -1,4 +1,12 @@
-# M5: Engines and simulation (size L, live budget about 50 calls)
+---
+type: Milestone
+title: "M5: Engines and simulation"
+description: "Engines, research and simulations after the first release."
+tags: [roadmap, engines-and-simulation]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
+# M5: Engines and simulation (size L, live budget about 85 calls)
 
 **Goal:** people can create goal-driven simulations from everyday requests. The event planner is the first evaluation scenario, created by the simulated person like any other tool, not shipped.
 

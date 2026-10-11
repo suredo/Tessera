@@ -1,3 +1,11 @@
+---
+type: Roadmap
+title: "Overview"
+description: "Build order, the milestone diagram, sizes and sign-off."
+tags: [roadmap, overview]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Roadmap
 
 Milestones and provisional call envelopes, derived per scenario run. Before each evaluation, derive calls per stage including intent, generation, data actions, repair reserves and review, then approve the actual hard cap ([ENG-07](../practices/live-evaluation.md)).

@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Runtime and sandbox"
+description: "The sandbox, one active runtime, staging before activation, bridge enforcement and the host clock (RUN-01 to RUN-07)."
+tags: [spec, runtime, sandbox]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Runtime and sandbox (`RUN`)
 
 Port the POC design; it held up in every boundary test.

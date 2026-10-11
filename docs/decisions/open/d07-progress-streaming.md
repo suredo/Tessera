@@ -1,3 +1,11 @@
+---
+type: Open Decision
+title: "D7. Progress streaming"
+description: "Whether Claude Code's streaming output can show real progress (decide with a spike in M2)."
+tags: [decisions, progress-streaming]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # D7. Progress streaming
 
 Requirements: `CLI-07`, `GEN-16`.

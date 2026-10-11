@@ -1,3 +1,11 @@
+---
+type: Test Design
+title: "Journeys every scenario set must cover"
+description: "The eight journeys every scenario set must cover, from first run to hands-on use."
+tags: [testing, journeys]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Journeys every scenario set must cover
 
 Each scenario covers several journeys. By M4 the set must cover all J0–J7. M2 intentionally omits automated hands-on `do` steps; M3 adds them. Earlier human exploratory sessions may exercise controls, with those observations labelled separately from automated evidence.

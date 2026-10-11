@@ -1,3 +1,11 @@
+---
+type: Lesson
+title: "Patterns behind the issues"
+description: "The seven patterns behind most POC issues, and the rule for each."
+tags: [lessons, patterns]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Patterns behind the issues
 
 Most issues come from seven patterns. Fixing the pattern fixes the family.

@@ -1,6 +1,14 @@
+---
+type: Overview
+title: "Overview"
+description: "What Tessera is, the key decisions and how to read these docs."
+tags: [overview, README]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # POC results: from Harness to Tessera
 
-Status: **draft 0.4 · 2026-10-11 · revised after the first full review** (GitHub Free, local CLI connections, binary assets, re-derived live budgets). These are target requirements, not an implemented Tessera release. Remaining [open decisions](decisions/open/index.md) are listed with when each is decided; none blocks starting M0.
+These are target requirements, not an implemented Tessera release; [log.md](log.md) records how the docs have changed. Remaining [open decisions](decisions/open/index.md) are listed with when each is decided; none blocks starting M0.
 
 The Harness POC demonstrated that an AI can build and keep changing useful tools from everyday requests inside a sandbox, and recorded passing checks for specific boundaries and workflows. It did not establish general security or a reliable success rate across arbitrary requests. This folder turns those three days of evidence into the starting documents for **Tessera**: an environment where people get the interface they need by creating it or opening one they saved. Each tool is one piece of their environment, like a tile in a mosaic.
 
@@ -14,7 +22,7 @@ Each folder has an `index.md` listing its documents with a one-line description;
 | 2 | [product/](product/index.md) and [spec/](spec/index.md) | The product and its rules: principles, architecture, and numbered requirements by area (contracts, generation, runtime, data, verification, provider adapters, observability, security, UX, later simulations, testing), plus release acceptance criteria. |
 | 3 | [roadmap/](roadmap/index.md) | Milestones M0–M6 in build order, with deliverables, exit criteria, what to port from the POC, and live-call budgets derived per scenario run (about 270 calls to the first release; internal alpha for you after M2). |
 | 4 | [practices/](practices/index.md) | How we work: GitHub and CI, TypeScript standards, AI-assistant rules and templates, the five-layer test pyramid, the live evaluation protocol, documentation and evidence structure. |
-| 5 | [decisions/](decisions/index.md) | The decision log (A1–A49) and the remaining choices: progress streaming, engine modularity, simulation presentation and outside data sources. |
+| 5 | [decisions/](decisions/index.md) | The decision log (A1–A51) and the remaining choices: progress streaming, engine modularity, simulation presentation and outside data sources. |
 | 6 | [testing/](testing/index.md) | Real-life test scenarios: what a scenario is, the eight journeys every set must cover (first run to hands-on), three platform scenarios, a catalogue of 17 test apps (simple, medium, advanced; modularity later), how replay stays honest, the scenario file format, judging (host facts, AI review, your verdict) and which scenarios run at each milestone. |
 | — | [poc/](poc/index.md) | Historical copies of the two POC designs Tessera ports: the [UI standard](poc/ui-standard.md) and the [simulation engines plan](poc/simulation-engines-plan.md), including the live run findings. |
 
@@ -26,6 +34,7 @@ Each folder has an `index.md` listing its documents with a one-line description;
 - **Stack:** Node 22, pnpm, Vite, zod, TypeScript, React 19 with the React Compiler. English first, translatable.
 - **Way of working:** a private repository on GitHub Free with CI on every pull request; solo, with Claude Code and Codex writing and reviewing each other's work; small pull requests that you merge.
 - **Evaluation:** real-life scenarios judged by host facts, an AI technical review and your verdict, a few in Portuguese. Sign-off after every milestone.
+- **Docs:** the [Open Knowledge Format](practices/documentation.md) (OKF v0.2): one file per area with frontmatter saying who wrote and who checked it, an index per folder, and code documented the same way and checked against the code.
 
 All decisions, with their reasons, are in the [decision log](decisions/decision-log.md). Still open: outside data sources (decided at the start of M4) and three later technical choices.
 
@@ -40,7 +49,7 @@ The spec says **what** the product does and **which rules it must follow**. The 
 
 ## How to read the numbers
 
-Counts in these documents are planning figures or historical summaries. A mapped mitigation is a plan, not proof that the failure is prevented. A live-call budget is an envelope to reconcile before each run, not a promise of coverage. POC results summarize runs whose raw evidence is not in this folder. Tessera tracks every lesson and requirement as proposed → implemented → verified (`ENG-17`).
+Counts in these documents are planning figures or historical summaries. A mapped mitigation is a plan, not proof that the failure is prevented. A live-call budget is an envelope to reconcile before each run, not a promise of coverage. POC results summarize runs whose raw evidence is not in this folder. Tessera tracks every lesson and requirement as proposed → implemented → verified (`ENG-17`). Each document's frontmatter also says who checked it: no `verified` entry means nobody has yet.
 
 ## This folder stands alone
 

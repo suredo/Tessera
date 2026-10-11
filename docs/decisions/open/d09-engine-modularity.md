@@ -1,3 +1,11 @@
+---
+type: Open Decision
+title: "D9. Engine modularity"
+description: "Whether splitting reusable engines is enforced or guidance (decide when M5 starts)."
+tags: [decisions, engine-modularity]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # D9. Engine modularity
 
 Milestone M5, requirement `SIM-06`.

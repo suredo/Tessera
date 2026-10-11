@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "User experience"
+description: "Useful immediately, progress, honest labels, accessibility, translation and lifecycle (UX-01 to UX-07)."
+tags: [spec, ux, accessibility]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # User experience (`UX`)
 
 | ID | Requirement |

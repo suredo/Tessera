@@ -1,3 +1,11 @@
+---
+type: Practice
+title: "Evidence, secrets and data"
+description: "Test outputs, evidence, secrets, data folders and the image and video rules (ENG-10, ENG-19)."
+tags: [practices, evidence]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Evidence, secrets and data
 
 | ID | Rule |

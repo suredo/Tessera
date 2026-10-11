@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Security"
+description: "Execution boundaries, untrusted text, local-only serving, least tools and the threat model (SEC-01 to SEC-05)."
+tags: [spec, security]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Security (`SEC`)
 
 | ID | Requirement |

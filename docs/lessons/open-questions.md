@@ -1,3 +1,11 @@
+---
+type: Lesson
+title: "Things the POC did not answer"
+description: "What the POC did not answer and Tessera must measure."
+tags: [lessons, open-questions]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Things the POC did not answer
 
 These need evidence in Tessera, not assumptions:

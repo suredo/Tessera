@@ -1,3 +1,11 @@
+---
+type: Milestone
+title: "M4: First release, v0.1"
+description: "Useful-immediately generation, more profiles, files and data providers, and the v0.1 acceptance run."
+tags: [roadmap, first-release]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # M4: First release, v0.1 (size L, live budget about 140 calls)
 
 **Goal:** a person can use it for real tasks.

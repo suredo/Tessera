@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Generation pipeline"
+description: "Structured intent, routing, generation, repair, honest messages and time limits (GEN-01 to GEN-18)."
+tags: [spec, generation, pipeline]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Generation pipeline (`GEN`)
 
 ## Flow

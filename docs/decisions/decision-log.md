@@ -1,6 +1,17 @@
+---
+type: Decision Log
+title: "Decision log"
+description: "Every decision made so far (A1–A51), with its choice and reasons."
+tags: [decisions, decision-log]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+sources:
+  - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
+  - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
+---
 # Decision log
 
-Decided on 2026-10-11. This log stays the record for A1–A49; new decisions from M0 on get one ADR each ([ENG-08](../practices/documentation.md)).
+Decided on 2026-10-11. This log stays the record for A1–A51; new decisions from M0 on get one ADR each ([ENG-08](../practices/documentation.md)).
 
 | # | Decision | Choice | Notes |
 | --- | --- | --- | --- |
@@ -50,6 +61,11 @@ Decided on 2026-10-11. This log stays the record for A1–A49; new decisions fro
 | A44 | Reusable starting state | **Use again keeps reusable defaults only** | Defaults are declared separately from original-request/session entries and examples. Keeping session entries for future reuse requires an explicit user choice. |
 | A45 | Restoring older interfaces | **Preserve current data; warn about incompatibility** | Check a copy first. If conversion would lose information, show the affected fields/records, warn and obtain confirmation. Keep a recovery snapshot; cancellation or an invalid conversion leaves the current unit intact (`DATA-10`). |
 | A46 | Research ordering | **Research before engine implementation code** | A structured plan may precede research; implementation code follows a validated cited spec and reference checks. New unresearched mathematical behavior returns to research. Reuse of an already researched spec is allowed (`SIM-04`). |
-| A47 | Connecting to models later | **API keys or the person's own provider account, then more providers** | Signed-in CLIs are for your own local use. Before anyone else runs Tessera on their own machine (M6 trials, the installer), connections move to API keys or the person's own account, behind the same adapter interface (`CLI-10`). Anthropic's Agent SDK documentation does not allow third-party products to offer claude.ai sign-in or subscription limits without prior approval. Later: other providers such as z.ai, Kimi and Grok, or a standalone app that connects to the person's own AI. |
+| A47 | Connecting to models later | **API keys or the person's own provider account, then more providers** | Signed-in CLIs are for your own local use. Before anyone else runs Tessera on their own machine (M6 trials, the installer), connections move to API keys or the person's own account, behind the same adapter interface (`CLI-10`). Anthropic's Agent SDK documentation does not allow third-party products to offer claude.ai sign-in or subscription limits without prior approval.[^agent-sdk] Later: other providers such as z.ai, Kimi and Grok, or a standalone app that connects to the person's own AI. |
 | A48 | Storing images and other binary files | **A content-addressed file store in the data folder, indexed in SQLite** | Files are named by SHA-256, immutable, and referenced from tool data by ID (`DATA-11`). This keeps the database small and quick to back up, stores an image once however many versions use it, and makes undo and restore need no copies. Assets travel inside export archives. In the repository, only small cited screenshots and fixtures are committed; videos and full screenshot sets go to milestone releases (`ENG-10`). |
 | A49 | Verifying tools that match no profile | **Try acceptance checks derived from the request (M3 experiment)** | A separate stage writes the checks, the generator exposes the hooks they name, and the host runs them (`VER-09`). Adopted as the default only if M3 measurements against your verdicts are good enough. |
+| A50 | Documentation format | **Open Knowledge Format (OKF v0.2), one concept per area** | Google's specification is the rulebook;[^okf-spec] okf.md is a community guide that partly follows the older v0.1. `docs/` is the bundle, with an `index.md` per folder and a `log.md`. Frontmatter records type, title, description, status, who wrote each doc (`generated`) and who checked it (`verified`). Links stay relative, because GitHub resolves OKF's `/` links from the repository root (`ENG-08`). |
+| A51 | Code documentation | **One OKF concept per code module, checked against the code** | Code docs say what a module is for, which requirements it implements, where to start, its invariants and pitfalls, and point at the code through `resource`. The check fails on missing paths or requirement IDs, and when code under a doc's `resource` changes without the doc, unless the pull request says why (`ENG-24`). |
+
+[^agent-sdk]: Claude Agent SDK overview
+[^okf-spec]: Open Knowledge Format specification v0.2

@@ -1,3 +1,11 @@
+---
+type: POC Reference
+title: "Default UI standard"
+description: "Historical copy of the POC's default UI standard, which Tessera ports."
+tags: [poc, ui-standard, history]
+status: stable
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Default UI standard
 
 > **Reference copy from the Harness POC.** File, script and command names from the POC were replaced with plain component names, so this document stands alone; the POC repository is not needed. Where it says "the POC", it describes how the POC did it, as input for Tessera's own design.

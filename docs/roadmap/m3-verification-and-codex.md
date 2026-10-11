@@ -1,3 +1,11 @@
+---
+type: Milestone
+title: "M3: Verification and the Codex adapter"
+description: "Verification profiles, the acceptance-check experiment, the AI reviewer and the Codex adapter."
+tags: [roadmap, verification-and-codex]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # M3: Verification and the Codex adapter (size M, live budget about 65 calls)
 
 **Goal:** the host knows whether a tool works. Every tool already gets static and smoke checks from M2; tools matching a verification profile now also get behavior checks.

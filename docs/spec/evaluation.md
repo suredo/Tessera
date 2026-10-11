@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Evaluation"
+description: "Scenario files, host facts, AI review, human verdict, model matrix and replays (EVAL-01 to EVAL-07)."
+tags: [spec, evaluation]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Evaluation (`EVAL`)
 
 Details, the scenario format and the test application catalogue are in [the test scenario docs](../testing/index.md).

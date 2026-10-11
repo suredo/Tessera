@@ -1,3 +1,11 @@
+---
+type: Principles
+title: "Principles"
+description: "The seven rules every design choice follows, from \"the model proposes, the host decides\" to local-first privacy."
+tags: [product, principles]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Principles
 
 These come straight from what went wrong and right in the POC.

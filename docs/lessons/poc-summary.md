@@ -1,3 +1,11 @@
+---
+type: Lesson
+title: "What the POC was"
+description: "What the Harness POC was, what it built and what evidence it left."
+tags: [lessons, poc-summary]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # What the POC was
 
 Covers the whole POC, from the first Codex runs on 2026-10-08 to the last live planner run on 2026-10-11.

@@ -1,3 +1,11 @@
+---
+type: Milestone
+title: "M6: Hardening and API connections"
+description: "Hardening, API-key connections, other platforms and outside trials."
+tags: [roadmap, hardening-and-api-connections]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # M6: Hardening and API connections (size M)
 
 - Cross-browser coverage (Firefox best effort), performance under large tools, accessibility audit.

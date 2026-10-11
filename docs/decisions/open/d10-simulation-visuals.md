@@ -1,3 +1,11 @@
+---
+type: Open Decision
+title: "D10. How visual the simulations should be"
+description: "Estimates first or moving dots from the start (decide when M5 starts)."
+tags: [decisions, simulation-visuals]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # D10. How visual the simulations should be
 
 Milestone M5.

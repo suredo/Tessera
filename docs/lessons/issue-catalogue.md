@@ -1,3 +1,11 @@
+---
+type: Lesson
+title: "Issue catalogue"
+description: "69 POC issues with root cause, mitigation requirements and status, plus coverage."
+tags: [lessons, issue-catalogue]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Issue catalogue
 
 This document records POC observations, failures and proposed Tessera mitigations. Requirement IDs point to [the spec](../spec/index.md) and [the engineering practices](../practices/index.md). The ambition is to prevent or automatically catch at least 90% of these failure cases; the [coverage count](#coverage) measures mapped plans, not prevention.

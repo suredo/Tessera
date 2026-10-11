@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Contracts"
+description: "One schema source, explicit output unions, the bridge manifest, versioned contracts and units (CON-01 to CON-05)."
+tags: [spec, contracts, schemas]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Contracts (`CON`)
 
 | ID | Requirement |

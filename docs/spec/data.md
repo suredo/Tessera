@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Data and persistence"
+description: "How Tessera stores, versions, exports and protects a person's data, including binary assets (DATA-01 to DATA-11)."
+tags: [spec, data, storage, assets]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Data and persistence (`DATA`)
 
 | ID | Requirement |

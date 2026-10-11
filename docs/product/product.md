@@ -1,3 +1,11 @@
+---
+type: Product
+title: "Product"
+description: "What Tessera is, who it is for, the first release's goals and what it leaves out."
+tags: [product]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Product
 
 ## What it is

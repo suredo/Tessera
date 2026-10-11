@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Testing"
+description: "The test layers required in CI and at milestones (TEST-01 to TEST-06)."
+tags: [spec, testing]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Testing (`TEST`)
 
 Summary; details are in [the testing practices](../practices/testing.md).

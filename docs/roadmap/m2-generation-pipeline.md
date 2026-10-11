@@ -1,3 +1,11 @@
+---
+type: Milestone
+title: "M2: Generation pipeline"
+description: "The Claude Code adapter and generation pipeline, ending in the internal alpha."
+tags: [roadmap, generation-pipeline]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # M2: Generation pipeline (size L, live budget about 35 calls) → internal alpha
 
 **Goal:** everyday requests create and change tools reliably, with honest results and full visibility. At the end, you start using Tessera for real tasks (A35).

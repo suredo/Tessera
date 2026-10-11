@@ -1,3 +1,11 @@
+---
+type: Architecture
+title: "Architecture"
+description: "The parts of Tessera and how they connect: launcher, host app, sandboxed runtime, local server, storage, adapters and shared contracts."
+tags: [product, architecture]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Architecture
 
 ```text

@@ -1,3 +1,11 @@
+---
+type: Practice
+title: "Code standards"
+description: "TypeScript standards, no text surgery, prompts as code, storage migrations and dependencies (ENG-04, ENG-12, ENG-16, ENG-18)."
+tags: [practices, code]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Code standards
 
 | ID | Rule |

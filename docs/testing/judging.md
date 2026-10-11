@@ -1,3 +1,11 @@
+---
+type: Test Design
+title: "Judging"
+description: "How scenarios are judged: host facts, AI technical review and your final verdict."
+tags: [testing, judging]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Judging
 
 ## Automatic host facts (every step)

@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Simulation engines"
+description: "Versioned engines, isolated checks and research before code, for a later milestone (SIM-01 to SIM-06)."
+tags: [spec, simulation, engines]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Simulation engines (`SIM`, later milestone)
 
 The POC's [simulation-engines-plan.md](../poc/simulation-engines-plan.md) is the reference design. Requirements to carry over when M5 starts:

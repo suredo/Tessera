@@ -1,3 +1,11 @@
+---
+type: Test Design
+title: "Scenario sets per milestone"
+description: "Which scenarios run live at each milestone."
+tags: [testing, milestone-sets]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Scenario sets per milestone
 
 | Milestone | Live set | Why these |

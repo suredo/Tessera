@@ -1,3 +1,7 @@
+---
+okf_version: "0.2"
+---
+
 # Start here
 
 * [Overview](README.md) - What Tessera is, the key decisions and how to read these docs.
@@ -10,7 +14,7 @@
 # Planning
 
 * [Roadmap](roadmap/index.md) - Milestones M0–M6 in build order, with deliverables, exit criteria and live-call budgets.
-* [Decisions](decisions/index.md) - The decision log (A1–A49) and the decisions still open.
+* [Decisions](decisions/index.md) - The decision log (A1–A51) and the decisions still open.
 
 # How we work
 
