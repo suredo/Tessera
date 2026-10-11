@@ -21,6 +21,10 @@ Current state: planning documents only, no product code yet. Next milestone: M0,
 7. **Leave the docs true.** When you change code or docs, update every affected doc (code docs too), set its `generated` to your actor (`claude-code/<model>` or `codex/<model>`) and the current UTC time, and add a line to `docs/log.md`. Never add `verified` for your own writing, and never add a `human:` entry.
 8. **Say what you relied on.** In the pull request, list the docs you read and the docs you changed.
 
+## Changing sessions
+
+Only when the owner asks: pause a task with the `task-checkpoint` skill (Claude Code `/task-checkpoint`, Codex `$task-checkpoint`), and continue it in a new session with `task-resume <task-id>`. Without skills, follow `docs/practices/checkpoint.md` or `docs/practices/resume.md`. A checkpoint writes files; it does not clear the conversation. Read `context/` only while checkpointing or resuming.
+
 ## Checks
 
 Run them before saying something is done, and report the results faithfully, including failures.
@@ -45,4 +49,4 @@ Run them before saying something is done, and report the results faithfully, inc
 - One topic per branch (`feat/…`, `fix/…`, `docs/…`, `chore/…`), Conventional Commits, and small pull requests of about 400 changed lines.
 - The other assistant reviews every pull request against the review checklist: Codex reviews Claude Code's work and the reverse.
 - Never push to `main`. Merge only when the owner explicitly asks. Squash-merge, and before merging a pull request that another one is stacked on, retarget the stacked one to `main`.
-- No long handoff documents: the pull request description is the handoff.
+- No long handoff documents: the pull request description is the handoff for finished work, and a task that continues in a new session gets one short handoff (`ENG-25`).

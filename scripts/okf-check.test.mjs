@@ -178,3 +178,78 @@ test("drift: code changed without its doc fails, unless the doc changes or the p
   r = check(root, "--base", "main");
   assert.equal(r.code, 0, r.out);
 });
+
+// ---------- task context (ENG-25, ENG-26) ----------
+const handoff = (id, { subject = "spec/data", status = "in-progress", extra = "", body = "" } = {}) =>
+  ["---", `task_id: ${id}`, `subject: ${subject}`, `status: ${status}`, "checkpoint_date: 2026-10-11", ...(extra ? [extra] : []), "---", "",
+    `# Task: ${id}`, "", "## Authoritative references", "- `docs/spec/data.md` — the asset rules", "", "## Next action", "1. Write the store.", body].join("\n");
+const historyNote = (subject, id, date = "2026-10-11", status = "historical") =>
+  ["---", `subject: ${subject}`, `task_id: ${id}`, `date: ${date}`, `status: ${status}`, "---", "", "# Rejected: storing images in SQLite",
+    "", "## Relationship to current knowledge", "- Canonical: `docs/spec/data.md`"].join("\n");
+
+test("handoffs and history notes: valid ones pass, and two tasks keep separate files (T7)", () => {
+  const root = makeRepo();
+  write(root, "context/handoffs/asset-store.md", handoff("asset-store"));
+  write(root, "context/handoffs/code-rules.md", handoff("code-rules", { subject: "practices/code", extra: "parent: asset-store" }));
+  write(root, "context/history/spec/data/2026-10-11-asset-store.md", historyNote("spec/data", "asset-store"));
+  const r = check(root);
+  assert.equal(r.code, 0, r.out);
+});
+
+test("a handoff's ID, status, subject and size are checked", () => {
+  const root = makeRepo();
+  write(root, "context/handoffs/asset-store.md", handoff("other-task"));
+  write(root, "context/handoffs/done-task.md", handoff("done-task", { status: "complete" }));
+  write(root, "context/handoffs/lost-task.md", handoff("lost-task", { subject: "spec/nowhere" }));
+  write(root, "context/handoffs/long-task.md", handoff("long-task", { body: "word ".repeat(720) }));
+  write(root, "context/handoffs/wordy-task.md", handoff("wordy-task", { body: "word ".repeat(520) }));
+  const r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /asset-store\.md: task_id must match the file name/);
+  assert.match(r.out, /done-task\.md: remove a finished task's handoff/);
+  assert.match(r.out, /lost-task\.md: subject is not a docs path: spec\/nowhere/);
+  assert.match(r.out, /long-task\.md: handoff has \d+ words; the limit is 700/);
+  assert.match(r.out, /warning .*wordy-task\.md: handoff has \d+ words; aim for 250–500/);
+});
+
+test("a stale reference in a handoff is reported, not ignored (T9)", () => {
+  const root = makeRepo();
+  write(root, "context/handoffs/asset-store.md", handoff("asset-store", { body: "\nSee `docs/spec/storage.md` and `docs/spec/data.md#missing-section`." }));
+  const r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /reference not found: docs\/spec\/storage\.md/);
+  assert.match(r.out, /reference anchor not found: docs\/spec\/data\.md#missing-section/);
+});
+
+test("history notes sit under their subject, are named <date>-<task_id>.md and are historical", () => {
+  const root = makeRepo();
+  write(root, "context/history/spec/data/2026-10-11-asset-store.md", historyNote("practices/code", "asset-store"));
+  write(root, "context/history/spec/data/notes.md", historyNote("spec/data", "asset-store"));
+  write(root, "context/history/spec/data/2026-10-12-other.md", historyNote("spec/data", "other", "2026-10-12", "stable"));
+  write(root, "context/scratch.md", "loose notes\n");
+  const r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /2026-10-11-asset-store\.md: subject must match its folder \(spec\/data\)/);
+  assert.match(r.out, /notes\.md: file name must be <date>-<task_id>\.md/);
+  assert.match(r.out, /2026-10-12-other\.md: status must be historical/);
+  assert.match(r.out, /context\/scratch\.md: context\/ holds only README\.md, handoffs\/ and history\//);
+});
+
+test("skills need identical Claude Code and Codex adapters with the same invocation policy", () => {
+  const root = makeRepo();
+  const skill = (extra) => ["---", "name: task-checkpoint", 'description: "Checkpoint a task."', ...extra, "---", "", "Follow `docs/practices/code.md`.", ""].join("\n");
+  write(root, ".claude/skills/task-checkpoint/SKILL.md", skill(["disable-model-invocation: true"]));
+  write(root, ".agents/skills/task-checkpoint/SKILL.md", skill([]));
+  write(root, ".agents/skills/task-checkpoint/agents/openai.yaml", "policy:\n  allow_implicit_invocation: false\n");
+  assert.equal(check(root).code, 0, check(root).out);
+
+  write(root, ".agents/skills/task-checkpoint/SKILL.md", skill([]).replace("code.md", "documentation.md"));
+  fs.rmSync(path.join(root, ".agents/skills/task-checkpoint/agents"), { recursive: true });
+  write(root, ".claude/skills/task-resume/SKILL.md", skill([]).replace("name: task-checkpoint", "name: task-resume"));
+  const r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /instructions differ from the Claude Code adapter/);
+  assert.match(r.out, /reference not found: docs\/practices\/documentation\.md/);
+  assert.match(r.out, /must agree on whether the skill runs only when asked/);
+  assert.match(r.out, /\.agents\/skills\/task-resume\/SKILL\.md: missing/);
+});

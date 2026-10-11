@@ -10,3 +10,5 @@
 * [Code documentation](code-docs.md) - How code is documented as OKF concepts and kept true to the code (ENG-24).
 * [Evidence, secrets and data](evidence.md) - Test outputs, evidence, secrets, data folders and the image and video rules (ENG-10, ENG-19).
 * [Issue and lesson tracking](tracking.md) - GitHub issues, labels, milestones and new lessons.
+* [Task checkpoint](checkpoint.md) - How to pause a task for a new session: route lasting findings to their docs, keep history apart, write one short handoff (ENG-25).
+* [Task resume](resume.md) - How a new session continues a checkpointed task from its handoff, reading only what the next step needs (ENG-26).

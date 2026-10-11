@@ -1,17 +1,17 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A51), with its choice and reasons."
+description: "Every decision made so far (A1–A52), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T22:56:28Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
 ---
 # Decision log
 
-Decided on 2026-10-11. This log stays the record for A1–A51; new decisions from M0 on get one ADR each ([ENG-08](../practices/documentation.md)).
+Decided on 2026-10-11. This log stays the record for A1–A52; new decisions from M0 on get one ADR each ([ENG-08](../practices/documentation.md)).
 
 | # | Decision | Choice | Notes |
 | --- | --- | --- | --- |
@@ -66,6 +66,7 @@ Decided on 2026-10-11. This log stays the record for A1–A51; new decisions fro
 | A49 | Verifying tools that match no profile | **Try acceptance checks derived from the request (M3 experiment)** | A separate stage writes the checks, the generator exposes the hooks they name, and the host runs them (`VER-09`). Adopted as the default only if M3 measurements against your verdicts are good enough. |
 | A50 | Documentation format | **Open Knowledge Format (OKF v0.2), one concept per area** | Google's specification is the rulebook;[^okf-spec] okf.md is a community guide that partly follows the older v0.1. `docs/` is the bundle, with an `index.md` per folder and a `log.md`. Frontmatter records type, title, description, status, who wrote each doc (`generated`) and who checked it (`verified`). Links stay relative, because GitHub resolves OKF's `/` links from the repository root (`ENG-08`). |
 | A51 | Code documentation | **One OKF concept per code module, checked against the code** | Code docs say what a module is for, which requirements it implements, where to start, its invariants and pitfalls, and point at the code through `resource`. The check fails on missing paths or requirement IDs, and when code under a doc's `resource` changes without the doc, unless the pull request says why (`ENG-24`). |
+| A52 | Changing sessions | **Task checkpoint and resume, with one short handoff per task** | From the context-checkpoint specification, approved by the owner, amending `ENG-05`. A checkpoint sends lasting findings to their existing docs, keeps rejected alternatives in non-authoritative history notes, and writes a handoff in `context/handoffs/`; a new session resumes from it. Handoffs live outside the OKF bundle and are removed when the task's pull request merges, so they don't pile up (L-14). Skills are named `task-checkpoint` and `task-resume` because a project skill named `resume` would replace Claude Code's built-in `/resume` (`ENG-25`, `ENG-26`). The alternatives considered are in a [history note](../../context/history/practices/checkpoint/2026-10-11-task-checkpoint-workflow.md). |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2
