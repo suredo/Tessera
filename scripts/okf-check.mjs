@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// OKF documentation check (ENG-08, ENG-24). See docs/practices/documentation.md.
+// OKF documentation check (ENG-08, ENG-24, ENG-25). See docs/practices/documentation.md.
+// Also checks task handoffs and history notes in context/, and that every skill has identical
+// Claude Code (.claude/skills) and Codex (.agents/skills) adapters.
 // Zero dependencies until the M0 tooling exists, so frontmatter uses a simple YAML subset.
 //
 // Usage: node scripts/okf-check.mjs [--fix] [--base <git-ref>] [--pr-body <file>]
@@ -286,6 +288,120 @@ if (base) {
     if (touched.length && !changedFiles.includes(rel(f)) && !excused.has(rel(f)))
       err(f, `code under ${res} changed (${touched.join(", ")}) but this doc did not; update it or add "No doc change needed: ${rel(f)}: <reason>" to the pull request description`);
   }
+}
+
+// ---------- task context: handoffs and history notes (ENG-25, ENG-26) ----------
+const CONTEXT = path.join(ROOT, "context");
+const TASK_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const SUBJECT = /^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const HANDOFF_STATUSES = new Set(["in-progress", "blocked", "ready-for-review"]);
+const isDay = (d) => DAY.test(d ?? "") && !isNaN(Date.parse(d));
+const subjectExists = (s) =>
+  SUBJECT.test(s ?? "") && (fs.existsSync(path.join(BUNDLE, `${s}.md`)) || fs.existsSync(path.join(BUNDLE, s, "index.md")));
+const anchorCache = new Map();
+const anchorsOf = (f) => {
+  if (!anchorCache.has(f)) anchorCache.set(f, new Set([...stripFences(read(f)).matchAll(/^#{1,6}\s+(.+)$/gm)].map((m) => slug(m[1]))));
+  return anchorCache.get(f);
+};
+const walkAll = (d) =>
+  fs.existsSync(d) ? fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walkAll(path.join(d, e.name)) : [path.join(d, e.name)])) : [];
+
+// Markdown links resolve from the file; `backticked` paths resolve from the repository root.
+function checkReferences(f, body) {
+  const text = stripFences(body);
+  for (const m of text.replace(/`[^`\n]*`/g, "").matchAll(/\]\(([^)\s]+)\)/g)) {
+    if (/^[a-z]+:/i.test(m[1])) continue;
+    const [p, a] = m[1].split("#");
+    const target = p ? path.resolve(path.dirname(f), p) : f;
+    if (!fs.existsSync(target)) err(f, `broken link: ${m[1]}`);
+    else if (a && target.endsWith(".md") && !anchorsOf(target).has(a)) err(f, `broken anchor: ${m[1]}`);
+  }
+  for (const m of text.matchAll(/`((?:docs|context|scripts|packages|evals)\/[^`\s#]*)(?:#([^`\s]+))?`/g)) {
+    const target = path.join(ROOT, m[1]);
+    if (!fs.existsSync(target)) err(f, `reference not found: ${m[1]}`);
+    else if (m[2] && target.endsWith(".md") && !anchorsOf(target).has(m[2])) err(f, `reference anchor not found: ${m[1]}#${m[2]}`);
+  }
+}
+
+function contextFile(f) {
+  try {
+    const parsed = parseFrontmatter(read(f));
+    if (!parsed.fm) err(f, "missing frontmatter");
+    return parsed.fm ? parsed : null;
+  } catch (e) { err(f, e.message); return null; }
+}
+
+if (fs.existsSync(CONTEXT)) {
+  for (const e of fs.readdirSync(CONTEXT, { withFileTypes: true }))
+    if (e.isDirectory() ? !["handoffs", "history"].includes(e.name) : e.name !== "README.md")
+      err(path.join(CONTEXT, e.name), "context/ holds only README.md, handoffs/ and history/");
+  if (fs.existsSync(path.join(CONTEXT, "README.md"))) checkReferences(path.join(CONTEXT, "README.md"), read(path.join(CONTEXT, "README.md")));
+
+  const handoffDir = path.join(CONTEXT, "handoffs");
+  for (const f of walkAll(handoffDir)) {
+    if (path.basename(f) === ".gitkeep") continue;
+    if (path.dirname(f) !== handoffDir || !f.endsWith(".md")) { err(f, "handoffs are .md files directly in context/handoffs/"); continue; }
+    const c = contextFile(f);
+    if (!c) continue;
+    const { fm, body } = c;
+    const id = path.basename(f, ".md");
+    if (!TASK_ID.test(id)) err(f, "task IDs are lowercase words joined by hyphens");
+    if (fm.task_id !== id) err(f, `task_id must match the file name (${id})`);
+    if (fm.status === "complete") err(f, "remove a finished task's handoff instead of marking it complete");
+    else if (!HANDOFF_STATUSES.has(fm.status)) err(f, "status must be in-progress, blocked or ready-for-review");
+    if (!isDay(fm.checkpoint_date)) err(f, "checkpoint_date must be YYYY-MM-DD");
+    if (!subjectExists(fm.subject)) err(f, `subject is not a docs path: ${fm.subject}`);
+    if (fm.parent !== undefined && !TASK_ID.test(fm.parent)) err(f, "parent must be a task ID");
+    const words = (body.match(/\S+/g) ?? []).length;
+    if (words > 700) err(f, `handoff has ${words} words; the limit is 700, so link to docs instead of copying them`);
+    else if (words > 500) warnings.push(`${rel(f)}: handoff has ${words} words; aim for 250–500`);
+    checkReferences(f, body);
+  }
+
+  const historyDir = path.join(CONTEXT, "history");
+  for (const f of walkAll(historyDir)) {
+    if (path.basename(f) === ".gitkeep") continue;
+    if (!f.endsWith(".md")) { err(f, "history notes are .md files"); continue; }
+    const c = contextFile(f);
+    if (!c) continue;
+    const { fm, body } = c;
+    const folder = path.relative(historyDir, path.dirname(f)).split(path.sep).join("/");
+    if (fm.subject !== folder) err(f, `subject must match its folder (${folder || "none"})`);
+    if (!subjectExists(fm.subject)) err(f, `subject is not a docs path: ${fm.subject}`);
+    if (!TASK_ID.test(fm.task_id ?? "")) err(f, "task_id must be lowercase words joined by hyphens");
+    if (!isDay(fm.date)) err(f, "date must be YYYY-MM-DD");
+    if (path.basename(f) !== `${fm.date}-${fm.task_id}.md`) err(f, "file name must be <date>-<task_id>.md");
+    if (fm.status !== "historical") err(f, "status must be historical");
+    checkReferences(f, body);
+  }
+}
+
+// ---------- skills: one procedure in docs/, identical thin adapters for each tool ----------
+const SKILL_ROOTS = { "Claude Code": path.join(ROOT, ".claude", "skills"), Codex: path.join(ROOT, ".agents", "skills") };
+const skillNames = new Set(
+  Object.values(SKILL_ROOTS).flatMap((r) => (fs.existsSync(r) ? fs.readdirSync(r, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name) : [])),
+);
+for (const name of skillNames) {
+  const adapters = {};
+  for (const [tool, root] of Object.entries(SKILL_ROOTS)) {
+    const f = path.join(root, name, "SKILL.md");
+    if (!fs.existsSync(f)) { err(f, `missing: every skill needs both a Claude Code and a Codex adapter`); continue; }
+    const c = contextFile(f);
+    if (!c) continue;
+    if (c.fm.name !== name) err(f, `name must be "${name}", the folder name`);
+    if (!c.fm.description) err(f, "missing description");
+    checkReferences(f, c.body);
+    adapters[tool] = { f, ...c };
+  }
+  const claude = adapters["Claude Code"], codex = adapters.Codex;
+  if (!claude || !codex) continue;
+  if (claude.fm.description !== codex.fm.description) err(codex.f, "description differs from the Claude Code adapter");
+  if (claude.body !== codex.body) err(codex.f, "instructions differ from the Claude Code adapter; keep the two identical");
+  const policy = path.join(SKILL_ROOTS.Codex, name, "agents", "openai.yaml");
+  const codexManual = fs.existsSync(policy) && /^\s*allow_implicit_invocation:\s*false\s*$/m.test(read(policy));
+  if ((claude.fm["disable-model-invocation"] === "true") !== codexManual)
+    err(codex.f, "Claude Code (disable-model-invocation) and Codex (agents/openai.yaml allow_implicit_invocation) must agree on whether the skill runs only when asked");
 }
 
 // ---------- report ----------
