@@ -2,7 +2,7 @@
 
 > **Reference copy from the Harness POC.** File, script and command names from the POC were replaced with plain component names, so this document stands alone; the POC repository is not needed. Where it says "the POC", it describes how the POC did it, as input for Tessera's own design.
 
-**Tessera adoption:** the [spec](../02-spec.md) and [accepted decisions](../05-open-decisions.md) govern the new implementation. Defaults apply only where the user has not specified a style; explicit custom styles remain supported. The enforcement description below records the POC, not functionality already implemented in Tessera. Port the design and test the guarantees independently.
+**Tessera adoption:** the [spec](../spec/index.md) and [accepted decisions](../decisions/decision-log.md) govern the new implementation. Defaults apply only where the user has not specified a style; explicit custom styles remain supported. The enforcement description below records the POC, not functionality already implemented in Tessera. Port the design and test the guarantees independently.
 
 Version 1.2 · 2026-10-10 · Enforced design contract
 
