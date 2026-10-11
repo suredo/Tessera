@@ -4,7 +4,7 @@ title: "Documentation"
 description: "How the docs follow the Open Knowledge Format: kinds, frontmatter, indexes, log and links (ENG-08)."
 tags: [practices, documentation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:49:45Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T22:10:03Z }
 sources:
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
 ---
@@ -53,7 +53,7 @@ Frontmatter uses a simple YAML subset, so the check needs no dependencies: `key:
 - **`index.md`** in every folder lists each concept as `* [title](file.md) - description`, grouped under headings written by hand, and each subfolder by its `index.md`. Only the root `index.md` has frontmatter (`okf_version`). The check fails when an entry is missing or its title or description differs from the concept's frontmatter; `node scripts/okf-check.mjs --fix` rewrites them.
 - **`log.md`** at the root lists documentation changes under `## YYYY-MM-DD` headings, newest first. Every pull request that changes docs adds a line.
 - **Links are relative** (`../spec/data.md`). OKF prefers links starting with `/` from the bundle root, but GitHub resolves those from the repository root, so they would break with `docs/` as the bundle.
-- **Entry point:** `docs/index.md`. `AGENTS.md` points assistants there, so they read a folder's index before opening its documents.
+- **Entry point:** `docs/index.md`. How assistants find, trust and maintain the docs (start from the indexes, search by ID, what wins in a conflict, the trust signals, what to update) is the "Using the docs" protocol in [`AGENTS.md`](../../AGENTS.md), which every assistant loads automatically.
 
 The README stays short: what the project is, how to run it, where the docs are.
 
