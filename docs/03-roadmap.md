@@ -71,7 +71,7 @@ This is the largest milestone. Split it into pull requests by area (storage and 
 - The POC's 13 boundary checks are ported to Playwright and pass.
 - The 250-operation patch stress test is ported and passes.
 - A chat-style patch planned before an in-tool edit to a different record still applies; one that touches the same record is rejected with a plain message.
-- A hand-written tool shows an image asset through a `blob:` URL under the strict CSP. The asset survives a restart and an export/import round trip, and is removed only after nothing references it.
+- A hand-written tool shows an image asset through a `blob:` URL under the strict CSP. The asset survives a restart and an export/import round trip, and is removed only after nothing references it. Replacing it with a cropped copy, running cleanup, restarting and then undoing the crop brings the original back; once that undo entry is discarded, cleanup removes the original.
 - Every change survives a server restart (always saved).
 - The scripted trash-expiry scenario (P3) runs in CI.
 - Delete to trash and restore round-trips, and expiry after 30 days works with a test clock.
