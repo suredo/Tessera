@@ -1,3 +1,11 @@
+---
+type: Budget
+title: "Live budget summary"
+description: "Live-call envelopes per milestone and how they are derived."
+tags: [roadmap, budgets]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Live budget summary
 
 | Milestone | Proposed calls | Purpose |

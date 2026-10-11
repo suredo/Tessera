@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Host capabilities"
+description: "What tools can ask the host for: data providers, files in and out, vetted libraries (CAP-01 to CAP-05)."
+tags: [spec, capabilities]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Host capabilities (`CAP`)
 
 Generated tools run in a sandbox with no network, files or storage (`RUN-01`). Anything more they need is a **host capability**: provided by the host, declared in the bridge manifest (`CON-03`), requested by the tool, and enforced at runtime. The clock (`RUN-07`) is the first one.

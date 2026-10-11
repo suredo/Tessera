@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Observability, cost and speed"
+description: "The call ledger, evaluation budget guard, metrics and speed targets (OBS-01 to OBS-04)."
+tags: [spec, observability, cost]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Observability, cost and speed (`OBS`)
 
 | ID | Requirement |

@@ -1,3 +1,11 @@
+---
+type: Lesson
+title: "What worked: keep these"
+description: "The designs and practices from the POC that Tessera keeps."
+tags: [lessons, what-worked]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # What worked: keep these
 
 | Area | What to keep | Evidence |

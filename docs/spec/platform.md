@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Platform and setup"
+description: "Windows-first platform, launcher, setup check and data folder (PLAT-01 to PLAT-04)."
+tags: [spec, platform, setup]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Platform and setup (`PLAT`)
 
 | ID | Requirement |

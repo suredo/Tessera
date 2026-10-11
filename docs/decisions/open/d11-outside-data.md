@@ -1,3 +1,11 @@
+---
+type: Open Decision
+title: "D11. Outside data for medium apps"
+description: "Which outside data sources tools can use (decide at the start of M4)."
+tags: [decisions, outside-data]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # D11. Outside data for medium apps
 
 Requirement: `CAP-02`. **Deferred, with a deadline: decided at the start of M4** (A42), before the movie finder (T7) is built and tested. Generated tools cannot use the network, so outside data always comes through host-owned providers. Which ones is open. There is a lot of content available, and the right sources depend on what the tests need.

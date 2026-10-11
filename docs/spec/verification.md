@@ -1,3 +1,11 @@
+---
+type: Requirement Area
+title: "Verification"
+description: "How the host knows a tool works: static and smoke checks, verification profiles, acceptance checks (VER-01 to VER-09)."
+tags: [spec, verification, checks]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Verification (`VER`)
 
 | ID | Requirement |

@@ -1,3 +1,11 @@
+---
+type: Test Design
+title: "Scenario file format"
+description: "The scenario file format, step types and fields, with a full example."
+tags: [testing, scenario-format]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Scenario file format
 
 Scenarios are data files in `evals/scenarios/`, readable by people and the runner. Example (shortened):

@@ -1,3 +1,11 @@
+---
+type: Test Design
+title: "Test application catalogue"
+description: "The test apps (simple, medium, advanced), platform scenarios and later modularity scenarios."
+tags: [testing, app-catalogue]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Test application catalogue
 
 These apps are test examples only; the simulated person creates them from nothing.

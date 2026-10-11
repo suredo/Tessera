@@ -1,3 +1,14 @@
+---
+type: Requirement Area
+title: "Provider adapters"
+description: "Model connections: the Claude Code and Codex CLI adapters now, API keys and other providers later (CLI-01 to CLI-10)."
+tags: [spec, providers, cli]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+stale_after: 2027-04-11T00:00:00Z
+sources:
+  - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
+---
 # Provider adapters: Claude Code and Codex CLIs (`CLI`)
 
 For now Tessera reaches models through the signed-in Claude Code and Codex CLIs on your machine (A3): they are quick to connect for local development and testing. These requirements turn every CLI problem from the POC into a design rule. API keys and other providers come later through the same interface (`CLI-10`).
@@ -13,4 +24,6 @@ For now Tessera reaches models through the signed-in Claude Code and Codex CLIs 
 | CLI-07 | **Progress.** If the CLI's streaming output mode can report progress without breaking structured output, use it for `GEN-16`. Otherwise show elapsed time and stage names. Decided in [D7](../decisions/open/d07-progress-streaming.md). |
 | CLI-08 | **Clean environment and no file tools.** Use a temporary working directory; remove `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and the matching Codex variables (such as `OPENAI_API_KEY`) unless API billing is explicitly allowed. No stage exposes file tools to the model. A temporary directory is not an OS filesystem sandbox, and the trusted CLI still needs its sign-in/configuration files. The evaluation reviewer gets approved, sanitized screenshots as image inputs (A27). If an adapter cannot pass images, the reviewer works from source, host facts and page text, and the report says the screenshots were not reviewed. |
 | CLI-09 | **Default model routing** (starting point, A18): Haiku 5.5 low for intent and data actions; Sonnet 5.5 medium for creation and repairs; Sonnet 5.5 low for edits; Sonnet 5.5 medium for research (M5). Opus only by explicit configuration, never as an automatic fallback. The acceptance stage (`VER-09`) starts on Haiku 5.5 low. Codex routes are set when its adapter lands (M3). Each stage's route is configurable and recorded in the ledger. |
-| CLI-10 | **Later: API keys and other providers** (A47). Signed-in CLIs are for your own local use. Before anyone else runs Tessera on their own machine (M6 trials, the installer), connections move to API keys or the person's own provider account, through adapters behind the same interface: Anthropic and OpenAI first, then other providers such as z.ai, Kimi and Grok. Anthropic's Agent SDK documentation does not allow third-party products to offer claude.ai sign-in or subscription limits without prior approval, so subscription sign-in is never offered to other people. Each new provider gets contract tests, a probe and a model-matrix run (`EVAL-05`) before it is offered. |
+| CLI-10 | **Later: API keys and other providers** (A47). Signed-in CLIs are for your own local use. Before anyone else runs Tessera on their own machine (M6 trials, the installer), connections move to API keys or the person's own provider account, through adapters behind the same interface: Anthropic and OpenAI first, then other providers such as z.ai, Kimi and Grok. Anthropic's Agent SDK documentation does not allow third-party products to offer claude.ai sign-in or subscription limits without prior approval,[^agent-sdk] so subscription sign-in is never offered to other people. Each new provider gets contract tests, a probe and a model-matrix run (`EVAL-05`) before it is offered. |
+
+[^agent-sdk]: Claude Agent SDK overview

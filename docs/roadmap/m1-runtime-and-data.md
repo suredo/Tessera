@@ -1,3 +1,11 @@
+---
+type: Milestone
+title: "M1: Runtime and data core"
+description: "The sandboxed runtime, data model, storage, assets and host app shell, with no model calls."
+tags: [roadmap, runtime-and-data]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # M1: Runtime and data core (size L, no model calls)
 
 **Goal:** a hand-written tool runs safely inside the host app, its data is always saved and versioned, and it survives everything.

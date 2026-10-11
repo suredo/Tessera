@@ -1,3 +1,11 @@
+---
+type: Practice
+title: "Live evaluation protocol"
+description: "How live model calls are planned, rehearsed, run, stopped and recorded (ENG-07)."
+tags: [practices, live-evaluation]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Live evaluation protocol
 
 | ID | Rule |

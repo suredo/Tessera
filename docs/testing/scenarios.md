@@ -1,3 +1,11 @@
+---
+type: Test Design
+title: "What a scenario is"
+description: "What a real-life test scenario is, its live and replay forms, and how replay stays honest."
+tags: [testing, scenarios]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # What a scenario is
 
 A scenario is a short story about one person with a goal, played against a real Tessera. It includes:

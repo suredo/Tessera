@@ -1,3 +1,11 @@
+---
+type: Acceptance Criteria
+title: "Acceptance for the first release"
+description: "The conditions under which the first release (v0.1) is accepted."
+tags: [spec, release, acceptance]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+---
 # Acceptance for the first release
 
 The first release (roadmap M4) is accepted when:

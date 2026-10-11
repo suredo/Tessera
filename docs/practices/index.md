@@ -6,6 +6,7 @@
 * [Definition of done](definition-of-done.md) - When a change counts as done (ENG-09).
 * [Testing](testing.md) - The five-layer test pyramid and test rules (ENG-11, ENG-13, ENG-14, ENG-17, ENG-20).
 * [Live evaluation protocol](live-evaluation.md) - How live model calls are planned, rehearsed, run, stopped and recorded (ENG-07).
-* [Documentation](documentation.md) - The kinds of documentation, where each lives and how it is kept current (ENG-08).
+* [Documentation](documentation.md) - How the docs follow the Open Knowledge Format: kinds, frontmatter, indexes, log and links (ENG-08).
+* [Code documentation](code-docs.md) - How code is documented as OKF concepts and kept true to the code (ENG-24).
 * [Evidence, secrets and data](evidence.md) - Test outputs, evidence, secrets, data folders and the image and video rules (ENG-10, ENG-19).
 * [Issue and lesson tracking](tracking.md) - GitHub issues, labels, milestones and new lessons.
