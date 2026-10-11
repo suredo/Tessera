@@ -9,15 +9,17 @@ checkpoint_date: 2026-10-11
 
 ## Objective
 
-Add the documentation-first checkpoint and resume workflow from the owner's context-checkpoint specification: one procedure in `docs/`, thin skills for Claude Code and Codex, handoffs and history in `context/`, checked by the OKF script.
+Add the documentation-first checkpoint and resume workflow from the owner's context-checkpoint specification. That specification is not in the repository; its result is `ENG-25`, `ENG-26` and decision A52, which are what count now.
 
 ## Completed
 
-- Procedures: `docs/practices/checkpoint.md` (`ENG-25`) and `docs/practices/resume.md` (`ENG-26`), with both templates.
-- Skills: `task-checkpoint` and `task-resume` in `.claude/skills/` and `.agents/skills/`, manual-only in both tools.
-- `context/README.md`; the alternatives considered are in `context/history/practices/checkpoint/2026-10-11-task-checkpoint-workflow.md`.
-- `scripts/okf-check.mjs` validates handoffs, history notes and skill parity; `scripts/okf-check.test.mjs` has 17 passing cases.
-- Rule updates: `ENG-05` amended, `ENG-09` item 8, L-14 mapped to `ENG-25`, `AGENTS.md` "Changing sessions", `docs/log.md`.
+- Procedures `docs/practices/checkpoint.md` (`ENG-25`, with the handoff and history templates) and `docs/practices/resume.md` (`ENG-26`).
+- Skills `task-checkpoint` and `task-resume` in `.claude/skills/` and `.agents/skills/`, manual-only in both tools.
+- `context/` with this handoff and the history note `context/history/practices/checkpoint/2026-10-11-task-checkpoint-workflow.md`.
+- `scripts/okf-check.mjs` checks handoffs, history notes and skill parity; `scripts/okf-check.test.mjs` passes 17 of 17.
+- Rule updates: `ENG-05`, `ENG-09` item 8, L-14 mapped to `ENG-25`, `AGENTS.md` "Changing sessions", `docs/log.md`.
+- Fresh-session resume check, Claude Code: read only the skill, `ENG-26` and this handoff, verified every path, and reported five unresolvable references, now fixed here and prevented by `ENG-25` step 6. The command reached it as text from another session, so the skill was found through the `AGENTS.md` fallback.
+- Codex: `$task-resume` loaded the skill and followed `ENG-26`, but in a chat with earlier context.
 
 ## Authoritative references
 
@@ -33,17 +35,15 @@ Add the documentation-first checkpoint and resume workflow from the owner's cont
 
 ## Open questions / blockers
 
-- `/task-resume` in Claude Code is untested until a session that starts after this branch exists runs it (acceptance test T6).
-- `$task-resume` in Codex follows the Codex docs but has not been tried here.
+- The fresh-session resume check (the specification's test "T6", not Tessera's T6 test app) still needs two runs the owner types: `/task-resume` in a new interactive Claude Code session, and `$task-resume` in a new Codex chat. Codex skill docs: https://developers.openai.com/codex/skills
 
 ## Next action
 
-1. In a new Claude Code session on this branch, run `/task-resume task-checkpoint-workflow` and record what it read and proposed.
-2. Do the same in Codex with `$task-resume task-checkpoint-workflow`.
-3. Address review findings on the pull request.
-4. When the owner asks to merge, remove this handoff in the last commit first.
+1. Record the owner's two fresh-session runs on the pull request.
+2. Address review findings on the pull request.
+3. When the owner asks to merge, remove this handoff in the last commit first.
 
 ## Provenance
 
-- Branch `feat/task-checkpoint`; the pull request is opened from it.
-- Checks at checkpoint: `node scripts/okf-check.mjs`, 0 errors; `node --test scripts/okf-check.test.mjs`, 17 of 17 passing.
+- Branch `feat/task-checkpoint`; pull request https://github.com/suredo/Tessera/pull/5
+- Checks: `node scripts/okf-check.mjs`, 0 errors; `node --test scripts/okf-check.test.mjs`, 17 of 17.

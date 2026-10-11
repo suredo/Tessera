@@ -4,7 +4,7 @@ title: "Task checkpoint"
 description: "How to pause a task for a new session: route lasting findings to their docs, keep history apart, write one short handoff (ENG-25)."
 tags: [practices, checkpoint, handoff]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T22:56:28Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T23:20:00Z }
 ---
 # Task checkpoint
 
@@ -44,7 +44,7 @@ Three kinds of content stay apart: **knowledge** in `docs/` says what is true or
    - Unverified: label it so wherever it is written.
 4. **Plan, then apply.** Show the plan as `path → reason → section and edit`, with changes that need approval listed apart. Apply only what is allowed. Without approval, leave authoritative docs untouched and put the exact proposed change in the handoff. Follow each file's conventions: frontmatter, `generated`, its index and a `docs/log.md` line. Never delete earlier decisions or history to tidy up, and never record credentials or personal data.
 5. **Write history only when it earns its place.** One note per subject per task, from the [history note template](#history-note-template), linking the canonical docs it relates to. A repeated checkpoint updates that note; it never adds a second one.
-6. **Write or refresh the handoff** from the [handoff template](#handoff-template): one file per task, updated in place, never shared between tasks. Aim for 250–500 words; the check warns above 500 and fails above 700. Link to docs instead of copying them. If there is nothing to continue and nothing new, write no handoff.
+6. **Write or refresh the handoff** from the [handoff template](#handoff-template): one file per task, updated in place, never shared between tasks. Aim for 250–500 words; the check warns above 500 and fails above 700. Link to docs instead of copying them. A new session knows only the repository, so every reference must resolve from it: give the pull request URL once there is one, a URL for anything outside the repository, and the file that holds anything you mention, and don't use an ID the docs define differently (Tessera's `T1`–`T17` are test apps). If there is nothing to continue and nothing new, write no handoff.
 7. **Verify and report.** Run `node scripts/okf-check.mjs`, which also checks handoffs and history notes, and look over the changed files for anything unrelated or duplicated. Report the canonical updates, the history saved, the handoff path, the changes awaiting approval, and how to resume. Say plainly that the current conversation is unchanged, and that a new session continues with `task-resume <task-id>`.
 
 ## Life of a handoff
