@@ -4,7 +4,7 @@ title: "M0: Foundations"
 description: "Repository, tooling, CI, contracts and two small live spikes."
 tags: [roadmap, foundations]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:49:45Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T22:10:03Z }
 ---
 # M0: Foundations (size S, live spikes about 33 calls)
 
@@ -17,7 +17,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:49:45Z }
 | pnpm workspace with packages scoped `@tessera/*`: `contracts`, `server`, `web` (React), `runtime`, `evals`; SQLite access layer chosen | [Architecture](../product/architecture.md), DATA-01 |
 | Translation layer for host text from the first component, with a lint rule that fails on hard-coded host text | UX-05 |
 | Small platform helpers for paths and processes; Node 22 (`.nvmrc`), TypeScript strict, Vite, React 19 with the React Compiler and its ESLint rules, Prettier, ESLint, Vitest, Playwright (Chrome and Edge), all running in CI: Linux runners for the fast checks, one Windows job for platform tests and Playwright | PLAT-01, ENG-02, ENG-04, TEST-01, TEST-03, TEST-06, RUN-06 |
-| `AGENTS.md` as the single rules file with the non-negotiables and `docs/index.md` as the docs entry point; `CLAUDE.md` that only imports it, enforced in CI; both assistants (Claude Code, Codex) set up for development, with the cross-review workflow and checklist | ENG-05, ENG-15, ENG-21, ENG-22 |
+| `AGENTS.md` and `CLAUDE.md`: written before M0 (2026-10-11), with the docs protocol and the non-negotiables. Remaining: a CI check that `CLAUDE.md` only imports `AGENTS.md`; both assistants (Claude Code, Codex) set up for development, with the cross-review workflow and checklist | ENG-05, ENG-15, ENG-21, ENG-22 |
 | Requirement/lesson coverage report: milestone, proposed/implemented/verified status and evidence. Deferred work cannot count as resolved | ENG-17 |
 | The OKF check (`scripts/okf-check.mjs`, written before M0) and its tests (`scripts/okf-check.test.mjs`) run in CI, with the code-doc drift check against the pull request's base. With the TypeScript tooling: switch its frontmatter parsing to a YAML library, check symbols named in code docs, and generate their symbol sections. The first package gets its code docs | ENG-08, ENG-24 |
 | Contracts package with zod: generation of TS types and JSON Schema; unit-named numeric fields as a convention | CON-01, CON-05 |
