@@ -1,10 +1,6 @@
-# Decisions
+# Decision log
 
-Status: draft 0.4 · 2026-10-11 · The decision log (A1–A49) and remaining choices. This file stays the record for A1–A49; new decisions from M0 on get one ADR each ([ENG-08](04-engineering-practices.md#7-documentation)).
-
----
-
-## Decided (2026-10-11)
+Decided on 2026-10-11. This log stays the record for A1–A49; new decisions from M0 on get one ADR each ([ENG-08](../practices/documentation.md)).
 
 | # | Decision | Choice | Notes |
 | --- | --- | --- | --- |
@@ -31,7 +27,7 @@ Status: draft 0.4 · 2026-10-11 · The decision log (A1–A49) and remaining cho
 | A21 | Opening saved tools | **Both, clearly separated: Continue and Use again** | Continue opens the entry's linked workspace. Use again creates a new workspace from reusable defaults only and leaves that link unchanged (`DATA-07`, A44). |
 | A22 | Judging scenarios | **Automatic host facts + AI technical review + your final verdict** | The AI reviewer checks fulfilment, standard style, working controls and coherence, the same way whichever model built the tool. You decide (`EVAL-02` to `EVAL-04`). |
 | A23 | Portuguese scenarios | **Yes, a few** | Generated tools follow the person's language; the host stays English (`EVAL-06`). |
-| A24 | Test applications | **A tiered catalogue: simple, medium, advanced; modularity later** | Simple: lists, charts, forms, calculators. Medium: video and film finder, article finder, research board, rule-based planners. Advanced: drawing, image and document editing, 2D and 3D simulation. Later: saving and reusing features across tools. See [06-test-scenarios.md](06-test-scenarios.md). |
+| A24 | Test applications | **A tiered catalogue: simple, medium, advanced; modularity later** | Simple: lists, charts, forms, calculators. Medium: video and film finder, article finder, research board, rule-based planners. Advanced: drawing, image and document editing, 2D and 3D simulation. Later: saving and reusing features across tools. See the [test application catalogue](../testing/app-catalogue.md). |
 | A25 | Vetted libraries in the sandbox | **Yes, a few** | Pinned, reviewed versions injected as declared capabilities (`CAP-04`): a chart library first (M3), three.js for 3D (M5). The UI standard covers chart styling. Each library is added by an ADR and updated deliberately. |
 | A26 | First editing app | **Image editor** | Open a photo, crop, annotate, export: exercises files in and out and the canvas (`CAP-03`). The document editor comes later. |
 | A27 | AI reviewer and screenshots | **Approved screenshots as image inputs; no file tools** | The reviewer gets approved, sanitized screenshots as image inputs (CLI-08). If an adapter cannot pass images, it reviews without them and the report says so. Image input is verified in M2. Other normal stages stay tool-free; research alone has web tools. |
@@ -57,61 +53,3 @@ Status: draft 0.4 · 2026-10-11 · The decision log (A1–A49) and remaining cho
 | A47 | Connecting to models later | **API keys or the person's own provider account, then more providers** | Signed-in CLIs are for your own local use. Before anyone else runs Tessera on their own machine (M6 trials, the installer), connections move to API keys or the person's own account, behind the same adapter interface (`CLI-10`). Anthropic's Agent SDK documentation does not allow third-party products to offer claude.ai sign-in or subscription limits without prior approval. Later: other providers such as z.ai, Kimi and Grok, or a standalone app that connects to the person's own AI. |
 | A48 | Storing images and other binary files | **A content-addressed file store in the data folder, indexed in SQLite** | Files are named by SHA-256, immutable, and referenced from tool data by ID (`DATA-11`). This keeps the database small and quick to back up, stores an image once however many versions use it, and makes undo and restore need no copies. Assets travel inside export archives. In the repository, only small cited screenshots and fixtures are committed; videos and full screenshot sets go to milestone releases (`ENG-10`). |
 | A49 | Verifying tools that match no profile | **Try acceptance checks derived from the request (M3 experiment)** | A separate stage writes the checks, the generator exposes the hooks they name, and the host runs them (`VER-09`). Adopted as the default only if M3 measurements against your verdicts are good enough. |
-
----
-
-## Open
-
-### D7. Progress streaming
-
-Requirements: `CLI-07`, `GEN-16`.
-
-Claude Code has a streaming output mode. Open question: does it report useful progress while keeping the final structured output intact? If it does, the person sees real progress ("writing the interface…"). If not, the app shows the stage name and elapsed time.
-
-**Recommendation:** run a spike (a short experiment) in M2. Fall back to elapsed time if streaming complicates the adapter.
-
-### D9. Engine modularity
-
-Milestone M5, requirement `SIM-06`.
-
-In five live runs Claude always built one combined engine, ignoring the guidance to split reusable parts (L-38).
-
-| Option | Meaning |
-| --- | --- |
-| a. Guidance only | Accept combined engines; reuse happens when it happens |
-| **b. Host-enforced split for known building blocks** | The library ships a few base engines (queue, arrivals). Creating a new engine that duplicates one is rejected, and the model is told to use the base engine |
-| c. Always ask the model to plan modules first | An extra planning call before any engine creation |
-
-**Recommendation: b**, decided properly when M5 starts.
-
-### D10. How visual the simulations should be
-
-Milestone M5.
-
-The POC planners showed lines and waits per station, not people moving as dots with a heat map, which was the experience designed in the plan.
-
-| Option | Meaning |
-| --- | --- |
-| **a. Estimates first, movement later** | Queue estimates and a station view in M5; a movement engine (walking, doorways) as a follow-up |
-| b. Movement from the start | Moving dots and a heat map in M5; heavier engine and generation, higher cost |
-
-**Recommendation: a.**
-
-### D11. Outside data for medium apps
-
-Requirement: `CAP-02`. **Deferred, with a deadline: decided at the start of M4** (A42), before the movie finder (T7) is built and tested. Generated tools cannot use the network, so outside data always comes through host-owned providers. Which ones is open. There is a lot of content available, and the right sources depend on what the tests need.
-
-Candidates noted so far:
-- YouTube (Data API, needs a key). Its player needs a nested frame, which the sandbox blocks (`RUN-01`), so in the first release thumbnails arrive through the host as assets and videos open on YouTube (`CAP-02`)
-- Internet Archive (free, no key; the POC's video provider)
-- Public APIs for articles and papers (OpenAlex, Crossref, arXiv)
-- Wikipedia and Wikidata
-
-Rules any provider must follow are in `CAP-02`: host-owned, cached, records carry their source, and only the requested search terms/filters are sent. No unrelated workspace contents are forwarded. Part of this decision: whether host-proxied playback of a provider's media is worth adding later.
-
-## Questions for you
-
-Still open:
-
-1. **D11:** outside data sources, at the start of M4.
-2. **D7, D9, D10:** settle with a spike in M2 (D7) or when M5 starts (D9, D10).

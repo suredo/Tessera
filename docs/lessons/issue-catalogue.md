@@ -1,54 +1,6 @@
-# Lessons learned from the Harness POC
+# Issue catalogue
 
-Status: draft 0.4 · 2026-10-11 · Covers the whole POC, from the first Codex runs on 2026-10-08 to the last live planner run on 2026-10-11.
-
-This document records POC observations, failures and proposed Tessera mitigations. Requirement IDs point to [02-spec.md](02-spec.md) and [04-engineering-practices.md](04-engineering-practices.md). The ambition is to prevent or automatically catch at least 90% of these failure cases; the [coverage count](#coverage) measures mapped plans, not prevention.
-
----
-
-## 1. What the POC was
-
-**Harness** was a local web app (Node.js, no dependencies) where a person typed what they needed and an AI wrote a small working tool, in HTML, CSS and JavaScript, inside the chat. The person could then change it by talking or by using its controls. Over three days it grew:
-
-- **Foundation:**
-  - generated tools in a sandbox, with a bridge for actions on host-held data
-  - versions, undo and saved tools
-  - a study behavior check
-  - two providers (Codex CLI, Claude Code CLI)
-- **Final days:**
-  - an enforced UI standard
-  - a simulation engine system (versioned engines, isolated checks, dependencies)
-  - engine rules in generation
-  - a research step with web search
-  - starting data
-  - a flow-planner behavior check
-- **Evidence:** 157 offline tests, three recorded browser test suites with video, and about 120 live model calls across many evaluation runs.
-
-This document is self-contained. It summarizes the POC's evaluation reports: two runs of the same student workflow (on Codex and on Claude), a fault-injection and live-matrix simulation, a drawing-tool run, independent review findings, and the engine, research and planner runs from this session. The POC repository is not needed to use it.
-
----
-
-## 2. What worked: keep these
-
-| Area | What to keep | Evidence |
-| --- | --- | --- |
-| Core idea | Generated code, not templates, can make useful tools from everyday requests: a study planner with enforced scheduling, notes to flashcards, a drawing tool, a task board, a converter, an event planner | Live runs on Codex and Claude |
-| Ownership | **The host owns data, permissions, versions and lifecycle; generated code only presents.** Every safety fix was possible because of this split | All evaluations |
-| Sandbox | Opaque-origin child frame, opposite-loopback wrapper, strict CSP and MessageChannel bridge. Passed 13/13 boundary checks every time it was tested; network probes never reached the server | POC boundary evaluations, repeated after each runtime change |
-| Data safety | Atomic, revision-checked patch batches with stable IDs; stale changes rejected; AI changes never replace whole objects | 250-operation stress test |
-| Versions | Immutable, hashed tool versions; staging and rollback; undo that refuses to overwrite newer work | Many live runs |
-| Behavior checks | Host-driven checks with synthetic data before activation (study suite, flow suite), with failures sent to repair. They turned "the model says it works" into "the host saw it work" | Study and flow gates live |
-| Diagnostics to repair | Precise failure messages fed back to the model fixed problems that vague ones could not | The note-restore check failed 4 times with a vague message and passed first time once the message was precise |
-| UI standard | One doc used in prompts, host stylesheets, static checks and a custom mode. Generated tools looked consistent; focus stayed visible | Recorded UI suite 16/16 |
-| Engines | Versioned engine modules with pinned dependencies, isolated checks, seeded randomness, and identical results in Node and the browser | Engine browser check 5/5; live extension accepted |
-| Research | A cited spec and reference checks before engine acceptance. The POC drafted code first; Tessera requires research before implementation code (SIM-04). The runs recorded models and limitations | Live research probe; planner runs |
-| Testing approach | A scripted-provider server running the real pipeline with canned replies; recorded browser runs with video; a budget-guarded live server with a dry-run mode | Used for every test suite and live run in the last two days of the POC |
-| Live testing discipline | Approved budgets, hard call caps, rehearsals before spending, per-call logs, and stopping after repeated failure | Phase 4 used 32 calls and found 8 real bugs |
-| Model routing | Cheap model for intent and data actions (Haiku/Luna low); stronger model for generation; no silent expensive fallback | Usage ledgers |
-
----
-
-## 3. Issue catalogue
+This document records POC observations, failures and proposed Tessera mitigations. Requirement IDs point to [the spec](../spec/index.md) and [the engineering practices](../practices/index.md). The ambition is to prevent or automatically catch at least 90% of these failure cases; the [coverage count](#coverage) measures mapped plans, not prevention.
 
 Status key:
 - **D**, planned design mitigation: a structural control or automatic check is specified. Its implementation and regression evidence must still be established; the classification is not proof that the issue is impossible.
@@ -57,7 +9,7 @@ Status key:
 
 Issues L-64 to L-69 were added when the catalogue was reviewed against the finished spec. They sit in their category, so their numbers are not in order. IDs are never renumbered (`ENG-17`).
 
-### 3.1 Engineering process
+## Engineering process
 
 | ID | What happened | Root cause | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -80,7 +32,7 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-66 | Prompt edits changed live outcomes, but nothing recorded which prompt version produced which result, so changes in behavior could not be traced. | Prompts treated as inline text, not code | ENG-16 | D |
 | L-69 | The browser boundary and acceptance checks needed someone to open a diagnostic page and click to run them, so they were not part of automatic testing. | Browser tests not automated | TEST-03, ENG-02 | D |
 
-### 3.2 AI pipeline
+## AI pipeline
 
 | ID | What happened | Root cause | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -111,7 +63,7 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-40 | Each generated design is different, so one generic test could never cover them, and most tools ended up "behavior unverified". | No verification profiles or hooks | VER-02, VER-03 | R |
 | L-68 | Date-dependent behavior could only be tested with fixed fixture dates (the study check used fixed calendar days), while generated tools read the real clock. Default dates and "the next day" could not be tested. | No host-provided clock | RUN-07, VER-01 | D |
 
-### 3.3 Research (relevant from the engines milestone)
+## Research (relevant from the engines milestone)
 
 | ID | What happened | Root cause | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -120,7 +72,7 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-43 | Web pages can carry instructions (prompt injection). | Untrusted text in prompts | SEC-02, CLI-03 | R |
 | L-44 | Codex web search was never verified as a research provider: the later engine/research session could not check it. | Feature-specific verification unavailable in that session | CLI-01 (each provider's research support gets its own contract tests and probe) | D |
 
-### 3.4 CLI provider
+## CLI provider
 
 | ID | What happened | Root cause | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -133,7 +85,7 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-51 | The CLI version changed during the POC (2.1.211 to 2.1.296), and nothing checked compatibility. | No version gate | CLI-02, CLI-03, PLAT-03 | D |
 | L-52 | API keys in the environment would silently switch billing from the plan to the API. | Inherited environment | CLI-08 | D |
 
-### 3.5 Runtime, security and data
+## Runtime, security and data
 
 | ID | What happened | Root cause | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -143,7 +95,7 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-56 | A single 32 KiB untyped data object per tool, with no schema or migration. | Prototype simplicity | DATA-03, DATA-06, ENG-18 | D |
 | L-57 | Minimized mode was not restored after a reload, and once a restored version reported "stopped responding" for an unknown reason. | Lifecycle edge cases untested | UX-07, APP-03, TEST-03 | R |
 
-### 3.6 Product and UX
+## Product and UX
 
 | ID | What happened | Root cause | Mitigation | Status |
 | --- | --- | --- | --- | --- |
@@ -153,38 +105,8 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-61 | Host status text was English-only, while requests came in Portuguese and Spanish too. | No language plan | UX-05 (translation layer from day one) | D |
 | L-62 | Honesty: estimates and unverified behavior needed explicit labels to avoid overclaiming. | Model optimism | UX-03, VER-08 | D |
 | L-63 | Scheduling defaults were in the past (a default date earlier than today). | No "sensible defaults" rule | UX-01, RUN-07 (host clock) | R |
-| L-64 | "Save" meant saving the code only. Reusing a saved interface could reset its data, and what save, reopen and reuse meant was never defined. | Product concepts never defined | Glossary (spec §1.5), DATA-07, DATA-08 | D |
+| L-64 | "Save" meant saving the code only. Reusing a saved interface could reset its data, and what save, reopen and reuse meant was never defined. | Product concepts never defined | [Glossary](../product/glossary.md), DATA-07, DATA-08 | D |
 | L-67 | Saved tools could only be reopened from a menu dialog; asking for one in chat would build a new tool instead. | No "open saved" intent | GEN-18, APP-04 | D |
-
----
-
-## 4. Patterns behind the issues
-
-Most issues come from seven patterns. Fixing the pattern fixes the family.
-
-1. **Trusting text instead of checking structure.** Model messages were taken as outcomes; regex did intent detection; self-reported flags were believed. Issues L-16, L-17, L-20, L-25, L-26, L-31, L-33, L-36, L-37, L-62. **Rule:** the model proposes structured data; the host verifies (P1, P2, P4).
-2. **Two definitions of one thing.** The prompt said one thing and the check another; schemas were duplicated; contracts lived only in prose. Issues L-04, L-05, L-06, L-24, L-27, L-28, L-39, L-65. **Rule:** one definition, many uses (P3, CON-01, CON-03, VER-04, ENG-05).
-3. **Untestable outputs.** Designs differed every run, so tests couldn't hold onto anything, and offline tests didn't predict live results. Issues L-08, L-10, L-15, L-40, L-68, L-69. **Rule:** verification profiles that ask matching tools for stable hooks (P5, VER-03), a host clock, and a test pyramid that includes automated browser tests, replays and live evaluations.
-4. **No engineering baseline.** No version control, a synced folder, no formatter, local-only evidence, no retention policy, scattered handoffs. Issues L-01, L-02, L-03, L-07, L-11, L-13, L-14. **Rule:** the [engineering practices](04-engineering-practices.md), from the first commit.
-5. **Implicit external contracts.** CLI flags, executable paths, token fields, versions, billing and time limits were all discovered by failure. Issues L-35, L-44, L-45, L-46, L-47, L-51, L-52. **Rule:** adapter contract tests and probes, and limits set from measurements (CLI-02, CLI-03, GEN-11, TEST-02).
-6. **Invisible failures.** Diagnostics were dropped, usage was missing, check failures were vague, progress was silent. Issues L-12, L-29, L-48, L-49, L-66. **Rule:** nothing invisible (P6, OBS-01, GEN-10, VER-07, ENG-16).
-7. **Undefined product concepts.** Nobody had defined what save, reopen and reuse meant, or how a person gets back to a tool they made. Issues L-64, L-67. **Rule:** a glossary in the spec (§1.5), and lifecycle requirements for each concept (DATA-07, DATA-08, DATA-09, GEN-18, APP-04).
-
----
-
-## 5. Things the POC did not answer
-
-These need evidence in Tessera, not assumptions:
-
-- **Success rate at scale.** Every live result was a single run or two repeats. Measure first-attempt pass rates over the agreed real-life scenarios (TEST-05).
-- **Cost per useful tool.** Calls and tokens are known per run, but not what "a working tool" costs on average.
-- **Does verification generalize?** Two behavior suites existed (study, flow). Whether a small set of verification profiles covers most real requests is unknown.
-- **Codex research integration.** Codex generated tools live in the POC, but its web search was never verified for research. Tessera's Codex adapter (M3) gets its own contract tests and probe; research support is checked separately when engines arrive (M5).
-- **Real users.** Every request was written by the team. Nobody outside it has used the product.
-- **Plan allowance in daily use.** For now Tessera uses the signed-in Claude Code and Codex CLIs on your machine (A3). How far the plan allowance stretches with daily use and evaluation runs is unknown; the internal alpha (A35) measures it. Before other people run Tessera, connections move to API keys or their own provider account (A47).
-- **Do people understand the lifecycle?** Observe the internal alpha and a few invited outside testers in observed sessions on your machine during M2/M3, then broader trials in M6. Test Continue, defaults-only Use again, incompatible restoration warnings, finding saved tools and trash without coaching.
-
----
 
 ## Coverage
 

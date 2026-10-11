@@ -1,0 +1,12 @@
+# D10. How visual the simulations should be
+
+Milestone M5.
+
+The POC planners showed lines and waits per station, not people moving as dots with a heat map, which was the experience designed in the plan.
+
+| Option | Meaning |
+| --- | --- |
+| **a. Estimates first, movement later** | Queue estimates and a station view in M5; a movement engine (walking, doorways) as a follow-up |
+| b. Movement from the start | Moving dots and a heat map in M5; heavier engine and generation, higher cost |
+
+**Recommendation: a.**
