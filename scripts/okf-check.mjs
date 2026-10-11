@@ -39,9 +39,15 @@ const read = (f) => fs.readFileSync(f, "utf8").replace(/\r\n/g, "\n");
 // ---------- frontmatter: a simple YAML subset ----------
 function splitTop(s) {
   const parts = [];
-  let depth = 0, quote = null, cur = "";
+  let depth = 0, quote = null, escaped = false, cur = "";
   for (const ch of s) {
-    if (quote) { cur += ch; if (ch === quote) quote = null; continue; }
+    if (quote) {
+      cur += ch;
+      if (escaped) escaped = false;
+      else if (ch === "\\" && quote === '"') escaped = true; // "a \"b, c\" d" stays one value
+      else if (ch === quote) quote = null;
+      continue;
+    }
     if (ch === '"' || ch === "'") quote = ch;
     else if (ch === "[" || ch === "{") depth++;
     else if (ch === "]" || ch === "}") depth--;
@@ -123,10 +129,12 @@ const slug = (h) => h.trim().toLowerCase().replace(/[`*]/g, "").replace(/[^\p{L}
 const stripFences = (t) => t.replace(/^```[\s\S]*?^```/gm, "");
 const stripCode = (t) => stripFences(t).replace(/`[^`\n]*`/g, ""); // links inside code are not links
 
-const specIds = new Set();
+// Requirement IDs a code doc may implement: product requirements (spec/) and engineering rules (practices/).
+const requirementIds = new Set();
+const requirementDirs = ["spec", "practices"].map((d) => path.join(BUNDLE, d) + path.sep);
 for (const f of files) {
-  if (f.startsWith(path.join(BUNDLE, "spec") + path.sep))
-    for (const m of read(f).matchAll(/^\| ([A-Z]+-\d+) \|/gm)) specIds.add(m[1]);
+  if (requirementDirs.some((d) => f.startsWith(d)))
+    for (const m of read(f).matchAll(/^\| ([A-Z]+-\d+) \|/gm)) requirementIds.add(m[1]);
 }
 
 // ---------- concepts ----------
@@ -168,7 +176,7 @@ for (const f of files) {
     if (!fm.resource) err(f, "code docs need a resource");
     else if (!fs.existsSync(path.resolve(dir, fm.resource))) err(f, `resource not found: ${fm.resource}`);
     for (const t of [].concat(fm.tests ?? [])) if (!fs.existsSync(path.resolve(dir, t))) err(f, `test not found: ${t}`);
-    for (const id of [].concat(fm.implements ?? [])) if (!specIds.has(id)) err(f, `implements unknown requirement ${id}`);
+    for (const id of [].concat(fm.implements ?? [])) if (!requirementIds.has(id)) err(f, `implements unknown requirement ${id}`);
   }
 }
 

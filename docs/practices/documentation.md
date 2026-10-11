@@ -4,7 +4,7 @@ title: "Documentation"
 description: "How the docs follow the Open Knowledge Format: kinds, frontmatter, indexes, log and links (ENG-08)."
 tags: [practices, documentation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:49:45Z }
 sources:
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
 ---
@@ -12,7 +12,7 @@ sources:
 
 | ID | Rule |
 | --- | --- |
-| ENG-08 | **Documentation follows the Open Knowledge Format** (OKF v0.2, A50). `docs/` is one OKF bundle: every document is a concept file with frontmatter, every folder has an `index.md`, and `docs/log.md` records changes. Google's specification is the rulebook;[^okf-spec] the rules below add what OKF leaves to each project. The OKF check (`node scripts/okf-check.mjs`) enforces them. |
+| ENG-08 | **Documentation follows the Open Knowledge Format** (OKF v0.2, A50). `docs/` is one OKF bundle: every document is a concept file with frontmatter, every folder has an `index.md`, and `docs/log.md` records changes. Google's specification is the rulebook;[^okf-spec] the rules below add what OKF leaves to each project. The OKF check (`node scripts/okf-check.mjs`) enforces them; its own tests run with `node --test scripts/okf-check.test.mjs`. |
 
 ## Kinds of documentation
 

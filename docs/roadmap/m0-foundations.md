@@ -4,7 +4,7 @@ title: "M0: Foundations"
 description: "Repository, tooling, CI, contracts and two small live spikes."
 tags: [roadmap, foundations]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:49:45Z }
 ---
 # M0: Foundations (size S, live spikes about 33 calls)
 
@@ -19,7 +19,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
 | Small platform helpers for paths and processes; Node 22 (`.nvmrc`), TypeScript strict, Vite, React 19 with the React Compiler and its ESLint rules, Prettier, ESLint, Vitest, Playwright (Chrome and Edge), all running in CI: Linux runners for the fast checks, one Windows job for platform tests and Playwright | PLAT-01, ENG-02, ENG-04, TEST-01, TEST-03, TEST-06, RUN-06 |
 | `AGENTS.md` as the single rules file with the non-negotiables and `docs/index.md` as the docs entry point; `CLAUDE.md` that only imports it, enforced in CI; both assistants (Claude Code, Codex) set up for development, with the cross-review workflow and checklist | ENG-05, ENG-15, ENG-21, ENG-22 |
 | Requirement/lesson coverage report: milestone, proposed/implemented/verified status and evidence. Deferred work cannot count as resolved | ENG-17 |
-| The OKF check (`scripts/okf-check.mjs`, written before M0) runs in CI, with the code-doc drift check against the pull request's base. With the TypeScript tooling: switch its frontmatter parsing to a YAML library, check symbols named in code docs, and generate their symbol sections. The first package gets its code docs | ENG-08, ENG-24 |
+| The OKF check (`scripts/okf-check.mjs`, written before M0) and its tests (`scripts/okf-check.test.mjs`) run in CI, with the code-doc drift check against the pull request's base. With the TypeScript tooling: switch its frontmatter parsing to a YAML library, check symbols named in code docs, and generate their symbol sections. The first package gets its code docs | ENG-08, ENG-24 |
 | Contracts package with zod: generation of TS types and JSON Schema; unit-named numeric fields as a convention | CON-01, CON-05 |
 | Scripted provider skeleton (scenario selected by test configuration) and budget-guarded evaluation harness with dry-run mode | ENG-11, OBS-02 |
 | **Live spike (about 3 calls, A33):** (1) a zod-generated schema of realistic size is accepted by Claude Code's `--json-schema`; (2) the locked flags (`CLI-03`) still work on the current CLI version; (3) structured output returns intact. Results are written up as an ADR | CON-01, CLI-03 |
