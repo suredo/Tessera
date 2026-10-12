@@ -114,12 +114,29 @@ describe("pre-commit", () => {
     expect(git(dir, "commit", "-q", "-m", "test").status).not.toBe(0);
   });
 
-  it("refuses video files (ENG-10)", { timeout: TIMEOUT }, () => {
+  it("refuses video files, whatever the common extension (ENG-10)", { timeout: TIMEOUT }, () => {
     const dir = makeRepo();
-    const refused = commit(dir, { "demo/run.mp4": Buffer.alloc(2048, 1) });
-    expect(refused.status).not.toBe(0);
-    expect(refused.stderr).toMatch(/demo\/run\.mp4: videos never go in the repository/);
+    for (const ext of ["mp4", "mpeg", "mov", "webm"]) {
+      const refused = commit(dir, { [`demo/run.${ext}`]: Buffer.alloc(2048, 1) });
+      expect(refused.status).not.toBe(0);
+      expect(refused.stderr).toMatch(`demo/run.${ext}: videos never go in the repository`);
+      git(dir, "reset", "-q");
+    }
   });
+
+  it(
+    "handles large files: clean ones pass, a secret in one is refused (ENG-19)",
+    { timeout: TIMEOUT },
+    () => {
+      const dir = makeRepo();
+      const bigText = `${JSON.stringify({ rows: "x".repeat(2 * 1024 * 1024) })}\n`;
+      const files = { "data.json": bigText, "fixture.bin": Buffer.alloc(2 * 1024 * 1024, 0) };
+      expect(commit(dir, files).status).toBe(0);
+      const refused = commit(dir, { "data.json": `${bigText}key: ${FAKE_GITHUB_TOKEN}\n` });
+      expect(refused.status).not.toBe(0);
+      expect(refused.stderr).toMatch(/likely secrets in the staged changes/);
+    },
+  );
 
   it("refuses images over 1 MB and allows smaller ones (ENG-10)", { timeout: TIMEOUT }, () => {
     const dir = makeRepo();
