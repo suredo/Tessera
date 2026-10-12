@@ -2,6 +2,8 @@
 
 ## 2026-10-12
 
+* **Update**: Clarified partial-issue links in [`ENG-29`](practices/tracking.md): partial work uses `Part of #N`, and closing keywords are reserved for the intended issue closure in pull request descriptions and commit messages ([issue 25](https://github.com/suredo/Tessera/issues/25)).
+
 * **Update**: Set up the cross-review between Claude Code and Codex ([issue 9](https://github.com/suredo/Tessera/issues/9)): the [cross-review procedure](practices/assistants.md) for `ENG-15`, a `cross-review` skill for both tools, and committed settings that let both run the checks and read-only `gh` and `git` commands without asking. [ADR 0001](decisions/adr/0001-checkpoint-suggestions.md), the first ADR, decides D12: an assistant may suggest a checkpoint in one line but never runs one unasked (`ENG-25`).
 * **Update**: CI now runs on every pull request and on `main` ([issue 8](https://github.com/suredo/Tessera/issues/8)): the OKF check with the drift check against the pull request's base, its tests, and the merge-ready job (`ENG-02`, `ENG-25`). The OKF check also fails when `CLAUDE.md` holds anything besides `@AGENTS.md` (`ENG-05`).
 * **Update**: Started M0: its remaining deliverables became issues on the M0 milestone (`ENG-29`). Moving the scenarios to `evals/` moved from [M0](roadmap/m0-foundations.md) to the scenario runner in [M2](roadmap/m2-generation-pipeline.md), which is what reads scenario files. The M0 repository row no longer reads as if squash-only merges and the pre-push hook were done: they are listed as remaining, with their issue. A status correction, not a scope change.
