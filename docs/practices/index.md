@@ -2,7 +2,7 @@
 
 * [Repository, version control and releases](repository.md) - Git, GitHub Free, CI, synced folders and releases (ENG-01 to ENG-03, ENG-23).
 * [Code standards](code.md) - TypeScript standards, no text surgery, prompts as code, storage migrations and dependencies (ENG-04, ENG-12, ENG-16, ENG-18).
-* [Working with AI assistants](assistants.md) - How Claude Code and Codex work on the project: rules file, briefs, review, pull request size, templates and checklist.
+* [Working with AI assistants](assistants.md) - How Claude Code and Codex work on the project: rules file, briefs, review, pull request size, tool memory, templates and checklist.
 * [Definition of done](definition-of-done.md) - When a change counts as done (ENG-09).
 * [Testing](testing.md) - The five-layer test pyramid and test rules (ENG-11, ENG-13, ENG-14, ENG-17, ENG-20).
 * [Live evaluation protocol](live-evaluation.md) - How live model calls are planned, rehearsed, run, stopped and recorded (ENG-07).

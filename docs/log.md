@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-12
+
+* **Update**: Closed gaps in task context handling. New [`ENG-27`](practices/assistants.md) (decision A53): an assistant's own tool memory holds only facts about the owner or their machine, never project rules. [`ENG-25`](practices/checkpoint.md) and [`ENG-26`](practices/resume.md) now cover old and dropped handoffs, and the OKF check warns on handoffs more than 14 days old and gains `--merge-ready` (`ENG-09` item 8, M0 CI). New open decision [D12](decisions/open/d12-checkpoint-suggestions.md): whether assistants may suggest a checkpoint. L-14 maps to `ENG-27` too.
+
 ## 2026-10-11
 
 * **Creation**: Added the task [checkpoint](practices/checkpoint.md) and [resume](practices/resume.md) workflows (`ENG-25`, `ENG-26`, decision A52), the `task-checkpoint` and `task-resume` skills for Claude Code and Codex, and `context/` for handoffs and history notes. `ENG-05` now allows one short handoff per task continuing in a new session; L-14 maps to `ENG-25`.
