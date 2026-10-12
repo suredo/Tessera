@@ -4,7 +4,7 @@ title: "M0: Foundations"
 description: "Repository, tooling, CI, contracts and two small live spikes."
 tags: [roadmap, foundations]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T03:31:52Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T06:42:39Z }
 ---
 # M0: Foundations (size S, live spikes about 33 calls)
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T03:31:52Z }
 
 | Deliverable | Requirements |
 | --- | --- |
-| Private repository on GitHub Free, outside synced folders (created 2026-10-11 as `suredo/Tessera`). GitHub Free has no branch protection for private repositories, so: squash-only merges, a local pre-push hook that refuses direct pushes to `main`, and merging only on green CI (`ENG-15`). Issue and pull request templates, the [tracking rules](../practices/tracking.md), and the GitHub labels and milestones M0–M6 (`ENG-28`): done before M0 (2026-10-12, A54). Remaining ([#11](https://github.com/suredo/Tessera/issues/11)): squash-only merges (merge commits and rebase merges are still allowed); the setup script with the pre-push hook; Dependabot alerts; secret scanning in a pre-commit hook and CI | ENG-01, ENG-03, ENG-15, ENG-19, ENG-28 |
+| Private repository on GitHub Free, outside synced folders (created 2026-10-11 as `suredo/Tessera`). GitHub Free has no branch protection for private repositories, so: squash-only merges, a local pre-push hook that refuses direct pushes to `main`, and merging only on green CI (`ENG-15`). Issue and pull request templates, the [tracking rules](../practices/tracking.md), and the GitHub labels and milestones M0–M6 (`ENG-28`): done before M0 (2026-10-12, A54). Done in M0 ([#11](https://github.com/suredo/Tessera/issues/11)): squash-only merges; the setup script with the pre-commit and pre-push hooks; Dependabot alerts and update proposals; secret scanning in a pre-commit hook and CI | ENG-01, ENG-03, ENG-15, ENG-19, ENG-28 |
 | Planning docs in OKF: done before M0 (2026-10-11, A50) | ENG-08, ENG-10 |
 | pnpm workspace with packages scoped `@tessera/*`: `contracts`, `server`, `web` (React), `runtime`, `evals`; SQLite access layer chosen | [Architecture](../product/architecture.md), DATA-01 |
 | Translation layer for host text from the first component, with a lint rule that fails on hard-coded host text | UX-05 |

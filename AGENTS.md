@@ -31,8 +31,9 @@ Run them before saying something is done, and report the results faithfully, inc
 
 - `node scripts/okf-check.mjs`: docs frontmatter, indexes, links, log, code docs, and that `CLAUDE.md` only imports this file. `--fix` repairs index entries. `--merge-ready` also fails while a task handoff is left: run it before merging.
 - `node --test scripts/okf-check.test.mjs`: whenever you change the checker.
-- The workspace (Node from `.nvmrc`; pnpm through Corepack: `corepack enable` once, or prefix `corepack`): `pnpm install`, then `pnpm typecheck`, `pnpm lint`, `pnpm format:check` (`pnpm format` fixes it) and `pnpm test`.
+- The workspace (Node from `.nvmrc`; pnpm through Corepack: `corepack enable` once, or prefix `corepack`): `pnpm install`, then `pnpm typecheck`, `pnpm lint`, `pnpm format:check` (`pnpm format` fixes it), `pnpm test` and `pnpm secrets`.
 - CI (`.github/workflows/ci.yml`) runs all of these, plus `--merge-ready`, on every pull request and on `main`.
+- Git hooks, turned on by `pnpm install` (or `node scripts/setup.mjs`): pre-commit refuses likely secrets, videos and images over 1 MB; pre-push refuses pushes to `main`. Skip one only deliberately, with `--no-verify`, and say why in the pull request.
 
 ## Non-negotiables
 

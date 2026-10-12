@@ -1,0 +1,3 @@
+#!/bin/sh
+# Refuses likely secrets, videos and images over 1 MB (ENG-10, ENG-19). See scripts/hooks/pre-commit.mjs.
+exec node scripts/hooks/pre-commit.mjs
