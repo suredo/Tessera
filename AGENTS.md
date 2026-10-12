@@ -29,7 +29,7 @@ Only when the owner asks: pause a task with the `task-checkpoint` skill (Claude 
 
 Run them before saying something is done, and report the results faithfully, including failures.
 
-- `node scripts/okf-check.mjs`: docs frontmatter, indexes, links, log and code docs. `--fix` repairs index entries.
+- `node scripts/okf-check.mjs`: docs frontmatter, indexes, links, log and code docs. `--fix` repairs index entries. `--merge-ready` also fails while a task handoff is left: run it before merging.
 - `node --test scripts/okf-check.test.mjs`: whenever you change the checker.
 - From M0: typecheck, lint, format check and tests, added here as they exist.
 
@@ -50,3 +50,4 @@ Run them before saying something is done, and report the results faithfully, inc
 - The other assistant reviews every pull request against the review checklist: Codex reviews Claude Code's work and the reverse.
 - Never push to `main`. Merge only when the owner explicitly asks. Squash-merge, and before merging a pull request that another one is stacked on, retarget the stacked one to `main`.
 - No long handoff documents: the pull request description is the handoff for finished work, and a task that continues in a new session gets one short handoff (`ENG-25`).
+- Your tool's own memory, outside the repository, holds only facts about the owner or their machine. Project rules, decisions and lessons go in `docs/` or here, where both assistants see them (`ENG-27`).

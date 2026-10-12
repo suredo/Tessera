@@ -4,10 +4,11 @@
 // Claude Code (.claude/skills) and Codex (.agents/skills) adapters.
 // Zero dependencies until the M0 tooling exists, so frontmatter uses a simple YAML subset.
 //
-// Usage: node scripts/okf-check.mjs [--fix] [--base <git-ref>] [--pr-body <file>]
-//   --fix       rewrite index.md entries (title, description) from frontmatter and add missing ones
-//   --base      also run the code-doc drift check against `git diff <base>...HEAD`
-//   --pr-body   file holding the pull request description ("No doc change needed: <doc>: <reason>")
+// Usage: node scripts/okf-check.mjs [--fix] [--base <git-ref>] [--pr-body <file>] [--merge-ready]
+//   --fix          rewrite index.md entries (title, description) from frontmatter and add missing ones
+//   --base         also run the code-doc drift check against `git diff <base>...HEAD`
+//   --pr-body      file holding the pull request description ("No doc change needed: <doc>: <reason>")
+//   --merge-ready  also fail while any task handoff is left: run before merging, and on main
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -32,6 +33,7 @@ const INDEX_ENTRY = /^\* \[(.+?)\]\((.+?)\)(?: - (.*))?$/;
 const args = process.argv.slice(2);
 const opt = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined);
 const FIX = args.includes("--fix");
+const MERGE_READY = args.includes("--merge-ready");
 const errors = [];
 const warnings = [];
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join("/");
@@ -296,6 +298,7 @@ const TASK_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SUBJECT = /^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const HANDOFF_STATUSES = new Set(["in-progress", "blocked", "ready-for-review"]);
+const HANDOFF_MAX_AGE_DAYS = 5;
 const isDay = (d) => DAY.test(d ?? "") && !isNaN(Date.parse(d));
 const subjectExists = (s) =>
   SUBJECT.test(s ?? "") && (fs.existsSync(path.join(BUNDLE, `${s}.md`)) || fs.existsSync(path.join(BUNDLE, s, "index.md")));
@@ -342,6 +345,7 @@ if (fs.existsSync(CONTEXT)) {
   for (const f of walkAll(handoffDir)) {
     if (path.basename(f) === ".gitkeep") continue;
     if (path.dirname(f) !== handoffDir || !f.endsWith(".md")) { err(f, "handoffs are .md files directly in context/handoffs/"); continue; }
+    if (MERGE_READY) err(f, "not ready to merge: the last commit of the task's pull request removes its handoff (ENG-25)");
     const c = contextFile(f);
     if (!c) continue;
     const { fm, body } = c;
@@ -351,6 +355,11 @@ if (fs.existsSync(CONTEXT)) {
     if (fm.status === "complete") err(f, "remove a finished task's handoff instead of marking it complete");
     else if (!HANDOFF_STATUSES.has(fm.status)) err(f, "status must be in-progress, blocked or ready-for-review");
     if (!isDay(fm.checkpoint_date)) err(f, "checkpoint_date must be YYYY-MM-DD");
+    else {
+      const age = Math.floor((Date.now() - Date.parse(fm.checkpoint_date)) / 86_400_000);
+      if (age > HANDOFF_MAX_AGE_DAYS)
+        warnings.push(`${rel(f)}: checkpointed ${age} days ago; refresh it with a checkpoint, or end the task (ENG-25)`);
+    }
     if (!subjectExists(fm.subject)) err(f, `subject is not a docs path: ${fm.subject}`);
     if (fm.parent !== undefined && !TASK_ID.test(fm.parent)) err(f, "parent must be a task ID");
     const words = (body.match(/\S+/g) ?? []).length;

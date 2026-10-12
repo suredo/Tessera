@@ -180,8 +180,9 @@ test("drift: code changed without its doc fails, unless the doc changes or the p
 });
 
 // ---------- task context (ENG-25, ENG-26) ----------
-const handoff = (id, { subject = "spec/data", status = "in-progress", extra = "", body = "" } = {}) =>
-  ["---", `task_id: ${id}`, `subject: ${subject}`, `status: ${status}`, "checkpoint_date: 2026-10-11", ...(extra ? [extra] : []), "---", "",
+const today = () => new Date().toISOString().slice(0, 10);
+const handoff = (id, { subject = "spec/data", status = "in-progress", date = today(), extra = "", body = "" } = {}) =>
+  ["---", `task_id: ${id}`, `subject: ${subject}`, `status: ${status}`, `checkpoint_date: ${date}`, ...(extra ? [extra] : []), "---", "",
     `# Task: ${id}`, "", "## Authoritative references", "- `docs/spec/data.md` — the asset rules", "", "## Next action", "1. Write the store.", body].join("\n");
 const historyNote = (subject, id, date = "2026-10-11", status = "historical") =>
   ["---", `subject: ${subject}`, `task_id: ${id}`, `date: ${date}`, `status: ${status}`, "---", "", "# Rejected: storing images in SQLite",
@@ -219,6 +220,29 @@ test("a stale reference in a handoff is reported, not ignored (T9)", () => {
   assert.equal(r.code, 1);
   assert.match(r.out, /reference not found: docs\/spec\/storage\.md/);
   assert.match(r.out, /reference anchor not found: docs\/spec\/data\.md#missing-section/);
+});
+
+test("a handoff checkpointed more than 5 days ago is a warning, not an error", () => {
+  const root = makeRepo();
+  write(root, "context/handoffs/old-task.md", handoff("old-task", { date: "2026-01-01" }));
+  write(root, "context/handoffs/fresh-task.md", handoff("fresh-task"));
+  const r = check(root);
+  assert.equal(r.code, 0, r.out);
+  assert.match(r.out, /warning .*old-task\.md: checkpointed \d+ days ago; refresh it with a checkpoint, or end the task/);
+  assert.doesNotMatch(r.out, /fresh-task\.md/);
+});
+
+test("--merge-ready fails while a handoff is left, and passes once it is removed", () => {
+  const root = makeRepo();
+  write(root, "context/handoffs/.gitkeep", "");
+  write(root, "context/handoffs/asset-store.md", handoff("asset-store"));
+  assert.equal(check(root).code, 0);
+  let r = check(root, "--merge-ready");
+  assert.equal(r.code, 1);
+  assert.match(r.out, /asset-store\.md: not ready to merge: the last commit of the task's pull request removes its handoff/);
+  fs.rmSync(path.join(root, "context/handoffs/asset-store.md"));
+  r = check(root, "--merge-ready");
+  assert.equal(r.code, 0, r.out);
 });
 
 test("history notes sit under their subject, are named <date>-<task_id>.md and are historical", () => {

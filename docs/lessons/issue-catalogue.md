@@ -4,7 +4,7 @@ title: "Issue catalogue"
 description: "69 POC issues with root cause, mitigation requirements and status, plus coverage."
 tags: [lessons, issue-catalogue]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T22:56:28Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
 ---
 # Issue catalogue
 
@@ -34,7 +34,7 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-11 | Fixes were often made during live runs, after a failure, instead of acceptance criteria being written first. | Exploratory process | ENG-06, ENG-07, ENG-09, ENG-13 | D |
 | L-12 | Failure reasons were thrown away: a failed generation reported only "did not pass validation", so one live failure could never be explained. | Diagnostics not part of the result | GEN-10, OBS-01 | D |
 | L-13 | Test-run output piled up, and safety checks blocked bulk deletion. | No retention policy | ENG-10 | D |
-| L-14 | Several AI assistants (Codex, Claude) worked from long handoff documents of mixed age, re-deriving context and repeating mistakes. | No concise single source of rules for assistants | ENG-05, ENG-08, ENG-15, ENG-25 | D |
+| L-14 | Several AI assistants (Codex, Claude) worked from long handoff documents of mixed age, re-deriving context and repeating mistakes. | No concise single source of rules for assistants | ENG-05, ENG-08, ENG-15, ENG-25, ENG-27 | D |
 | L-15 | Recorded browser tests could not drive interfaces that were designed differently each time: generic clicking filled the wrong field and couldn't add stations. | No stable hooks to test against | VER-03, P5, ENG-14 | D |
 | L-65 | The two assistant rule files (`CLAUDE.md` for Claude, `AGENTS.md` for Codex) were copies kept in sync by hand, so they could drift apart. | Two sources for one set of rules | ENG-05 (one file, the other only imports it, checked in CI) | D |
 | L-66 | Prompt edits changed live outcomes, but nothing recorded which prompt version produced which result, so changes in behavior could not be traced. | Prompts treated as inline text, not code | ENG-16 | D |

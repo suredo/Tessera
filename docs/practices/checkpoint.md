@@ -4,7 +4,7 @@ title: "Task checkpoint"
 description: "How to pause a task for a new session: route lasting findings to their docs, keep history apart, write one short handoff (ENG-25)."
 tags: [practices, checkpoint, handoff]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T23:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:52:39Z }
 ---
 # Task checkpoint
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T23:20:00Z }
 | --- | --- |
 | ENG-25 | **Checkpoint a task before changing sessions** (A52). When a task pauses, switches subject or the owner wants a fresh session, the assistant runs this procedure, only when asked: the `task-checkpoint` skill, or "follow `docs/practices/checkpoint.md`". It sends each lasting finding to its existing home in `docs/`, keeps useful history apart in `context/history/`, and writes one short handoff in `context/handoffs/<task-id>.md`. A checkpoint writes files; it does not clear or shorten the current conversation. Only a new session does that. |
 
-Resuming in the new session is [`ENG-26`](resume.md). A checkpoint never runs by itself or after every small answer.
+Resuming in the new session is [`ENG-26`](resume.md). A checkpoint never runs by itself or after every small answer. Whether an assistant may suggest one is still open: [D12](../decisions/open/d12-checkpoint-suggestions.md).
 
 ## What goes where
 
@@ -28,6 +28,7 @@ Three kinds of content stay apart: **knowledge** in `docs/` says what is true or
 | Failure that must not happen again | A new lesson in the [issue catalogue](../lessons/issue-catalogue.md) | Needed |
 | Rejected alternative whose tradeoffs are worth keeping | A history note | Not needed: history is not authoritative |
 | Progress: files changed, checks run, next step | The handoff | Not needed |
+| A fact about the owner or their machine, not the project: which account is which, local paths | The assistant's own tool memory ([`ENG-27`](assistants.md)) | Not needed |
 | Exploration with no lasting value | Nowhere | — |
 
 **Authoritative** means `docs/product/`, `docs/spec/`, `docs/practices/`, `docs/roadmap/` (scope and exit criteria), the decision log and ADRs, and `AGENTS.md`. Changing them needs the owner's explicit approval in the conversation, unless that exact change was already approved for this task. The index entries, `generated` fields and `docs/log.md` lines that follow from an approved change need no separate approval.
@@ -35,7 +36,7 @@ Three kinds of content stay apart: **knowledge** in `docs/` says what is true or
 ## Procedure
 
 1. **Bound the task.** Use a stable `task_id` of lowercase words and hyphens (`asset-store`), the same one again if the task already has a handoff. Its `subject` is the docs path it belongs to, without `.md` (`spec/data`, `practices`). Split unrelated subjects into separate tasks; a split-off task names its `parent`. If earlier parts of the conversation are no longer available, say so instead of reconstructing them.
-2. **Collect candidates.** Keep only what is needed later, explains a decision, or saves repeating an investigation. Never save transcripts or step-by-step reasoning.
+2. **Collect candidates.** Keep only what is needed later, explains a decision, or saves repeating an investigation. Never save transcripts or step-by-step reasoning. Look in your own tool memory too: a project fact kept there belongs in the docs, where the other assistant can see it ([`ENG-27`](assistants.md)).
 3. **Reconcile each candidate.** Find its home through the indexes or by ID (`grep -rn`), read only the relevant section, and decide: new, already covered, contradictory, superseding, unverified or irrelevant.
    - Already covered: don't repeat it; link to it if useful.
    - Contradicts an authoritative doc: never prefer the newer conversation silently. Surface the conflict and ask.
@@ -51,7 +52,9 @@ Three kinds of content stay apart: **knowledge** in `docs/` says what is true or
 
 - **Status:** `in-progress`, `blocked` or `ready-for-review`.
 - **Where:** committed on the task's branch, so the next session finds it with Claude Code or Codex on any machine. Before a branch exists it may stay local.
-- **End:** the last commit before the task's pull request merges removes the handoff. Git and the pull request keep it; history notes stay. Handoffs never accumulate on `main` (L-14).
+- **Age:** `checkpoint_date` is the last checkpoint. The check warns once it is more than 5 days old, since work with AI assistants moves fast and a handoff ages quickly; this also catches one left behind on one machine: refresh it with a checkpoint, or end the task.
+- **End:** the last commit before the task's pull request merges removes the handoff, and `node scripts/okf-check.mjs --merge-ready` fails until it does. Git and the pull request keep it; history notes stay. Handoffs never accumulate on `main` (L-14).
+- **Dropped:** when the owner drops a task, first send anything lasting to its home (steps 2–5), then remove the handoff and close the pull request if there is one. The owner decides whether the branch is deleted.
 
 ## Handoff template
 
