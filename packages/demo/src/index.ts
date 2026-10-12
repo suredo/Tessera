@@ -1,2 +1,2 @@
 // Docs: docs/code/demo.md
-export const demo = 1;
+export const demo = 2;
