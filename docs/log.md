@@ -2,6 +2,7 @@
 
 ## 2026-10-12
 
+* **Update**: Repository guards ([issue 11](https://github.com/suredo/Tessera/issues/11)): `pnpm install` turns on git hooks that refuse likely secrets, videos and images over 1 MB at commit (`ENG-10`, `ENG-19`) and pushes to `main` (`ENG-15`); CI runs the same secret scan; Dependabot proposes updates for the packages and the CI actions (`ENG-02`). `AGENTS.md` lists the hooks and `pnpm secrets`.
 * **Update**: The pnpm workspace exists ([issue 10](https://github.com/suredo/Tessera/issues/10)): the five `@tessera/*` packages from the [architecture](product/architecture.md), Node 22 pinned in `.nvmrc`, and TypeScript, ESLint, Prettier and Vitest, each run by CI on every pull request (`ENG-02`, `ENG-04`, `TEST-01`). `AGENTS.md` lists the commands.
 * **Update**: Clarified partial-issue links in [`ENG-29`](practices/tracking.md): partial work uses `Part of #N`, and closing keywords are reserved for the intended issue closure in pull request descriptions and commit messages ([issue 25](https://github.com/suredo/Tessera/issues/25)).
 * **Update**: Set up the cross-review between Claude Code and Codex ([issue 9](https://github.com/suredo/Tessera/issues/9)): the [cross-review procedure](practices/assistants.md) for `ENG-15`, a `cross-review` skill for both tools, and committed settings that let both run the checks and read-only `gh` and `git` commands without asking. [ADR 0001](decisions/adr/0001-checkpoint-suggestions.md), the first ADR, decides D12: an assistant may suggest a checkpoint in one line but never runs one unasked (`ENG-25`).

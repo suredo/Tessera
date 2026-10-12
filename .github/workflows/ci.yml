@@ -1,6 +1,7 @@
 # CI on every pull request and on main (ENG-02): the OKF check and its tests (ENG-05, ENG-08, ENG-24),
 # the merge-ready job that stays red while a task handoff is left (ENG-25), and the workspace's
-# typecheck, lint, format check and unit tests (ENG-04, TEST-01). No secrets and no model calls.
+# typecheck, lint, format check, unit tests (ENG-04, TEST-01) and secret scan, with the same rules
+# as the pre-commit hook (ENG-19). No secrets and no model calls.
 name: CI
 
 on:
@@ -63,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false # each check reports on its own
       matrix:
-        check: [typecheck, lint, "format:check", test]
+        check: [typecheck, lint, "format:check", test, secrets]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

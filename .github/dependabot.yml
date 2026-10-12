@@ -1,0 +1,21 @@
+# Update proposals for the workspace's packages and the CI actions (ENG-02). Security alerts are a
+# repository setting. A release must be two weeks old before it is proposed, as when pinning by hand.
+version: 2
+updates:
+  - package-ecosystem: npm # the pnpm workspace, read from pnpm-lock.yaml
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    labels: [eng]
+    groups:
+      workspace:
+        patterns: ["*"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    labels: [eng]

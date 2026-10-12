@@ -3,5 +3,5 @@ docs/
 context/
 *.md
 # The OKF check stays as written until it moves to the TypeScript tooling (#13).
-scripts/
+scripts/okf-check*.mjs
 pnpm-lock.yaml
