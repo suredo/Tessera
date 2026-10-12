@@ -29,4 +29,20 @@ describe("units in contracts", () => {
       "wait",
     ]);
   });
+
+  it("finds numbers in intersections and shared definitions, under the field's name (CON-05)", () => {
+    const positive = () => z.intersection(z.number(), z.number().min(0));
+    const intersections = z.object({ wait: positive(), waitSeconds: positive() });
+    expect(numericFieldsWithoutUnit(z.toJSONSchema(intersections))).toEqual(["wait"]);
+
+    const withReferences = {
+      $defs: { Delay: { type: "number" }, Step: { properties: { pause: { type: "integer" } } } },
+      properties: {
+        delay: { $ref: "#/$defs/Delay" },
+        delayMs: { $ref: "#/$defs/Delay" },
+        step: { $ref: "#/$defs/Step" },
+      },
+    };
+    expect(numericFieldsWithoutUnit(withReferences).sort()).toEqual(["$defs.Step.pause", "delay"]);
+  });
 });

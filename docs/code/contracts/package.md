@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-05, GEN-01]
 tests: [../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T07:56:53Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T08:11:39Z }
 ---
 
 # Purpose
@@ -27,7 +27,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 - **One definition.** A shape exists only as a zod schema here. The files in `schemas/` are generated and never edited by hand. A test fails while they differ from the zod definitions.
 - **zod and the JSON Schema agree.** Constraints are written so they appear in the JSON Schema too: discriminated unions, enums, patterns, strict objects. A zod-only refinement would let the model's contract and the host's check disagree. The intent tests check both on the same valid and invalid samples.
 - **A field means one thing** (`CON-02`). Each `kind` of intent is its own branch: `savedToolId` exists only for `open_saved`, and `null` means only "nothing".
-- **Numbers name their unit** (`CON-05`). A numeric field ends in a unit (`Ms`, `Seconds`, `Minutes`, `Hours`, `Days`, `Bytes`, `Px`, `Percent`, `Tokens`, `Usd`), or it is unitless: a name ending in `Count`, `Index` or `Version`, or exactly `count`, `index` or `version`. A test checks every contract. A new unit is added to `UNIT_SUFFIXES` in `src/units.ts`, which keeps both lists.
+- **Numbers name their unit** (`CON-05`). A numeric field ends in a unit (`Ms`, `Seconds`, `Minutes`, `Hours`, `Days`, `Bytes`, `Px`, `Percent`, `Tokens`, `Usd`), or it is unitless: a name ending in `Count`, `Index` or `Version`, or exactly `count`, `index` or `version`. A test checks every contract, looking through unions, intersections and shared definitions (`$ref`) while keeping the field's name. A new unit is added to `UNIT_SUFFIXES` in `src/units.ts`, which keeps both lists.
 - **Platform-free.** The browser host, the sandboxed runtime and the server all import this package, so `src/` uses no Node or browser APIs. Only `scripts/` and `test/` use Node.
 
 # Depends on / used by
