@@ -222,7 +222,7 @@ test("a stale reference in a handoff is reported, not ignored (T9)", () => {
   assert.match(r.out, /reference anchor not found: docs\/spec\/data\.md#missing-section/);
 });
 
-test("a handoff checkpointed more than 14 days ago is a warning, not an error", () => {
+test("a handoff checkpointed more than 5 days ago is a warning, not an error", () => {
   const root = makeRepo();
   write(root, "context/handoffs/old-task.md", handoff("old-task", { date: "2026-01-01" }));
   write(root, "context/handoffs/fresh-task.md", handoff("fresh-task"));

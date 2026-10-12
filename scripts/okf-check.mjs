@@ -298,7 +298,7 @@ const TASK_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SUBJECT = /^[a-z0-9-]+(?:\/[a-z0-9-]+)*$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const HANDOFF_STATUSES = new Set(["in-progress", "blocked", "ready-for-review"]);
-const HANDOFF_MAX_AGE_DAYS = 14;
+const HANDOFF_MAX_AGE_DAYS = 5;
 const isDay = (d) => DAY.test(d ?? "") && !isNaN(Date.parse(d));
 const subjectExists = (s) =>
   SUBJECT.test(s ?? "") && (fs.existsSync(path.join(BUNDLE, `${s}.md`)) || fs.existsSync(path.join(BUNDLE, s, "index.md")));

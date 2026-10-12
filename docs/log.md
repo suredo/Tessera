@@ -2,7 +2,7 @@
 
 ## 2026-10-12
 
-* **Update**: Closed gaps in task context handling. New [`ENG-27`](practices/assistants.md) (decision A53): an assistant's own tool memory holds only facts about the owner or their machine, never project rules. [`ENG-25`](practices/checkpoint.md) and [`ENG-26`](practices/resume.md) now cover old and dropped handoffs, and the OKF check warns on handoffs more than 14 days old and gains `--merge-ready` (`ENG-09` item 8, M0 CI). New open decision [D12](decisions/open/d12-checkpoint-suggestions.md): whether assistants may suggest a checkpoint. L-14 maps to `ENG-27` too.
+* **Update**: Closed gaps in task context handling. New [`ENG-27`](practices/assistants.md) (decision A53): an assistant's own tool memory holds only facts about the owner or their machine, never project rules. [`ENG-25`](practices/checkpoint.md) and [`ENG-26`](practices/resume.md) now cover old and dropped handoffs, and the OKF check warns on handoffs more than 5 days old and gains `--merge-ready` (`ENG-09` item 8, M0 CI). New open decision [D12](decisions/open/d12-checkpoint-suggestions.md): whether assistants may suggest a checkpoint. L-14 maps to `ENG-27` too.
 
 ## 2026-10-11
 

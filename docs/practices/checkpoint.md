@@ -4,7 +4,7 @@ title: "Task checkpoint"
 description: "How to pause a task for a new session: route lasting findings to their docs, keep history apart, write one short handoff (ENG-25)."
 tags: [practices, checkpoint, handoff]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:52:39Z }
 ---
 # Task checkpoint
 
@@ -52,7 +52,7 @@ Three kinds of content stay apart: **knowledge** in `docs/` says what is true or
 
 - **Status:** `in-progress`, `blocked` or `ready-for-review`.
 - **Where:** committed on the task's branch, so the next session finds it with Claude Code or Codex on any machine. Before a branch exists it may stay local.
-- **Age:** `checkpoint_date` is the last checkpoint. The check warns once it is more than 14 days old, which also catches a handoff left behind on one machine: refresh it with a checkpoint, or end the task.
+- **Age:** `checkpoint_date` is the last checkpoint. The check warns once it is more than 5 days old, since work with AI assistants moves fast and a handoff ages quickly; this also catches one left behind on one machine: refresh it with a checkpoint, or end the task.
 - **End:** the last commit before the task's pull request merges removes the handoff, and `node scripts/okf-check.mjs --merge-ready` fails until it does. Git and the pull request keep it; history notes stay. Handoffs never accumulate on `main` (L-14).
 - **Dropped:** when the owner drops a task, first send anything lasting to its home (steps 2–5), then remove the handoff and close the pull request if there is one. The owner decides whether the branch is deleted.
 
