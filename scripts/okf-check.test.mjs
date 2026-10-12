@@ -34,12 +34,14 @@ const check = (root, ...args) => {
 const git = (root, ...args) =>
   execFileSync("git", ["-c", "user.name=test", "-c", "user.email=test@example.com", "-c", "core.autocrlf=false", ...args], { cwd: root, encoding: "utf8" });
 
-// A minimal valid repository: a spec row, an engineering rule, and one code doc with its back-link.
+// A minimal valid repository: the rules files, a spec row, an engineering rule, and one code doc with its back-link.
 function makeRepo() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "okf-check-"));
   roots.push(root);
   const files = {
     "scripts/okf-check.mjs": fs.readFileSync(CHECKER, "utf8"),
+    "AGENTS.md": "# Rules for AI assistants\n",
+    "CLAUDE.md": "@AGENTS.md\n",
     "docs/index.md": '---\nokf_version: "0.2"\n---\n\n# Docs\n\n* [Spec](spec/index.md) - Requirements.\n* [Practices](practices/index.md) - Rules.\n* [Code](code/index.md) - Code docs.\n',
     "docs/log.md": "# Documentation log\n\n## 2026-10-11\n\n* **Creation**: Fixture.\n",
     "docs/spec/index.md": "# Spec\n\n* [Data](data.md) - Data rules.\n",
@@ -154,6 +156,37 @@ test("code docs need a Docs: back-link, and Docs: comments must point to real do
   assert.equal(r.code, 1);
   assert.match(r.out, /no code file names this doc/);
   assert.match(r.out, /points to a missing doc: docs\/code\/server\/nope\.md/);
+});
+
+test("a code doc without a resource, or with one that doesn't exist, fails (ENG-24)", () => {
+  const root = makeRepo();
+  edit(root, "docs/code/server/assets.md", "resource: ../../../packages/server/src/assets/\n", "");
+  let r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /assets\.md: code docs need a resource/);
+
+  write(root, "docs/code/server/assets.md", concept("Code Module", "Asset store", "Stores files by hash.", "resource: ../../../packages/server/src/blobs/\nimplements: [DATA-11]"));
+  r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /assets\.md: resource not found: \.\.\/\.\.\/\.\.\/packages\/server\/src\/blobs\//);
+});
+
+test("CLAUDE.md must contain only @AGENTS.md, and AGENTS.md must exist (ENG-05)", () => {
+  const root = makeRepo();
+  write(root, "CLAUDE.md", "@AGENTS.md\r\n");
+  assert.equal(check(root).code, 0, "Windows line endings still pass");
+
+  write(root, "CLAUDE.md", "@AGENTS.md\n\nAlways run the tests first.\n");
+  let r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /CLAUDE\.md: must contain only @AGENTS\.md/);
+
+  fs.rmSync(path.join(root, "CLAUDE.md"));
+  fs.rmSync(path.join(root, "AGENTS.md"));
+  r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /CLAUDE\.md: missing: CLAUDE\.md must contain only @AGENTS\.md/);
+  assert.match(r.out, /AGENTS\.md: missing: AGENTS\.md is the rules file/);
 });
 
 test("drift: code changed without its doc fails, unless the doc changes or the pull request says why", () => {

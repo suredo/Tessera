@@ -1,0 +1,57 @@
+# CI on every pull request and on main (ENG-02). For now: the OKF check and its tests (ENG-05, ENG-08,
+# ENG-24), and the merge-ready job that stays red while a task handoff is left (ENG-25). The TypeScript
+# checks join with the workspace (#10). No secrets and no model calls.
+name: CI
+
+on:
+  pull_request:
+    # edited: a changed description can add or remove a "No doc change needed" line.
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  okf:
+    name: OKF check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the drift check diffs against the pull request's base
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: Checker tests
+        run: node --test scripts/okf-check.test.mjs
+      - name: OKF check, with the drift check against the base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/pr-body.md"
+          node scripts/okf-check.mjs --base "origin/$BASE_REF" --pr-body "$RUNNER_TEMP/pr-body.md"
+      # On main, the pull request already ran the drift check with its description.
+      - name: OKF check
+        if: github.event_name == 'push'
+        run: node scripts/okf-check.mjs
+
+  merge-ready:
+    name: merge-ready
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+      - name: No task handoff left (ENG-25)
+        run: node scripts/okf-check.mjs --merge-ready

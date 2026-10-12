@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// OKF documentation check (ENG-08, ENG-24, ENG-25). See docs/practices/documentation.md.
-// Also checks task handoffs and history notes in context/, and that every skill has identical
-// Claude Code (.claude/skills) and Codex (.agents/skills) adapters.
+// OKF documentation check (ENG-05, ENG-08, ENG-24, ENG-25). See docs/practices/documentation.md.
+// Also checks task handoffs and history notes in context/, that CLAUDE.md only imports AGENTS.md,
+// and that every skill has identical Claude Code (.claude/skills) and Codex (.agents/skills) adapters.
 // Zero dependencies until the M0 tooling exists, so frontmatter uses a simple YAML subset.
 //
 // Usage: node scripts/okf-check.mjs [--fix] [--base <git-ref>] [--pr-body <file>] [--merge-ready]
@@ -385,6 +385,13 @@ if (fs.existsSync(CONTEXT)) {
     checkReferences(f, body);
   }
 }
+
+// ---------- rules files: CLAUDE.md only imports AGENTS.md, so both assistants read the same rules (ENG-05) ----------
+const AGENTS_MD = path.join(ROOT, "AGENTS.md");
+const CLAUDE_MD = path.join(ROOT, "CLAUDE.md");
+if (!fs.existsSync(AGENTS_MD)) err(AGENTS_MD, "missing: AGENTS.md is the rules file for every assistant (ENG-05)");
+if (!fs.existsSync(CLAUDE_MD)) err(CLAUDE_MD, "missing: CLAUDE.md must contain only @AGENTS.md (ENG-05)");
+else if (read(CLAUDE_MD).trim() !== "@AGENTS.md") err(CLAUDE_MD, "must contain only @AGENTS.md; rules go in AGENTS.md, where Codex reads them too (ENG-05)");
 
 // ---------- skills: one procedure in docs/, identical thin adapters for each tool ----------
 const SKILL_ROOTS = { "Claude Code": path.join(ROOT, ".claude", "skills"), Codex: path.join(ROOT, ".agents", "skills") };

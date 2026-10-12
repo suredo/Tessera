@@ -29,7 +29,8 @@ Only when the owner asks: pause a task with the `task-checkpoint` skill (Claude 
 
 Run them before saying something is done, and report the results faithfully, including failures.
 
-- `node scripts/okf-check.mjs`: docs frontmatter, indexes, links, log and code docs. `--fix` repairs index entries. `--merge-ready` also fails while a task handoff is left: run it before merging.
+- `node scripts/okf-check.mjs`: docs frontmatter, indexes, links, log, code docs, and that `CLAUDE.md` only imports this file. `--fix` repairs index entries. `--merge-ready` also fails while a task handoff is left: run it before merging.
+- CI (`.github/workflows/ci.yml`) runs the check, its tests and `--merge-ready` on every pull request and on `main`.
 - `node --test scripts/okf-check.test.mjs`: whenever you change the checker.
 - From M0: typecheck, lint, format check and tests, added here as they exist.
 
