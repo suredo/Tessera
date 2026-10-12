@@ -4,7 +4,7 @@ title: "Overview"
 description: "What Tessera is, the key decisions and how to read these docs."
 tags: [overview, README]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T03:31:52Z }
 ---
 # POC results: from Harness to Tessera
 
@@ -53,4 +53,4 @@ Counts in these documents are planning figures or historical summaries. A mapped
 
 ## This folder stands alone
 
-These documents summarize the Harness POC and can be read without it. The copies in [poc/](poc/) are historical; the spec and the decision log take precedence. M0 adds a sanitized evidence index and any available portable fixtures; missing raw evidence stays marked unavailable rather than reconstructed.
+These documents summarize the Harness POC and can be read without it. The copies in [poc/](poc/) are historical; the spec and the decision log take precedence. POC results stay historical summaries, and their raw evidence is not carried over: Tessera's evidence comes from its own runs, starting with the M0 live spikes ([`ENG-10`](practices/evidence.md)).
