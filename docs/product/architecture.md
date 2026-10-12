@@ -4,7 +4,7 @@ title: "Architecture"
 description: "The parts of Tessera and how they connect: launcher, host app, sandboxed runtime, local server, storage, adapters and shared contracts."
 tags: [product, architecture]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T05:43:01Z }
 ---
 # Architecture
 
@@ -32,4 +32,4 @@ Shared package
 
 Tooling (decided, A14 and A15): Node.js 22 LTS, pnpm workspaces, Vite, zod, React 19 with the React Compiler.
 
-Repository layout (proposal): a pnpm workspace with `packages/contracts`, `packages/server`, `packages/web` (React host app) and `packages/runtime`, plus `evals/` for the evaluation runner, scenarios and reports. The sandboxed runtime stays framework-free: generated tools are plain HTML, CSS and JS, whatever the host uses.
+Repository layout: a pnpm workspace (A14) with `packages/contracts`, `packages/server`, `packages/web` (React host app) and `packages/runtime`, plus `evals/` for the evaluation runner, scenarios and reports; each folder is the package `@tessera/<name>`. Packages import each other's TypeScript sources directly, with no build step between them. The sandboxed runtime stays framework-free: generated tools are plain HTML, CSS and JS, whatever the host uses.

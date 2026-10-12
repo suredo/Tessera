@@ -1,0 +1,7 @@
+node_modules/
+# Test outputs: videos, screenshots, logs (ENG-10).
+test-output/
+coverage/
+*.tsbuildinfo
+# Personal Claude Code settings stay out of the repository (ENG-27).
+.claude/settings.local.json

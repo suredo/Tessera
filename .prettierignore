@@ -1,0 +1,7 @@
+# Prettier formats code and configuration. Docs keep their own style (ENG-08).
+docs/
+context/
+*.md
+# The OKF check stays as written until it moves to the TypeScript tooling (#13).
+scripts/
+pnpm-lock.yaml
