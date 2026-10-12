@@ -1,2 +1,10 @@
-// @tessera/contracts: shared schemas and the types generated from them (CON-01). A placeholder until #12 adds the first contracts.
-export const packageName = "@tessera/contracts";
+// Docs: docs/code/contracts/package.md
+// @tessera/contracts: every shape that crosses a boundary, defined once with zod (CON-01).
+export { INTENT_KINDS, intentSchema, type Intent } from "./intent.ts";
+export { contracts, renderSchemaFiles, toJsonSchema, type ContractName } from "./json-schema.ts";
+export {
+  numericFieldsWithoutUnit,
+  UNIT_SUFFIXES,
+  UNITLESS_NAMES,
+  UNITLESS_SUFFIXES,
+} from "./units.ts";

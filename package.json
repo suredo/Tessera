@@ -9,6 +9,7 @@
   "scripts": {
     "prepare": "node scripts/setup.mjs",
     "secrets": "secretlint \"**/*\"",
+    "contracts:schemas": "node packages/contracts/scripts/generate-schemas.ts",
     "typecheck": "tsc -p packages/contracts && tsc -p packages/server && tsc -p packages/web && tsc -p packages/runtime && tsc -p evals",
     "lint": "eslint .",
     "format": "prettier --write .",
