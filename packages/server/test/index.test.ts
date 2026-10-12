@@ -10,8 +10,4 @@ describe("@tessera/server", () => {
   it("imports @tessera/contracts through the workspace (A14)", () => {
     expect(contracts).toBe("@tessera/contracts");
   });
-
-  it("fails on purpose (CI demonstration)", () => {
-    expect(1).toBe(2);
-  });
 });
