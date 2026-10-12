@@ -14,7 +14,7 @@ okf_version: "0.2"
 # Planning
 
 * [Roadmap](roadmap/index.md) - Milestones M0–M6 in build order, with deliverables, exit criteria and live-call budgets.
-* [Decisions](decisions/index.md) - The decision log (A1–A54) and the decisions still open.
+* [Decisions](decisions/index.md) - The decision log (A1–A54), ADRs from M0 on, and the decisions still open.
 
 # How we work
 
