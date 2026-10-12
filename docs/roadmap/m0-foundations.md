@@ -4,7 +4,7 @@ title: "M0: Foundations"
 description: "Repository, tooling, CI, contracts and two small live spikes."
 tags: [roadmap, foundations]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:22:49Z }
 ---
 # M0: Foundations (size S, live spikes about 33 calls)
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
 
 | Deliverable | Requirements |
 | --- | --- |
-| Private repository on GitHub Free, outside synced folders (created 2026-10-11 as `suredo/Tessera`). GitHub Free has no branch protection for private repositories, so: squash-only merges, a local pre-push hook that refuses direct pushes to `main`, and merging only on green CI (`ENG-15`). Issue and pull request templates and the [tracking rules](../practices/tracking.md): written before M0 (2026-10-12, A54). Remaining: GitHub labels and milestones M0–M6 (`ENG-28`); Dependabot alerts; secret scanning in a pre-commit hook and CI | ENG-01, ENG-03, ENG-15, ENG-19, ENG-28 |
+| Private repository on GitHub Free, outside synced folders (created 2026-10-11 as `suredo/Tessera`). GitHub Free has no branch protection for private repositories, so: squash-only merges, a local pre-push hook that refuses direct pushes to `main`, and merging only on green CI (`ENG-15`). Issue and pull request templates, the [tracking rules](../practices/tracking.md), and the GitHub labels and milestones M0–M6 (`ENG-28`): done before M0 (2026-10-12, A54). Remaining: Dependabot alerts; secret scanning in a pre-commit hook and CI | ENG-01, ENG-03, ENG-15, ENG-19, ENG-28 |
 | Planning docs in OKF: done before M0 (2026-10-11, A50). Remaining: scenarios move to `evals/` with the runner; preserve a sanitized evidence index and available portable fixtures; identify missing raw evidence | ENG-08, ENG-10 |
 | pnpm workspace with packages scoped `@tessera/*`: `contracts`, `server`, `web` (React), `runtime`, `evals`; SQLite access layer chosen | [Architecture](../product/architecture.md), DATA-01 |
 | Translation layer for host text from the first component, with a lint rule that fails on hard-coded host text | UX-05 |
