@@ -4,7 +4,7 @@ title: "Documentation"
 description: "How the docs follow the Open Knowledge Format: kinds, frontmatter, indexes, log and links (ENG-08)."
 tags: [practices, documentation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T03:31:52Z }
 sources:
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
 ---
@@ -58,6 +58,6 @@ Frontmatter uses a simple YAML subset, so the check needs no dependencies: `key:
 
 The README stays short: what the project is, how to run it, where the docs are.
 
-On import, preserve a sanitized evidence index (run/date, provider, scope, measured result and available portable report/fixture). Missing raw evidence stays marked unavailable. Never turn a proposed fix into a measured success claim. The UI-standard version remains contract metadata.
+POC results stay historical summaries; new evidence comes from Tessera's own runs, kept as [`ENG-10`](evidence.md) describes. Never turn a proposed fix into a measured success claim. The UI-standard version remains contract metadata.
 
 [^okf-spec]: Open Knowledge Format specification v0.2
