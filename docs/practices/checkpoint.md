@@ -4,7 +4,7 @@ title: "Task checkpoint"
 description: "How to pause a task for a new session: route lasting findings to their docs, keep history apart, write one short handoff (ENG-25)."
 tags: [practices, checkpoint, handoff]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:52:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
 ---
 # Task checkpoint
 
@@ -25,6 +25,7 @@ Three kinds of content stay apart: **knowledge** in `docs/` says what is true or
 | Accepted decision | The [decision log](../decisions/decision-log.md) before M0; an ADR from M0 on | Needed: the owner accepts it in the conversation |
 | Proposed decision | The handoff, under "Pending approval" | Not applied until approved |
 | Open question or blocker | The handoff; an [open decision](../decisions/open/index.md) or GitHub issue if it outlives the task | Needed for a new open decision |
+| Follow-up work found during the task | A GitHub issue with its brief ([`ENG-29`](tracking.md)), listed in the pull request | Not needed |
 | Failure that must not happen again | A new lesson in the [issue catalogue](../lessons/issue-catalogue.md) | Needed |
 | Rejected alternative whose tradeoffs are worth keeping | A history note | Not needed: history is not authoritative |
 | Progress: files changed, checks run, next step | The handoff | Not needed |
@@ -91,7 +92,7 @@ checkpoint_date: 2026-11-02
 2. <up to three follow-ups>
 
 ## Provenance
-- Branch, commits, pull request and checks run
+- Issue, branch, commits, pull request and checks run
 ```
 
 ## History note template

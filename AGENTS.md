@@ -45,7 +45,7 @@ Run them before saying something is done, and report the results faithfully, inc
 
 ## Way of working
 
-- Work starts from a task brief with acceptance criteria and requirement IDs (`docs/practices/assistants.md`).
+- Work starts from a task brief with acceptance criteria and requirement IDs, kept in the task's issue, or in the pull request for work done in one session (`ENG-29`). Scope lives only in `docs/roadmap/`: issues and pull requests link to it and carry a milestone and an area label (`ENG-28`).
 - One topic per branch (`feat/…`, `fix/…`, `docs/…`, `chore/…`), Conventional Commits, and small pull requests of about 400 changed lines.
 - The other assistant reviews every pull request against the review checklist: Codex reviews Claude Code's work and the reverse.
 - Never push to `main`. Merge only when the owner explicitly asks. Squash-merge, and before merging a pull request that another one is stacked on, retarget the stacked one to `main`.

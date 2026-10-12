@@ -4,7 +4,7 @@ title: "Documentation"
 description: "How the docs follow the Open Knowledge Format: kinds, frontmatter, indexes, log and links (ENG-08)."
 tags: [practices, documentation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
 sources:
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
 ---
@@ -20,9 +20,9 @@ sources:
 | --- | --- | --- |
 | Planning | `docs/product/`, `spec/`, `roadmap/`, `practices/`, `testing/`, `lessons/` | The spec labels target requirements and delivery status. Updated in the same pull request as the change it describes. |
 | Code docs | `docs/code/`, mirroring the packages | One concept per module or subsystem, checked against the code (`ENG-24`). They describe current behavior only. |
-| Decisions | [the decision log](../decisions/decision-log.md) for A1–A53; `docs/decisions/adr/NNNN-title.md` for new decisions from M0 on | The decision log stays as it is. Each new decision gets one ADR (`type: Decision`): context, decision, consequences. Never edited afterwards; superseded by a new ADR. |
+| Decisions | [the decision log](../decisions/decision-log.md) for A1–A54; `docs/decisions/adr/NNNN-title.md` for new decisions from M0 on | The decision log stays as it is. Each new decision gets one ADR (`type: Decision`): context, decision, consequences. Never edited afterwards; superseded by a new ADR. |
 | POC references | `docs/poc/` | Historical copies, labelled, and subordinate to the spec and decisions. |
-| Evaluations and milestone reports | `evals/reports/YYYY-MM-DD-name.md` | Dated results of live runs, and each milestone's closing report (delivered, exit criteria, live costs, open issues) with the product owner's sign-off. Historical: never updated to look current. Same frontmatter (`type: Evaluation Report`), kept outside the `docs/` bundle. |
+| Evaluations and milestone reports | `evals/reports/YYYY-MM-DD-name.md` | Dated results of live runs, and each milestone's closing report (delivered, exit criteria, live costs, and each open issue and where it went, `ENG-30`) with the product owner's sign-off. Historical: never updated to look current. Same frontmatter (`type: Evaluation Report`), kept outside the `docs/` bundle. |
 | Task context | `context/handoffs/`, `context/history/` | Outside the OKF bundle and not authoritative. A handoff says what to do next for one in-progress task; a history note keeps rejected alternatives under the subject they belong to (`ENG-25`, `ENG-26`). The OKF check validates both. |
 | Changelog | `CHANGELOG.md` | What changed per release (`ENG-23`). |
 
