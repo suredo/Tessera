@@ -5,5 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
   }
 }

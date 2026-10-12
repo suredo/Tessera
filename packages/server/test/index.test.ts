@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { packageName as contracts } from "@tessera/contracts";
+import { INTENT_KINDS } from "@tessera/contracts";
 import { packageName } from "../src/index.ts";
 
 describe("@tessera/server", () => {
@@ -8,6 +8,6 @@ describe("@tessera/server", () => {
   });
 
   it("imports @tessera/contracts through the workspace (A14)", () => {
-    expect(contracts).toBe("@tessera/contracts");
+    expect(INTENT_KINDS).toContain("open_saved");
   });
 });

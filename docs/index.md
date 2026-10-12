@@ -16,6 +16,10 @@ okf_version: "0.2"
 * [Roadmap](roadmap/index.md) - Milestones M0–M6 in build order, with deliverables, exit criteria and live-call budgets.
 * [Decisions](decisions/index.md) - The decision log (A1–A54), ADRs from M0 on, and the decisions still open.
 
+# The code
+
+* [Code](code/index.md) - What each package is for, which requirements it implements and where to start (ENG-24).
+
 # How we work
 
 * [Practices](practices/index.md) - Repository, code, AI assistants, testing, live evaluation, documentation and evidence rules.
