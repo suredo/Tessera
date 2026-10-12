@@ -1,13 +1,14 @@
 ---
 type: Open Decision
 title: "D12. Suggesting a checkpoint"
-description: "Whether assistants may suggest a checkpoint on their own, and on what signals (decide during M0)."
+description: "Decided on 2026-10-12 by ADR 0001: an assistant may suggest a checkpoint in one line. Kept as the open question it was."
 tags: [decisions, checkpoint]
-status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
-stale_after: 2027-04-11T00:00:00Z
+status: deprecated
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T04:41:26Z }
 ---
 # D12. Suggesting a checkpoint
+
+> **Decided** on 2026-10-12 by [ADR 0001](../adr/0001-checkpoint-suggestions.md): an assistant may suggest a checkpoint in one line, saying why, and never runs one unasked. What follows is the open question as it stood.
 
 Rules: `ENG-25`, `ENG-26`. Decision: A52.
 

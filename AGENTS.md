@@ -23,7 +23,7 @@ Current state: planning documents only, no product code yet. Next milestone: M0,
 
 ## Changing sessions
 
-Only when the owner asks: pause a task with the `task-checkpoint` skill (Claude Code `/task-checkpoint`, Codex `$task-checkpoint`), and continue it in a new session with `task-resume <task-id>`. Without skills, follow `docs/practices/checkpoint.md` or `docs/practices/resume.md`. A checkpoint writes files; it does not clear the conversation. Read `context/` only while checkpointing or resuming.
+Only when the owner asks: pause a task with the `task-checkpoint` skill (Claude Code `/task-checkpoint`, Codex `$task-checkpoint`), and continue it in a new session with `task-resume <task-id>`. Without skills, follow `docs/practices/checkpoint.md` or `docs/practices/resume.md`. You may suggest a checkpoint in one line, saying why, but never run one unasked (ADR 0001). A checkpoint writes files; it does not clear the conversation. Read `context/` only while checkpointing or resuming.
 
 ## Checks
 

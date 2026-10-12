@@ -1,0 +1,40 @@
+# Tessera project rules for Codex. They load only when the project is trusted.
+# They allow the same commands as .claude/settings.json; change the two together.
+# See docs/practices/assistants.md#cross-review (ENG-15).
+
+prefix_rule(
+    pattern = ["node", "scripts/okf-check.mjs"],
+    decision = "allow",
+    justification = "The OKF check reads the docs and git history (ENG-08).",
+    match = ["node scripts/okf-check.mjs --base origin/main --pr-body body.md"],
+)
+
+prefix_rule(
+    pattern = ["node", "--test", "scripts/okf-check.test.mjs"],
+    decision = "allow",
+    justification = "The checker's tests create throwaway git repositories in the temp folder, which the sandbox blocks.",
+    match = ["node --test scripts/okf-check.test.mjs"],
+)
+
+prefix_rule(
+    pattern = ["git", ["status", "log", "diff", "show", "fetch"]],
+    decision = "allow",
+    justification = "Read-only git commands, and fetching the pull request's base and head (needs the network).",
+    match = ["git fetch origin", "git diff --check origin/main...HEAD", "git log --oneline -5"],
+    not_match = ["git push origin main", "git commit -m x"],
+)
+
+prefix_rule(
+    pattern = ["gh", ["pr", "issue", "run"], ["view", "diff", "checks", "list"]],
+    decision = "allow",
+    justification = "Read-only GitHub commands for reviews; they need the network.",
+    match = ["gh pr view 22 --repo suredo/Tessera", "gh pr checks 22", "gh issue view 9", "gh run view 123 --log-failed"],
+    not_match = ["gh pr comment 22", "gh pr merge 22"],
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", ["comment", "merge", "close", "edit", "review"]],
+    decision = "prompt",
+    justification = "Changes on GitHub need the owner's go-ahead.",
+    match = ["gh pr comment 22 --body-file review.md", "gh pr merge 22 --squash"],
+)

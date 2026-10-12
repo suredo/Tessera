@@ -4,7 +4,7 @@ title: "Task checkpoint"
 description: "How to pause a task for a new session: route lasting findings to their docs, keep history apart, write one short handoff (ENG-25)."
 tags: [practices, checkpoint, handoff]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T04:41:26Z }
 ---
 # Task checkpoint
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
 | --- | --- |
 | ENG-25 | **Checkpoint a task before changing sessions** (A52). When a task pauses, switches subject or the owner wants a fresh session, the assistant runs this procedure, only when asked: the `task-checkpoint` skill, or "follow `docs/practices/checkpoint.md`". It sends each lasting finding to its existing home in `docs/`, keeps useful history apart in `context/history/`, and writes one short handoff in `context/handoffs/<task-id>.md`. A checkpoint writes files; it does not clear or shorten the current conversation. Only a new session does that. |
 
-Resuming in the new session is [`ENG-26`](resume.md). A checkpoint never runs by itself or after every small answer. Whether an assistant may suggest one is still open: [D12](../decisions/open/d12-checkpoint-suggestions.md).
+Resuming in the new session is [`ENG-26`](resume.md). A checkpoint never runs by itself or after every small answer. An assistant may suggest one in one line, saying why (the task switched subject, the session has run long, or the task waits on a review or the owner), but never runs one unasked ([ADR 0001](../decisions/adr/0001-checkpoint-suggestions.md)).
 
 ## What goes where
 
