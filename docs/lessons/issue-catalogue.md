@@ -4,7 +4,7 @@ title: "Issue catalogue"
 description: "69 POC issues with root cause, mitigation requirements and status, plus coverage."
 tags: [lessons, issue-catalogue]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
 ---
 # Issue catalogue
 
@@ -31,7 +31,7 @@ Issues L-64 to L-69 were added when the catalogue was reviewed against the finis
 | L-08 | Offline tests passed while live runs failed on routing, feature fulfillment, gate policies and hidden requirements. The tests checked the host, not the model-facing behavior. | Test pyramid missing replay and live layers | TEST-03, TEST-04, TEST-05, EVAL-07, ENG-13 | R |
 | L-09 | Test markers inside the request text changed product behavior: `[engine-sneaky]` contained "engine", so the look-only rule treated it as a behavior request. | Test data in the natural-language channel | ENG-11 | D |
 | L-10 | Flaky browser tests: a viewport resize snapped back; the app's built-in browser pane could not mount sandboxed frames; clicks on native `<select>` popups didn't register in automation. | Environment and test-tooling assumptions | RUN-06, TEST-06, ENG-14, ENG-20 | D |
-| L-11 | Fixes were often made during live runs, after a failure, instead of acceptance criteria being written first. | Exploratory process | ENG-06, ENG-07, ENG-09, ENG-13 | D |
+| L-11 | Fixes were often made during live runs, after a failure, instead of acceptance criteria being written first. | Exploratory process | ENG-06, ENG-07, ENG-09, ENG-13, ENG-29 | D |
 | L-12 | Failure reasons were thrown away: a failed generation reported only "did not pass validation", so one live failure could never be explained. | Diagnostics not part of the result | GEN-10, OBS-01 | D |
 | L-13 | Test-run output piled up, and safety checks blocked bulk deletion. | No retention policy | ENG-10 | D |
 | L-14 | Several AI assistants (Codex, Claude) worked from long handoff documents of mixed age, re-deriving context and repeating mistakes. | No concise single source of rules for assistants | ENG-05, ENG-08, ENG-15, ENG-25, ENG-27 | D |

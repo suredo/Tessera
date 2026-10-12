@@ -4,7 +4,7 @@ title: "Overview"
 description: "What Tessera is, the key decisions and how to read these docs."
 tags: [overview, README]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
 ---
 # POC results: from Harness to Tessera
 
@@ -22,7 +22,7 @@ Each folder has an `index.md` listing its documents with a one-line description;
 | 2 | [product/](product/index.md) and [spec/](spec/index.md) | The product and its rules: principles, architecture, and numbered requirements by area (contracts, generation, runtime, data, verification, provider adapters, observability, security, UX, later simulations, testing), plus release acceptance criteria. |
 | 3 | [roadmap/](roadmap/index.md) | Milestones M0–M6 in build order, with deliverables, exit criteria, what to port from the POC, and live-call budgets derived per scenario run (about 270 calls to the first release; internal alpha for you after M2). |
 | 4 | [practices/](practices/index.md) | How we work: GitHub and CI, TypeScript standards, AI-assistant rules and templates, the five-layer test pyramid, the live evaluation protocol, documentation and evidence structure. |
-| 5 | [decisions/](decisions/index.md) | The decision log (A1–A53) and the remaining choices: progress streaming, engine modularity, simulation presentation, outside data sources and checkpoint suggestions. |
+| 5 | [decisions/](decisions/index.md) | The decision log (A1–A54) and the remaining choices: progress streaming, engine modularity, simulation presentation, outside data sources and checkpoint suggestions. |
 | 6 | [testing/](testing/index.md) | Real-life test scenarios: what a scenario is, the eight journeys every set must cover (first run to hands-on), three platform scenarios, a catalogue of 17 test apps (simple, medium, advanced; modularity later), how replay stays honest, the scenario file format, judging (host facts, AI review, your verdict) and which scenarios run at each milestone. |
 | — | [poc/](poc/index.md) | Historical copies of the two POC designs Tessera ports: the [UI standard](poc/ui-standard.md) and the [simulation engines plan](poc/simulation-engines-plan.md), including the live run findings. |
 

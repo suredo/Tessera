@@ -4,7 +4,7 @@ title: "M0: Foundations"
 description: "Repository, tooling, CI, contracts and two small live spikes."
 tags: [roadmap, foundations]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
 ---
 # M0: Foundations (size S, live spikes about 33 calls)
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
 
 | Deliverable | Requirements |
 | --- | --- |
-| Private repository on GitHub Free, outside synced folders (created 2026-10-11 as `suredo/Tessera`). GitHub Free has no branch protection for private repositories, so: squash-only merges, a local pre-push hook that refuses direct pushes to `main`, and merging only on green CI (`ENG-15`). PR, issue and task-brief templates; GitHub milestones M0–M6; Dependabot alerts; secret scanning in a pre-commit hook and CI | ENG-01, ENG-03, ENG-15, ENG-19 |
+| Private repository on GitHub Free, outside synced folders (created 2026-10-11 as `suredo/Tessera`). GitHub Free has no branch protection for private repositories, so: squash-only merges, a local pre-push hook that refuses direct pushes to `main`, and merging only on green CI (`ENG-15`). Issue and pull request templates and the [tracking rules](../practices/tracking.md): written before M0 (2026-10-12, A54). Remaining: GitHub labels and milestones M0–M6 (`ENG-28`); Dependabot alerts; secret scanning in a pre-commit hook and CI | ENG-01, ENG-03, ENG-15, ENG-19, ENG-28 |
 | Planning docs in OKF: done before M0 (2026-10-11, A50). Remaining: scenarios move to `evals/` with the runner; preserve a sanitized evidence index and available portable fixtures; identify missing raw evidence | ENG-08, ENG-10 |
 | pnpm workspace with packages scoped `@tessera/*`: `contracts`, `server`, `web` (React), `runtime`, `evals`; SQLite access layer chosen | [Architecture](../product/architecture.md), DATA-01 |
 | Translation layer for host text from the first component, with a lint rule that fails on hard-coded host text | UX-05 |
@@ -30,6 +30,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T00:21:12Z }
 - A sample Playwright test records video.
 - The OKF check runs in CI and fails on a deliberately broken code doc (missing `resource`, code changed without its doc).
 - The evaluation harness dry run produces a ledger.
+- The tracking rules (`ENG-28` to `ENG-30`) are reviewed against the issues and pull requests M0 produced, including where the line between issue and pull-request-only work fell.
 - The spike reports are signed off. If the schema or flags fail, the contracts approach is adjusted before M1. Intent categories with a high misroute rate get a design note before M2.
 
 **From the POC:** the recording approach for browser runs (a video plus a screenshot per step, driven over the browser's debugging protocol), the budget-guarded live server with its dry-run mode, and the documentation link checker.
