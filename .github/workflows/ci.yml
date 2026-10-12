@@ -1,6 +1,6 @@
-# CI on every pull request and on main (ENG-02). For now: the OKF check and its tests (ENG-05, ENG-08,
-# ENG-24), and the merge-ready job that stays red while a task handoff is left (ENG-25). The TypeScript
-# checks join with the workspace (#10). No secrets and no model calls.
+# CI on every pull request and on main (ENG-02): the OKF check and its tests (ENG-05, ENG-08, ENG-24),
+# the merge-ready job that stays red while a task handoff is left (ENG-25), and the workspace's
+# typecheck, lint, format check and unit tests (ENG-04, TEST-01). No secrets and no model calls.
 name: CI
 
 on:
@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0 # the drift check diffs against the pull request's base
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
       - name: Checker tests
         run: node --test scripts/okf-check.test.mjs
       - name: OKF check, with the drift check against the base
@@ -52,6 +52,24 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: 22
+          node-version-file: .nvmrc
       - name: No task handoff left (ENG-25)
         run: node scripts/okf-check.mjs --merge-ready
+
+  checks:
+    name: ${{ matrix.check }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false # each check reports on its own
+      matrix:
+        check: [typecheck, lint, "format:check", test]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: pnpm from packageManager, through Corepack
+        run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ${{ matrix.check }}

@@ -1,0 +1,6 @@
+packages:
+  - packages/*
+  - evals
+
+# Refuse to install on a Node version outside "engines" (A14).
+engineStrict: true

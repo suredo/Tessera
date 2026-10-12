@@ -3,6 +3,10 @@
     "allow": [
       "Bash(node scripts/okf-check.mjs:*)",
       "Bash(node --test scripts/okf-check.test.mjs)",
+      "Bash(pnpm typecheck)",
+      "Bash(pnpm lint)",
+      "Bash(pnpm format:check)",
+      "Bash(pnpm test)",
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git diff:*)",
