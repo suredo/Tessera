@@ -16,11 +16,38 @@ const rulesBroken = async (code: string): Promise<(string | null)[]> => {
 describe("web lint rules", { timeout: 60_000 }, () => {
   it("passes a component whose text comes from the translation layer (UX-05)", async () => {
     const code = `import { t } from "./i18n/translate.ts";
-export function App() {
-  return <h1 title={t("app.title")}>{t("home.heading")}</h1>;
+export function App({ open, draft }: { open: boolean; draft: string }) {
+  return (
+    <form title={t("app.title")}>
+      <h1>{t("home.heading")}</h1>
+      <button>{open ? t("home.status") : t("home.intro")}</button>
+      <input type="submit" value={t("home.status")} />
+      <input type="hidden" name="draft" value="draft-1" />
+      <input type="text" value={draft} />
+    </form>
+  );
 }
 `;
     expect(await rulesBroken(code)).toEqual([]);
+  });
+
+  it.each([
+    ["a condition", `<button>{open ? "Close" : "Open"}</button>`],
+    ["a fallback", `<p>{name || "Nobody yet"}</p>`],
+    ["an 'and'", `<p>{open && "Saving"}</p>`],
+    ["a concatenation", `<p>{"Hello " + name}</p>`],
+    ["a template", "<p>{`${name} saved`}</p>"],
+    ["a list", `<p>{["Ready", name]}</p>`],
+    ["a submit caption", `<input type="submit" value="Save" />`],
+    ["a button caption", `<input type="button" value={open ? "Hide" : "Show"} />`],
+  ])("fails on host text reached through %s (UX-05)", async (_, jsx) => {
+    const code = `export function App({ open, name }: { open: boolean; name: string }) {
+  return ${jsx};
+}
+`;
+    // Each case uses only some of the props, so only this rule's messages are compared.
+    const hostText = (await rulesBroken(code)).filter((rule) => rule === "tessera/no-host-text");
+    expect(hostText).toHaveLength(1);
   });
 
   it("fails on host text written in a component: text, string children and labels (UX-05)", async () => {

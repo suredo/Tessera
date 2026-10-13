@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04]
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-13T23:18:16Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-13T23:33:38Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 # Invariants
 
-- **No host text in components** (`UX-05`). A component asks `t("key")` for every word it shows, including `aria-label`, `title`, `alt`, `placeholder` and `label`. The lint rule `tessera/no-host-text` (`scripts/eslint/no-host-text.mjs`) fails on text written in a component.
+- **No host text in components** (`UX-05`). A component asks `t("key")` for every word it shows, including `aria-label`, `title`, `alt`, `placeholder`, `label`, and the `value` of a submit, button or reset input. The lint rule `tessera/no-host-text` (`scripts/eslint/no-host-text.mjs`) fails on text written in a component, also when it is reached through a condition, a fallback, a concatenation, a template or a list. It never looks inside a function call, so `t("key")` passes.
 - **A missing key is visible, never silent.** The translator falls back to English for a key another language lacks; a key no language has shows as the key itself. Either way it reports the gap through its `onMissing` handler, which warns in the console by default.
 - **The React Compiler does the memoizing** (A15). No hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case, with a comment saying so. ESLint runs the hooks rules and the compiler's rules (`eslint-plugin-react-hooks`, `recommended-latest`) on every component.
 
