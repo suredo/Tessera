@@ -355,6 +355,23 @@ test("the generated symbol section follows the code, and --fix rewrites it (ENG-
   assert.match(r.out, /assets\.md: the "# Symbols \(generated\)" section is missing/);
 });
 
+test("destructured and namespace exports count, under Entry points and in the generated section (ENG-24)", () => {
+  const root = makeRepo();
+  write(root, "packages/server/src/assets/helpers.ts", "export const help = 1;\n");
+  fs.appendFileSync(
+    path.join(root, ASSETS_CODE),
+    'export const { read, write: save, ...rest } = { read: 1, write: 2, keep: 3 };\nexport const [first, , third] = [1, 2, 3];\nexport * as helpers from "./helpers.ts";\n',
+  );
+  edit(root, ASSETS_DOC, "# Asset store\n", "# Asset store\n\n# Entry points\n\n- `index.ts`: `read`, `save`, `rest`, `first`, `third` and `helpers`\n");
+  const r = check(root, "--fix");
+  assert.equal(r.code, 0, r.out);
+  assert.ok(
+    read(root, ASSETS_DOC).endsWith("- `helpers.ts`: `help`\n- `index.ts`: `putAsset`, `read`, `save`, `rest`, `first`, `third`, `helpers`\n"),
+    read(root, ASSETS_DOC),
+  );
+  assert.equal(check(root).code, 0);
+});
+
 // ---------- the YAML library reads the docs as the old parser did (ENG-08) ----------
 // A frozen copy of the subset parser the check used before it read frontmatter with a YAML library.
 function legacySplitTop(s) {

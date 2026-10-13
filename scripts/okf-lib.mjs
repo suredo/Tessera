@@ -47,18 +47,27 @@ export function sourceFiles(resource) {
 
 const hasModifier = (node, kind) => (ts.getModifiers(node) ?? []).some((m) => m.kind === kind);
 
+// The names a declaration binds, including destructuring: `const { a, b: c, ...d } = x` binds a, c, d.
+const boundNames = (name) =>
+  ts.isIdentifier(name)
+    ? [name.text]
+    : name.elements.flatMap((el) => (ts.isOmittedExpression(el) ? [] : boundNames(el.name)));
+
 /** What a file exports, in source order, read from its syntax tree: `{ name, type }`. */
 export function exportsOf(file) {
   const source = ts.createSourceFile(file, fs.readFileSync(file, "utf8"), ts.ScriptTarget.Latest);
   const found = [];
   for (const statement of source.statements) {
     if (ts.isExportDeclaration(statement)) {
-      // `export { a, type B } from "./x.ts"`; `export * from` names nothing here.
+      // `export { a, type B } from "./x.ts"` and `export * as ns from`; a bare `export * from`
+      // names nothing here.
       const clause = statement.exportClause;
       if (clause && ts.isNamedExports(clause)) {
         for (const el of clause.elements) {
           found.push({ name: el.name.text, type: statement.isTypeOnly || el.isTypeOnly });
         }
+      } else if (clause && ts.isNamespaceExport(clause)) {
+        found.push({ name: clause.name.text, type: statement.isTypeOnly });
       }
     } else if (ts.isExportAssignment(statement)) {
       found.push({ name: "default", type: false });
@@ -71,7 +80,7 @@ export function exportsOf(file) {
         found.push({ name: "default", type });
       else if (ts.isVariableStatement(statement)) {
         for (const d of statement.declarationList.declarations) {
-          if (ts.isIdentifier(d.name)) found.push({ name: d.name.text, type: false });
+          for (const name of boundNames(d.name)) found.push({ name, type: false });
         }
       } else if (statement.name && ts.isIdentifier(statement.name)) {
         found.push({ name: statement.name.text, type });
