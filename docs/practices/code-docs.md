@@ -4,7 +4,7 @@ title: "Code documentation"
 description: "How code is documented as OKF concepts and kept true to the code (ENG-24)."
 tags: [practices, code-docs]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:49:45Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-13T05:01:14Z }
 ---
 # Code documentation
 
@@ -34,7 +34,7 @@ Body sections, in this order, when they apply:
 
 ## How it stays true
 
-1. **References are checked.** The OKF check fails when a code doc's `resource` or `tests` path does not exist, or an `implements` ID is not in the spec or the engineering practices. Named symbols are checked once the TypeScript tooling exists (M0), which also writes the generated symbol section.
+1. **References are checked.** The OKF check fails when a code doc's `resource` or `tests` path does not exist, or an `implements` ID is not in the spec or the engineering practices. Every symbol a doc names in backticks under `# Entry points` must be exported by the code under its `resource`. `node scripts/okf-check.mjs --fix` writes the `# Symbols (generated)` section from what that code exports, and the check fails while the section is missing or out of date.
 2. **Code changes pull in their docs.** When a pull request changes files under a code doc's `resource`, the check fails unless that doc changes too, or the pull request description has a line `No doc change needed: docs/code/<path>.md: <reason>`. The reviewing assistant checks the reason ([review checklist](assistants.md#ai-review-checklist), item 7).
 3. **Links go both ways.** Each module's main file starts with a comment naming its doc, for example `// Docs: docs/code/server/assets.md`. The check fails if that doc does not exist, and if a code doc is not named by any code file.
 4. **Coverage comes from the docs.** The coverage report (`ENG-17`) reads `implements` and `tests` to show, for each requirement, the code that implements it and the tests that check it.

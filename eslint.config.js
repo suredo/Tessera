@@ -5,9 +5,8 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  // The OKF check stays plain, dependency-free JavaScript until it moves to this tooling (#13).
   {
-    ignores: ["**/node_modules/", "scripts/okf-check*.mjs", "test-output/", "coverage/"],
+    ignores: ["**/node_modules/", "test-output/", "coverage/"],
   },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,

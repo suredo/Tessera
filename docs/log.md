@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-13
+
+* **Update**: The OKF check reads frontmatter with a YAML library ([documentation practice](practices/documentation.md), `ENG-08`) and checks code docs down to their symbols ([code docs](practices/code-docs.md), `ENG-24`): every symbol named under Entry points must be exported, and `--fix` writes the generated symbol section, which the [contracts package](code/contracts/package.md) doc now has ([issue 13](https://github.com/suredo/Tessera/issues/13)).
+
 ## 2026-10-12
 
 * **Creation**: The first code doc, [contracts package](code/contracts/package.md) ([issue 12](https://github.com/suredo/Tessera/issues/12)), under a new [code](code/index.md) folder (`ENG-24`). `@tessera/contracts` holds the draft intent contract (`GEN-01`), its generated JSON Schema (`CON-01`), and the unit rule for numbers with its short list of unitless names (`CON-05`). `AGENTS.md` says when to run `pnpm contracts:schemas`.
