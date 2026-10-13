@@ -8,6 +8,7 @@
       "Bash(pnpm format:check)",
       "Bash(pnpm test)",
       "Bash(pnpm secrets)",
+      "Bash(pnpm build)",
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git diff:*)",

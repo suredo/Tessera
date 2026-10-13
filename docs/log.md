@@ -2,6 +2,7 @@
 
 ## 2026-10-13
 
+* **Creation**: The [web package](code/web/package.md) code doc ([issue 14](https://github.com/suredo/Tessera/issues/14)): the host app's first screen in React 19 with the React Compiler (A15), its host text through the translation layer, and a lint rule that fails on host text written in a component (`UX-05`). `AGENTS.md` lists `pnpm build`.
 * **Update**: The OKF check reads frontmatter with a YAML library ([documentation practice](practices/documentation.md), `ENG-08`) and checks code docs down to their symbols ([code docs](practices/code-docs.md), `ENG-24`): every symbol named under Entry points must be exported, and `--fix` writes the generated symbol section, which the [contracts package](code/contracts/package.md) doc now has ([issue 13](https://github.com/suredo/Tessera/issues/13)).
 
 ## 2026-10-12
