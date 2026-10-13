@@ -4,7 +4,7 @@ title: "Documentation"
 description: "How the docs follow the Open Knowledge Format: kinds, frontmatter, indexes, log and links (ENG-08)."
 tags: [practices, documentation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T03:31:52Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-13T05:01:14Z }
 sources:
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
 ---
@@ -45,7 +45,7 @@ Every concept file starts with YAML frontmatter:
 
 Actors: `claude-code/<model>` and `codex/<model>` for the assistants, `human:<github-user>` for people, and `process:<name>` for automation such as `process:ci`. Datetimes are ISO 8601 with an explicit offset, for example `2026-10-11T20:21:39Z`.
 
-Frontmatter uses a simple YAML subset, so the check needs no dependencies: `key: value`, `key: [a, b]`, `key: { k: v }`, and a key followed by indented `- ` items that are values or `{ k: v }` maps. Quote any value containing `: ` or ` #`.
+Frontmatter is YAML, which the check reads with a YAML library (YAML 1.2's core schema: dates stay text, and a repeated key is an error). Keep to the simple forms the docs already use: `key: value`, `key: [a, b]`, `key: { k: v }`, and a key followed by indented `- ` items that are values or `{ k: v }` maps. Quote any value containing `: ` or ` #`.
 
 **Project types:** Overview, Product, Glossary, Principles, Architecture, Requirement Area, Acceptance Criteria, Roadmap, Milestone, Budget, Practice, Decision Log, Decision, Open Decision, Lesson, Test Design, POC Reference, Code Package, Code Module, Evaluation Report. A new type is added here and in the check first.
 

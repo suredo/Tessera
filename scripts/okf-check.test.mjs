@@ -1,5 +1,5 @@
-// Tests for scripts/okf-check.mjs (ENG-08, ENG-24). Zero dependencies: Node's built-in test runner.
-// Run: node --test scripts/okf-check.test.mjs
+// Tests for scripts/okf-check.mjs (ENG-08, ENG-24), on Node's built-in test runner.
+// Run: node --test scripts/okf-check.test.mjs (after pnpm install: the checker reads YAML and TypeScript)
 // Each test builds a small throwaway repository with a copy of the checker, then breaks one thing.
 import { test, after } from "node:test";
 import assert from "node:assert/strict";
@@ -9,7 +9,10 @@ import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const CHECKER = path.join(path.dirname(fileURLToPath(import.meta.url)), "okf-check.mjs");
+const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
+const CHECKER = path.join(SCRIPTS, "okf-check.mjs");
+const SYMBOLS = (lines) =>
+  ["", "# Symbols (generated)", "", "Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.", "", ...lines, ""].join("\n");
 const GENERATED = "generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:00:00Z }";
 const roots = [];
 after(() => roots.forEach((r) => fs.rmSync(r, { recursive: true, force: true })));
@@ -40,6 +43,8 @@ function makeRepo() {
   roots.push(root);
   const files = {
     "scripts/okf-check.mjs": fs.readFileSync(CHECKER, "utf8"),
+    "scripts/okf-lib.mjs": fs.readFileSync(path.join(SCRIPTS, "okf-lib.mjs"), "utf8"),
+    ".gitignore": "node_modules/\n", // the linked workspace dependencies below are never committed
     "AGENTS.md": "# Rules for AI assistants\n",
     "CLAUDE.md": "@AGENTS.md\n",
     "docs/index.md": '---\nokf_version: "0.2"\n---\n\n# Docs\n\n* [Spec](spec/index.md) - Requirements.\n* [Practices](practices/index.md) - Rules.\n* [Code](code/index.md) - Code docs.\n',
@@ -50,10 +55,12 @@ function makeRepo() {
     "docs/practices/code.md": concept("Practice", "Code standards", "Code rules.", "", "\n| ID | Rule |\n| --- | --- |\n| ENG-18 | Storage migrations. |\n"),
     "docs/code/index.md": "# Code\n\n* [Server](server/index.md) - Server docs.\n",
     "docs/code/server/index.md": "# Server\n\n* [Asset store](assets.md) - Stores files by hash.\n",
-    "docs/code/server/assets.md": concept("Code Module", "Asset store", "Stores files by hash.", "resource: ../../../packages/server/src/assets/\nimplements: [DATA-11]"),
+    "docs/code/server/assets.md": concept("Code Module", "Asset store", "Stores files by hash.", "resource: ../../../packages/server/src/assets/\nimplements: [DATA-11]", SYMBOLS(["- `index.ts`: `putAsset`"])),
     "packages/server/src/assets/index.ts": "// Docs: docs/code/server/assets.md\nexport const putAsset = () => 1;\n",
   };
   for (const [p, text] of Object.entries(files)) write(root, p, text);
+  // The checker's own dependencies (yaml, typescript) come from the workspace.
+  fs.symlinkSync(path.join(SCRIPTS, "..", "node_modules"), path.join(root, "node_modules"), "junction");
   return root;
 }
 
@@ -94,7 +101,7 @@ test("unknown types and unquoted values containing ': ' fail", () => {
   const r = check(root);
   assert.equal(r.code, 1);
   assert.match(r.out, /unknown type "Pratice"/);
-  assert.match(r.out, /quote this value: Data: rules/);
+  assert.match(r.out, /data\.md: frontmatter is not valid YAML \(quote values that contain ": "\)/);
 });
 
 test("index entries must match frontmatter; --fix repairs them and never writes 'undefined'", () => {
@@ -195,14 +202,15 @@ test("drift: code changed without its doc fails, unless the doc changes or the p
   git(root, "add", "-A");
   git(root, "commit", "-qm", "base");
   git(root, "switch", "-qc", "feature");
-  fs.appendFileSync(path.join(root, "packages/server/src/assets/index.ts"), "export const getAsset = () => 2;\n");
+  // A change inside a function: the exports, and so the generated symbol section, stay the same.
+  edit(root, "packages/server/src/assets/index.ts", "() => 1", "() => 2");
   git(root, "commit", "-qam", "code only");
 
   let r = check(root, "--base", "main");
   assert.equal(r.code, 1);
   assert.match(r.out, /code under packages\/server\/src\/assets changed/);
 
-  write(root, "pr.txt", "Summary\n\nNo doc change needed: docs/code/server/assets.md: adds a getter only\n");
+  write(root, "pr.txt", "Summary\n\nNo doc change needed: docs/code/server/assets.md: changes a return value only\n");
   r = check(root, "--base", "main", "--pr-body", "pr.txt");
   assert.equal(r.code, 0, r.out);
 
@@ -309,4 +317,137 @@ test("skills need identical Claude Code and Codex adapters with the same invocat
   assert.match(r.out, /reference not found: docs\/practices\/documentation\.md/);
   assert.match(r.out, /must agree on whether the skill runs only when asked/);
   assert.match(r.out, /\.agents\/skills\/task-resume\/SKILL\.md: missing/);
+});
+
+// ---------- symbols in code docs (ENG-24) ----------
+const ASSETS_DOC = "docs/code/server/assets.md";
+const ASSETS_CODE = "packages/server/src/assets/index.ts";
+
+test("a code doc that names a symbol its code doesn't export fails (ENG-24)", () => {
+  const root = makeRepo();
+  edit(root, ASSETS_DOC, "# Asset store\n", "# Asset store\n\n# Entry points\n\n- `index.ts`: `putAsset` and `getAsset`\n");
+  let r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /assets\.md: names `getAsset` under Entry points, which packages\/server\/src\/assets doesn't export/);
+  assert.doesNotMatch(r.out, /names `putAsset`/);
+
+  fs.appendFileSync(path.join(root, ASSETS_CODE), "export const getAsset = () => 2;\n");
+  r = check(root, "--fix");
+  assert.equal(r.code, 0, r.out);
+});
+
+test("the generated symbol section follows the code, and --fix rewrites it (ENG-24)", () => {
+  const root = makeRepo();
+  fs.appendFileSync(path.join(root, ASSETS_CODE), "export type Asset = { hash: string };\nexport { putAsset as storeAsset };\n");
+  let r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /assets\.md: the "# Symbols \(generated\)" section is out of date; run node scripts\/okf-check\.mjs --fix/);
+
+  r = check(root, "--fix");
+  assert.equal(r.code, 0, r.out);
+  assert.ok(read(root, ASSETS_DOC).endsWith("- `index.ts`: `putAsset`, `Asset` (type), `storeAsset`\n"));
+  assert.equal(check(root, "--fix").code, 0);
+  assert.ok(read(root, ASSETS_DOC).endsWith("- `index.ts`: `putAsset`, `Asset` (type), `storeAsset`\n"), "a second --fix changes nothing");
+
+  write(root, ASSETS_DOC, concept("Code Module", "Asset store", "Stores files by hash.", "resource: ../../../packages/server/src/assets/\nimplements: [DATA-11]"));
+  r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /assets\.md: the "# Symbols \(generated\)" section is missing/);
+});
+
+test("destructured and namespace exports count, under Entry points and in the generated section (ENG-24)", () => {
+  const root = makeRepo();
+  write(root, "packages/server/src/assets/helpers.ts", "export const help = 1;\n");
+  fs.appendFileSync(
+    path.join(root, ASSETS_CODE),
+    'export const { read, write: save, ...rest } = { read: 1, write: 2, keep: 3 };\nexport const [first, , third] = [1, 2, 3];\nexport * as helpers from "./helpers.ts";\n',
+  );
+  edit(root, ASSETS_DOC, "# Asset store\n", "# Asset store\n\n# Entry points\n\n- `index.ts`: `read`, `save`, `rest`, `first`, `third` and `helpers`\n");
+  const r = check(root, "--fix");
+  assert.equal(r.code, 0, r.out);
+  assert.ok(
+    read(root, ASSETS_DOC).endsWith("- `helpers.ts`: `help`\n- `index.ts`: `putAsset`, `read`, `save`, `rest`, `first`, `third`, `helpers`\n"),
+    read(root, ASSETS_DOC),
+  );
+  assert.equal(check(root).code, 0);
+});
+
+// ---------- the YAML library reads the docs as the old parser did (ENG-08) ----------
+// A frozen copy of the subset parser the check used before it read frontmatter with a YAML library.
+function legacySplitTop(s) {
+  const parts = [];
+  let depth = 0, quote = null, escaped = false, cur = "";
+  for (const ch of s) {
+    if (quote) {
+      cur += ch;
+      if (escaped) escaped = false;
+      else if (ch === "\\" && quote === '"') escaped = true;
+      else if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === "[" || ch === "{") depth++;
+    else if (ch === "]" || ch === "}") depth--;
+    else if (ch === "," && depth === 0) { parts.push(cur.trim()); cur = ""; continue; }
+    cur += ch;
+  }
+  if (cur.trim()) parts.push(cur.trim());
+  return parts;
+}
+
+function legacyParseValue(v) {
+  v = v.trim();
+  if (v.startsWith("[")) return legacySplitTop(v.slice(1, -1)).map(legacyParseValue);
+  if (v.startsWith("{")) {
+    const o = {};
+    for (const part of legacySplitTop(v.slice(1, -1))) {
+      const k = part.indexOf(": ");
+      o[part.slice(0, k).trim()] = legacyParseValue(part.slice(k + 2));
+    }
+    return o;
+  }
+  if (v.startsWith('"')) return JSON.parse(v);
+  if (v.startsWith("'")) return v.slice(1, -1).replace(/''/g, "'");
+  return v;
+}
+
+function legacyParseFrontmatter(text) {
+  if (!text.startsWith("---\n")) return { fm: null, body: text };
+  const end = text.indexOf("\n---\n", 3);
+  const lines = text.slice(4, end).split("\n");
+  const fm = {};
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim() || line.trim().startsWith("#")) continue;
+    const [, key, rest] = /^([A-Za-z_][\w-]*):(?:\s+(.*))?$/.exec(line);
+    if (rest) { fm[key] = legacyParseValue(rest); continue; }
+    const items = [];
+    while (i + 1 < lines.length && /^\s+-\s+/.test(lines[i + 1])) items.push(legacyParseValue(lines[++i].replace(/^\s+-\s+/, "")));
+    fm[key] = items;
+  }
+  return { fm, body: text.slice(end + 5) };
+}
+
+test("the YAML library reads every doc in this repository as the old subset parser did (ENG-08)", async () => {
+  const { parseFrontmatter } = await import("./okf-lib.mjs");
+  const repo = path.join(SCRIPTS, "..");
+  const markdown = (dir) =>
+    fs.existsSync(dir)
+      ? fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+          e.isDirectory() ? markdown(path.join(dir, e.name)) : e.name.endsWith(".md") ? [path.join(dir, e.name)] : [])
+      : [];
+  const files = ["docs", "context", ".claude/skills", ".agents/skills"].flatMap((d) => markdown(path.join(repo, d)));
+  // The old parser kept every scalar as text; YAML reads `true` as a boolean. Compare as text.
+  const asText = (v) =>
+    Array.isArray(v) ? v.map(asText) : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, asText(x)])) : String(v);
+  let withFrontmatter = 0;
+  for (const f of files) {
+    const text = fs.readFileSync(f, "utf8").replace(/\r\n/g, "\n");
+    const before = legacyParseFrontmatter(text);
+    const now = parseFrontmatter(text);
+    assert.deepEqual(asText(now.fm), asText(before.fm), path.relative(repo, f));
+    assert.equal(now.body, before.body, path.relative(repo, f));
+    if (now.fm) withFrontmatter++;
+  }
+  assert.ok(withFrontmatter > 60, `only ${withFrontmatter} docs with frontmatter found`);
 });

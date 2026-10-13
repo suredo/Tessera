@@ -2,10 +2,10 @@
 // OKF documentation check (ENG-05, ENG-08, ENG-24, ENG-25). See docs/practices/documentation.md.
 // Also checks task handoffs and history notes in context/, that CLAUDE.md only imports AGENTS.md,
 // and that every skill has identical Claude Code (.claude/skills) and Codex (.agents/skills) adapters.
-// Zero dependencies until the M0 tooling exists, so frontmatter uses a simple YAML subset.
+// Frontmatter is read with a YAML library and code with TypeScript's parser, so run `pnpm install` first.
 //
 // Usage: node scripts/okf-check.mjs [--fix] [--base <git-ref>] [--pr-body <file>] [--merge-ready]
-//   --fix          rewrite index.md entries (title, description) from frontmatter and add missing ones
+//   --fix          rewrite index.md entries from frontmatter, and code docs' generated symbol sections
 //   --base         also run the code-doc drift check against `git diff <base>...HEAD`
 //   --pr-body      file holding the pull request description ("No doc change needed: <doc>: <reason>")
 //   --merge-ready  also fail while any task handoff is left: run before merging, and on main
@@ -13,6 +13,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { exportsOf, parseFrontmatter, renderSymbols, sourceFiles, SYMBOLS_HEADING } from "./okf-lib.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BUNDLE = path.join(ROOT, "docs");
@@ -39,79 +40,6 @@ const warnings = [];
 const rel = (p) => path.relative(ROOT, p).split(path.sep).join("/");
 const err = (file, msg) => errors.push(`${rel(file)}: ${msg}`);
 const read = (f) => fs.readFileSync(f, "utf8").replace(/\r\n/g, "\n");
-
-// ---------- frontmatter: a simple YAML subset ----------
-function splitTop(s) {
-  const parts = [];
-  let depth = 0, quote = null, escaped = false, cur = "";
-  for (const ch of s) {
-    if (quote) {
-      cur += ch;
-      if (escaped) escaped = false;
-      else if (ch === "\\" && quote === '"') escaped = true; // "a \"b, c\" d" stays one value
-      else if (ch === quote) quote = null;
-      continue;
-    }
-    if (ch === '"' || ch === "'") quote = ch;
-    else if (ch === "[" || ch === "{") depth++;
-    else if (ch === "]" || ch === "}") depth--;
-    else if (ch === "," && depth === 0) { parts.push(cur.trim()); cur = ""; continue; }
-    cur += ch;
-  }
-  if (cur.trim()) parts.push(cur.trim());
-  return parts;
-}
-
-function parseValue(v) {
-  v = v.trim();
-  if (v.startsWith("[")) {
-    if (!v.endsWith("]")) throw new Error(`unclosed list: ${v}`);
-    return splitTop(v.slice(1, -1)).map(parseValue);
-  }
-  if (v.startsWith("{")) {
-    if (!v.endsWith("}")) throw new Error(`unclosed map: ${v}`);
-    const o = {};
-    for (const part of splitTop(v.slice(1, -1))) {
-      const k = part.indexOf(": ");
-      if (k < 0) throw new Error(`map entry without "key: value": ${part}`);
-      o[part.slice(0, k).trim()] = parseValue(part.slice(k + 2));
-    }
-    return o;
-  }
-  if (v.startsWith('"')) {
-    if (!v.endsWith('"') || v.length < 2) throw new Error(`unclosed quote: ${v}`);
-    return JSON.parse(v);
-  }
-  if (v.startsWith("'")) {
-    if (!v.endsWith("'") || v.length < 2) throw new Error(`unclosed quote: ${v}`);
-    return v.slice(1, -1).replace(/''/g, "'");
-  }
-  // Plain scalars must also be plain in real YAML, so other OKF consumers read them the same way.
-  if (/: |\s#/.test(v) || /^[&*!|>%@`?-]/.test(v)) throw new Error(`quote this value: ${v}`);
-  return v;
-}
-
-function parseFrontmatter(text) {
-  if (!text.startsWith("---\n")) return { fm: null, body: text };
-  const end = text.indexOf("\n---\n", 3);
-  if (end < 0) throw new Error("frontmatter is not closed with ---");
-  const lines = text.slice(4, end).split("\n");
-  const fm = {};
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim() || line.trim().startsWith("#")) continue;
-    const m = /^([A-Za-z_][\w-]*):(?:\s+(.*))?$/.exec(line);
-    if (!m) throw new Error(`unsupported frontmatter line: ${line}`);
-    const [, key, rest] = m;
-    if (key in fm) throw new Error(`duplicate key: ${key}`);
-    if (rest) { fm[key] = parseValue(rest); continue; }
-    const items = [];
-    while (i + 1 < lines.length && /^\s+-\s+/.test(lines[i + 1])) items.push(parseValue(lines[++i].replace(/^\s+-\s+/, "")));
-    if (!items.length) throw new Error(`key "${key}" has no value`);
-    fm[key] = items;
-  }
-  return { fm, body: text.slice(end + 5) };
-}
 
 // ---------- bundle walk ----------
 function walk(dir) {
@@ -254,12 +182,12 @@ if (fs.existsSync(logFile)) {
   }
 } else err(BUNDLE, "missing log.md");
 
-// ---------- code docs: back-links and drift ----------
+// ---------- code docs: back-links, named symbols, generated symbol sections and drift ----------
 const codeDocs = [...concepts].filter(([, c]) => CODE_TYPES.has(c.fm.type));
-const packages = path.join(ROOT, "packages");
 const backLinked = new Set();
-if (fs.existsSync(packages)) {
-  const stack = [packages];
+for (const codeRoot of ["packages", "evals"].map((d) => path.join(ROOT, d))) {
+  if (!fs.existsSync(codeRoot)) continue;
+  const stack = [codeRoot];
   while (stack.length) {
     const d = stack.pop();
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
@@ -275,6 +203,33 @@ if (fs.existsSync(packages)) {
   }
 }
 for (const [f] of codeDocs) if (!backLinked.has(f)) err(f, "no code file names this doc in a `Docs:` comment");
+
+// Symbols named in backticks under "# Entry points" must be exported by the code the doc describes,
+// and the "# Symbols (generated)" section must match that code (`--fix` rewrites it).
+const sectionOf = (body, heading) => {
+  const m = new RegExp(`^# ${heading}\\s*$([\\s\\S]*?)(?=^# |(?![\\s\\S]))`, "m").exec(body);
+  return m ? m[1] : "";
+};
+for (const [f, c] of codeDocs) {
+  if (!c.fm.resource) continue;
+  const resource = path.resolve(path.dirname(f), c.fm.resource);
+  if (!fs.existsSync(resource)) continue;
+  const exported = new Set(sourceFiles(resource).flatMap((file) => exportsOf(file).map((s) => s.name)));
+  for (const m of stripFences(sectionOf(c.body, "Entry points")).matchAll(/`([A-Za-z_$][\w$]*)`/g))
+    if (!exported.has(m[1])) err(f, `names \`${m[1]}\` under Entry points, which ${rel(resource)} doesn't export`);
+
+  const expected = renderSymbols(resource);
+  const at = c.body.indexOf(`\n${SYMBOLS_HEADING}\n`);
+  const current = at < 0 ? null : c.body.slice(at + 1).trimEnd() + "\n";
+  if (current === expected) continue;
+  if (FIX) {
+    const kept = (at < 0 ? c.body : c.body.slice(0, at + 1)).trimEnd();
+    const text = read(f);
+    const head = text.slice(0, text.length - c.body.length);
+    fs.writeFileSync(f, `${head}${kept}${expected ? `\n\n${expected}` : "\n"}`);
+  } else if (expected === null) err(f, `has a symbol section, but ${rel(resource)} exports nothing; run --fix`);
+  else err(f, `the "${SYMBOLS_HEADING}" section is ${at < 0 ? "missing" : "out of date"}; run node scripts/okf-check.mjs --fix`);
+}
 
 const base = opt("--base");
 if (base) {
@@ -416,7 +371,7 @@ for (const name of skillNames) {
   if (claude.body !== codex.body) err(codex.f, "instructions differ from the Claude Code adapter; keep the two identical");
   const policy = path.join(SKILL_ROOTS.Codex, name, "agents", "openai.yaml");
   const codexManual = fs.existsSync(policy) && /^\s*allow_implicit_invocation:\s*false\s*$/m.test(read(policy));
-  if ((claude.fm["disable-model-invocation"] === "true") !== codexManual)
+  if ((String(claude.fm["disable-model-invocation"]) === "true") !== codexManual)
     err(codex.f, "Claude Code (disable-model-invocation) and Codex (agents/openai.yaml allow_implicit_invocation) must agree on whether the skill runs only when asked");
 }
 

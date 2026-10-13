@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-05, GEN-01]
 tests: [../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T08:11:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-13T05:01:14Z }
 ---
 
 # Purpose
@@ -38,3 +38,12 @@ Depends on zod. The server uses it, and so will the host, the runtime, the evalu
 
 - **After changing a contract, run `pnpm contracts:schemas`** and commit the result, or the schema test fails.
 - **The intent contract is a draft.** The intent spike (#20) and the generation pipeline (M2) may change it. Claude Code's acceptance of the generated schema, including `oneOf`, is checked by the CLI spike (#19).
+
+# Symbols (generated)
+
+Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
+
+- `src/index.ts`: `INTENT_KINDS`, `intentSchema`, `Intent` (type), `contracts`, `renderSchemaFiles`, `toJsonSchema`, `ContractName` (type), `numericFieldsWithoutUnit`, `UNIT_SUFFIXES`, `UNITLESS_NAMES`, `UNITLESS_SUFFIXES`
+- `src/intent.ts`: `INTENT_KINDS`, `intentSchema`, `Intent` (type)
+- `src/json-schema.ts`: `contracts`, `ContractName` (type), `toJsonSchema`, `renderSchemaFiles`
+- `src/units.ts`: `UNIT_SUFFIXES`, `UNITLESS_SUFFIXES`, `UNITLESS_NAMES`, `numericFieldsWithoutUnit`

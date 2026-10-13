@@ -29,7 +29,7 @@ Only when the owner asks: pause a task with the `task-checkpoint` skill (Claude 
 
 Run them before saying something is done, and report the results faithfully, including failures.
 
-- `node scripts/okf-check.mjs`: docs frontmatter, indexes, links, log, code docs, and that `CLAUDE.md` only imports this file. `--fix` repairs index entries. `--merge-ready` also fails while a task handoff is left: run it before merging.
+- `node scripts/okf-check.mjs` (after `pnpm install`): docs frontmatter, indexes, links, log, code docs and the symbols they name, and that `CLAUDE.md` only imports this file. `--fix` repairs index entries and rewrites code docs' generated symbol sections. `--merge-ready` also fails while a task handoff is left: run it before merging.
 - `node --test scripts/okf-check.test.mjs`: whenever you change the checker.
 - The workspace (Node from `.nvmrc`; pnpm through Corepack: `corepack enable` once, or prefix `corepack`): `pnpm install`, then `pnpm typecheck`, `pnpm lint`, `pnpm format:check` (`pnpm format` fixes it), `pnpm test` and `pnpm secrets`. After changing a contract in `packages/contracts`, run `pnpm contracts:schemas` and commit the result; a test fails until you do.
 - CI (`.github/workflows/ci.yml`) runs all of these, plus `--merge-ready`, on every pull request and on `main`.
