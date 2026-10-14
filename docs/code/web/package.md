@@ -3,11 +3,11 @@ type: Code Package
 title: "Web package"
 description: "@tessera/web: the host app in the browser, built with Vite and React 19 with the React Compiler, with all host text going through the translation layer."
 resource: ../../../packages/web/
-implements: [UX-05, ENG-04]
-tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts]
+implements: [UX-05, ENG-04, TEST-06]
+tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/e2e/shell.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-13T23:33:38Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-14T00:08:03Z }
 ---
 
 # Purpose
@@ -21,6 +21,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - `src/i18n/translate.ts`: `t`, the host's translator, and `createTranslator`, which builds one for a language.
 - `src/i18n/en.ts`: `en`, the English host text by key. `MessageKey` is its list of keys.
 - `vite.config.ts`: the build, with the React Compiler as a Babel preset. Run it as `pnpm build`.
+- `e2e/shell.spec.ts`: the browser test, run as `pnpm e2e` with the repository's `playwright.config.ts`. It opens the built app in the installed Chrome and Edge at 320 px and 1280 px wide and records a video into `test-output/playwright/` (`TEST-06`). `e2e/prune-runs.ts` keeps the last 3 runs there.
 
 # Invariants
 
