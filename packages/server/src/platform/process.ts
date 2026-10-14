@@ -74,6 +74,8 @@ export function runProcess(
       env: options.env,
       shell: false,
       windowsHide: true,
+      // No input is sent, so the program reads end-of-input at once instead of waiting.
+      stdio: ["ignore", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";

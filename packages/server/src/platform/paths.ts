@@ -20,5 +20,7 @@ export function isInsideFolder(
   const p = platform === "win32" ? path.win32 : path.posix;
   const fold = (s: string) => (platform === "win32" ? s.toLowerCase() : s);
   const relative = p.relative(fold(p.resolve(parent)), fold(p.resolve(child)));
-  return relative === "" || (!relative.startsWith("..") && !p.isAbsolute(relative));
+  // Outside means the first step is "..", the parent folder; a name like "..cache" is inside.
+  const goesUp = relative === ".." || relative.startsWith(`..${p.sep}`);
+  return relative === "" || (!goesUp && !p.isAbsolute(relative));
 }

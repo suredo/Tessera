@@ -43,6 +43,14 @@ describe("paths (PLAT-01)", () => {
     expect(isInsideFolder("/data", "/data/a folder with spaces/x.db", "linux")).toBe(true);
     expect(isInsideFolder("/data", "/data", "linux")).toBe(true);
   });
+
+  it("counts a name that starts with two dots as inside; only '..' itself goes up", () => {
+    expect(isInsideFolder("C:\\data", "C:\\data\\..cache", "win32")).toBe(true);
+    expect(isInsideFolder("C:\\data", "C:\\data\\..cache\\x.db", "win32")).toBe(true);
+    expect(isInsideFolder("/data", "/data/..cache", "linux")).toBe(true);
+    expect(isInsideFolder("/data", "/data/../other", "linux")).toBe(false);
+    expect(isInsideFolder("/data", "/", "linux")).toBe(false);
+  });
 });
 
 describe("processes (PLAT-01)", () => {
@@ -61,6 +69,12 @@ describe("processes (PLAT-01)", () => {
     expect(failed).toMatchObject({ exitCode: 3, stderr: "no\n", timedOut: false });
     const slow = await runProcess(node, ["-e", "setTimeout(() => {}, 10000)"], { timeoutMs: 200 });
     expect(slow.timedOut).toBe(true);
+  });
+
+  it("gives a program no input, so one that reads until the end finishes", async () => {
+    const readsAll = "process.stdin.resume(); process.stdin.on('end', () => console.log('done'));";
+    const result = await runProcess(node, ["-e", readsAll], { timeoutMs: 5000 });
+    expect(result).toMatchObject({ exitCode: 0, stdout: "done\n", timedOut: false });
   });
 
   it("refuses a relative path and a Windows batch file, saying what to do (L-45)", async () => {
