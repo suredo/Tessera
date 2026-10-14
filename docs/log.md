@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-14
+
+* **Creation**: The [platform helpers](code/server/platform.md) code doc ([issue 15](https://github.com/suredo/Tessera/issues/15)): paths and starting programs the same on every platform, by absolute path, with no shell and no Windows batch files (`PLAT-01`, L-45). CI gains a Windows job for the helpers and for browser tests in Chrome and Edge at 320 px and 1280 px, with videos kept as run artifacts (`TEST-06`, `ENG-14`, `ENG-10`). Code docs no longer list browser-test code among their symbols. `AGENTS.md` lists `pnpm e2e`.
+
 ## 2026-10-13
 
 * **Creation**: The [web package](code/web/package.md) code doc ([issue 14](https://github.com/suredo/Tessera/issues/14)): the host app's first screen in React 19 with the React Compiler (A15), its host text through the translation layer, and a lint rule that fails on host text written in a component (`UX-05`). `AGENTS.md` lists `pnpm build`.

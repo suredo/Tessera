@@ -28,8 +28,9 @@ export function parseFrontmatter(text) {
 
 // ---------- exported symbols ----------
 
-const SKIP_DIRS = new Set(["node_modules", "dist", "test", "tests"]);
-const isSource = (name) => /\.tsx?$/.test(name) && !/\.(test|d)\.tsx?$/.test(name);
+// Tests (unit and browser), declarations and build output aren't the code a doc describes.
+const SKIP_DIRS = new Set(["node_modules", "dist", "test", "tests", "e2e"]);
+const isSource = (name) => /\.tsx?$/.test(name) && !/\.(test|spec|d)\.tsx?$/.test(name);
 
 /** The TypeScript source files under a resource (a folder or a file), tests left out, sorted. */
 export function sourceFiles(resource) {

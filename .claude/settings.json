@@ -9,6 +9,7 @@
       "Bash(pnpm test)",
       "Bash(pnpm secrets)",
       "Bash(pnpm build)",
+      "Bash(pnpm e2e)",
       "Bash(git status:*)",
       "Bash(git log:*)",
       "Bash(git diff:*)",
