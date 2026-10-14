@@ -8,6 +8,9 @@ import path from "node:path";
 /** How long the output may keep arriving after the program has exited. */
 const OUTPUT_GRACE_MS = 250;
 
+/** How long a program may take to stop when asked, at the time limit, before it is ended outright. */
+const STOP_GRACE_MS = 1000;
+
 export type ProcessResult = {
   exitCode: number | null;
   stdout: string;
@@ -19,7 +22,7 @@ export type ProcessResult = {
 export type RunOptions = {
   cwd?: string;
   env?: NodeJS.ProcessEnv;
-  /** The process is stopped after this long. */
+  /** The process is asked to stop after this long, and ended outright if it hasn't a second later. */
   timeoutMs?: number;
 };
 
@@ -34,6 +37,15 @@ function isRunnable(file: string, platform: NodeJS.Platform): boolean {
   } catch {
     return false;
   }
+}
+
+// The file's name as stored on disk: Windows matches names regardless of case. Links are kept as
+// found, as a shell runs them: some programs choose what to do from the name they were started by.
+function asStored(file: string, platform: NodeJS.Platform): string {
+  if (platform !== "win32") return file;
+  const lower = path.basename(file).toLowerCase();
+  const stored = fs.readdirSync(path.dirname(file)).find((name) => name.toLowerCase() === lower);
+  return stored === undefined ? file : path.join(path.dirname(file), stored);
 }
 
 /**
@@ -53,9 +65,8 @@ export function findExecutable(
   const delimiter = platform === "win32" ? ";" : ":";
   for (const dir of pathValue.split(delimiter).filter(Boolean)) {
     for (const ext of extensions) {
-      const candidate = path.join(dir, name + ext);
-      // Windows matches names regardless of case; return the file's own name.
-      if (isRunnable(candidate, platform)) return fs.realpathSync.native(candidate);
+      const candidate = path.resolve(dir, name + ext);
+      if (isRunnable(candidate, platform)) return asStored(candidate, platform);
     }
   }
   return null;
@@ -94,6 +105,7 @@ export function runProcess(
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let killer: ReturnType<typeof setTimeout> | undefined;
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
     child.stderr.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
     const timer =
@@ -102,6 +114,8 @@ export function runProcess(
         : setTimeout(() => {
             timedOut = true;
             child.kill();
+            // Outside Windows a program can catch or ignore that request; then it's ended outright.
+            killer = setTimeout(() => child.kill("SIGKILL"), STOP_GRACE_MS);
           }, options.timeoutMs);
     // The result comes when the program exits, once its output has arrived. A program it started
     // and left running can hold the output open; the call then waits only OUTPUT_GRACE_MS more.
@@ -120,10 +134,13 @@ export function runProcess(
     child.on("error", (error) => {
       settled = true;
       clearTimeout(timer);
+      clearTimeout(killer);
       reject(error);
     });
     child.on("exit", (code) => {
       exitCode = code;
+      clearTimeout(timer);
+      clearTimeout(killer);
       grace = setTimeout(finish, OUTPUT_GRACE_MS);
     });
     child.on("close", finish);

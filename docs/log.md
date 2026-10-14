@@ -3,6 +3,7 @@
 ## 2026-10-14
 
 * **Creation**: The [platform helpers](code/server/platform.md) code doc ([issue 15](https://github.com/suredo/Tessera/issues/15)): paths and starting programs the same on every platform, by absolute path, with no shell and no Windows batch files (`PLAT-01`, L-45). CI gains a Windows job for the helpers and for browser tests in Chrome and Edge at 320 px and 1280 px, with videos kept as run artifacts (`TEST-06`, `ENG-14`, `ENG-10`). Code docs no longer list browser-test code among their symbols. `AGENTS.md` lists `pnpm e2e`.
+* **Update**: The [platform helpers](code/server/platform.md) (`PLAT-01`): `findExecutable` returns a link as found, not its target, and a program that ignores the request to stop at the time limit is ended outright. `isInsideFolder` doesn't follow links, which the doc now says.
 
 ## 2026-10-13
 

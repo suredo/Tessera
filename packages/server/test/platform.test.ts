@@ -71,6 +71,15 @@ describe("processes (PLAT-01)", () => {
     expect(slow.timedOut).toBe(true);
   });
 
+  it("ends a program that ignores the request to stop at the time limit", async () => {
+    // Outside Windows a program can catch the request; Windows always ends it. Runs on both.
+    const ignores = "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);";
+    const started = Date.now();
+    const result = await runProcess(node, ["-e", ignores], { timeoutMs: 1000 });
+    expect(Date.now() - started).toBeLessThan(4000);
+    expect(result).toMatchObject({ exitCode: null, timedOut: true });
+  });
+
   it("gives a program no input, so one that reads until the end finishes", async () => {
     const readsAll = "process.stdin.resume(); process.stdin.on('end', () => console.log('done'));";
     const result = await runProcess(node, ["-e", readsAll], { timeoutMs: 5000 });
@@ -109,7 +118,17 @@ describe("processes (PLAT-01)", () => {
       fs.writeFileSync(path.join(first, "tool"), "#!/bin/sh\n", { mode: 0o644 });
       fs.writeFileSync(path.join(second, "tool"), "#!/bin/sh\n", { mode: 0o755 });
       const env = { PATH: `${first}:${second}` };
-      expect(findExecutable("tool", env)).toBe(fs.realpathSync(path.join(second, "tool")));
+      expect(findExecutable("tool", env)).toBe(path.join(second, "tool"));
+    },
+  );
+
+  // Making a link needs admin rights on Windows, so this case runs on Linux CI.
+  it.skipIf(process.platform === "win32")(
+    "returns a link as found, not the file it points to, as a shell does",
+    () => {
+      const dir = folderWithSpaces();
+      fs.symlinkSync(node, path.join(dir, "shim"));
+      expect(findExecutable("shim", { PATH: dir })).toBe(path.join(dir, "shim"));
     },
   );
 });
