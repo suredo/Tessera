@@ -6,7 +6,8 @@ import path from "node:path";
 const KEEP = 3;
 
 export default function pruneRuns(): void {
-  const dir = path.resolve("test-output", "playwright");
+  // The repository root, where playwright.config.ts puts the runs, whatever folder Playwright ran in.
+  const dir = path.resolve(import.meta.dirname, "..", "..", "..", "test-output", "playwright");
   if (!fs.existsSync(dir)) return;
   const current = process.env["TESSERA_E2E_RUN"];
   const older = fs

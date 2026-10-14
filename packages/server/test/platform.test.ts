@@ -77,6 +77,16 @@ describe("processes (PLAT-01)", () => {
     expect(result).toMatchObject({ exitCode: 0, stdout: "done\n", timedOut: false });
   });
 
+  it("returns when the program exits, even if a program it started still holds the output", async () => {
+    // The parent exits at once; its child is detached and released but still holds the output.
+    const leavesChild =
+      'const c = require("child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 4000)"], { stdio: "inherit", detached: true }); c.unref(); console.log("parent done");';
+    const started = Date.now();
+    const result = await runProcess(node, ["-e", leavesChild]);
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(result).toMatchObject({ exitCode: 0, stdout: "parent done\n", timedOut: false });
+  });
+
   it("refuses a relative path and a Windows batch file, saying what to do (L-45)", async () => {
     await expect(runProcess("node", ["-v"])).rejects.toThrow(/full path/);
     const shim = path.join(folderWithSpaces(), "claude.cmd");
@@ -90,4 +100,16 @@ describe("processes (PLAT-01)", () => {
     expect(findExecutable(name, env)).toBe(node);
     expect(findExecutable("no-such-program-here", env)).toBeNull();
   });
+
+  // Permission to run exists only outside Windows, so this case runs on Linux CI.
+  it.skipIf(process.platform === "win32")(
+    "skips a file that isn't allowed to run, as a shell does",
+    () => {
+      const [first, second] = [folderWithSpaces(), folderWithSpaces()];
+      fs.writeFileSync(path.join(first, "tool"), "#!/bin/sh\n", { mode: 0o644 });
+      fs.writeFileSync(path.join(second, "tool"), "#!/bin/sh\n", { mode: 0o755 });
+      const env = { PATH: `${first}:${second}` };
+      expect(findExecutable("tool", env)).toBe(fs.realpathSync(path.join(second, "tool")));
+    },
+  );
 });
