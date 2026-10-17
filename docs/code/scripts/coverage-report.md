@@ -7,7 +7,7 @@ implements: [ENG-17, ENG-24, ENG-28]
 tests: [../../../scripts/test/coverage-report.test.ts]
 tags: [code, scripts, coverage]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:10:29Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T08:35:38Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Shows, for every requirement in the spec and the practices and every lesson, whe
 
 # Entry points
 
-- `scripts/coverage-report.ts`: `collect` reads a repository into `Coverage` (each `Requirement` and `Lesson`, and the unknown IDs); `render` writes it as Markdown. `MILESTONES` lists M0 to M6.
+- `scripts/coverage-report.ts`: `collect` reads a repository into `Coverage` (each `Requirement` and `Lesson`, and the unknown IDs); `render` writes it as Markdown; `testTitles` reads the test names a file declares. `MILESTONES` lists M0 to M6.
 - The `pnpm coverage` command in `package.json` sets the current milestone (`--milestone M0`). Change it when the owner signs off a milestone.
 
 # Invariants
@@ -29,6 +29,8 @@ The status rules:
 - **Work in a later milestone never counts as resolved.** A requirement counts toward the current milestone only once its milestone is reached; before that it is listed, with its status, as "deferred", and kept out of the counted totals.
 - **A practice with no milestone counts from the start;** without code evidence it is "a working rule: followed in review". A spec requirement in no milestone never counts, and says so.
 - **A lesson** takes the status of its least advanced mitigation, and the latest milestone among its scheduled mitigations; it counts only when all its mitigations do. A lesson without mitigations is "accepted" if the catalogue says A. An R lesson always carries "residual risk: depends on the model".
+- **Only real test declarations are evidence.** Test names are read from the syntax tree: the plain-text first argument of each `it`, `test` or `describe` call, `.skip` and the like included. A call written in a comment or inside a string, as test fixtures often are, is not a test.
+- **Only this checkout is read.** A folder with its own `.git`, such as an assistant's worktree of another branch under `.claude/worktrees/`, is left out, so its tests and IDs never count for this commit.
 - **Unknown IDs fail it:** an ID in a test name, a code doc's `implements` or a lesson's mitigations that nothing defines. Only known prefixes count as IDs, so a name like SHA-256 isn't one.
 
 # Depends on / used by
@@ -37,12 +39,13 @@ Depends on `scripts/okf-lib.mjs` for frontmatter, and on the docs' layout: requi
 
 # Pitfalls
 
-- **Scripts need code docs to count as evidence.** The OKF check and the git hooks enforce several practices (`ENG-01`, `ENG-05`, `ENG-08`, `ENG-10`, `ENG-15`, `ENG-24`), and their tests name them, but until those scripts have code docs the report shows "named in tests only".
-- **Test names are found by a pattern** for `it`, `test` and `describe` with a string title. A title built at run time isn't seen.
-- **The milestone comes from tables only.** An ID mentioned only in a milestone's prose or exit criteria isn't scheduled there.
+- **Scripts count as evidence only through code docs,** like any other code: the OKF check and the git hooks have theirs ([OKF check](okf-check.md), [git hooks](git-hooks.md)). A new script whose tests name an ID shows "named in tests only" until it has one.
+- **A test name built at run time isn't seen,** such as a template with `${…}` or a name from `it.each`. Write the ID in plain text.
+- **The first version matched test names with a pattern** over the raw text, which counted commented-out tests and sample strings, and walked into nested checkouts; Codex's review of [pull request 40](https://github.com/suredo/Tessera/pull/40) found both.
+- **The milestone comes from tables only, and from IDs written out.** An ID mentioned only in a milestone's prose or exit criteria isn't scheduled there, and neither is one inside a range such as "CLI-01 to CLI-05": only CLI-01 and CLI-05 are read.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `coverage-report.ts`: `MILESTONES`, `Milestone` (type), `Status` (type), `Requirement` (type), `Lesson` (type), `Coverage` (type), `collect`, `render`
+- `coverage-report.ts`: `MILESTONES`, `Milestone` (type), `Status` (type), `Requirement` (type), `Lesson` (type), `Coverage` (type), `testTitles`, `collect`, `render`
