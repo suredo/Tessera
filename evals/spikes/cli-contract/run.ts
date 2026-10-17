@@ -8,16 +8,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { intentSchema, stageSchema } from "@tessera/contracts";
-import { findExecutable, runProcess, type Provider } from "@tessera/server";
+import type { Provider } from "@tessera/server";
 import { z } from "zod";
 import { HarnessError, startHarness, type LedgerSummary, type RunMode } from "../../src/index.ts";
 import { artifactDraftSchema } from "./artifact-draft.ts";
 import {
-  cleanEnvironment,
-  createClaudeCliProvider,
-  isSignedIn,
+  fakeClaudeProvider,
+  liveClaudeProvider,
   MAX_TURNS,
   resultEnvelopeSchema,
+  runFolder,
+  runModeFrom,
 } from "./claude-cli.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -116,63 +117,20 @@ export async function runSpike(options: {
 }
 
 /** The provider for a dry run: the same caller, starting the fake claude instead of the real one. */
-export function fakeProvider(dataFolder: string, repliesFile?: string): Provider {
-  return createClaudeCliProvider({
-    executable: process.execPath,
-    leadingArgs: [
-      path.join(here, "fake-claude.ts"),
-      repliesFile ?? path.join(here, "dry-run-replies.json"),
-      path.join(dataFolder, "fake-calls"),
-    ],
-    live: false,
-    systemPrompt: readPrompt("system.md"),
-  });
-}
-
-async function liveProvider(): Promise<{ provider: Provider; cliVersion: string }> {
-  const executable = findExecutable("claude");
-  if (!executable) throw new Error("The claude program is not on the PATH.");
-  // Free: --version reaches no model.
-  const version = await runProcess(executable, ["--version"], {
-    env: cleanEnvironment(process.env),
-    timeoutMs: 30_000,
-  });
-  if (version.exitCode !== 0) throw new Error(`claude --version failed: ${version.stderr}`);
-  // Free too: a missing sign-in stops here, before the harness counts a call.
-  if (!(await isSignedIn(executable, process.env))) {
-    throw new Error(
-      "The claude program is not signed in. Run `claude auth login`, then try again.",
-    );
-  }
-  const provider = createClaudeCliProvider({
-    executable,
-    live: true,
-    systemPrompt: readPrompt("system.md"),
-  });
-  return { provider, cliVersion: version.stdout.trim() };
-}
+export const fakeProvider = (dataFolder: string, repliesFile?: string): Provider =>
+  fakeClaudeProvider(
+    readPrompt("system.md"),
+    repliesFile ?? path.join(here, "dry-run-replies.json"),
+    path.join(dataFolder, "fake-calls"),
+  );
 
 async function main(argv: string[]): Promise<void> {
-  const live = argv.includes("--live");
-  if (live === argv.includes("--dry-run")) throw new Error("Pass either --dry-run or --live.");
-  const capArg = argv[argv.indexOf("--approved-cap") + 1];
-  if (live && (!argv.includes("--approved-cap") || Number(capArg) !== PLAN.callCap)) {
-    throw new Error(`A live run needs --approved-cap ${PLAN.callCap}, the cap the owner approved.`);
-  }
-  const mode: RunMode = live ? "live" : "dry-run";
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const dataFolder = path.join(
-    here,
-    "..",
-    "..",
-    "..",
-    "test-output",
-    "evals",
-    `cli-${mode}-${stamp}`,
-  );
-  const { provider, cliVersion } = live
-    ? await liveProvider()
-    : { provider: fakeProvider(dataFolder), cliVersion: null };
+  const mode = runModeFrom(argv, PLAN.callCap);
+  const dataFolder = runFolder("cli", mode);
+  const { provider, cliVersion } =
+    mode === "live"
+      ? await liveClaudeProvider(readPrompt("system.md"))
+      : { provider: fakeProvider(dataFolder), cliVersion: null };
   const report = await runSpike({ mode, provider, dataFolder, cliVersion });
   console.log(JSON.stringify(report, null, 2));
   console.log(`Ledger, request log and report: ${dataFolder}`);
