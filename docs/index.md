@@ -27,5 +27,5 @@ okf_version: "0.2"
 
 # History
 
-* [Lessons](lessons/index.md) - What the Harness POC built, what worked, its 69 issues and what it left unanswered.
+* [Lessons](lessons/index.md) - What the Harness POC built, what worked, its 69 issues and what it left unanswered, then the issues found while building Tessera, from L-70 on.
 * [POC references](poc/index.md) - Historical copies of the two POC designs Tessera ports.

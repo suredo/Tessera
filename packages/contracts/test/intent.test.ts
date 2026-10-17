@@ -1,10 +1,11 @@
-import { Ajv2020 } from "ajv/dist/2020.js";
+import { Ajv } from "ajv";
 import { describe, expect, it } from "vitest";
 import { intentSchema, toJsonSchema } from "../src/index.ts";
 
 // zod (used in the host) and the generated JSON Schema (handed to the CLI) must give the same
-// verdict on every sample, or the model could be held to a different contract than the host.
-const validateWithJsonSchema = new Ajv2020({ strict: true }).compile(toJsonSchema("intent"));
+// verdict on every sample, or the model could be held to a different contract than the host. A
+// default (draft-07) ajv, as Claude Code uses to check --json-schema.
+const validateWithJsonSchema = new Ajv({ strict: true }).compile(toJsonSchema("intent"));
 
 const base = {
   interfacePart: "a table of my guests",

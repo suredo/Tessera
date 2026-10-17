@@ -4,7 +4,7 @@ title: "Issue catalogue"
 description: "69 POC issues with root cause, mitigation requirements and status, plus coverage."
 tags: [lessons, issue-catalogue]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T03:28:33Z }
 ---
 # Issue catalogue
 
@@ -15,7 +15,7 @@ Status key:
 - **R**, planned risk reduction: a mitigation is specified, but residual behavior remains model-dependent or otherwise uncertain.
 - **A**, accepted: an inherent limit, documented and monitored.
 
-Issues L-64 to L-69 were added when the catalogue was reviewed against the finished spec. They sit in their category, so their numbers are not in order. IDs are never renumbered (`ENG-17`).
+Issues L-64 to L-69 were added when the catalogue was reviewed against the finished spec. They sit in their category, so their numbers are not in order. IDs are never renumbered (`ENG-17`). Issues found while building Tessera continue the series from L-70 in [Tessera issues](tessera-issues.md).
 
 ## Engineering process
 

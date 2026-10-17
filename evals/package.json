@@ -8,6 +8,10 @@
   },
   "dependencies": {
     "@tessera/contracts": "workspace:*",
-    "@tessera/server": "workspace:*"
+    "@tessera/server": "workspace:*",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
   }
 }
