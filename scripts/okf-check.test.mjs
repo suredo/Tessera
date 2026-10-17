@@ -531,6 +531,15 @@ test("a code doc that names a symbol its code doesn't export fails (ENG-24)", ()
   assert.equal(r.code, 0, r.out);
 });
 
+test("test code (unit, e2e, spec) is not listed among a doc's symbols (ENG-24)", () => {
+  const root = makeRepo();
+  write(root, "packages/server/src/assets/e2e/prune.ts", "export default function prune() {}\n");
+  write(root, "packages/server/src/assets/store.spec.ts", "export const fixture = 1;\n");
+  write(root, "packages/server/src/assets/store.test.ts", "export const sample = 1;\n");
+  const r = check(root);
+  assert.equal(r.code, 0, r.out);
+});
+
 test("the generated symbol section follows the code, and --fix rewrites it (ENG-24)", () => {
   const root = makeRepo();
   fs.appendFileSync(

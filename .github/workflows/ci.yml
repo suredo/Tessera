@@ -1,7 +1,8 @@
 # CI on every pull request and on main (ENG-02): the OKF check and its tests (ENG-05, ENG-08, ENG-24),
 # the merge-ready job that stays red while a task handoff is left (ENG-25), and the workspace's
 # typecheck, lint, format check, unit tests (ENG-04, TEST-01), secret scan, with the same rules
-# as the pre-commit hook (ENG-19), and the web app's build. No secrets and no model calls.
+# as the pre-commit hook (ENG-19), and the web app's build, all on Linux; then one Windows job for
+# the platform helpers and the browser tests (PLAT-01, TEST-06). No secrets and no model calls.
 name: CI
 
 on:
@@ -80,3 +81,31 @@ jobs:
         run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm run ${{ matrix.check }}
+
+  # The one Windows job (ENG-02): the platform helpers' tests and the browser tests in Chrome and
+  # Edge, both preinstalled on the runner. Windows minutes cost more, so the fast checks stay above.
+  windows:
+    name: Windows (platform, Chrome and Edge)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: pnpm from packageManager, through Corepack
+        run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Platform helpers (PLAT-01)
+        run: pnpm exec vitest run packages/server/test/platform.test.ts
+      - name: Playwright's video encoder
+        run: pnpm exec playwright install ffmpeg
+      - name: Browser tests in Chrome and Edge (TEST-06)
+        run: pnpm e2e
+      - name: Keep the videos (ENG-10)
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-videos
+          path: test-output/playwright/
+          retention-days: 14

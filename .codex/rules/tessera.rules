@@ -17,10 +17,10 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["pnpm", ["typecheck", "lint", "format:check", "test", "secrets", "build"]],
+    pattern = ["pnpm", ["typecheck", "lint", "format:check", "test", "secrets", "build", "e2e"]],
     decision = "allow",
-    justification = "The workspace checks (ENG-04, TEST-01, ENG-19); only build writes, to packages/web/dist/.",
-    match = ["pnpm typecheck", "pnpm format:check", "pnpm test", "pnpm secrets", "pnpm build"],
+    justification = "The workspace checks (ENG-04, TEST-01, ENG-19, TEST-06); build writes packages/web/dist/, e2e writes test-output/.",
+    match = ["pnpm typecheck", "pnpm format:check", "pnpm test", "pnpm secrets", "pnpm build", "pnpm e2e"],
     not_match = ["pnpm install", "pnpm format", "pnpm add left-pad"],
 )
 
