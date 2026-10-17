@@ -56,17 +56,60 @@ describe("storage (DATA-01, ENG-18)", () => {
     db.close();
   });
 
-  it("enforces foreign keys, and refuses async or nested transactions", () => {
+  it("enforces foreign keys, and refuses nested transactions", () => {
     const db = openDatabase(path.join(newFolder(), "tessera.db"));
     migrate(db, readMigrations(fixtures));
     expect(() => db.run("INSERT INTO note_tags (note_id, tag) VALUES (?, ?)", 99, "x")).toThrow(
       /FOREIGN KEY/,
     );
-    expect(() => db.transaction(async () => {})).toThrow(/synchronous/);
     expect(() => db.transaction(() => db.transaction(() => 1))).toThrow(/inside another/);
-    // Each refused transaction was rolled back, so a new one starts cleanly.
+    // The refused transaction was rolled back, so a new one starts cleanly.
     expect(db.transaction(() => 2)).toBe(2);
     db.close();
+  });
+
+  // Codex's review of #39: async work that writes after an await must not land outside the
+  // transaction it was refused from.
+  it("refuses async work before it runs, so nothing it writes after an await is kept", async () => {
+    const db = openDatabase(path.join(newFolder(), "tessera.db"));
+    migrate(db, readMigrations(fixtures));
+    let ran = false;
+    const write = async () => {
+      ran = true;
+      await Promise.resolve();
+      db.run("INSERT INTO notes (text, created_at) VALUES (?, ?)", "late", "2026-10-17T09:00:00Z");
+    };
+    // @ts-expect-error: the type refuses async work too.
+    expect(() => db.transaction(write)).toThrow(/synchronous/);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(ran).toBe(false);
+    expect(db.get(count, "SELECT COUNT(*) AS n FROM notes")).toEqual({ n: 0 });
+    db.close();
+  });
+
+  it("closes the connection when plain work returns a promise, so its later writes fail", async () => {
+    const file = path.join(newFolder(), "tessera.db");
+    const db = openDatabase(file);
+    migrate(db, readMigrations(fixtures));
+    let lateWrite: unknown = null;
+    const work = () =>
+      Promise.resolve().then(() => {
+        try {
+          db.run("INSERT INTO notes (text, created_at) VALUES (?, ?)", "late", "2026-10-17T09:00Z");
+        } catch (error) {
+          lateWrite = error;
+        }
+      });
+    // @ts-expect-error: the type refuses a returned promise.
+    expect(() => db.transaction(work)).toThrow(/synchronous/);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(String(lateWrite)).toMatch(/database was closed/);
+    expect(() => db.get(count, "SELECT COUNT(*) AS n FROM notes")).toThrow(/database was closed/);
+    db.close();
+
+    const again = openDatabase(file);
+    expect(again.get(count, "SELECT COUNT(*) AS n FROM notes")).toEqual({ n: 0 });
+    again.close();
   });
 
   it("checks every row against its contract (CON-01)", () => {

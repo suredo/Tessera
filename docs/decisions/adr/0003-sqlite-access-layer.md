@@ -4,7 +4,7 @@ title: "ADR 0003. The SQLite access layer"
 description: "Tessera reaches its SQLite database through Node's built-in node:sqlite, with plain SQL, rows checked by the zod contracts, and numbered migration files."
 tags: [decisions, data, storage]
 status: stable
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T06:21:53Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T06:32:39Z }
 ---
 # ADR 0003. The SQLite access layer
 
@@ -37,6 +37,6 @@ Install risk decided it: a native module is the setup step most likely to fail o
 ## Consequences
 
 - Node prints an experimental warning once when the server starts; it is expected until `node:sqlite` is stable.
-- A transaction's work must be synchronous, and transactions don't nest; the helper refuses both, since an async step would commit early.
+- A transaction's work must be synchronous, and transactions don't nest. Async work would go on after an `await`, outside the transaction, so the type refuses it, an async function is refused before it runs, and a plain function that returns a promise anyway gets its transaction rolled back and its connection closed.
 - **When to revisit:** if `node:sqlite` shows a bug or lacks something Tessera needs (backups, concurrent access), or the next Node LTS changes its API in a way that is costly to follow. Moving to `better-sqlite3` then changes only the storage module.
 - M1 adds Tessera's real tables and migrations, the backup before migrating real data (`node:sqlite` has `backup()`), and tests on fixture databases from earlier versions (`ENG-18`).

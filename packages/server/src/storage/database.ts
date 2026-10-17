@@ -7,6 +7,9 @@ import type { z } from "zod";
 
 export type SqlValue = SQLInputValue;
 
+/** A transaction's work must be synchronous: an await would let its writes land after it ends. */
+export type SyncResult<T> = T extends PromiseLike<unknown> ? never : T;
+
 export type Database = {
   /** Runs SQL with no parameters and no result, such as a migration. */
   exec(sql: string): void;
@@ -17,7 +20,7 @@ export type Database = {
   /** The first row of a query, checked against its contract, or undefined. */
   get<T>(row: z.ZodType<T>, sql: string, ...params: SqlValue[]): T | undefined;
   /** Runs `work` in one transaction: everything it wrote is kept, or nothing if it throws. */
-  transaction<T>(work: () => T): T;
+  transaction<T>(work: () => SyncResult<T>): T;
   close(): void;
 };
 
@@ -33,40 +36,72 @@ export function openDatabase(file: string): Database {
   // Write-ahead logging: a crash mid-write leaves the last committed state, and reads don't wait.
   db.exec("PRAGMA journal_mode = WAL");
 
-  const transaction = <T>(work: () => T): T => {
-    if (db.isTransaction) {
+  // Set when the connection was closed to stop stray async work (see `transaction`).
+  let closedBecause: string | null = null;
+  const open = (): DatabaseSync => {
+    if (closedBecause !== null) throw new Error(`The database was closed: ${closedBecause}`);
+    return db;
+  };
+
+  const transaction = <T>(work: () => SyncResult<T>): T => {
+    // An async function's work goes on after an await, outside the transaction: refuse it unrun.
+    if (work.constructor.name === "AsyncFunction") {
+      throw new Error("A transaction's work must be synchronous.");
+    }
+    if (open().isTransaction) {
       throw new Error(
         "A transaction can't start inside another one; do the work in the outer one.",
       );
     }
     db.exec("BEGIN IMMEDIATE");
+    let result: unknown;
     try {
-      const result = work();
-      // An async function would commit before its work is done.
-      if (result instanceof Promise) {
-        throw new Error("A transaction's work must be synchronous.");
-      }
-      db.exec("COMMIT");
-      return result;
+      result = work();
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;
     }
+    if (isThenable(result)) {
+      // A plain function returned a promise: its work may still write once it resumes. Roll back,
+      // then close this connection, so nothing it does later can land outside a transaction.
+      db.exec("ROLLBACK");
+      closedBecause = "a transaction's work returned a promise.";
+      db.close();
+      // Its outcome no longer matters; the refusal below is what the caller sees.
+      result.then(undefined, () => {});
+      throw new Error("A transaction's work must be synchronous.");
+    }
+    db.exec("COMMIT");
+    return result as T;
   };
 
   return {
-    exec: (sql) => db.exec(sql),
-    run: (sql, ...params) => Number(db.prepare(sql).run(...params).changes),
+    exec: (sql) => open().exec(sql),
+    run: (sql, ...params) =>
+      Number(
+        open()
+          .prepare(sql)
+          .run(...params).changes,
+      ),
     all: (row, sql, ...params) =>
-      db
+      open()
         .prepare(sql)
         .all(...params)
         .map((r) => row.parse(r)),
     get: (row, sql, ...params) => {
-      const found = db.prepare(sql).get(...params);
+      const found = open()
+        .prepare(sql)
+        .get(...params);
       return found === undefined ? undefined : row.parse(found);
     },
     transaction,
-    close: () => db.close(),
+    close: () => {
+      if (closedBecause === null) db.close();
+    },
   };
 }
+
+const isThenable = (value: unknown): value is PromiseLike<unknown> =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { then?: unknown }).then === "function";

@@ -7,7 +7,7 @@ implements: [DATA-01, ENG-18, CON-01, CON-04, PLAT-01]
 tests: [../../../packages/server/test/storage.test.ts]
 tags: [code, server, storage, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T06:21:53Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T06:32:39Z }
 ---
 
 # Purpose
@@ -16,14 +16,15 @@ The one way the local server reads and writes its SQLite database (`DATA-01`), c
 
 # Entry points
 
-- `src/storage/database.ts`: `openDatabase` returns a `Database`: it runs SQL, returns rows each checked against a zod schema, runs a transaction and closes. `SqlValue` is what a parameter can be.
+- `src/storage/database.ts`: `openDatabase` returns a `Database`: it runs SQL, returns rows each checked against a zod schema, runs a transaction and closes. `SqlValue` is what a parameter can be, and `SyncResult` keeps a transaction's work synchronous in the types.
 - `src/storage/migrations.ts`: `readMigrations` reads the numbered `.sql` files of a folder, and `migrate` applies the ones the database doesn't have yet.
 
 # Invariants
 
 - **Only this module touches the driver.** Nothing else imports `node:sqlite`, so a change of driver stays here (ADR 0003).
 - **Rows are checked when read.** `all` and `get` take the row's zod schema and parse every row, so a query can't hand back a shape its contract doesn't allow.
-- **A transaction is all or nothing.** `transaction` keeps everything its work wrote, or nothing if the work throws. It starts with `BEGIN IMMEDIATE`, so two writers can't both start and then collide. Its work must be synchronous, and it can't start inside another transaction: the helper refuses both, and rolls back.
+- **A transaction is all or nothing.** `transaction` keeps everything its work wrote, or nothing if the work throws. It starts with `BEGIN IMMEDIATE`, so two writers can't both start and then collide. It can't start inside another transaction.
+- **A transaction's work is synchronous, or nothing it writes is kept.** Async work would go on after an `await`, outside the transaction. The type refuses work that returns a promise; an async function is refused before it runs; and if a plain function returns a promise anyway, the transaction rolls back and the connection is closed, so the work's later writes fail instead of landing outside it. Every later call on that connection says why it was closed.
 - **Every connection** has foreign keys enforced, write-ahead logging (a crash keeps the last committed state) and a 5 s busy timeout.
 - **Migrations are numbered from 0001 with no gaps**, named like `0001-what-it-does.sql`. Each is applied in its own transaction and recorded in `schema_migrations`; running `migrate` again applies nothing. A database whose schema is newer than the migrations this code knows is refused, so an older Tessera never writes to data it doesn't understand (`CON-04`).
 
@@ -35,13 +36,14 @@ Depends on Node's `node:sqlite`, `fs`, `path` and zod. M1's data layer will use 
 
 - **Node 22 prints an experimental warning** when `node:sqlite` loads. It is expected (ADR 0003); don't silence warnings globally to hide it.
 - **Write-ahead logging adds `-wal` and `-shm` files** beside the database while it is open. A backup must use SQLite's backup (`node:sqlite`'s `backup()`, M1), never a file copy of a database in use.
-- **An async step in a transaction would commit early,** which is why `transaction` refuses a function that returns a promise. Do the async work first, then write in one synchronous transaction.
+- **Do async work before the transaction, then write in one synchronous transaction.** Checking only the returned promise isn't enough: Codex's review found the first version rolled back and reported failure while the work, resumed after its `await`, still wrote a row.
+- **A closed connection stays closed.** After a transaction's work returned a promise, open a new connection; the misuse is a bug to fix, not a state to recover from.
 - **Tests use their own temporary folder** (`ENG-19`). The real data folder (`PLAT-04`) arrives in M1.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `database.ts`: `SqlValue` (type), `Database` (type), `openDatabase`
-- `index.ts`: `openDatabase`, `Database` (type), `SqlValue` (type), `migrate`, `readMigrations`, `Migration` (type)
+- `database.ts`: `SqlValue` (type), `SyncResult` (type), `Database` (type), `openDatabase`
+- `index.ts`: `openDatabase`, `Database` (type), `SqlValue` (type), `SyncResult` (type), `migrate`, `readMigrations`, `Migration` (type)
 - `migrations.ts`: `Migration` (type), `readMigrations`, `migrate`
