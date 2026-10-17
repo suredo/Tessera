@@ -7,7 +7,7 @@ implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-16]
 tests: [../../../evals/test/cli-contract-spike.test.ts]
 tags: [code, evals, cli, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T03:24:15Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T03:53:09Z }
 ---
 
 # Purpose
@@ -31,7 +31,7 @@ Tests the riskiest assumptions about Claude Code before anything is built on the
 - **An allowlisted environment** (`CLI-08`): only the variables the CLI needs to start and find its sign-in. API keys would switch billing to the API (L-52), and a parent Claude Code session sets variables such as `ANTHROPIC_BASE_URL` and `CLAUDE_CODE_SIMPLE` that change where and how the CLI calls the model.
 - **A fresh, empty working folder** outside the repository for each call, removed afterwards (`CLI-08`).
 - **Usage counts cache writes and reads as input** (`CLI-04`, L-47); a missing part makes the total unknown, never 0.
-- **The first call failing stops the run** (`ENG-07`): later calls would spend budget with nothing to build on.
+- **The first call failing stops the run** (`ENG-07`), whether it throws or answers but fails a check: later calls would spend budget with nothing to build on.
 
 # Depends on / used by
 

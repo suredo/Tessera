@@ -35,7 +35,15 @@ const fakeCalls = (dataFolder: string) =>
         },
     );
 
-describe("CLI contract spike (CLI-03, CLI-08, #19)", () => {
+const spikeFolder = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "spikes",
+  "cli-contract",
+);
+
+// These tests start real processes, which can take seconds on a busy machine (ENG-20).
+describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => {
   it("passes the locked flags of a normal stage, then the prompt", () => {
     const args = buildArgs(
       {
@@ -173,6 +181,27 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", () => {
       kind: "failed",
       error: "turn_limit",
     });
+  });
+
+  // Codex's review of #37: a first call that answers but fails its checks must stop the run too.
+  it("stops after a first call that answers but fails its checks (ENG-07)", async () => {
+    const dataFolder = newFolder();
+    const replies = path.join(root, `replies-${runs}.json`);
+    const canned = JSON.parse(
+      fs.readFileSync(path.join(spikeFolder, "dry-run-replies.json"), "utf8"),
+    ) as Record<string, unknown>[];
+    const toolAttempted = { ...canned[0], permission_denials: [{}] };
+    fs.writeFileSync(replies, JSON.stringify([toolAttempted, canned[1], canned[2]]));
+    const report = await runSpike({
+      mode: "dry-run",
+      provider: fakeProvider(dataFolder, replies),
+      dataFolder,
+    });
+    expect(report.calls).toEqual([
+      { check: "intent schema", passed: false, notes: ["a tool was attempted"] },
+    ]);
+    expect(readLedger(dataFolder)).toHaveLength(1);
+    expect(fakeCalls(dataFolder)).toHaveLength(1);
   });
 
   // The second live run's failure: "success" yet is_error, 0 tokens, from a CLI not signed in. Its

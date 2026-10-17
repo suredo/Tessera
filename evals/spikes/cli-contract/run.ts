@@ -78,6 +78,7 @@ export async function runSpike(options: {
   });
   const calls: CallReport[] = [];
   for (const [index, call] of plannedCalls().entries()) {
+    let notes: string[];
     try {
       const result = await harness.provider.run({
         stage: call.stage,
@@ -88,13 +89,18 @@ export async function runSpike(options: {
         tools: "none",
         timeLimitMs: PLAN.timeLimitMs,
       });
-      const notes = inspectEnvelope(result.raw);
-      calls.push({ check: call.check, passed: notes.length === 0, notes });
+      notes = inspectEnvelope(result.raw);
     } catch (error) {
-      calls.push({ check: call.check, passed: false, notes: [String(error)] });
-      // ENG-07: if the first call fails, later ones would spend calls with nothing to build on.
-      if (index === 0 || error instanceof HarnessError) break;
+      notes = [String(error)];
+      if (error instanceof HarnessError) {
+        calls.push({ check: call.check, passed: false, notes });
+        break;
+      }
     }
+    calls.push({ check: call.check, passed: notes.length === 0, notes });
+    // ENG-07: if the first call fails, by an error or a check, later ones would spend calls with
+    // nothing to build on.
+    if (index === 0 && notes.length > 0) break;
   }
   const report: SpikeReport = {
     mode: options.mode,

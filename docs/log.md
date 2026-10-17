@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Update**: The [CLI contract spike](code/evals/cli-contract-spike.md) now also stops when its first call answers but fails a check, not only when it throws (`ENG-07`), as Codex's review of [pull request 37](https://github.com/suredo/Tessera/pull/37) found.
+
 * **Update**: The owner signed off [ADR 0002](decisions/adr/0002-claude-code-cli-contract.md). Its rules are now in the spec: [`CON-01`](spec/contracts.md) (JSON Schema draft-07), and in [providers](spec/providers.md) `CLI-02` (free sign-in check), `CLI-03` (tested flags for 2.1.296, every contract wrapped in an object, `--max-turns` not a hard bound), `CLI-05` (failures read from `is_error`) and `CLI-08` (an allowlisted environment).
 * **Creation**: [Tessera issues](lessons/tessera-issues.md), the lessons found while building Tessera, continuing the POC catalogue's IDs from L-70. L-70 to L-74 are the CLI contract spike's live failures and the environment trap found before it.
 
