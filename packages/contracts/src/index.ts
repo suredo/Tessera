@@ -3,6 +3,13 @@
 export { INTENT_KINDS, intentSchema, type Intent } from "./intent.ts";
 export { contracts, renderSchemaFiles, toJsonSchema, type ContractName } from "./json-schema.ts";
 export {
+  ledgerEntrySchema,
+  requestLogEntrySchema,
+  RUN_MODES,
+  type LedgerEntry,
+  type RequestLogEntry,
+} from "./ledger.ts";
+export {
   EFFORTS,
   effortSchema,
   PROVIDER_ERROR_KINDS,
