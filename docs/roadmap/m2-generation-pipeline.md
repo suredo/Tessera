@@ -4,7 +4,7 @@ title: "M2: Generation pipeline"
 description: "The Claude Code adapter and generation pipeline, ending in the internal alpha."
 tags: [roadmap, generation-pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:21:34Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T18:16:57Z }
 ---
 # M2: Generation pipeline (size L, live budget about 35 calls) → internal alpha
 
@@ -28,6 +28,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:21:34Z }
 | Speed targets measured and reported | OBS-04 |
 | Scenario runner: scenario files (the scenarios move to `evals/` with the runner, moved from M0), automatic host facts, live and replay modes, evaluation report | EVAL-01, EVAL-02, EVAL-07 |
 | Replay tests from the POC's recorded failures, where exports exist | TEST-04 |
+| Scripted end-to-end tests in Playwright through the real pipeline, with canned replies chosen by test configuration, screenshots and video (moved from M0, which built their tooling: Playwright with video, the scripted provider, the harness) | TEST-03 |
 
 **Live evaluation (about 35 calls, `TEST-05`):** T1 about 10, T6 about 7, T13 about 7, the limits run about 5, probe and image check 2, repair reserve about 4.
 - One probe call plus a check that a sanitized screenshot reaches the model as an image input (CLI-08, A27).
