@@ -3,11 +3,11 @@ type: Code Module
 title: "Intent spike"
 description: "The M0 live spike that measures how often a draft intent stage misroutes the POC's failure cases, in several languages, with its request set, draft prompt and report."
 resource: ../../../evals/spikes/intent/
-implements: [GEN-01, GEN-02, GEN-15, GEN-18, ENG-07, ENG-11, ENG-16]
+implements: [GEN-01, GEN-02, GEN-15, GEN-18, ENG-07, ENG-11, ENG-13, ENG-16]
 tests: [../../../evals/test/intent-spike.test.ts]
 tags: [code, evals, intent, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T05:41:18Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:07:20Z }
 ---
 
 # Purpose

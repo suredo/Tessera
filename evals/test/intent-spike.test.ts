@@ -161,7 +161,7 @@ describe("intent spike (GEN-01, GEN-02, GEN-15, #20)", { timeout: 60_000 }, () =
 
   // L-75, from the live run: the stage reworded a data part, and once half translated it. The
   // scorer flags both; r23 kept its words and is not flagged (ENG-13).
-  it("flags a split part that isn't in the request's words, as in the live run (L-75)", () => {
+  it("flags a split part that isn't in the request's words, as in the live run (L-75, ENG-13)", () => {
     const fixture = JSON.parse(
       fs.readFileSync(path.join(spikeFolder, "replays", "l-75.json"), "utf8"),
     ) as { replays: { id: string; answer: unknown }[] };

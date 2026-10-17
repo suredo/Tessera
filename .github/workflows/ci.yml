@@ -1,7 +1,8 @@
 # CI on every pull request and on main (ENG-02): the OKF check and its tests (ENG-05, ENG-08, ENG-24),
 # the merge-ready job that stays red while a task handoff is left (ENG-25), and the workspace's
 # typecheck, lint, format check, unit tests (ENG-04, TEST-01), secret scan, with the same rules
-# as the pre-commit hook (ENG-19), and the web app's build, all on Linux; then one Windows job for
+# as the pre-commit hook (ENG-19), the web app's build, and the coverage report (ENG-17), all on
+# Linux; then one Windows job for
 # the platform helpers, the SQLite storage and the browser tests (PLAT-01, DATA-01, TEST-06). No
 # secrets and no model calls.
 name: CI
@@ -72,7 +73,8 @@ jobs:
     strategy:
       fail-fast: false # each check reports on its own
       matrix:
-        check: [typecheck, lint, "format:check", test, secrets, build]
+        # coverage writes the requirement and lesson report to the job summary (ENG-17).
+        check: [typecheck, lint, "format:check", test, secrets, build, coverage]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0

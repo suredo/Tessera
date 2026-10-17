@@ -265,7 +265,8 @@ if (fs.existsSync(logFile)) {
 // ---------- code docs: back-links, named symbols, generated symbol sections and drift ----------
 const codeDocs = [...concepts].filter(([, c]) => CODE_TYPES.has(c.fm.type));
 const backLinked = new Set();
-for (const codeRoot of ["packages", "evals"].map((d) => path.join(ROOT, d))) {
+// Tests are skipped: a module's main file names its doc, and a test may hold sample Docs: text.
+for (const codeRoot of ["packages", "evals", "scripts"].map((d) => path.join(ROOT, d))) {
   if (!fs.existsSync(codeRoot)) continue;
   const stack = [codeRoot];
   while (stack.length) {
@@ -273,10 +274,10 @@ for (const codeRoot of ["packages", "evals"].map((d) => path.join(ROOT, d))) {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       const p = path.join(d, e.name);
       if (e.isDirectory()) {
-        if (e.name !== "node_modules" && e.name !== "dist") stack.push(p);
+        if (!["node_modules", "dist", "test", "e2e"].includes(e.name)) stack.push(p);
         continue;
       }
-      if (!/\.(ts|tsx|js|mjs|css)$/.test(e.name)) continue;
+      if (!/\.(ts|tsx|js|mjs|css)$/.test(e.name) || /\.(test|spec)\.\w+$/.test(e.name)) continue;
       for (const m of read(p).matchAll(/Docs: (docs\/[\w./-]+\.md)/g)) {
         const doc = path.join(ROOT, m[1]);
         if (!fs.existsSync(doc)) err(p, `Docs comment points to a missing doc: ${m[1]}`);

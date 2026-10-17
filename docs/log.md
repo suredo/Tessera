@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Creation**: The [coverage report](code/scripts/coverage-report.md) code doc ([issue 17](https://github.com/suredo/Tessera/issues/17)): every requirement and lesson with its milestone, proposed, implemented or verified status, evidence and remaining limits, in CI's job summary on every pull request (`ENG-17`). Verified needs a code doc that implements the ID and one of its own tests naming it; a test name alone is a link; work due in a later milestone is never counted; unknown IDs fail. `AGENTS.md` lists `pnpm coverage`. The two spike code docs now list `ENG-13`, which their replay tests cover.
+
 * **Update**: [Storage](code/server/storage.md) transactions also roll back when the commit itself fails, as with a deferred foreign key, so nothing is kept and the connection is free again, as Codex's second review of [pull request 39](https://github.com/suredo/Tessera/pull/39) found.
 
 * **Update**: [Storage](code/server/storage.md) transactions keep async work from writing after they are refused, as Codex's review of [pull request 39](https://github.com/suredo/Tessera/pull/39) found: the type refuses promise-returning work, an async function is refused before it runs, and a plain function that returns a promise has its transaction rolled back and its connection closed. [ADR 0003](decisions/adr/0003-sqlite-access-layer.md) says the same.
