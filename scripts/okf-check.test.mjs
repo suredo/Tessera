@@ -75,9 +75,11 @@ const git = (root, ...args) =>
 function makeRepo() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "okf-check-"));
   roots.push(root);
+  // The checker's own Docs: comment names a doc this fixture doesn't have, so it is left out.
+  const copy = (file) => fs.readFileSync(file, "utf8").replace(/^\/\/ Docs: .*\n/m, "");
   const files = {
-    "scripts/okf-check.mjs": fs.readFileSync(CHECKER, "utf8"),
-    "scripts/okf-lib.mjs": fs.readFileSync(path.join(SCRIPTS, "okf-lib.mjs"), "utf8"),
+    "scripts/okf-check.mjs": copy(CHECKER),
+    "scripts/okf-lib.mjs": copy(path.join(SCRIPTS, "okf-lib.mjs")),
     ".gitignore": "node_modules/\n", // the linked workspace dependencies below are never committed
     "AGENTS.md": "# Rules for AI assistants\n",
     "CLAUDE.md": "@AGENTS.md\n",
