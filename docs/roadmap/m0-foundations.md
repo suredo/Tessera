@@ -4,7 +4,7 @@ title: "M0: Foundations"
 description: "Repository, tooling, CI, contracts and two small live spikes."
 tags: [roadmap, foundations]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T06:42:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T18:16:57Z }
 ---
 # M0: Foundations (size S, live spikes about 33 calls)
 
@@ -16,7 +16,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T06:42:39Z }
 | Planning docs in OKF: done before M0 (2026-10-11, A50) | ENG-08, ENG-10 |
 | pnpm workspace with packages scoped `@tessera/*`: `contracts`, `server`, `web` (React), `runtime`, `evals`; SQLite access layer chosen | [Architecture](../product/architecture.md), DATA-01 |
 | Translation layer for host text from the first component, with a lint rule that fails on hard-coded host text | UX-05 |
-| Small platform helpers for paths and processes; Node 22 (`.nvmrc`), TypeScript strict, Vite, React 19 with the React Compiler and its ESLint rules, Prettier, ESLint, Vitest, Playwright (Chrome and Edge), all running in CI: Linux runners for the fast checks, one Windows job for platform tests and Playwright | PLAT-01, ENG-02, ENG-04, TEST-01, TEST-03, TEST-06, RUN-06 |
+| Small platform helpers for paths and processes; Node 22 (`.nvmrc`), TypeScript strict, Vite, React 19 with the React Compiler and its ESLint rules, Prettier, ESLint, Vitest, Playwright (Chrome and Edge), all running in CI: Linux runners for the fast checks, one Windows job for platform tests and Playwright. Scripted end-to-end tests through the real pipeline moved to M2, which builds the pipeline (owner, 2026-10-17); M0 delivered their tooling | PLAT-01, ENG-02, ENG-04, TEST-01, TEST-06, RUN-06 |
 | `AGENTS.md` and `CLAUDE.md`: written before M0 (2026-10-11), with the docs protocol and the non-negotiables. Remaining: a CI check that `CLAUDE.md` only imports `AGENTS.md`; both assistants (Claude Code, Codex) set up for development, with the cross-review workflow and checklist; decide [D12](../decisions/open/d12-checkpoint-suggestions.md), whether assistants may suggest a checkpoint | ENG-05, ENG-15, ENG-21, ENG-22, ENG-25 |
 | Requirement/lesson coverage report: milestone, proposed/implemented/verified status and evidence. Deferred work cannot count as resolved | ENG-17 |
 | The OKF check (`scripts/okf-check.mjs`, written before M0) and its tests (`scripts/okf-check.test.mjs`) run in CI, with the code-doc drift check against the pull request's base. A separate `merge-ready` job runs it with `--merge-ready` on pull requests and on `main`: it stays red while a task handoff is left, so merging only on green CI (`ENG-15`) also makes sure the handoff is gone (`ENG-25`). With the TypeScript tooling: switch its frontmatter parsing to a YAML library, check symbols named in code docs, and generate their symbol sections. The first package gets its code docs | ENG-08, ENG-24, ENG-25 |
