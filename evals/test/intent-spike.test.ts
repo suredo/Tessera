@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Intent } from "@tessera/contracts";
+import { intentSchema, type Intent } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { readLedger } from "../src/index.ts";
 import {
@@ -15,6 +15,7 @@ import {
   requests,
   runIntentSpike,
   score,
+  wordsNotInRequest,
   type IntentReport,
 } from "../spikes/intent/run.ts";
 
@@ -23,21 +24,17 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-intent-spike-"));
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
 let runs = 0;
 const newFolder = () => path.join(root, `run-${++runs}`);
-const systemPrompt = fs.readFileSync(
-  path.join(
-    path.dirname(fileURLToPath(import.meta.url)),
-    "..",
-    "spikes",
-    "intent",
-    "prompts",
-    "system.md",
-  ),
-  "utf8",
+const spikeFolder = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "spikes",
+  "intent",
 );
+const systemPrompt = fs.readFileSync(path.join(spikeFolder, "prompts", "system.md"), "utf8");
 const answer = (overrides: Partial<Intent>): Intent =>
   ({
     kind: "edit",
-    interfacePart: "x",
+    interfacePart: null,
     dataPart: null,
     behaviorChange: false,
     lookOnly: true,
@@ -134,6 +131,62 @@ describe("intent spike (GEN-01, GEN-02, GEN-15, #20)", { timeout: 60_000 }, () =
     expect(readLedger(dataFolder)).toHaveLength(3);
   });
 
+  // Codex's review of #38: a run that stops early must not shrink the denominator.
+  it("keeps every planned request in the rate when the run stops early (ENG-07)", async () => {
+    const dataFolder = newFolder();
+    const [first] = expectedReplies() as { structured_output: { answer: object } }[];
+    const misrouted = {
+      ...first,
+      structured_output: { answer: { ...first?.structured_output.answer, kind: "clarify" } },
+    };
+    const failed = { type: "result", subtype: "success", is_error: true, result: "boom" };
+    const report = await runIntentSpike({
+      mode: "dry-run",
+      provider: fakeProvider(dataFolder, [misrouted, failed, failed]),
+      dataFolder,
+    });
+    expect(report.categories.find((c) => c.category === "create")).toEqual({
+      category: "create",
+      requestCount: 5,
+      correctCount: 0,
+      misroutedCount: 1,
+      blockedCount: 4,
+      misroutePercent: 20,
+    });
+    expect(report.categories.find((c) => c.category === "style")).toMatchObject({
+      blockedCount: 6,
+      misroutePercent: 0,
+    });
+  });
+
+  // L-75, from the live run: the stage reworded a data part, and once half translated it. The
+  // scorer flags both; r23 kept its words and is not flagged (ENG-13).
+  it("flags a split part that isn't in the request's words, as in the live run (L-75)", () => {
+    const fixture = JSON.parse(
+      fs.readFileSync(path.join(spikeFolder, "replays", "l-75.json"), "utf8"),
+    ) as { replays: { id: string; answer: unknown }[] };
+    const flagged = fixture.replays.map(({ id, answer }) => [
+      id,
+      score(request(id), intentSchema.parse(answer)).mismatches.filter((m) =>
+        m.startsWith("dataPart reworded"),
+      ).length > 0,
+    ]);
+    expect(flagged).toEqual([
+      ["r19", true],
+      ["r20", true],
+      ["r23", false],
+    ]);
+    expect(
+      wordsNotInRequest("Coloca 2 litros de leite e 1 pão.", "2 litros de leite e 1 pão"),
+    ).toEqual([]);
+    expect(
+      wordsNotInRequest(
+        "Coloca 2 litros de leite e 1 pão.",
+        "Add 2 litros de leite and 1 pão to the shopping list.",
+      ),
+    ).toEqual(["add", "and", "to", "the", "shopping", "list"]);
+  });
+
   it("reports the misroute rate per category and lists every misroute", () => {
     const report: IntentReport = {
       mode: "dry-run",
@@ -142,8 +195,9 @@ describe("intent spike (GEN-01, GEN-02, GEN-15, #20)", { timeout: 60_000 }, () =
         {
           category: "style",
           requestCount: 6,
-          answeredCount: 6,
+          correctCount: 4,
           misroutedCount: 1,
+          blockedCount: 1,
           misroutePercent: 17,
         },
       ],
@@ -172,7 +226,7 @@ describe("intent spike (GEN-01, GEN-02, GEN-15, #20)", { timeout: 60_000 }, () =
       },
     };
     const text = renderReport(report);
-    expect(text).toContain("| style | 6 | 6 | 1 | 17% |");
+    expect(text).toContain("| style | 6 | 4 | 1 | 1 | 17% |");
     expect(text).toContain("| r09 | style | en | Make it calmer. | edit | unsupported |");
     expect(text).toContain("- r09 (style): lookOnly false");
   });

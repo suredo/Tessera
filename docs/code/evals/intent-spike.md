@@ -7,7 +7,7 @@ implements: [GEN-01, GEN-02, GEN-15, GEN-18, ENG-07, ENG-11, ENG-16]
 tests: [../../../evals/test/intent-spike.test.ts]
 tags: [code, evals, intent, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T05:13:53Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T05:41:18Z }
 ---
 
 # Purpose
@@ -16,14 +16,16 @@ Measures, before the core is built on it, how often a draft intent stage (`GEN-0
 
 # Entry points
 
-- `run.ts`: the script. `PLAN` is the approved run (one call per request, no retries); `runIntentSpike` makes the calls through the [evaluation harness](harness.md) and writes `report.json` and `report.md`; `score` decides a misroute; `renderPrompt` builds each request's message; `renderReport` writes the Markdown report; `expectedReplies` and `fakeProvider` make the dry run. Run it with `node evals/spikes/intent/run.ts --dry-run`, or `--live --approved-cap 31` once the owner has approved the request set and the budget.
+- `run.ts`: the script. `PLAN` is the approved run (one call per request, no retries); `runIntentSpike` makes the calls through the [evaluation harness](harness.md) and writes `report.json` and `report.md`; `score` decides a misroute, and `wordsNotInRequest` finds a split part's words that aren't in the request; `buildReport` counts each category; `rescoreRun` scores a finished run again from its request log, with no call; `renderPrompt` builds each request's message; `renderReport` writes the Markdown report; `expectedReplies` and `fakeProvider` make the dry run. Run it with `node evals/spikes/intent/run.ts --dry-run`, `--live --approved-cap 31` once the owner has approved the request set and the budget, or `--rescore <run folder>`.
+- `replays/l-75.json`: the live answers behind lesson L-75, kept for the replay test (`ENG-13`) and as the M2 split's first test case.
 - `requests.json`: the request set, each with its category, source lesson or requirement, context, language and expected answer. `contexts.json`: what each request sees: the tool open now, if any, and the saved tools.
 - `prompts/system.md`: the draft intent prompt, with each kind defined and examples of the POC's failure families (`ENG-16`). `prompts/request.md`: the message for one request.
 - The caller, the fake claude and the live checks are the [CLI contract spike](cli-contract-spike.md)'s.
 
 # Invariants
 
-- **A misroute is a wrong kind, or the wrong saved tool.** Differences in the flags (`lookOnly`, `behaviorChange`, `targetsCurrentTool`, whether an interface or data part was found) and in the language are listed apart. A language is checked by its primary subtag, so `pt-BR` passes for `pt`.
+- **A misroute is a wrong kind, or the wrong saved tool.** Differences in the flags (`lookOnly`, `behaviorChange`, `targetsCurrentTool`, whether an interface or data part was found) and in the language are listed apart. A language is checked by its primary subtag, so `pt-BR` passes for `pt`. A split part with words that aren't in the request is listed as reworded (L-75).
+- **Rates are over the planned requests** (`ENG-07`): the denominator is frozen, and a request with no answer, failed or never made because the run stopped, counts as blocked.
 - **No keyword gating** (`GEN-02`). Every request gets the same system prompt; only the message with the context and the request changes. A test checks that every call in the dry run got the same system prompt.
 - **The prompt's examples are not the test requests,** so the run measures the prompt, not recall. A test checks that no request appears in the system prompt.
 - **The dry run is the exact run,** against the fake claude, which answers each request with its expected answer by call order, never by the request's words (`ENG-11`).
@@ -38,10 +40,11 @@ Depends on the [CLI contract spike](cli-contract-spike.md)'s caller, the [evalua
 - **The expected answers are judgment calls,** reviewed by the owner before the run. A "misroute" on a request with two reasonable answers says more about the request than the prompt; the report keeps the request text so it can be judged.
 - **31 requests is a small sample:** one misroute in a category of 3 is 33%. Read the rates with the counts.
 - **The contexts are made up and short.** Real catalogues are longer; the M2 stage needs its own measurement.
-- **The score doesn't read the split parts' words.** The live run on 2026-10-17 misrouted 1 request in 31, but its data parts were reworded and once half translated (L-75), which only reading the answers showed. Results and the design notes they call for: [the report](../../../evals/reports/2026-10-17-intent-spike.md).
+- **Reading the answers finds what a score misses.** The live run on 2026-10-17 misrouted 1 request in 31, but its data parts were reworded and once half translated (L-75), which only reading the answers showed at first; the scorer now checks for it, and the run was scored again offline. Results and the design notes they call for: [the report](../../../evals/reports/2026-10-17-intent-spike.md).
+- **The reworded check is word by word,** so a part that only reorders the request's words passes, and a part that drops words passes too. It catches added and translated words, which is what L-75 showed.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `run.ts`: `PLAN`, `IntentRequest` (type), `contexts`, `requests`, `renderPrompt`, `Scored` (type), `score`, `RequestResult` (type), `CategoryResult` (type), `IntentReport` (type), `runIntentSpike`, `renderReport`, `expectedReplies`, `fakeProvider`
+- `run.ts`: `PLAN`, `IntentRequest` (type), `contexts`, `requests`, `renderPrompt`, `Scored` (type), `score`, `wordsNotInRequest`, `RequestResult` (type), `CategoryResult` (type), `IntentReport` (type), `runIntentSpike`, `buildReport`, `rescoreRun`, `renderReport`, `expectedReplies`, `fakeProvider`

@@ -10,8 +10,17 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { INTENT_KINDS, intentSchema, type Intent } from "@tessera/contracts";
 import type { Provider } from "@tessera/server";
 import { z } from "zod";
-import { HarnessError, startHarness, type LedgerSummary, type RunMode } from "../../src/index.ts";
 import {
+  HarnessError,
+  readLedger,
+  readRequestLog,
+  startHarness,
+  summarizeLedger,
+  type LedgerSummary,
+  type RunMode,
+} from "../../src/index.ts";
+import {
+  ANSWER_KEY,
   fakeClaudeProvider,
   liveClaudeProvider,
   runFolder,
@@ -115,7 +124,29 @@ export function score(request: IntentRequest, answer: Intent): Scored {
   flag("dataPart", want.hasDataPart, answer.dataPart !== null);
   const primary = answer.language.split("-")[0];
   if (primary !== request.language) mismatches.push(`language ${answer.language}`);
+  for (const [name, part] of [
+    ["interfacePart", answer.interfacePart],
+    ["dataPart", answer.dataPart],
+  ] as const) {
+    const added = part === null ? [] : wordsNotInRequest(request.request, part);
+    if (added.length) mismatches.push(`${name} reworded (${added.slice(0, 6).join(", ")})`);
+  }
   return { misrouted, mismatches };
+}
+
+const words = (text: string) =>
+  text
+    .normalize("NFC")
+    .toLowerCase()
+    .match(/[\p{L}\p{N}]+/gu) ?? [];
+
+/**
+ * The words of a split part that the request doesn't contain. The prompt asks for the request's
+ * own words; a reworded or translated part could change what the next step does (L-75).
+ */
+export function wordsNotInRequest(request: string, part: string): string[] {
+  const known = new Set(words(request));
+  return [...new Set(words(part).filter((word) => !known.has(word)))];
 }
 
 export type RequestResult = {
@@ -131,11 +162,14 @@ export type RequestResult = {
 };
 export type CategoryResult = {
   category: string;
+  /** The planned requests: the frozen denominator (ENG-07). */
   requestCount: number;
-  answeredCount: number;
+  correctCount: number;
   misroutedCount: number;
-  /** Misroutes over answered requests; null when none was answered. */
-  misroutePercent: number | null;
+  /** Planned requests with no answer: failed, or never made because the run stopped. */
+  blockedCount: number;
+  /** Misroutes over the planned requests, never over the answered ones only. */
+  misroutePercent: number;
 };
 export type IntentReport = {
   mode: RunMode;
@@ -163,13 +197,6 @@ export async function runIntentSpike(options: {
   const results: RequestResult[] = [];
   let failuresInARow = 0;
   for (const [index, request] of requests().entries()) {
-    const base = {
-      id: request.id,
-      category: request.category,
-      language: request.language,
-      request: request.request,
-      expected: describe(request.expected.kind, request.expected.savedToolId),
-    };
     try {
       const { value } = await harness.provider.run({
         stage: "intent",
@@ -180,41 +207,89 @@ export async function runIntentSpike(options: {
         tools: "none",
         timeLimitMs: PLAN.timeLimitMs,
       });
-      const got = describe(value.kind, value.kind === "open_saved" ? value.savedToolId : undefined);
-      results.push({ ...base, got, ...score(request, value), error: null });
+      results.push(resultFor(request, value));
       failuresInARow = 0;
     } catch (error) {
-      results.push({ ...base, got: null, misrouted: false, mismatches: [], error: String(error) });
+      results.push(resultFor(request, String(error)));
       failuresInARow += 1;
       // ENG-07: stop when the first call fails, when the harness refuses, or after two failures
       // in a row, which point to a cause that more calls won't fix.
       if (index === 0 || error instanceof HarnessError || failuresInARow >= 2) break;
     }
   }
-  const report: IntentReport = {
-    mode: options.mode,
-    cliVersion: options.cliVersion ?? null,
-    categories: CATEGORIES.map((category) => {
-      const all = requests().filter((r) => r.category === category);
-      const done = results.filter((r) => r.category === category && r.error === null);
-      const misroutedCount = done.filter((r) => r.misrouted).length;
-      return {
-        category,
-        requestCount: all.length,
-        answeredCount: done.length,
-        misroutedCount,
-        misroutePercent: done.length ? Math.round((100 * misroutedCount) / done.length) : null,
-      };
-    }),
-    results,
-    summary: harness.finish(),
-  };
+  const report = buildReport(options.mode, options.cliVersion ?? null, results, harness.finish());
   fs.writeFileSync(
     path.join(harness.dataFolder, "report.json"),
     `${JSON.stringify(report, null, 2)}\n`,
   );
   fs.writeFileSync(path.join(harness.dataFolder, "report.md"), renderReport(report));
   return report;
+}
+
+/** One request's result, from its answer or from the error that stopped it. */
+function resultFor(request: IntentRequest, outcome: Intent | string): RequestResult {
+  const base = {
+    id: request.id,
+    category: request.category,
+    language: request.language,
+    request: request.request,
+    expected: describe(request.expected.kind, request.expected.savedToolId),
+  };
+  if (typeof outcome === "string") {
+    return { ...base, got: null, misrouted: false, mismatches: [], error: outcome };
+  }
+  const saved = outcome.kind === "open_saved" ? outcome.savedToolId : undefined;
+  return { ...base, got: describe(outcome.kind, saved), ...score(request, outcome), error: null };
+}
+
+/** The report, with every planned request counted, answered or not (ENG-07). */
+export function buildReport(
+  mode: RunMode,
+  cliVersion: string | null,
+  results: RequestResult[],
+  summary: LedgerSummary,
+): IntentReport {
+  const categories = CATEGORIES.map((category) => {
+    const requestCount = requests().filter((r) => r.category === category).length;
+    const answered = results.filter((r) => r.category === category && r.error === null);
+    const misroutedCount = answered.filter((r) => r.misrouted).length;
+    return {
+      category,
+      requestCount,
+      correctCount: answered.length - misroutedCount,
+      misroutedCount,
+      blockedCount: requestCount - answered.length,
+      misroutePercent: Math.round((100 * misroutedCount) / requestCount),
+    };
+  });
+  return { mode, cliVersion, categories, results, summary };
+}
+
+/**
+ * Scores a run again from its request log, without a call: for a change to the scoring, such as
+ * the reworded-part check added after the live run (L-75).
+ */
+export function rescoreRun(dataFolder: string): IntentReport {
+  const planned = requests();
+  const ledger = readLedger(dataFolder);
+  const log = readRequestLog(dataFolder);
+  const results = ledger.map((entry) => {
+    const request = planned[entry.callIndex];
+    if (!request) throw new Error(`Call ${entry.callIndex} has no planned request.`);
+    const raw = log.find((l) => l.callIndex === entry.callIndex)?.answer ?? null;
+    if (entry.outcome.kind !== "ok" || raw === null) {
+      const said = "message" in entry.outcome ? entry.outcome.message : entry.outcome.kind;
+      return resultFor(request, said);
+    }
+    const envelope = JSON.parse(raw) as { structured_output?: Record<string, unknown> };
+    return resultFor(request, intentSchema.parse(envelope.structured_output?.[ANSWER_KEY]));
+  });
+  const first = ledger[0];
+  const reportFile = path.join(dataFolder, "report.json");
+  const cliVersion = fs.existsSync(reportFile)
+    ? (JSON.parse(fs.readFileSync(reportFile, "utf8")) as { cliVersion: string | null }).cliVersion
+    : null;
+  return buildReport(first?.mode ?? "dry-run", cliVersion, results, summarizeLedger(ledger));
 }
 
 const cell = (text: string) => text.replaceAll("|", "\\|");
@@ -227,11 +302,13 @@ export function renderReport(report: IntentReport): string {
     "",
     `Model ${PLAN.model}, effort ${PLAN.effort}; CLI ${report.cliVersion ?? "fake"}. Calls ${s.callCount} (cap ${PLAN.callCap}), failed ${s.failedCount}, refused ${s.refusedCount}. Input ${s.inputTokens} tokens (${s.cachedInputTokens} from cache), output ${s.outputTokens}, ${(s.durationMs / 1000).toFixed(1)} s.`,
     "",
-    "| Category | Requests | Answered | Misrouted | Misroute rate |",
-    "| --- | --- | --- | --- | --- |",
+    "Rates are over the planned requests; a request with no answer counts as blocked, never as left out.",
+    "",
+    "| Category | Requests | Correct | Misrouted | Blocked | Misroute rate |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...report.categories.map(
       (c) =>
-        `| ${c.category} | ${c.requestCount} | ${c.answeredCount} | ${c.misroutedCount} | ${c.misroutePercent === null ? "n/a" : `${c.misroutePercent}%`} |`,
+        `| ${c.category} | ${c.requestCount} | ${c.correctCount} | ${c.misroutedCount} | ${c.blockedCount} | ${c.misroutePercent}% |`,
     ),
     "",
     "## Misroutes",
@@ -317,6 +394,16 @@ export function fakeProvider(dataFolder: string, replies: unknown[] = expectedRe
 }
 
 async function main(argv: string[]): Promise<void> {
+  // --rescore <run folder>: score a finished run again from its request log; no call is made.
+  const rescoreAt = argv.indexOf("--rescore");
+  if (rescoreAt >= 0) {
+    const folder = argv[rescoreAt + 1];
+    if (!folder) throw new Error("Pass the run's folder after --rescore.");
+    const text = renderReport(rescoreRun(folder));
+    fs.writeFileSync(path.join(folder, "report-rescored.md"), text);
+    console.log(text);
+    return;
+  }
   const mode = runModeFrom(argv, PLAN.callCap);
   const dataFolder = runFolder("intent", mode);
   const { provider, cliVersion } =
