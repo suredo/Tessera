@@ -3,11 +3,11 @@ type: Code Module
 title: "CLI contract spike"
 description: "The M0 live spike that checks Claude Code accepts a zod-generated schema, keeps working with the locked flags, and returns structured output intact; with a fake claude for its free dry run."
 resource: ../../../evals/spikes/cli-contract/
-implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-16]
+implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-13, ENG-16]
 tests: [../../../evals/test/cli-contract-spike.test.ts]
 tags: [code, evals, cli, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T04:35:35Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:07:20Z }
 ---
 
 # Purpose

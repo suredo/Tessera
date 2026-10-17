@@ -249,6 +249,17 @@ test("code docs need a Docs: back-link, and Docs: comments must point to real do
   assert.match(r.out, /points to a missing doc: docs\/code\/server\/nope\.md/);
 });
 
+test("a script's Docs: comment back-links its doc, and test files are not read for them", () => {
+  const root = makeRepo();
+  write(root, "packages/server/src/assets/index.ts", "export const putAsset = () => 1;\n");
+  write(root, "scripts/assets.ts", "// Docs: docs/code/server/assets.md\n");
+  // A test's sample text is not a back-link, even when it points nowhere.
+  write(root, "scripts/test/sample.test.mjs", '"// Docs: docs/code/server/nope.md";\n');
+  write(root, "packages/server/test/sample.test.ts", '"// Docs: docs/code/server/nope.md";\n');
+  const r = check(root);
+  assert.equal(r.code, 0, r.out);
+});
+
 test("a code doc without a resource, or with one that doesn't exist, fails (ENG-24)", () => {
   const root = makeRepo();
   edit(root, "docs/code/server/assets.md", "resource: ../../../packages/server/src/assets/\n", "");
