@@ -7,7 +7,7 @@ implements: [GEN-01, GEN-02, GEN-15, GEN-18, ENG-07, ENG-11, ENG-16]
 tests: [../../../evals/test/intent-spike.test.ts]
 tags: [code, evals, intent, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T04:35:35Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T05:13:53Z }
 ---
 
 # Purpose
@@ -38,6 +38,7 @@ Depends on the [CLI contract spike](cli-contract-spike.md)'s caller, the [evalua
 - **The expected answers are judgment calls,** reviewed by the owner before the run. A "misroute" on a request with two reasonable answers says more about the request than the prompt; the report keeps the request text so it can be judged.
 - **31 requests is a small sample:** one misroute in a category of 3 is 33%. Read the rates with the counts.
 - **The contexts are made up and short.** Real catalogues are longer; the M2 stage needs its own measurement.
+- **The score doesn't read the split parts' words.** The live run on 2026-10-17 misrouted 1 request in 31, but its data parts were reworded and once half translated (L-75), which only reading the answers showed. Results and the design notes they call for: [the report](../../../evals/reports/2026-10-17-intent-spike.md).
 
 # Symbols (generated)
 
