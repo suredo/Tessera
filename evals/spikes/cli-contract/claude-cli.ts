@@ -16,6 +16,30 @@ import { z } from "zod";
 
 export const MAX_TURNS = 3;
 
+/** The field every answer travels in. */
+export const ANSWER_KEY = "answer";
+
+/**
+ * The CLI hands the schema to the API as a tool's input schema, which must be an object at the
+ * top level (the third live run, #19), while a contract may be a union (CON-02). So every schema
+ * travels wrapped as `{ answer: <contract> }`, with shared definitions moved to the top so that
+ * their references still resolve.
+ */
+export function wrapSchema(schema: Record<string, unknown>): Record<string, unknown> {
+  const { $schema, definitions, $defs, ...contract } = schema;
+  return {
+    ...($schema === undefined ? {} : { $schema }),
+    type: "object",
+    properties: { [ANSWER_KEY]: contract },
+    required: [ANSWER_KEY],
+    additionalProperties: false,
+    ...(definitions === undefined ? {} : { definitions }),
+    ...($defs === undefined ? {} : { $defs }),
+  };
+}
+
+const wrappedAnswer = z.object({ [ANSWER_KEY]: z.unknown() });
+
 /** The locked flags of a normal stage (CLI-03), then the prompt. Research and file tools: never. */
 export function buildArgs(spec: StageSpec<unknown>, systemPrompt: string): string[] {
   return [
@@ -23,7 +47,7 @@ export function buildArgs(spec: StageSpec<unknown>, systemPrompt: string): strin
     "--output-format",
     "json",
     "--json-schema",
-    JSON.stringify(jsonSchemaOf(spec.schema)),
+    JSON.stringify(wrapSchema(jsonSchemaOf(spec.schema))),
     "--model",
     spec.model,
     "--effort",
@@ -116,7 +140,7 @@ function failure(envelope: ResultEnvelope): ProviderError {
   const kind =
     envelope.subtype === "error_max_turns"
       ? "turn_limit"
-      : envelope.subtype === "error_max_structured_output_retries"
+      : envelope.subtype === "error_max_structured_output_retries" || /input_schema/.test(text)
         ? "schema"
         : /log ?in|authenticat|sign.?in/.test(text)
           ? "sign_in"
@@ -188,7 +212,8 @@ export function createClaudeCliProvider(options: ClaudeCliOptions): Provider {
       }
       if (envelope.is_error || envelope.subtype !== "success") throw failure(envelope);
       const usage = toUsage(envelope);
-      const checked = spec.schema.safeParse(envelope.structured_output);
+      const wrapped = wrappedAnswer.safeParse(envelope.structured_output);
+      const checked = spec.schema.safeParse(wrapped.success ? wrapped.data[ANSWER_KEY] : undefined);
       if (!checked.success) {
         throw new ProviderError("schema", "The answer did not have the expected shape.", usage);
       }

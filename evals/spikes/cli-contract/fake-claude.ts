@@ -21,11 +21,25 @@ fs.writeFileSync(
 // calls a model: the live run found it refuses draft 2020-12 (#19).
 const schemaAt = args.indexOf("--json-schema") + 1;
 if (schemaAt > 0) {
+  const schema = JSON.parse(args[schemaAt] ?? "") as { type?: unknown };
   try {
-    new Ajv().compile(JSON.parse(args[schemaAt] ?? "") as object);
+    new Ajv().compile(schema);
   } catch (error) {
     process.stderr.write(
       `Error: --json-schema is not a valid JSON Schema: ${(error as Error).message}\n`,
+    );
+    process.exit(1);
+  }
+  // The API then takes it as a tool's input schema, which must be an object at the top level: the
+  // third live run got this answer for a union (#19).
+  if (schema.type !== "object") {
+    process.stdout.write(
+      JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: true,
+        result: "API Error: 400 tools.1.custom.input_schema.type: Field required",
+      }),
     );
     process.exit(1);
   }

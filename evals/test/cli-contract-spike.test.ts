@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { intentSchema, toJsonSchema } from "@tessera/contracts";
 import { runProcess } from "@tessera/server";
+import { Ajv } from "ajv";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { readLedger } from "../src/index.ts";
@@ -12,6 +13,7 @@ import {
   cleanEnvironment,
   createClaudeCliProvider,
   toUsage,
+  wrapSchema,
 } from "../spikes/cli-contract/claude-cli.ts";
 import { fakeProvider, plannedCalls, PLAN, runSpike } from "../spikes/cli-contract/run.ts";
 
@@ -48,8 +50,8 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", () => {
       "System prompt",
     );
     const schemaAt = args.indexOf("--json-schema") + 1;
-    // The contract's own schema file, in the draft the CLI accepts.
-    expect(JSON.parse(args[schemaAt] ?? "")).toEqual(toJsonSchema("intent"));
+    // The contract's own schema, in the draft the CLI accepts, wrapped in an object for the API.
+    expect(JSON.parse(args[schemaAt] ?? "")).toEqual(wrapSchema(toJsonSchema("intent")));
     expect(toJsonSchema("intent")["$schema"]).toBe("http://json-schema.org/draft-07/schema#");
     expect(args.filter((_, i) => i !== schemaAt)).toEqual([
       "--print",
@@ -73,6 +75,26 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", () => {
       "System prompt",
       "Make me a list",
     ]);
+  });
+
+  it("wraps any contract, a union included, in an object whose references still resolve", () => {
+    const union = toJsonSchema("intent");
+    expect(union["type"]).toBeUndefined();
+    const wrapped = wrapSchema(union);
+    expect(wrapped).toMatchObject({ type: "object", required: ["answer"] });
+    expect(wrapped["$schema"]).toBe(union["$schema"]);
+
+    // Shared definitions move to the top, where "#/definitions/..." points.
+    const withRefs = {
+      $schema: "http://json-schema.org/draft-07/schema#",
+      type: "array",
+      items: { $ref: "#/definitions/item" },
+      definitions: { item: { type: "string", minLength: 1 } },
+    };
+    const validate = new Ajv({ strict: true }).compile(wrapSchema(withRefs));
+    expect(validate({ answer: ["milk"] })).toBe(true);
+    expect(validate({ answer: [""] })).toBe(false);
+    expect(validate(["milk"])).toBe(false);
   });
 
   it("starts the CLI with an allowlisted environment: no API keys, no parent session (L-52)", () => {
@@ -178,6 +200,21 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", () => {
       kind: "failed",
       error: "sign_in",
       message: "The CLI call failed (success): Not logged in · Please run /login",
+    });
+  });
+
+  it("fails like the API did in the third live run for a schema that isn't an object (ENG-13)", async () => {
+    const spike = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "spikes");
+    const result = await runProcess(process.execPath, [
+      path.join(spike, "cli-contract", "fake-claude.ts"),
+      path.join(spike, "cli-contract", "dry-run-replies.json"),
+      path.join(root, "replay-union-calls"),
+      "--json-schema",
+      JSON.stringify(toJsonSchema("intent")),
+    ]);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      is_error: true,
+      result: "API Error: 400 tools.1.custom.input_schema.type: Field required",
     });
   });
 

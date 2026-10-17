@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Update**: The CLI contract spike's third live call ([issue 19](https://github.com/suredo/Tessera/issues/19)) was refused by the API: Claude Code passes the schema as a tool's input schema, which must be an object at the top level, and the intent contract is a union (`CON-02`). The [spike](code/evals/cli-contract-spike.md) now sends every contract wrapped as `{ answer: <contract> }` and unwraps the reply; the contracts stay as they are ([contracts package](code/contracts/package.md)). The fake `claude` refuses what the API refused, with a replay test (`ENG-13`).
+
 * **Update**: The CLI contract spike's second live call ([issue 19](https://github.com/suredo/Tessera/issues/19)) stopped because the standalone CLI wasn't signed in; the desktop app's sign-in doesn't reach a CLI started with the allowlisted environment (`CLI-08`). The [spike](code/evals/cli-contract-spike.md) now checks the sign-in for free before a live run, and records the CLI's own words when a call fails (`ENG-07`).
 
 * **Update**: The CLI contract spike's first live call ([issue 19](https://github.com/suredo/Tessera/issues/19)) found that Claude Code 2.1.296 refuses a draft 2020-12 JSON Schema in `--json-schema`; it checks with a draft-07 validator. The [contracts package](code/contracts/package.md) now generates draft-07 for every schema that leaves the process (`CON-01`), and the [spike](code/evals/cli-contract-spike.md)'s fake `claude` checks schemas the same way, with a replay test (`ENG-13`).

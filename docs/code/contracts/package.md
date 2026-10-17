@@ -43,6 +43,7 @@ Depends on zod. The server uses it, its provider adapters included, and so does 
 - **The script format is not in `contracts`,** since it never leaves the process: it has no schema file. Usage reaches `contracts` inside the ledger entry. A canned reply's value is any JSON: its shape is the stage's own contract.
 - **The intent contract is a draft.** The intent spike (#20) and the generation pipeline (M2) may change it. Claude Code's acceptance of the generated schema, including `oneOf`, is checked by the CLI spike (#19).
 - **zod features that only draft 2020-12 can express** (such as tuples written as `prefixItems`) would be written differently or refused by the CLI. Check a new contract's generated file before relying on it.
+- **A union contract can't go to the CLI as it is.** The API takes the schema as a tool's input schema, which must be an object at the top level, so the caller wraps every contract as `{ answer: <contract> }` and unwraps the reply ([CLI contract spike](../evals/cli-contract-spike.md)). The files in `schemas/` stay the contracts themselves.
 
 # Symbols (generated)
 

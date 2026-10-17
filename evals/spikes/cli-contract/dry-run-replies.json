@@ -14,14 +14,16 @@
       "output_tokens": 0
     },
     "structured_output": {
-      "kind": "create",
-      "interfacePart": "A shopping list I can tick off at the store",
-      "dataPart": "Add milk, eggs, bread and apples",
-      "behaviorChange": false,
-      "lookOnly": false,
-      "targetsCurrentTool": false,
-      "language": "en",
-      "features": [{ "name": "Shopping list", "request": "a shopping list I can tick off" }]
+      "answer": {
+        "kind": "create",
+        "interfacePart": "A shopping list I can tick off at the store",
+        "dataPart": "Add milk, eggs, bread and apples",
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": false,
+        "language": "en",
+        "features": [{ "name": "Shopping list", "request": "a shopping list I can tick off" }]
+      }
     }
   },
   {
@@ -39,19 +41,21 @@
       "output_tokens": 0
     },
     "structured_output": {
-      "title": "Counter",
-      "summary": "A counter with plus, minus and reset buttons.",
-      "language": "en",
-      "files": {
-        "mode": "replace",
-        "files": [{ "path": "index.html", "content": "<button>+</button>" }]
-      },
-      "controls": [
-        { "hook": "plus", "label": "Plus", "kind": "button" },
-        { "hook": "minus", "label": "Minus", "kind": "button" },
-        { "hook": "reset", "label": "Reset", "kind": "button" }
-      ],
-      "data": { "fields": [{ "name": "count", "type": "number", "unit": null }], "startCount": 0 }
+      "answer": {
+        "title": "Counter",
+        "summary": "A counter with plus, minus and reset buttons.",
+        "language": "en",
+        "files": {
+          "mode": "replace",
+          "files": [{ "path": "index.html", "content": "<button>+</button>" }]
+        },
+        "controls": [
+          { "hook": "plus", "label": "Plus", "kind": "button" },
+          { "hook": "minus", "label": "Minus", "kind": "button" },
+          { "hook": "reset", "label": "Reset", "kind": "button" }
+        ],
+        "data": { "fields": [{ "name": "count", "type": "number", "unit": null }], "startCount": 0 }
+      }
     }
   },
   {
@@ -69,16 +73,18 @@
       "output_tokens": 0
     },
     "structured_output": {
-      "kind": "create",
-      "interfacePart": "A habit tracker for drinking water",
-      "dataPart": null,
-      "behaviorChange": false,
-      "lookOnly": false,
-      "targetsCurrentTool": false,
-      "language": "en",
-      "features": [
-        { "name": "Water habit tracker", "request": "a habit tracker for drinking water" }
-      ]
+      "answer": {
+        "kind": "create",
+        "interfacePart": "A habit tracker for drinking water",
+        "dataPart": null,
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": false,
+        "language": "en",
+        "features": [
+          { "name": "Water habit tracker", "request": "a habit tracker for drinking water" }
+        ]
+      }
     }
   }
 ]
