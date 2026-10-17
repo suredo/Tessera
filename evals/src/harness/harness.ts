@@ -92,6 +92,8 @@ export function startHarness(options: HarnessOptions): Harness {
 
   const run = async <T>(spec: StageSpec<T>): Promise<StageResult<T>> => {
     const callIndex = nextIndex++;
+    // Read before the call: the ledger line is written when it ends, maybe minutes later.
+    const startedAt = now().toISOString();
     const record = (usage: Usage, outcome: LedgerEntry["outcome"]): void =>
       appendLine(ledgerFile, {
         callIndex,
@@ -101,7 +103,7 @@ export function startHarness(options: HarnessOptions): Harness {
         model: spec.model,
         effort: spec.effort,
         promptCharCount: spec.prompt.length,
-        startedAt: now().toISOString(),
+        startedAt,
         usage,
         outcome,
       });

@@ -105,6 +105,30 @@ describe("evaluation harness (OBS-02, ENG-07)", () => {
     expect(harness.callsUsed()).toBe(2);
   });
 
+  it("records when a call started, not when it ended", async () => {
+    let clockMs = Date.parse("2026-10-17T09:00:00Z");
+    const scripted = createScriptedProvider({ name: "slow", replies: [value("create")] });
+    // A call that takes five minutes on the run's clock.
+    const slow: Provider = {
+      name: "slow",
+      live: false,
+      run: async (callSpec) => {
+        const result = await scripted.run(callSpec);
+        clockMs += 5 * 60_000;
+        return result;
+      },
+    };
+    const harness = startHarness({
+      provider: slow,
+      mode: "dry-run",
+      callCap: 1,
+      dataFolder: newFolder(),
+      now: () => new Date(clockMs),
+    });
+    await harness.provider.run(spec("create"));
+    expect(readLedger(harness.dataFolder)[0]?.startedAt).toBe("2026-10-17T09:00:00.000Z");
+  });
+
   it("records failed and broken calls, and stops after a provider error", async () => {
     const { harness } = dryRun([
       { kind: "value", stage: "intent", value: { kind: "create" } },

@@ -7,7 +7,7 @@ implements: [OBS-02, ENG-07, ENG-19, CLI-04]
 tests: [../../../evals/test/harness.test.ts]
 tags: [code, evals, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T00:45:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T01:42:58Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ Makes every evaluation run follow the [live evaluation protocol](../../practices
 
 - **The cap is hard.** It is set when the run starts, must be a whole number of at least 1, and never grows. A call past it is refused before it reaches the provider and recorded as `refused`. A call is counted before it starts, so calls made at the same time can't pass the cap together. Raising the budget means a new approval and a new run.
 - **A dry run can't reach a model.** It refuses any provider whose `live` is true, and a live run refuses the scripted provider, so the ledger's `mode` is always true.
-- **Every call leaves a trace.** Each call, refused ones included, gets a ledger line: stage, model, effort, prompt size, usage and outcome (`ok`, `failed` with its error kind, `crashed` for a bug, or `refused`). Each call that started gets a request log line with its prompt and raw answer. Lines are appended as calls end, so a run that breaks keeps what it recorded.
+- **Every call leaves a trace.** Each call, refused ones included, gets a ledger line: stage, model, effort, prompt size, usage and outcome (`ok`, `failed` with its error kind, `crashed` for a bug, or `refused`). Each call that started gets a request log line with its prompt and raw answer. Lines are appended as calls end, so a run that breaks keeps what it recorded; a ledger line still gives the time its call started, read before the call.
 - **Provider errors stop the run** (`ENG-07`). After a sign-in, usage limit, unavailable model or unsupported effort error, every later call is refused. A usage limit pauses: the rest resumes as a new run once the limit resets.
 - **Unknown cost is never 0** (`CLI-04`). The summary counts calls with unknown usage and leaves their unknown parts out of the totals.
 - **The run's own data folder** (`ENG-19`). It must be new or empty, so it can never be someone's real data folder, and it holds the ledger, request log and summary.
