@@ -2,7 +2,8 @@
 # the merge-ready job that stays red while a task handoff is left (ENG-25), and the workspace's
 # typecheck, lint, format check, unit tests (ENG-04, TEST-01), secret scan, with the same rules
 # as the pre-commit hook (ENG-19), and the web app's build, all on Linux; then one Windows job for
-# the platform helpers and the browser tests (PLAT-01, TEST-06). No secrets and no model calls.
+# the platform helpers, the SQLite storage and the browser tests (PLAT-01, DATA-01, TEST-06). No
+# secrets and no model calls.
 name: CI
 
 on:
@@ -96,8 +97,8 @@ jobs:
       - name: pnpm from packageManager, through Corepack
         run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - name: Platform helpers (PLAT-01)
-        run: pnpm exec vitest run packages/server/test/platform.test.ts
+      - name: Platform helpers and SQLite storage (PLAT-01, DATA-01)
+        run: pnpm exec vitest run packages/server/test/platform.test.ts packages/server/test/storage.test.ts
       - name: Playwright's video encoder
         run: pnpm exec playwright install ffmpeg
       - name: Browser tests in Chrome and Edge (TEST-06)

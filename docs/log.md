@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Creation**: [ADR 0003. The SQLite access layer](decisions/adr/0003-sqlite-access-layer.md), decided by the owner ([issue 16](https://github.com/suredo/Tessera/issues/16)): Node's built-in `node:sqlite`, plain SQL with rows checked by the zod contracts, and numbered migration files, chosen because nothing native has to install on Windows. [`DATA-01`](spec/data.md) points to it. The [storage](code/server/storage.md) code doc covers the module: opening the database, transactions that keep all or nothing, and migrations that refuse gaps and data from a newer version (`ENG-18`, `CON-04`).
+
 * **Update**: The owner signed off the intent spike's report, `evals/reports/2026-10-17-intent-spike.md` ([issue 20](https://github.com/suredo/Tessera/issues/20)), with its two design notes for M2.
 
 * **Update**: After Codex's review of [pull request 38](https://github.com/suredo/Tessera/pull/38), the [intent spike](code/evals/intent-spike.md) scores every category over its planned requests, with blocked requests counted (`ENG-07`); it flags a split part whose words aren't in the request; and the live answers behind L-75 are a committed replay fixture with a test (`ENG-13`). The live run was scored again offline, and the report's design note now keeps to `GEN-04`: the host checks each part against the request, instead of sending the whole request along.
