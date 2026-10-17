@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import ts from "typescript";
 import { parseFrontmatter } from "./okf-lib.mjs";
 
 export const MILESTONES = ["M0", "M1", "M2", "M3", "M4", "M5", "M6"] as const;
@@ -52,12 +53,17 @@ const SKIP = new Set(["node_modules", ".git", "dist", "test-output", "coverage"]
 const read = (file: string) => fs.readFileSync(file, "utf8").replace(/\r\n/g, "\n");
 const slash = (p: string) => p.split(path.sep).join("/");
 
+/**
+ * The files under `dir`. A folder with its own `.git` is another repository or worktree, such as
+ * an assistant's checkout of another branch, and is left out: its tests aren't this commit's.
+ */
 function walk(dir: string): string[] {
   if (!fs.existsSync(dir)) return [];
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const p = path.join(dir, entry.name);
-    if (entry.isDirectory()) return SKIP.has(entry.name) ? [] : walk(p);
-    return [p];
+    if (!entry.isDirectory()) return [p];
+    if (SKIP.has(entry.name) || fs.existsSync(path.join(p, ".git"))) return [];
+    return walk(p);
   });
 }
 
@@ -89,8 +95,33 @@ const idsIn = (text: string, prefixes: Set<string>): string[] =>
     .filter((m) => prefixes.has(m[1] ?? ""))
     .map((m) => m[0]);
 
-// Test titles: the first string argument of it(), test() and describe(), with .skip and the like.
-const TITLE = /\b(?:it|test|describe)(?:\.\w+)*\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g;
+const TEST_CALLS = new Set(["it", "test", "describe"]);
+
+/**
+ * The titles of the tests a file declares: the first argument of each it(), test() or describe()
+ * call (also .skip, .only and the like) when it is plain text. Read from the syntax tree, so a
+ * call written inside a comment or a string is not a test.
+ */
+export function testTitles(file: string, text: string): string[] {
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, false);
+  const titles: string[] = [];
+  const calledName = (callee: ts.Expression): string | undefined => {
+    let node = callee;
+    while (ts.isPropertyAccessExpression(node)) node = node.expression;
+    return ts.isIdentifier(node) ? node.text : undefined;
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && TEST_CALLS.has(calledName(node.expression) ?? "")) {
+      const first = node.arguments[0];
+      if (first && (ts.isStringLiteral(first) || ts.isNoSubstitutionTemplateLiteral(first))) {
+        titles.push(first.text);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return titles;
+}
 
 /** Collects the coverage of every requirement and lesson in the repository at `root`. */
 export function collect(root: string, current: Milestone): Coverage {
@@ -155,8 +186,8 @@ export function collect(root: string, current: Milestone): Coverage {
   const namedIn = new Map<string, Set<string>>();
   const testFiles = walk(root).filter((f) => /\.(test|spec)\.(tsx?|mjs)$/.test(f));
   for (const file of testFiles) {
-    for (const m of read(file).matchAll(TITLE)) {
-      for (const id of idsIn(m[2] ?? "", prefixes)) {
+    for (const title of testTitles(file, read(file))) {
+      for (const id of idsIn(title, prefixes)) {
         check(id, rel(file));
         if (!namedIn.has(id)) namedIn.set(id, new Set());
         namedIn.get(id)?.add(rel(file));

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
-import { collect, render } from "../coverage-report.ts";
+import { collect, render, testTitles } from "../coverage-report.ts";
 
 const temps: string[] = [];
 afterAll(() => temps.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
@@ -116,6 +116,51 @@ describe("coverage report (ENG-17)", () => {
     );
     expect(c.unknownIds.map((u) => u.id).sort()).toEqual(["AREA-07", "AREA-09", "ENG-99"]);
     expect(render(c)).toContain("## Unknown IDs");
+  });
+
+  // Codex's review of #40: only real test declarations are evidence, read from the syntax tree.
+  it("reads test names from real calls, never from comments or sample text", () => {
+    const text = [
+      '// it("commented out (AREA-01)", () => {});',
+      '/* describe("in a block comment (AREA-01)", () => {}); */',
+      "const sample = 'it(\"a sample string (AREA-01)\", () => {})';",
+      'const fixture = `test("a template sample (AREA-01)", () => {})`;',
+      "describe.skip(",
+      '  "a real, multiline call (AREA-02)",',
+      "  () => {",
+      "    it(`a template title (AREA-03)`, () => {});",
+      "    it(`built at run time ${1} (AREA-04)`, () => {});",
+      "  },",
+      ");",
+    ].join("\n");
+    expect(testTitles("t.test.ts", text)).toEqual([
+      "a real, multiline call (AREA-02)",
+      "a template title (AREA-03)",
+    ]);
+
+    const c = collect(
+      repo({ ...base, "pkg/test/mod.test.ts": text.split("\n").slice(0, 4).join("\n") }),
+      "M0",
+    );
+    // The code doc's test file now only mentions AREA-01 in comments and samples: not verified.
+    expect(c.requirements.find((r) => r.id === "AREA-01")).toMatchObject({
+      status: "implemented",
+      namedIn: [],
+    });
+  });
+
+  it("leaves out nested checkouts, whose tests belong to another branch", () => {
+    const root = repo({
+      ...base,
+      ".claude/worktrees/other/.git": "gitdir: elsewhere\n",
+      ".claude/worktrees/other/pkg/test/mod.test.ts":
+        'it("another branch (AREA-99, AREA-02)", () => {});\n',
+    });
+    const c = collect(root, "M0");
+    expect(c.unknownIds).toEqual([]);
+    expect(c.requirements.find((r) => r.id === "AREA-02")?.namedIn).toEqual([
+      "pkg/test/other.test.ts",
+    ]);
   });
 
   it("finds no unknown ID in this repository", () => {
