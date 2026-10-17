@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Docs: docs/code/scripts/okf-check.md
 // OKF documentation check (ENG-05, ENG-08, ENG-24, ENG-25). See docs/practices/documentation.md.
-// Also checks task handoffs and history notes in context/, that CLAUDE.md only imports AGENTS.md,
+// Also checks the frontmatter of reports in evals/reports/, task handoffs and history notes in
+// context/, that CLAUDE.md only imports AGENTS.md,
 // and that every skill has identical Claude Code (.claude/skills) and Codex (.agents/skills) adapters.
 // Frontmatter is read with a YAML library and code with TypeScript's parser, so run `pnpm install` first.
 //
@@ -104,22 +105,21 @@ for (const f of files) {
 }
 
 // ---------- concepts ----------
-for (const f of files) {
-  if (RESERVED.has(path.basename(f))) continue;
+// The frontmatter rules every concept follows. Returns the parsed file, or null when it has none.
+function checkConcept(f, required = REQUIRED) {
   let parsed;
   try {
     parsed = parseFrontmatter(read(f));
   } catch (e) {
     err(f, e.message);
-    continue;
+    return null;
   }
   const { fm, body } = parsed;
   if (!fm) {
     err(f, "missing frontmatter");
-    continue;
+    return null;
   }
-  concepts.set(f, parsed);
-  for (const k of REQUIRED) if (fm[k] === undefined || fm[k] === "") err(f, `missing "${k}"`);
+  for (const k of required) if (fm[k] === undefined || fm[k] === "") err(f, `missing "${k}"`);
   if (fm.type && !TYPES.has(fm.type))
     err(f, `unknown type "${fm.type}" (add it to the project types first)`);
   if (fm.status && !STATUSES.has(fm.status)) err(f, `status must be draft, stable or deprecated`);
@@ -163,7 +163,26 @@ for (const f of files) {
     for (const id of [].concat(fm.implements ?? []))
       if (!requirementIds.has(id)) err(f, `implements unknown requirement ${id}`);
   }
+  return parsed;
 }
+
+for (const f of files) {
+  if (RESERVED.has(path.basename(f))) continue;
+  const parsed = checkConcept(f);
+  if (parsed) concepts.set(f, parsed);
+}
+
+// Evaluation and milestone reports live outside the bundle, so only their frontmatter is checked:
+// no index, and their links are their own (documentation.md, "Where things live").
+const REPORTS = path.join(ROOT, "evals", "reports");
+if (fs.existsSync(REPORTS))
+  for (const e of fs.readdirSync(REPORTS, { withFileTypes: true })) {
+    if (!e.isFile() || !e.name.endsWith(".md")) continue;
+    const f = path.join(REPORTS, e.name);
+    const parsed = checkConcept(f, [...REQUIRED, "tags"]);
+    if (parsed?.fm.type && parsed.fm.type !== "Evaluation Report")
+      err(f, `a report's type must be "Evaluation Report", not "${parsed.fm.type}"`);
+  }
 
 // ---------- links (all .md in the bundle, including indexes and log) ----------
 const anchors = new Map();
@@ -267,7 +286,10 @@ if (fs.existsSync(logFile)) {
 const codeDocs = [...concepts].filter(([, c]) => CODE_TYPES.has(c.fm.type));
 const backLinked = new Set();
 // Tests are skipped: a module's main file names its doc, and a test may hold sample Docs: text.
-for (const codeRoot of ["packages", "evals", "scripts"].map((d) => path.join(ROOT, d))) {
+// CI workflows are code too, and name their doc in a YAML comment.
+for (const codeRoot of ["packages", "evals", "scripts", ".github/workflows"].map((d) =>
+  path.join(ROOT, d),
+)) {
   if (!fs.existsSync(codeRoot)) continue;
   const stack = [codeRoot];
   while (stack.length) {
@@ -278,7 +300,8 @@ for (const codeRoot of ["packages", "evals", "scripts"].map((d) => path.join(ROO
         if (!["node_modules", "dist", "test", "e2e"].includes(e.name)) stack.push(p);
         continue;
       }
-      if (!/\.(ts|tsx|js|mjs|css)$/.test(e.name) || /\.(test|spec)\.\w+$/.test(e.name)) continue;
+      if (!/\.(ts|tsx|js|mjs|css|ya?ml)$/.test(e.name) || /\.(test|spec)\.\w+$/.test(e.name))
+        continue;
       for (const m of read(p).matchAll(/Docs: (docs\/[\w./-]+\.md)/g)) {
         const doc = path.join(ROOT, m[1]);
         if (!fs.existsSync(doc)) err(p, `Docs comment points to a missing doc: ${m[1]}`);

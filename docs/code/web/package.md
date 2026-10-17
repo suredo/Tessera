@@ -3,11 +3,11 @@ type: Code Package
 title: "Web package"
 description: "@tessera/web: the host app in the browser, built with Vite and React 19 with the React Compiler, with all host text going through the translation layer."
 resource: ../../../packages/web/
-implements: [UX-05, ENG-04, TEST-06]
+implements: [UX-05, ENG-04, TEST-06, RUN-06]
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/e2e/shell.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-14T00:08:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T18:27:54Z }
 ---
 
 # Purpose
@@ -21,11 +21,12 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - `src/i18n/translate.ts`: `t`, the host's translator, and `createTranslator`, which builds one for a language.
 - `src/i18n/en.ts`: `en`, the English host text by key. `MessageKey` is its list of keys.
 - `vite.config.ts`: the build, with the React Compiler as a Babel preset. Run it as `pnpm build`.
-- `e2e/shell.spec.ts`: the browser test, run as `pnpm e2e` with the repository's `playwright.config.ts`. It opens the built app in the installed Chrome and Edge at 320 px and 1280 px wide and records a video into `test-output/playwright/` (`TEST-06`). `e2e/prune-runs.ts` keeps the last 3 runs there.
+- `e2e/shell.spec.ts`: the browser test, run as `pnpm e2e` with the repository's `playwright.config.ts`. It opens the built app in the installed Chrome and Edge at 320 px and 1280 px wide and records a video into `test-output/playwright/` (`TEST-06`). `e2e/prune-runs.ts` keeps the last 3 runs there. The [CI workflow](../ci/workflow.md) runs it in its Windows job on every pull request.
 
 # Invariants
 
 - **No host text in components** (`UX-05`). A component asks `t("key")` for every word it shows, including `aria-label`, `title`, `alt`, `placeholder`, `label`, and the `value` of a submit, button or reset input. The lint rule `tessera/no-host-text` (`scripts/eslint/no-host-text.mjs`) fails on text written in a component, also when it is reached through a condition, a fallback, a concatenation, a template or a list. It never looks inside a function call, so `t("key")` passes.
+- **Chrome and Edge are the supported browsers** (`RUN-06`): the browser tests run in both, and CI runs them. Firefox is best effort and isn't tested. Embedded browser panes that can't load nested sandboxed frames are unsupported; the Claude desktop app's built-in pane couldn't mount the POC's tools.
 - **A missing key is visible, never silent.** The translator falls back to English for a key another language lacks; a key no language has shows as the key itself. Either way it reports the gap through its `onMissing` handler, which warns in the console by default.
 - **The React Compiler does the memoizing** (A15). No hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case, with a comment saying so. ESLint runs the hooks rules and the compiler's rules (`eslint-plugin-react-hooks`, `recommended-latest`) on every component.
 
