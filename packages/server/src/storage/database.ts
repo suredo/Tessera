@@ -43,6 +43,11 @@ export function openDatabase(file: string): Database {
     return db;
   };
 
+  // Some errors make SQLite roll back on its own; a second ROLLBACK would hide the first error.
+  const rollBack = (): void => {
+    if (db.isTransaction) db.exec("ROLLBACK");
+  };
+
   const transaction = <T>(work: () => SyncResult<T>): T => {
     // An async function's work goes on after an await, outside the transaction: refuse it unrun.
     if (work.constructor.name === "AsyncFunction") {
@@ -58,20 +63,26 @@ export function openDatabase(file: string): Database {
     try {
       result = work();
     } catch (error) {
-      db.exec("ROLLBACK");
+      rollBack();
       throw error;
     }
     if (isThenable(result)) {
       // A plain function returned a promise: its work may still write once it resumes. Roll back,
       // then close this connection, so nothing it does later can land outside a transaction.
-      db.exec("ROLLBACK");
+      rollBack();
       closedBecause = "a transaction's work returned a promise.";
       db.close();
       // Its outcome no longer matters; the refusal below is what the caller sees.
       result.then(undefined, () => {});
       throw new Error("A transaction's work must be synchronous.");
     }
-    db.exec("COMMIT");
+    try {
+      // COMMIT can fail too, as when a deferred foreign key is checked; then nothing is kept.
+      db.exec("COMMIT");
+    } catch (error) {
+      rollBack();
+      throw error;
+    }
     return result as T;
   };
 

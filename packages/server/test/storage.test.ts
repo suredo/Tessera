@@ -68,6 +68,20 @@ describe("storage (DATA-01, ENG-18)", () => {
     db.close();
   });
 
+  // Codex's second review of #39: a failed COMMIT must roll back too, and free the connection.
+  it("keeps nothing when the commit itself fails, as with a deferred foreign key", () => {
+    const db = openDatabase(path.join(newFolder(), "tessera.db"));
+    db.exec(
+      "CREATE TABLE p (id INTEGER PRIMARY KEY); CREATE TABLE c (pid INTEGER REFERENCES p (id) DEFERRABLE INITIALLY DEFERRED);",
+    );
+    expect(() => db.transaction(() => db.run("INSERT INTO c (pid) VALUES (?)", 99))).toThrow(
+      /FOREIGN KEY/,
+    );
+    expect(db.get(count, "SELECT COUNT(*) AS n FROM c")).toEqual({ n: 0 });
+    expect(db.transaction(() => db.run("INSERT INTO p (id) VALUES (?)", 1))).toBe(1);
+    db.close();
+  });
+
   // Codex's review of #39: async work that writes after an await must not land outside the
   // transaction it was refused from.
   it("refuses async work before it runs, so nothing it writes after an await is kept", async () => {

@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Update**: [Storage](code/server/storage.md) transactions also roll back when the commit itself fails, as with a deferred foreign key, so nothing is kept and the connection is free again, as Codex's second review of [pull request 39](https://github.com/suredo/Tessera/pull/39) found.
+
 * **Update**: [Storage](code/server/storage.md) transactions keep async work from writing after they are refused, as Codex's review of [pull request 39](https://github.com/suredo/Tessera/pull/39) found: the type refuses promise-returning work, an async function is refused before it runs, and a plain function that returns a promise has its transaction rolled back and its connection closed. [ADR 0003](decisions/adr/0003-sqlite-access-layer.md) says the same.
 
 * **Creation**: [ADR 0003. The SQLite access layer](decisions/adr/0003-sqlite-access-layer.md), decided by the owner ([issue 16](https://github.com/suredo/Tessera/issues/16)): Node's built-in `node:sqlite`, plain SQL with rows checked by the zod contracts, and numbered migration files, chosen because nothing native has to install on Windows. [`DATA-01`](spec/data.md) points to it. The [storage](code/server/storage.md) code doc covers the module: opening the database, transactions that keep all or nothing, and migrations that refuse gaps and data from a newer version (`ENG-18`, `CON-04`).
