@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Update**: After Codex's review of [pull request 42](https://github.com/suredo/Tessera/pull/42), M0's closing report reports GitHub Actions usage (672 Linux and 100 Windows minutes, nothing billed), as `ENG-02` asks of every milestone report, and both reports in `evals/reports/` carry the `Evaluation Report` frontmatter the [documentation practice](practices/documentation.md) requires.
+
 * **Update**: M0's closing report, `evals/reports/2026-10-17-m0-report.md`, records the delivered work, each exit criterion with its evidence, the review of the [tracking rules](practices/tracking.md) against M0's issues and pull requests (`ENG-28` to `ENG-30`), the live costs and where each open item goes. `AGENTS.md`'s current state now says M0 is built and awaits sign-off, and M1 is next.
 
 * **Creation**: Code docs for the repository's own scripts, so the coverage report counts their evidence: the [OKF check](code/scripts/okf-check.md) (`ENG-05`, `ENG-08`, `ENG-24`, `ENG-25`) and the [git hooks](code/scripts/git-hooks.md) (`ENG-01`, `ENG-10`, `ENG-15`, `ENG-19`). The scripts name them in `Docs:` comments, and the checker's tests that cover the docs, code-doc and handoff rules now name `ENG-08`, `ENG-24` and `ENG-25`. The roadmap tables in [M1](roadmap/m1-runtime-and-data.md), [M2](roadmap/m2-generation-pipeline.md) and [M3](roadmap/m3-verification-and-codex.md) list each ID instead of a range such as "CLI-01 to CLI-05", which the coverage report doesn't read, so `CLI-02`, `CLI-04` and `APP-02` to `APP-05` now have their milestones; the [coverage report](code/scripts/coverage-report.md) doc says so under Pitfalls.

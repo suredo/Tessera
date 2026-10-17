@@ -1,3 +1,11 @@
+---
+type: Evaluation Report
+title: "Intent spike: live run"
+description: "How often a draft intent stage misrouted 31 requests from the POC's routing failures, in five languages, with its findings and the design notes due before M2."
+tags: [reports, spike, intent]
+status: stable
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T18:07:33Z }
+---
 # Intent spike: live run, 2026-10-17
 
 Issue [#20](https://github.com/suredo/Tessera/issues/20), decision A33. The request set (31 requests, 9 categories, 11 not in English), the draft prompt and the runner are in `evals/spikes/intent/` ([code doc](../../docs/code/evals/intent-spike.md)). The owner reviewed the request set and approved 31 calls with a hard cap of 31. The run was rehearsed first against the fake claude. **Signed off by the owner on 2026-10-17.**
