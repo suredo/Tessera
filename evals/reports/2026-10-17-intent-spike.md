@@ -1,6 +1,6 @@
 # Intent spike: live run, 2026-10-17
 
-Issue [#20](https://github.com/suredo/Tessera/issues/20), decision A33. The request set (31 requests, 9 categories, 11 not in English), the draft prompt and the runner are in `evals/spikes/intent/` ([code doc](../../docs/code/evals/intent-spike.md)). The owner reviewed the request set and approved 31 calls with a hard cap of 31. The run was rehearsed first against the fake claude.
+Issue [#20](https://github.com/suredo/Tessera/issues/20), decision A33. The request set (31 requests, 9 categories, 11 not in English), the draft prompt and the runner are in `evals/spikes/intent/` ([code doc](../../docs/code/evals/intent-spike.md)). The owner reviewed the request set and approved 31 calls with a hard cap of 31. The run was rehearsed first against the fake claude. **Signed off by the owner on 2026-10-17.**
 
 Model claude-haiku-5-5, effort low; CLI 2.1.296 (Claude Code). Calls 31 (cap 31), failed 0, refused 0. Input 107,149 tokens (82,500 from cache), output 10,830, 80.0 s of model time. Every call took 2 turns.
 
