@@ -72,14 +72,21 @@ const git = (root, ...args) =>
   );
 
 // A minimal valid repository: the rules files, a spec row, an engineering rule, and one code doc with its back-link.
-function makeRepo() {
+// The scripts are copied without their own Docs: comment, which names a doc the fixture doesn't
+// have, in the line endings asked for (by default, as checked out: CRLF on some Windows checkouts).
+const EOLS = { lf: "\n", crlf: "\r\n" };
+const copyScript = (file, eol) => {
+  let text = fs.readFileSync(file, "utf8");
+  if (eol) text = text.replace(/\r?\n/g, EOLS[eol]);
+  return text.replace(/^\/\/ Docs: [^\r\n]*\r?\n/m, "");
+};
+
+function makeRepo({ eol } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "okf-check-"));
   roots.push(root);
-  // The checker's own Docs: comment names a doc this fixture doesn't have, so it is left out.
-  const copy = (file) => fs.readFileSync(file, "utf8").replace(/^\/\/ Docs: .*\n/m, "");
   const files = {
-    "scripts/okf-check.mjs": copy(CHECKER),
-    "scripts/okf-lib.mjs": copy(path.join(SCRIPTS, "okf-lib.mjs")),
+    "scripts/okf-check.mjs": copyScript(CHECKER, eol),
+    "scripts/okf-lib.mjs": copyScript(path.join(SCRIPTS, "okf-lib.mjs"), eol),
     ".gitignore": "node_modules/\n", // the linked workspace dependencies below are never committed
     "AGENTS.md": "# Rules for AI assistants\n",
     "CLAUDE.md": "@AGENTS.md\n",
@@ -127,6 +134,18 @@ function makeRepo() {
 test("a valid bundle passes", () => {
   const r = check(makeRepo());
   assert.equal(r.code, 0, r.out);
+});
+
+test("the fixture copies the checker without its Docs: comment, in LF or CRLF line endings", () => {
+  for (const eol of Object.keys(EOLS)) {
+    const root = makeRepo({ eol });
+    for (const file of ["scripts/okf-check.mjs", "scripts/okf-lib.mjs"]) {
+      assert.doesNotMatch(read(root, file), /^\/\/ Docs: /m, `${eol}: ${file}`);
+      assert.equal(read(root, file).includes("\r\n"), eol === "crlf", `${eol}: ${file}`);
+    }
+    const r = check(root);
+    assert.equal(r.code, 0, `${eol}: ${r.out}`);
+  }
 });
 
 test("code docs may implement engineering rules (ENG-*) as well as spec requirements", () => {
