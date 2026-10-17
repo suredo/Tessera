@@ -1,7 +1,10 @@
-# Lessons from the Harness POC
+# Lessons
+
+From the Harness POC (L-01 to L-69), and from building Tessera (L-70 on).
 
 * [What the POC was](poc-summary.md) - What the Harness POC was, what it built and what evidence it left.
 * [What worked: keep these](what-worked.md) - The designs and practices from the POC that Tessera keeps.
 * [Issue catalogue](issue-catalogue.md) - 69 POC issues with root cause, mitigation requirements and status, plus coverage.
 * [Patterns behind the issues](patterns.md) - The seven patterns behind most POC issues, and the rule for each.
 * [Things the POC did not answer](open-questions.md) - What the POC did not answer and Tessera must measure.
+* [Tessera issues](tessera-issues.md) - Issues found while building Tessera, from L-70 on: what happened, the cause, the mitigation and where it was found.

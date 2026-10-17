@@ -2,6 +2,9 @@
 
 ## 2026-10-17
 
+* **Update**: The owner signed off [ADR 0002](decisions/adr/0002-claude-code-cli-contract.md). Its rules are now in the spec: [`CON-01`](spec/contracts.md) (JSON Schema draft-07), and in [providers](spec/providers.md) `CLI-02` (free sign-in check), `CLI-03` (tested flags for 2.1.296, every contract wrapped in an object, `--max-turns` not a hard bound), `CLI-05` (failures read from `is_error`) and `CLI-08` (an allowlisted environment).
+* **Creation**: [Tessera issues](lessons/tessera-issues.md), the lessons found while building Tessera, continuing the POC catalogue's IDs from L-70. L-70 to L-74 are the CLI contract spike's live failures and the environment trap found before it.
+
 * **Creation**: [ADR 0002. The Claude Code CLI contract](decisions/adr/0002-claude-code-cli-contract.md), proposed and awaiting the owner's sign-off ([issue 19](https://github.com/suredo/Tessera/issues/19)). The fourth live run of the CLI contract spike answered all three calls with intact structured output on Claude Code 2.1.296, after three runs that each stopped at their first call. It sets the rules for schemas (draft-07, wrapped in an object), the environment (an allowlist), sign-in (checked for free first) and failures (read from `is_error`), and finds that `--max-turns` is not a hard bound.
 
 * **Update**: The CLI contract spike's third live call ([issue 19](https://github.com/suredo/Tessera/issues/19)) was refused by the API: Claude Code passes the schema as a tool's input schema, which must be an object at the top level, and the intent contract is a union (`CON-02`). The [spike](code/evals/cli-contract-spike.md) now sends every contract wrapped as `{ answer: <contract> }` and unwraps the reply; the contracts stay as they are ([contracts package](code/contracts/package.md)). The fake `claude` refuses what the API refused, with a replay test (`ENG-13`).

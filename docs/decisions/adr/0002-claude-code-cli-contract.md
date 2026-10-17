@@ -3,12 +3,12 @@ type: Decision
 title: "ADR 0002. The Claude Code CLI contract"
 description: "What the M0 CLI spike found on Claude Code 2.1.296, and the rules it sets for passing schemas, flags, environment and sign-in to the CLI."
 tags: [decisions, cli, contracts]
-status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T03:24:15Z }
+status: stable
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T03:28:33Z }
 ---
 # ADR 0002. The Claude Code CLI contract
 
-Proposed on 2026-10-17, from the M0 live spike ([issue 19](https://github.com/suredo/Tessera/issues/19), A33); **awaiting the owner's sign-off**. It answers A14's question (does Claude Code accept zod's JSON Schema?) and tests `CLI-03`'s locked flags. Code: the [CLI contract spike](../../code/evals/cli-contract-spike.md).
+Decided by the owner on 2026-10-17, from the M0 live spike ([issue 19](https://github.com/suredo/Tessera/issues/19), A33). It answers A14's question (does Claude Code accept zod's JSON Schema?) and tests `CLI-03`'s locked flags. Code: the [CLI contract spike](../../code/evals/cli-contract-spike.md).
 
 ## Context
 
@@ -54,6 +54,7 @@ Run 4, call by call (tokens: input including cache, of which read from cache; ou
 ## Consequences
 
 - The contracts package generates draft-07, and its schema files changed by one line each (this pull request).
-- On sign-off, the spec takes over decisions 3 to 5: `CLI-08` (allowlisted environment), `CLI-02` (free sign-in check) and `CLI-05` (read `is_error` and the error fields), and `CLI-03` records 2.1.296 as the tested version.
+- The spec takes over the decisions: `CON-01` (draft-07), `CLI-03` (the wrapped schema, the tested version 2.1.296, its flags and the turn limit), `CLI-08` (allowlisted environment), `CLI-02` (free sign-in check) and `CLI-05` (read `is_error` and the error fields).
+- The live failures are lessons L-70 to L-74 in [Tessera issues](../../lessons/tessera-issues.md).
 - The M2 Claude Code adapter starts from the spike's caller, with these rules and the open questions above as its first tests.
 - The intent spike (#20) can now run on the same caller. Its first answer chose `new_tool` where `create` also fits, which the intent spike should look at.
