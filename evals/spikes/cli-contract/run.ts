@@ -15,6 +15,7 @@ import { artifactDraftSchema } from "./artifact-draft.ts";
 import {
   cleanEnvironment,
   createClaudeCliProvider,
+  isSignedIn,
   MAX_TURNS,
   resultEnvelopeSchema,
 } from "./claude-cli.ts";
@@ -131,6 +132,12 @@ async function liveProvider(): Promise<{ provider: Provider; cliVersion: string 
     timeoutMs: 30_000,
   });
   if (version.exitCode !== 0) throw new Error(`claude --version failed: ${version.stderr}`);
+  // Free too: a missing sign-in stops here, before the harness counts a call.
+  if (!(await isSignedIn(executable, process.env))) {
+    throw new Error(
+      "The claude program is not signed in. Run `claude auth login`, then try again.",
+    );
+  }
   const provider = createClaudeCliProvider({
     executable,
     live: true,

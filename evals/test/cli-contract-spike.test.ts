@@ -153,6 +153,34 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", () => {
     });
   });
 
+  // The second live run's failure: "success" yet is_error, 0 tokens, from a CLI not signed in. Its
+  // words weren't recorded then, so the text here stands in for them.
+  it("maps a sign-in failure and keeps the CLI's words in the ledger (ENG-13)", async () => {
+    const dataFolder = newFolder();
+    const replies = path.join(root, `replies-${runs}.json`);
+    const usage = {
+      input_tokens: 0,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+      output_tokens: 0,
+    };
+    const notSignedIn = {
+      type: "result",
+      subtype: "success",
+      is_error: true,
+      duration_ms: 1817,
+      result: "Not logged in · Please run /login",
+      usage,
+    };
+    fs.writeFileSync(replies, JSON.stringify([notSignedIn]));
+    await runSpike({ mode: "dry-run", provider: fakeProvider(dataFolder, replies), dataFolder });
+    expect(readLedger(dataFolder)[0]?.outcome).toEqual({
+      kind: "failed",
+      error: "sign_in",
+      message: "The CLI call failed (success): Not logged in · Please run /login",
+    });
+  });
+
   it("refuses a draft 2020-12 schema, as Claude Code 2.1.296 did in the live run (ENG-13)", async () => {
     const spike = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "spikes");
     const draft2020 = JSON.stringify(z.toJSONSchema(intentSchema, { target: "draft-2020-12" }));

@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Update**: The CLI contract spike's second live call ([issue 19](https://github.com/suredo/Tessera/issues/19)) stopped because the standalone CLI wasn't signed in; the desktop app's sign-in doesn't reach a CLI started with the allowlisted environment (`CLI-08`). The [spike](code/evals/cli-contract-spike.md) now checks the sign-in for free before a live run, and records the CLI's own words when a call fails (`ENG-07`).
+
 * **Update**: The CLI contract spike's first live call ([issue 19](https://github.com/suredo/Tessera/issues/19)) found that Claude Code 2.1.296 refuses a draft 2020-12 JSON Schema in `--json-schema`; it checks with a draft-07 validator. The [contracts package](code/contracts/package.md) now generates draft-07 for every schema that leaves the process (`CON-01`), and the [spike](code/evals/cli-contract-spike.md)'s fake `claude` checks schemas the same way, with a replay test (`ENG-13`).
 
 * **Creation**: The [CLI contract spike](code/evals/cli-contract-spike.md) code doc ([issue 19](https://github.com/suredo/Tessera/issues/19), rehearsal): three planned calls that check Claude Code accepts a zod-generated schema (`CON-01`), keeps working with the locked flags (`CLI-03`) and returns structured output intact, rehearsed for free against a fake `claude` that records what it was given. The CLI starts from an allowlisted environment, since a parent Claude Code session sets variables such as `ANTHROPIC_BASE_URL` that removing API keys alone would let through (`CLI-08`). No live call has been made.

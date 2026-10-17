@@ -7,7 +7,7 @@ implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-16]
 tests: [../../../evals/test/cli-contract-spike.test.ts]
 tags: [code, evals, cli, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T02:39:49Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T02:45:16Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Tests the riskiest assumptions about Claude Code before anything is built on the
 # Entry points
 
 - `run.ts`: the script. `PLAN` is the approved run (cap, model, effort, time limit); `runSpike` makes the planned calls and writes `report.json`; `inspectEnvelope` checks what a call shows beyond its schema (turns, attempted tools, usage); `fakeProvider` is the dry run's provider. Run it with `node evals/spikes/cli-contract/run.ts --dry-run`, or `--live --approved-cap 3` once the owner has approved the budget.
-- `claude-cli.ts`: `buildArgs` (the locked flags), `cleanEnvironment`, `toUsage`, `createClaudeCliProvider` and the result envelope it reads, `resultEnvelopeSchema`.
+- `claude-cli.ts`: `buildArgs` (the locked flags), `cleanEnvironment`, `toUsage`, `createClaudeCliProvider` and the result envelope it reads, `resultEnvelopeSchema`; `isSignedIn`, the free sign-in check a live run makes first.
 - `fake-claude.ts`: a stand-in for the claude program that records the arguments, working folder and environment it was given, checks `--json-schema` as the real one does, and prints canned result envelopes from `dry-run-replies.json`.
 - `artifact-draft.ts`: `artifactDraftSchema`, a spike-only schema shaped like a generation answer.
 - `prompts/`: the system prompt and the three planned requests (`ENG-16`).
@@ -40,6 +40,7 @@ Depends on the [evaluation harness](harness.md), the platform helpers' `runProce
 # Pitfalls
 
 - **The first live run, on 2026-10-17, stopped at its first call:** Claude Code 2.1.296 refused the draft 2020-12 schema before calling a model. The contracts now generate draft-07, and a replay test keeps the fake refusing what the CLI refused (`ENG-13`). The dry run had passed because the fake didn't check schemas then.
+- **The second live run stopped at its first call too:** the CLI wasn't signed in on its own. A parent Claude Code session (such as the desktop app) signs its sessions in, but the allowlisted environment rightly cuts the spike off from that. The result said `success` with `is_error` true and 0 tokens. A live run now checks `claude auth status` first, which costs no call, and the ledger keeps the CLI's own words for a failure.
 - **`--max-turns` is not in the help of Claude Code 2.1.296.** The POC relied on it. If the CLI rejects it, the first call fails before reaching a model and the run stops; the ADR then says how `CLI-03`'s turn limit is kept.
 - **The prompt travels as a command-line argument,** which Windows limits to about 32,000 characters. The spike's prompts are small; the M2 adapter should send the prompt on standard input.
 - **The error mapping reads the CLI's text,** which can change between versions; anything it doesn't recognize is recorded as a crash, not guessed.
@@ -50,5 +51,5 @@ Depends on the [evaluation harness](harness.md), the platform helpers' `runProce
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `artifact-draft.ts`: `artifactDraftSchema`
-- `claude-cli.ts`: `MAX_TURNS`, `buildArgs`, `cleanEnvironment`, `resultEnvelopeSchema`, `ResultEnvelope` (type), `toUsage`, `ClaudeCliOptions` (type), `createClaudeCliProvider`
+- `claude-cli.ts`: `MAX_TURNS`, `buildArgs`, `cleanEnvironment`, `resultEnvelopeSchema`, `ResultEnvelope` (type), `toUsage`, `isSignedIn`, `ClaudeCliOptions` (type), `createClaudeCliProvider`
 - `run.ts`: `PLAN`, `plannedCalls`, `CallReport` (type), `SpikeReport` (type), `inspectEnvelope`, `runSpike`, `fakeProvider`

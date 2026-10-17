@@ -130,7 +130,26 @@ function failure(envelope: ResultEnvelope): ProviderError {
       `The CLI failed in an unexpected way (${envelope.subtype}): ${envelope.result}`,
     );
   }
-  return new ProviderError(kind, `The CLI call failed (${envelope.subtype}).`, usage);
+  // The CLI's own words go into the ledger, so a failure can be understood without a rerun.
+  const said = (envelope.result ?? "").slice(0, 500);
+  return new ProviderError(kind, `The CLI call failed (${envelope.subtype}): ${said}`, usage);
+}
+
+/**
+ * Whether the CLI is signed in, from `claude auth status`, which reaches no model. Checked before
+ * a live run so that a missing sign-in costs no call from the budget.
+ */
+export async function isSignedIn(executable: string, env: NodeJS.ProcessEnv): Promise<boolean> {
+  const status = await runProcess(executable, ["auth", "status"], {
+    cwd: os.tmpdir(),
+    env: cleanEnvironment(env),
+    timeoutMs: 30_000,
+  });
+  try {
+    return (JSON.parse(status.stdout) as { loggedIn?: unknown }).loggedIn === true;
+  } catch {
+    return false;
+  }
 }
 
 export type ClaudeCliOptions = {
