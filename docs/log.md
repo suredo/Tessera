@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Update**: The owner moved `TEST-03` (scripted end-to-end tests through the real pipeline) from [M0](roadmap/m0-foundations.md) to [M2](roadmap/m2-generation-pipeline.md), which builds the pipeline; M0 delivered the tests' tooling (`ENG-30`). M0's closing report records it.
+
 * **Update**: After Codex's review of [pull request 42](https://github.com/suredo/Tessera/pull/42), M0's closing report reports GitHub Actions usage (672 Linux and 100 Windows minutes, nothing billed), as `ENG-02` asks of every milestone report, and both reports in `evals/reports/` carry the `Evaluation Report` frontmatter the [documentation practice](practices/documentation.md) requires.
 
 * **Update**: M0's closing report, `evals/reports/2026-10-17-m0-report.md`, records the delivered work, each exit criterion with its evidence, the review of the [tracking rules](practices/tracking.md) against M0's issues and pull requests (`ENG-28` to `ENG-30`), the live costs and where each open item goes. `AGENTS.md`'s current state now says M0 is built and awaits sign-off, and M1 is next.
