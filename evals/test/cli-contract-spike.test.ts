@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { intentSchema } from "@tessera/contracts";
+import { fileURLToPath } from "node:url";
+import { intentSchema, toJsonSchema } from "@tessera/contracts";
+import { runProcess } from "@tessera/server";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { readLedger } from "../src/index.ts";
@@ -46,9 +48,9 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", () => {
       "System prompt",
     );
     const schemaAt = args.indexOf("--json-schema") + 1;
-    expect(JSON.parse(args[schemaAt] ?? "")).toEqual(
-      z.toJSONSchema(intentSchema, { target: "draft-2020-12" }),
-    );
+    // The contract's own schema file, in the draft the CLI accepts.
+    expect(JSON.parse(args[schemaAt] ?? "")).toEqual(toJsonSchema("intent"));
+    expect(toJsonSchema("intent")["$schema"]).toBe("http://json-schema.org/draft-07/schema#");
     expect(args.filter((_, i) => i !== schemaAt)).toEqual([
       "--print",
       "--output-format",
@@ -149,6 +151,22 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", () => {
       kind: "failed",
       error: "turn_limit",
     });
+  });
+
+  it("refuses a draft 2020-12 schema, as Claude Code 2.1.296 did in the live run (ENG-13)", async () => {
+    const spike = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "spikes");
+    const draft2020 = JSON.stringify(z.toJSONSchema(intentSchema, { target: "draft-2020-12" }));
+    const result = await runProcess(process.execPath, [
+      path.join(spike, "cli-contract", "fake-claude.ts"),
+      path.join(spike, "cli-contract", "dry-run-replies.json"),
+      path.join(root, "replay-calls"),
+      "--json-schema",
+      draft2020,
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain(
+      '--json-schema is not a valid JSON Schema: no schema with key or ref "https://json-schema.org/draft/2020-12/schema"',
+    );
   });
 
   it("records a CLI that prints no JSON result as a crash, with its message", async () => {

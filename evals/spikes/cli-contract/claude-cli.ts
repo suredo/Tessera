@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import type { Usage } from "@tessera/contracts";
+import { jsonSchemaOf, type Usage } from "@tessera/contracts";
 import {
   ProviderError,
   runProcess,
@@ -23,7 +23,7 @@ export function buildArgs(spec: StageSpec<unknown>, systemPrompt: string): strin
     "--output-format",
     "json",
     "--json-schema",
-    JSON.stringify(z.toJSONSchema(spec.schema, { target: "draft-2020-12" })),
+    JSON.stringify(jsonSchemaOf(spec.schema)),
     "--model",
     spec.model,
     "--effort",

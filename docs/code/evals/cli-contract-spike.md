@@ -7,7 +7,7 @@ implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-16]
 tests: [../../../evals/test/cli-contract-spike.test.ts]
 tags: [code, evals, cli, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T02:32:47Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T02:39:49Z }
 ---
 
 # Purpose
@@ -18,14 +18,15 @@ Tests the riskiest assumptions about Claude Code before anything is built on the
 
 - `run.ts`: the script. `PLAN` is the approved run (cap, model, effort, time limit); `runSpike` makes the planned calls and writes `report.json`; `inspectEnvelope` checks what a call shows beyond its schema (turns, attempted tools, usage); `fakeProvider` is the dry run's provider. Run it with `node evals/spikes/cli-contract/run.ts --dry-run`, or `--live --approved-cap 3` once the owner has approved the budget.
 - `claude-cli.ts`: `buildArgs` (the locked flags), `cleanEnvironment`, `toUsage`, `createClaudeCliProvider` and the result envelope it reads, `resultEnvelopeSchema`.
-- `fake-claude.ts`: a stand-in for the claude program that records the arguments, working folder and environment it was given and prints canned result envelopes from `dry-run-replies.json`.
+- `fake-claude.ts`: a stand-in for the claude program that records the arguments, working folder and environment it was given, checks `--json-schema` as the real one does, and prints canned result envelopes from `dry-run-replies.json`.
 - `artifact-draft.ts`: `artifactDraftSchema`, a spike-only schema shaped like a generation answer.
 - `prompts/`: the system prompt and the three planned requests (`ENG-16`).
 
 # Invariants
 
 - **Live only with approval.** `--live` refuses to start without `--approved-cap` equal to `PLAN.callCap`, and the harness refuses every call past it. Changing `PLAN` needs a new approval (`ENG-07`).
-- **The dry run is the exact run.** It uses the same caller, arguments, environment and checks, and starts a real process; only the program is the fake, which never reaches a model and is chosen by configuration, not by the prompt (`ENG-11`).
+- **The dry run is the exact run.** It uses the same caller, arguments, environment and checks, and starts a real process; only the program is the fake, which never reaches a model and is chosen by configuration, not by the prompt (`ENG-11`). The fake refuses a schema the real CLI refuses: it checks `--json-schema` with a default (draft-07) ajv, as Claude Code 2.1.296 does.
+- **The schema is the contract's own,** from `jsonSchemaOf` in `@tessera/contracts`, in draft-07.
 - **Locked flags** (`CLI-03`): `--print --output-format json --json-schema <schema> --model --effort --tools "" --safe-mode --strict-mcp-config --no-session-persistence --permission-mode dontAsk --max-turns 3 --system-prompt <prompt>`, then the request. No stage gets file tools.
 - **An allowlisted environment** (`CLI-08`): only the variables the CLI needs to start and find its sign-in. API keys would switch billing to the API (L-52), and a parent Claude Code session sets variables such as `ANTHROPIC_BASE_URL` and `CLAUDE_CODE_SIMPLE` that change where and how the CLI calls the model.
 - **A fresh, empty working folder** outside the repository for each call, removed afterwards (`CLI-08`).
@@ -38,6 +39,7 @@ Depends on the [evaluation harness](harness.md), the platform helpers' `runProce
 
 # Pitfalls
 
+- **The first live run, on 2026-10-17, stopped at its first call:** Claude Code 2.1.296 refused the draft 2020-12 schema before calling a model. The contracts now generate draft-07, and a replay test keeps the fake refusing what the CLI refused (`ENG-13`). The dry run had passed because the fake didn't check schemas then.
 - **`--max-turns` is not in the help of Claude Code 2.1.296.** The POC relied on it. If the CLI rejects it, the first call fails before reaching a model and the run stops; the ADR then says how `CLI-03`'s turn limit is kept.
 - **The prompt travels as a command-line argument,** which Windows limits to about 32,000 characters. The spike's prompts are small; the M2 adapter should send the prompt on standard input.
 - **The error mapping reads the CLI's text,** which can change between versions; anything it doesn't recognize is recorded as a crash, not guessed.
