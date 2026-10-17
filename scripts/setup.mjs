@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Docs: docs/code/scripts/git-hooks.md
 // Turns on the repository's git hooks in .githooks/ (ENG-01, ENG-15, ENG-19). It runs on every
 // `pnpm install` through the "prepare" script, and running it again changes nothing.
 import { execFileSync } from "node:child_process";

@@ -72,12 +72,21 @@ const git = (root, ...args) =>
   );
 
 // A minimal valid repository: the rules files, a spec row, an engineering rule, and one code doc with its back-link.
-function makeRepo() {
+// The scripts are copied without their own Docs: comment, which names a doc the fixture doesn't
+// have, in the line endings asked for (by default, as checked out: CRLF on some Windows checkouts).
+const EOLS = { lf: "\n", crlf: "\r\n" };
+const copyScript = (file, eol) => {
+  let text = fs.readFileSync(file, "utf8");
+  if (eol) text = text.replace(/\r?\n/g, EOLS[eol]);
+  return text.replace(/^\/\/ Docs: [^\r\n]*\r?\n/m, "");
+};
+
+function makeRepo({ eol } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "okf-check-"));
   roots.push(root);
   const files = {
-    "scripts/okf-check.mjs": fs.readFileSync(CHECKER, "utf8"),
-    "scripts/okf-lib.mjs": fs.readFileSync(path.join(SCRIPTS, "okf-lib.mjs"), "utf8"),
+    "scripts/okf-check.mjs": copyScript(CHECKER, eol),
+    "scripts/okf-lib.mjs": copyScript(path.join(SCRIPTS, "okf-lib.mjs"), eol),
     ".gitignore": "node_modules/\n", // the linked workspace dependencies below are never committed
     "AGENTS.md": "# Rules for AI assistants\n",
     "CLAUDE.md": "@AGENTS.md\n",
@@ -125,6 +134,18 @@ function makeRepo() {
 test("a valid bundle passes", () => {
   const r = check(makeRepo());
   assert.equal(r.code, 0, r.out);
+});
+
+test("the fixture copies the checker without its Docs: comment, in LF or CRLF line endings", () => {
+  for (const eol of Object.keys(EOLS)) {
+    const root = makeRepo({ eol });
+    for (const file of ["scripts/okf-check.mjs", "scripts/okf-lib.mjs"]) {
+      assert.doesNotMatch(read(root, file), /^\/\/ Docs: /m, `${eol}: ${file}`);
+      assert.equal(read(root, file).includes("\r\n"), eol === "crlf", `${eol}: ${file}`);
+    }
+    const r = check(root);
+    assert.equal(r.code, 0, `${eol}: ${r.out}`);
+  }
 });
 
 test("code docs may implement engineering rules (ENG-*) as well as spec requirements", () => {
@@ -177,7 +198,7 @@ test("unknown types and unquoted values containing ': ' fail", () => {
   assert.match(r.out, /data\.md: frontmatter is not valid YAML \(quote values that contain ": "\)/);
 });
 
-test("index entries must match frontmatter; --fix repairs them and never writes 'undefined'", () => {
+test("index entries must match frontmatter; --fix repairs them and never writes 'undefined' (ENG-08)", () => {
   const root = makeRepo();
   edit(root, "docs/spec/data.md", 'description: "Data rules."', 'description: "Rules for data."');
   let r = check(root);
@@ -194,7 +215,7 @@ test("index entries must match frontmatter; --fix repairs them and never writes 
   assert.doesNotMatch(read(root, "docs/spec/index.md"), /undefined/);
 });
 
-test("links must resolve and be relative, and footnotes need a matching source", () => {
+test("links must resolve and be relative, and footnotes need a matching source (ENG-08)", () => {
   const root = makeRepo();
   fs.appendFileSync(
     path.join(root, "docs/spec/data.md"),
@@ -216,7 +237,7 @@ test("links written inside code are ignored", () => {
   assert.equal(check(root).code, 0);
 });
 
-test("log dates must be newest first, and every folder needs an index", () => {
+test("log dates must be newest first, and every folder needs an index (ENG-08)", () => {
   const root = makeRepo();
   fs.appendFileSync(path.join(root, "docs/log.md"), "\n## 2026-10-12\n\n* Later.\n");
   write(root, "docs/extra/x.md", concept("Lesson", "X", "An extra doc."));
@@ -239,7 +260,7 @@ test("stale_after in the past is a warning, not an error", () => {
   assert.match(r.out, /warning .*stale since 2026-01-01/);
 });
 
-test("code docs need a Docs: back-link, and Docs: comments must point to real docs", () => {
+test("code docs need a Docs: back-link, and Docs: comments must point to real docs (ENG-24)", () => {
   const root = makeRepo();
   write(root, "packages/server/src/assets/index.ts", "export const putAsset = () => 1;\n");
   write(root, "packages/server/src/assets/other.ts", "// Docs: docs/code/server/nope.md\n");
@@ -303,7 +324,7 @@ test("CLAUDE.md must contain only @AGENTS.md, and AGENTS.md must exist (ENG-05)"
   assert.match(r.out, /AGENTS\.md: missing: AGENTS\.md is the rules file/);
 });
 
-test("drift: code changed without its doc fails, unless the doc changes or the pull request says why", () => {
+test("drift: code changed without its doc fails, unless the doc changes or the pull request says why (ENG-24)", () => {
   const root = makeRepo();
   git(root, "init", "-q", "-b", "main");
   git(root, "add", "-A");
@@ -370,7 +391,7 @@ const historyNote = (subject, id, date = "2026-10-11", status = "historical") =>
     "- Canonical: `docs/spec/data.md`",
   ].join("\n");
 
-test("handoffs and history notes: valid ones pass, and two tasks keep separate files (T7)", () => {
+test("handoffs and history notes: valid ones pass, and two tasks keep separate files (T7, ENG-25)", () => {
   const root = makeRepo();
   write(root, "context/handoffs/asset-store.md", handoff("asset-store"));
   write(
@@ -387,7 +408,7 @@ test("handoffs and history notes: valid ones pass, and two tasks keep separate f
   assert.equal(r.code, 0, r.out);
 });
 
-test("a handoff's ID, status, subject and size are checked", () => {
+test("a handoff's ID, status, subject and size are checked (ENG-25)", () => {
   const root = makeRepo();
   write(root, "context/handoffs/asset-store.md", handoff("other-task"));
   write(root, "context/handoffs/done-task.md", handoff("done-task", { status: "complete" }));
@@ -435,7 +456,7 @@ test("a handoff checkpointed more than 5 days ago is a warning, not an error", (
   assert.doesNotMatch(r.out, /fresh-task\.md/);
 });
 
-test("--merge-ready fails while a handoff is left, and passes once it is removed", () => {
+test("--merge-ready fails while a handoff is left, and passes once it is removed (ENG-25)", () => {
   const root = makeRepo();
   write(root, "context/handoffs/.gitkeep", "");
   write(root, "context/handoffs/asset-store.md", handoff("asset-store"));

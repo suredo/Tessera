@@ -7,7 +7,7 @@ implements: [ENG-17, ENG-24, ENG-28]
 tests: [../../../scripts/test/coverage-report.test.ts]
 tags: [code, scripts, coverage]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T08:13:12Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T08:35:38Z }
 ---
 
 # Purpose
@@ -39,10 +39,10 @@ Depends on `scripts/okf-lib.mjs` for frontmatter, and on the docs' layout: requi
 
 # Pitfalls
 
-- **Scripts need code docs to count as evidence.** The OKF check and the git hooks enforce several practices (`ENG-01`, `ENG-05`, `ENG-08`, `ENG-10`, `ENG-15`, `ENG-24`), and their tests name them, but until those scripts have code docs the report shows "named in tests only".
+- **Scripts count as evidence only through code docs,** like any other code: the OKF check and the git hooks have theirs ([OKF check](okf-check.md), [git hooks](git-hooks.md)). A new script whose tests name an ID shows "named in tests only" until it has one.
 - **A test name built at run time isn't seen,** such as a template with `${…}` or a name from `it.each`. Write the ID in plain text.
 - **The first version matched test names with a pattern** over the raw text, which counted commented-out tests and sample strings, and walked into nested checkouts; Codex's review of [pull request 40](https://github.com/suredo/Tessera/pull/40) found both.
-- **The milestone comes from tables only.** An ID mentioned only in a milestone's prose or exit criteria isn't scheduled there.
+- **The milestone comes from tables only, and from IDs written out.** An ID mentioned only in a milestone's prose or exit criteria isn't scheduled there, and neither is one inside a range such as "CLI-01 to CLI-05": only CLI-01 and CLI-05 are read.
 
 # Symbols (generated)
 

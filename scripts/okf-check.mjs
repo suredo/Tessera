@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Docs: docs/code/scripts/okf-check.md
 // OKF documentation check (ENG-05, ENG-08, ENG-24, ENG-25). See docs/practices/documentation.md.
 // Also checks task handoffs and history notes in context/, that CLAUDE.md only imports AGENTS.md,
 // and that every skill has identical Claude Code (.claude/skills) and Codex (.agents/skills) adapters.

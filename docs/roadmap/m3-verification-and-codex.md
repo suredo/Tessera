@@ -4,7 +4,7 @@ title: "M3: Verification and the Codex adapter"
 description: "Verification profiles, the acceptance-check experiment, the AI reviewer and the Codex adapter."
 tags: [roadmap, verification-and-codex]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:21:34Z }
 ---
 # M3: Verification and the Codex adapter (size M, live budget about 65 calls)
 
@@ -19,7 +19,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
 | Verified status in the UI and details view | VER-08, UX-03 |
 | Acceptance checks from the request (experiment): an acceptance stage, its hooks in the generation prompt, checks run before activation, results compared with your verdicts | VER-09, CLI-09 |
 | AI technical reviewer, receiving approved screenshots as image inputs, and the human verdict in the evaluation report | EVAL-03, EVAL-04 |
-| Codex CLI adapter behind the same interface: executable resolution, locked flags, clean environment, usage normalization, error mapping, version gate; the same contract tests as Claude Code's, plus one probe call (A5) | CLI-01 to CLI-05, CLI-08, TEST-02 |
+| Codex CLI adapter behind the same interface: executable resolution, locked flags, clean environment, usage normalization, error mapping, version gate; the same contract tests as Claude Code's, plus one probe call (A5) | CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, TEST-02 |
 | Codex boundary tests: no file or web tools in normal stages, clean environment, setup check covers Codex | CLI-03, CLI-08, PLAT-03, SEC-05 |
 | `do` steps in scenarios, driving tools through profile hooks | EVAL-01 |
 | First vetted library: a chart library, added by ADR and styled by the UI standard | CAP-04 |

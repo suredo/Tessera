@@ -4,7 +4,7 @@ title: "M2: Generation pipeline"
 description: "The Claude Code adapter and generation pipeline, ending in the internal alpha."
 tags: [roadmap, generation-pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T03:10:14Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:21:34Z }
 ---
 # M2: Generation pipeline (size L, live budget about 35 calls) → internal alpha
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T03:10:14Z }
 
 | Deliverable | Requirements |
 | --- | --- |
-| Claude Code adapter: executable resolution, probe, locked flags, clean environment, usage normalization, error mapping, version gate; full contract tests | CLI-01 to CLI-05, CLI-08, TEST-02 |
+| Claude Code adapter: executable resolution, probe, locked flags, clean environment, usage normalization, error mapping, version gate; full contract tests | CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, TEST-02 |
 | Job control: queue, cancel before start, supersede | CLI-06 |
 | Setup check and status screen (Claude Code installed, version, signed in; probe) | PLAT-03, APP-07 |
 | Structured intent stage with the POC failure cases as fixtures (style, behavior statements, unrelated, mixed, non-English) | GEN-01, GEN-02, GEN-15 |

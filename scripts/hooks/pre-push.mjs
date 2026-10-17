@@ -1,3 +1,4 @@
+// Docs: docs/code/scripts/git-hooks.md
 // Git pre-push hook: refuses any push to main, which changes only through pull requests (ENG-15).
 // Git passes one line per ref on stdin: <local ref> <local sha> <remote ref> <remote sha>.
 import { readFileSync } from "node:fs";

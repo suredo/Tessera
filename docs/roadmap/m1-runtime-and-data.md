@@ -4,7 +4,7 @@ title: "M1: Runtime and data core"
 description: "The sandboxed runtime, data model, storage, assets and host app shell, with no model calls."
 tags: [roadmap, runtime-and-data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:21:34Z }
 ---
 # M1: Runtime and data core (size L, no model calls)
 
@@ -23,7 +23,7 @@ This is the largest milestone. Split it into pull requests by area (storage and 
 | Asset store: content-addressed files with SQLite rows and references, type checks by content, limits, blob delivery over the bridge, removal only when unreferenced, assets inside export archives | DATA-11, DATA-05, DATA-09, RUN-01 |
 | Staging and verification panel with rollback (with a stub check) | RUN-03 |
 | Host stylesheets (accessibility floor, UI standard layer) | RUN-05, VER-06 (styles part) |
-| Host app shell around a hand-written test tool: main screen, empty state, workspaces, saved-tools library with Continue and Use again, versions with restore, undo, trash, export and import screens; host accessibility checked in CI | APP-01 to APP-06, APP-08, APP-11, DATA-07, UX-07 |
+| Host app shell around a hand-written test tool: main screen, empty state, workspaces, saved-tools library with Continue and Use again, versions with restore, undo, trash, export and import screens; host accessibility checked in CI | APP-01, APP-02, APP-03, APP-04, APP-05, APP-06, APP-08, APP-11, DATA-07, UX-07 |
 | Launcher (start, free port, single instance, open browser); server bound to 127.0.0.1 with Host-header and same-origin checks on every route | PLAT-02, SEC-03 |
 | Threat model and negative runtime/import/migration boundary tests. Executable migrations stay disabled until isolation is demonstrated; declarative migrations may be used first | SEC-01, SEC-05 |
 
