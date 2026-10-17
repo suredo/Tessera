@@ -3,6 +3,23 @@
 export { INTENT_KINDS, intentSchema, type Intent } from "./intent.ts";
 export { contracts, renderSchemaFiles, toJsonSchema, type ContractName } from "./json-schema.ts";
 export {
+  EFFORTS,
+  effortSchema,
+  PROVIDER_ERROR_KINDS,
+  providerErrorKindSchema,
+  providerScriptSchema,
+  scriptedReplySchema,
+  STAGES,
+  stageSchema,
+  usageSchema,
+  type Effort,
+  type ProviderErrorKind,
+  type ProviderScript,
+  type ScriptedReply,
+  type Stage,
+  type Usage,
+} from "./provider.ts";
+export {
   numericFieldsWithoutUnit,
   UNIT_SUFFIXES,
   UNITLESS_NAMES,

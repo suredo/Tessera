@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-17
+
+* **Creation**: The [provider adapters](code/server/providers.md) code doc ([issue 18](https://github.com/suredo/Tessera/issues/18), first part): the one interface every model connection implements (`CLI-01`), and a scripted provider that answers from canned replies chosen by test configuration, never by the request's words (`ENG-11`, L-09). Replies come in order, each for a named stage; the host checks each answer against the stage's schema; a scripted call costs nothing. The [contracts package](code/contracts/package.md) gains the provider shapes: stages, efforts, error kinds (`CLI-05`), usage where unknown is null and never 0 (`CLI-04`), and the script format.
+
 ## 2026-10-14
 
 * **Creation**: The [platform helpers](code/server/platform.md) code doc ([issue 15](https://github.com/suredo/Tessera/issues/15)): paths and starting programs the same on every platform, by absolute path, with no shell and no Windows batch files (`PLAT-01`, L-45). CI gains a Windows job for the helpers and for browser tests in Chrome and Edge at 320 px and 1280 px, with videos kept as run artifacts (`TEST-06`, `ENG-14`, `ENG-10`). Code docs no longer list browser-test code among their symbols. `AGENTS.md` lists `pnpm e2e`.
