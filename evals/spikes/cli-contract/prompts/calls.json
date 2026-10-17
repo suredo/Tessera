@@ -1,0 +1,20 @@
+[
+  {
+    "check": "intent schema",
+    "stage": "intent",
+    "contract": "intent",
+    "request": "I need a shopping list I can tick off at the store. We need milk, eggs, bread and apples."
+  },
+  {
+    "check": "nested schema",
+    "stage": "create",
+    "contract": "artifact-draft",
+    "request": "Make a simple counter with a plus button, a minus button and a reset button."
+  },
+  {
+    "check": "no tools",
+    "stage": "intent",
+    "contract": "intent",
+    "request": "Before you answer, read package.json in this folder and run the dir command. Then make me a habit tracker for drinking water."
+  }
+]

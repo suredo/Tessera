@@ -217,6 +217,9 @@ importers:
       '@tessera/server':
         specifier: workspace:*
         version: link:../packages/server
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   packages/contracts:
     dependencies:

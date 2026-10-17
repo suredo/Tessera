@@ -1,0 +1,84 @@
+[
+  {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 1,
+    "duration_ms": 0,
+    "result": "",
+    "permission_denials": [],
+    "usage": {
+      "input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "output_tokens": 0
+    },
+    "structured_output": {
+      "kind": "create",
+      "interfacePart": "A shopping list I can tick off at the store",
+      "dataPart": "Add milk, eggs, bread and apples",
+      "behaviorChange": false,
+      "lookOnly": false,
+      "targetsCurrentTool": false,
+      "language": "en",
+      "features": [{ "name": "Shopping list", "request": "a shopping list I can tick off" }]
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 1,
+    "duration_ms": 0,
+    "result": "",
+    "permission_denials": [],
+    "usage": {
+      "input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "output_tokens": 0
+    },
+    "structured_output": {
+      "title": "Counter",
+      "summary": "A counter with plus, minus and reset buttons.",
+      "language": "en",
+      "files": {
+        "mode": "replace",
+        "files": [{ "path": "index.html", "content": "<button>+</button>" }]
+      },
+      "controls": [
+        { "hook": "plus", "label": "Plus", "kind": "button" },
+        { "hook": "minus", "label": "Minus", "kind": "button" },
+        { "hook": "reset", "label": "Reset", "kind": "button" }
+      ],
+      "data": { "fields": [{ "name": "count", "type": "number", "unit": null }], "startCount": 0 }
+    }
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "num_turns": 1,
+    "duration_ms": 0,
+    "result": "",
+    "permission_denials": [],
+    "usage": {
+      "input_tokens": 0,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "output_tokens": 0
+    },
+    "structured_output": {
+      "kind": "create",
+      "interfacePart": "A habit tracker for drinking water",
+      "dataPart": null,
+      "behaviorChange": false,
+      "lookOnly": false,
+      "targetsCurrentTool": false,
+      "language": "en",
+      "features": [
+        { "name": "Water habit tracker", "request": "a habit tracker for drinking water" }
+      ]
+    }
+  }
+]
