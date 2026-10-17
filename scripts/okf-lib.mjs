@@ -1,3 +1,4 @@
+// Docs: docs/code/scripts/okf-check.md
 // Shared by the OKF check (scripts/okf-check.mjs) and its tests: frontmatter parsing with a YAML
 // library (ENG-08), and the exported symbols of the code a code doc describes (ENG-24).
 import fs from "node:fs";

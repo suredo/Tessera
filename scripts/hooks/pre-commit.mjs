@@ -1,3 +1,4 @@
+// Docs: docs/code/scripts/git-hooks.md
 // Git pre-commit hook: refuses likely secrets (ENG-19), video files and images over 1 MB (ENG-10)
 // in what is being committed. It checks the staged content, not the working copy.
 import { execFileSync, spawnSync } from "node:child_process";
