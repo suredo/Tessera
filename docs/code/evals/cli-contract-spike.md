@@ -7,7 +7,7 @@ implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-16]
 tests: [../../../evals/test/cli-contract-spike.test.ts]
 tags: [code, evals, cli, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T02:56:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T03:24:15Z }
 ---
 
 # Purpose
@@ -42,6 +42,7 @@ Depends on the [evaluation harness](harness.md), the platform helpers' `runProce
 - **The first live run, on 2026-10-17, stopped at its first call:** Claude Code 2.1.296 refused the draft 2020-12 schema before calling a model. The contracts now generate draft-07, and a replay test keeps the fake refusing what the CLI refused (`ENG-13`). The dry run had passed because the fake didn't check schemas then.
 - **The second live run stopped at its first call too:** the CLI wasn't signed in on its own. A parent Claude Code session (such as the desktop app) signs its sessions in, but the allowlisted environment rightly cuts the spike off from that. The result said `success` with `is_error` true and 0 tokens. A live run now checks `claude auth status` first, which costs no call, and the ledger keeps the CLI's own words for a failure.
 - **The third live run stopped at its first call as well:** the API refused the intent schema with `400 tools.1.custom.input_schema.type: Field required`, since a union has no top-level `type`. Every schema is now wrapped in an object. The error names `tools.1`, so the request carried another tool even with `--tools ""`; the no-tools check looks at that.
+- **The fourth live run answered all three calls,** with every answer passing its contract. One check flags a call that ran 4 turns under `--max-turns 3`: the flag is not a hard bound. Results and the rules they set: [ADR 0002](../../decisions/adr/0002-claude-code-cli-contract.md).
 - **`--max-turns` is not in the help of Claude Code 2.1.296.** The POC relied on it. If the CLI rejects it, the first call fails before reaching a model and the run stops; the ADR then says how `CLI-03`'s turn limit is kept.
 - **The prompt travels as a command-line argument,** which Windows limits to about 32,000 characters. The spike's prompts are small; the M2 adapter should send the prompt on standard input.
 - **The error mapping reads the CLI's text,** which can change between versions; anything it doesn't recognize is recorded as a crash, not guessed.
