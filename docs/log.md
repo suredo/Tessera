@@ -2,6 +2,14 @@
 
 ## 2026-10-17
 
+* **Update**: The owner signed off the intent spike's report, `evals/reports/2026-10-17-intent-spike.md` ([issue 20](https://github.com/suredo/Tessera/issues/20)), with its two design notes for M2.
+
+* **Update**: After Codex's review of [pull request 38](https://github.com/suredo/Tessera/pull/38), the [intent spike](code/evals/intent-spike.md) scores every category over its planned requests, with blocked requests counted (`ENG-07`); it flags a split part whose words aren't in the request; and the live answers behind L-75 are a committed replay fixture with a test (`ENG-13`). The live run was scored again offline, and the report's design note now keeps to `GEN-04`: the host checks each part against the request, instead of sending the whole request along.
+
+* **Update**: The [intent spike](code/evals/intent-spike.md)'s live run ([issue 20](https://github.com/suredo/Tessera/issues/20)) misrouted 1 request in 31 (3%), a judgment call between mixed and data, and routed every non-English request right. Its data parts were reworded and once half translated, lesson L-75 in [Tessera issues](lessons/tessera-issues.md). The committed report, `evals/reports/2026-10-17-intent-spike.md`, lists two design notes for M2: mixed against data, and keeping the request's words in the split parts (`GEN-04`).
+
+* **Creation**: The [intent spike](code/evals/intent-spike.md) code doc ([issue 20](https://github.com/suredo/Tessera/issues/20), rehearsal): 31 requests from the POC's routing failures, a third not in English, each with its context and expected answer; a draft intent prompt that defines each kind and switches nothing on by keywords (`GEN-02`); and a report of the misroute rate per category. Rehearsed for free against the fake claude; no live call has been made. The [CLI contract spike](code/evals/cli-contract-spike.md)'s caller is now shared by both spikes.
+
 * **Update**: The [CLI contract spike](code/evals/cli-contract-spike.md) now also stops when its first call answers but fails a check, not only when it throws (`ENG-07`), as Codex's review of [pull request 37](https://github.com/suredo/Tessera/pull/37) found.
 
 * **Update**: The owner signed off [ADR 0002](decisions/adr/0002-claude-code-cli-contract.md). Its rules are now in the spec: [`CON-01`](spec/contracts.md) (JSON Schema draft-07), and in [providers](spec/providers.md) `CLI-02` (free sign-in check), `CLI-03` (tested flags for 2.1.296, every contract wrapped in an object, `--max-turns` not a hard bound), `CLI-05` (failures read from `is_error`) and `CLI-08` (an allowlisted environment).

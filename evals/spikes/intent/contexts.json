@@ -1,0 +1,50 @@
+{
+  "empty": { "open": null, "saved": [] },
+  "library": {
+    "open": null,
+    "saved": [
+      {
+        "id": "t-shop",
+        "name": "Weekly shopping",
+        "description": "A shopping list to tick off at the store."
+      },
+      {
+        "id": "t-budget",
+        "name": "Monthly budget",
+        "description": "Spending by category, with a total per month."
+      },
+      {
+        "id": "t-study",
+        "name": "Exam study planner",
+        "description": "Topics to study each evening until the exam."
+      }
+    ]
+  },
+  "shopping-open": {
+    "open": {
+      "name": "Shopping list",
+      "description": "Items with a checkbox and a quantity, grouped by store section."
+    },
+    "saved": [
+      {
+        "id": "t-budget",
+        "name": "Monthly budget",
+        "description": "Spending by category, with a total per month."
+      }
+    ]
+  },
+  "party-open": {
+    "open": {
+      "name": "Party seating planner",
+      "description": "Tables and guests, and who sits where."
+    },
+    "saved": []
+  },
+  "queue-open": {
+    "open": {
+      "name": "Clinic waiting room board",
+      "description": "Shows each patient's waiting number and how long they have waited."
+    },
+    "saved": []
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "source": "Intent spike live run, 2026-10-17, claude-haiku-5-5 low on Claude Code 2.1.296 (lesson L-75). Each answer is the structured output exactly as returned, for a request in requests.json.",
+  "replays": [
+    {
+      "id": "r19",
+      "answer": {
+        "kind": "data",
+        "interfacePart": null,
+        "dataPart": "Add cheese to the shopping list; remove the apples from it.",
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": true,
+        "language": "en",
+        "features": [
+          {
+            "name": "Add cheese",
+            "request": "Add cheese"
+          },
+          {
+            "name": "Remove apples",
+            "request": "take the apples off"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r20",
+      "answer": {
+        "kind": "data",
+        "interfacePart": null,
+        "dataPart": "Add 2 litros de leite and 1 pão to the shopping list.",
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": true,
+        "language": "pt-BR",
+        "features": [
+          {
+            "name": "Add milk",
+            "request": "Coloca 2 litros de leite"
+          },
+          {
+            "name": "Add bread",
+            "request": "1 pão"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r23",
+      "answer": {
+        "kind": "mixed",
+        "interfacePart": "Mostra o total de itens no topo",
+        "dataPart": "tira os ovos",
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": true,
+        "language": "pt-BR",
+        "features": [
+          {
+            "name": "Show item total at top",
+            "request": "Mostra o total de itens no topo"
+          },
+          {
+            "name": "Remove eggs",
+            "request": "tira os ovos"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -4,7 +4,7 @@ title: "Tessera issues"
 description: "Issues found while building Tessera, from L-70 on: what happened, the cause, the mitigation and where it was found."
 tags: [lessons, issues]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T03:28:33Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T05:41:18Z }
 ---
 # Tessera issues
 
@@ -17,3 +17,4 @@ Every defect a live run finds gets an entry here, a replay test and a fix (`ENG-
 | L-72 | The API refused the intent contract as a tool's input schema, which must be an object at the top level; the contract is a union (`CON-02`). | The CLI passes `--json-schema` to the API as a tool's input schema | CLI-03 (every contract travels wrapped as `{ answer: <contract> }`), ENG-13 | D | CLI contract spike, run 3 |
 | L-73 | A call ran 4 turns under `--max-turns 3`, most likely retrying a structured answer. | `--max-turns` is not a hard bound | CLI-03 (every call also bounded by its time limit), OBS-01 (turns recorded) | R | CLI contract spike, run 4 |
 | L-74 | A CLI started from inside a Claude Code session (such as the desktop app) inherits about 30 `CLAUDE_*` variables plus `ANTHROPIC_BASE_URL` and `CLAUDE_CODE_SIMPLE`, which change where and how it calls the model. Removing only API keys would have let them through. Found before any call was spent. | The environment was inherited and filtered by a denylist | CLI-08 (an allowlisted environment) | D | CLI contract spike, preparation |
+| L-75 | The intent stage reworded the data part it split out of a request, and once half translated it ("Add 2 litros de leite and 1 pão to the shopping list."), although the prompt asked for the request's own words. The data stage acts on that text. | A model rewrites free-text fields even when told not to | GEN-04, GEN-15, ENG-13 (the host checks each part's words against the request, as the spike's scorer does; a replay fixture keeps the live answers; the fix is the M2 split's) | R | Intent spike ([report](../../evals/reports/2026-10-17-intent-spike.md)) |

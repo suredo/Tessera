@@ -1,8 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { jsonSchemaOf, type Usage } from "@tessera/contracts";
 import {
+  findExecutable,
   ProviderError,
   runProcess,
   type Provider,
@@ -10,9 +12,13 @@ import {
   type StageSpec,
 } from "@tessera/server";
 import { z } from "zod";
+import type { RunMode } from "../../src/index.ts";
 
 // Just enough of a Claude Code caller to test the CLI contract (CLI-03, CLI-08) before anything is
-// built on it. The real adapter, with its fake-process contract tests, replaces it in M2.
+// built on it, shared by the M0 spikes. The real adapter, with its fake-process contract tests,
+// replaces it in M2.
+
+const here = path.dirname(fileURLToPath(import.meta.url));
 
 export const MAX_TURNS = 3;
 
@@ -224,3 +230,63 @@ export function createClaudeCliProvider(options: ClaudeCliOptions): Provider {
   };
   return { name: options.live ? "claude-cli" : "claude-cli-fake", live: options.live, run };
 }
+
+/**
+ * The dry run's provider: the same caller, starting the fake claude instead of the real one. The
+ * fake answers from `repliesFile` by call order and writes what it got to `callsFolder`.
+ */
+export const fakeClaudeProvider = (
+  systemPrompt: string,
+  repliesFile: string,
+  callsFolder: string,
+): Provider =>
+  createClaudeCliProvider({
+    executable: process.execPath,
+    leadingArgs: [path.join(here, "fake-claude.ts"), repliesFile, callsFolder],
+    live: false,
+    systemPrompt,
+  });
+
+/** The real CLI, after the free checks: it is on the PATH, gives its version and is signed in. */
+export async function liveClaudeProvider(
+  systemPrompt: string,
+): Promise<{ provider: Provider; cliVersion: string }> {
+  const executable = findExecutable("claude");
+  if (!executable) throw new Error("The claude program is not on the PATH.");
+  const version = await runProcess(executable, ["--version"], {
+    env: cleanEnvironment(process.env),
+    timeoutMs: 30_000,
+  });
+  if (version.exitCode !== 0) throw new Error(`claude --version failed: ${version.stderr}`);
+  // A missing sign-in stops here, before the harness counts a call (L-71).
+  if (!(await isSignedIn(executable, process.env))) {
+    throw new Error(
+      "The claude program is not signed in. Run `claude auth login`, then try again.",
+    );
+  }
+  const provider = createClaudeCliProvider({ executable, live: true, systemPrompt });
+  return { provider, cliVersion: version.stdout.trim() };
+}
+
+/** `--dry-run`, or `--live` with `--approved-cap` equal to the cap the owner approved (ENG-07). */
+export function runModeFrom(argv: readonly string[], approvedCap: number): RunMode {
+  const live = argv.includes("--live");
+  if (live === argv.includes("--dry-run")) throw new Error("Pass either --dry-run or --live.");
+  const capAt = argv.indexOf("--approved-cap");
+  if (live && (capAt < 0 || Number(argv[capAt + 1]) !== approvedCap)) {
+    throw new Error(`A live run needs --approved-cap ${approvedCap}, the cap the owner approved.`);
+  }
+  return live ? "live" : "dry-run";
+}
+
+/** A new folder for one run, under the ignored test-output folder (ENG-10, ENG-19). */
+export const runFolder = (spike: string, mode: RunMode): string =>
+  path.join(
+    here,
+    "..",
+    "..",
+    "..",
+    "test-output",
+    "evals",
+    `${spike}-${mode}-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+  );
