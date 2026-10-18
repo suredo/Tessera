@@ -2,6 +2,8 @@
 
 ## 2026-10-17
 
+* **Creation**: The [CI workflow](code/ci/workflow.md) code doc, so the coverage report counts CI's evidence for `ENG-02` and `TEST-01`: `.github/workflows/ci.yml` names it in a `# Docs:` comment, and `scripts/test/ci-workflow.test.ts` checks that the workflow runs on every change, runs each check, keeps one Windows job and gives no job a secret. CI's Windows job now runs the OKF check's tests too. The [web package](code/web/package.md) implements `RUN-06`: Chrome and Edge are the supported browsers, and its browser test names it. The [OKF check](code/scripts/okf-check.md) reads `Docs:` comments in `.github/workflows/`, and checks the frontmatter of reports in `evals/reports/` (type `Evaluation Report`, with `tags`), which no check read before, as Codex's review of [pull request 42](https://github.com/suredo/Tessera/pull/42) found; the [documentation practice](practices/documentation.md) says so. These close the M0 report's tooling items.
+
 * **Update**: The owner signed off M0. Its closing report, `evals/reports/2026-10-17-m0-report.md`, is stable; `AGENTS.md` names M1, runtime and data core, as the current milestone; and `pnpm coverage` now counts requirements due by M1 ([coverage report](code/scripts/coverage-report.md)).
 
 * **Update**: The owner moved `TEST-03` (scripted end-to-end tests through the real pipeline) from [M0](roadmap/m0-foundations.md) to [M2](roadmap/m2-generation-pipeline.md), which builds the pipeline; M0 delivered the tests' tooling (`ENG-30`). M0's closing report records it.

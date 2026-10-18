@@ -281,6 +281,48 @@ test("a script's Docs: comment back-links its doc, and test files are not read f
   assert.equal(r.code, 0, r.out);
 });
 
+test("a CI workflow's # Docs: comment back-links its doc (ENG-24)", () => {
+  const root = makeRepo();
+  write(root, "packages/server/src/assets/index.ts", "export const putAsset = () => 1;\n");
+  write(root, ".github/workflows/ci.yml", "# Docs: docs/code/server/assets.md\nname: CI\n");
+  let r = check(root);
+  assert.equal(r.code, 0, r.out);
+  write(root, ".github/workflows/ci.yml", "# Docs: docs/code/ci/nope.md\nname: CI\n");
+  r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /ci\.yml: Docs comment points to a missing doc: docs\/code\/ci\/nope\.md/);
+});
+
+test("reports in evals/reports need the Evaluation Report frontmatter, and nothing else of the bundle (ENG-08)", () => {
+  const root = makeRepo();
+  const report = (extra) =>
+    concept(
+      "Evaluation Report",
+      "A spike: live run",
+      "What a live run found.",
+      extra,
+      // Outside the bundle: its links are not checked, and its folder needs no index.
+      "\nSee [the missing doc](../../docs/nope.md).\n",
+    );
+  write(root, "evals/reports/2026-10-11-spike.md", report("tags: [reports, spike]"));
+  let r = check(root);
+  assert.equal(r.code, 0, r.out);
+
+  write(root, "evals/reports/2026-10-12-bare.md", "# A report without frontmatter\n");
+  write(root, "evals/reports/2026-10-13-untagged.md", report(""));
+  write(
+    root,
+    "evals/reports/2026-10-14-typed.md",
+    report("tags: [reports]").replace("type: Evaluation Report", "type: Practice"),
+  );
+  r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(r.out, /evals\/reports\/2026-10-12-bare\.md: missing frontmatter/);
+  assert.match(r.out, /evals\/reports\/2026-10-13-untagged\.md: missing "tags"/);
+  assert.match(r.out, /2026-10-14-typed\.md: a report's type must be "Evaluation Report"/);
+  assert.doesNotMatch(r.out, /broken link|index\.md/);
+});
+
 test("a code doc without a resource, or with one that doesn't exist, fails (ENG-24)", () => {
   const root = makeRepo();
   edit(root, "docs/code/server/assets.md", "resource: ../../../packages/server/src/assets/\n", "");
