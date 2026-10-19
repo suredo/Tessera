@@ -7,7 +7,7 @@ implements: [DATA-05, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07]
 tests: [../../../packages/server/test/archives.test.ts]
 tags: [code, server, data, archives, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:58:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:48:55Z }
 ---
 
 # Purpose
@@ -27,6 +27,7 @@ Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), wit
 
 - **The format.** A ZIP file with `manifest.json` (format `tessera-archive`, format version 1, what was exported and when, the workspace with its history, and the saved tools) and each tool version's canonical JSON as `versions/<hash>.json`. Nothing else is accepted.
 - **Exactly back.** Importing an export into an empty data folder gives the same IDs, titles, data, data revisions, version history, version bodies, saved tools and times; a test exports, deletes the whole data folder, imports and compares. What is in the [trash](trash.md) isn't exported.
+- **An export always imports.** The writer stores an entry as it is, instead of deflating it, when deflating would pack it tighter than the reader's ratio limit, so ordinary data that compresses very well (such as long repeated text) still round-trips; then the export is read back with the import's own limits, and one that would be refused is refused when exporting, saying why. Codex's review of [pull request 67](https://github.com/suredo/Tessera/pull/67) found an export of 100 KB of repeated text that its own import refused.
 - **Checked whole before anything is written.** The archive is read in memory, never unpacked to disk, and checked in this order: the container (IMP-01, IMP-02), the manifest against its contract and format version (IMP-03), the manifest against the files beside it (IMP-05), and each tool version against its name and the artifact contract (IMP-04, `CON-04`). Only then does one transaction write it, so a refused import leaves nothing behind.
 - **The container is a strict subset of ZIP** (IMP-01, IMP-02), read here rather than by a general-purpose library: every entry is listed and checked before any is unpacked, so limits, names and ratios are refused without unpacking. Names that could escape (`..`, empty parts, absolute paths, drive letters, backslashes, NUL) are refused, as are repeated names, links, encryption, ZIP64 and any compression but none or deflate. Each entry is unpacked by `node:zlib` with a hard cap at the size it declares, and its size and CRC must match.
 - **Only tool code, stored as data** (IMP-05, `SEC-01`): the manifest and tool versions are the only files, and every shape is strict, so a migration, script or engine is refused. Tool code is stored and only ever runs in the sandbox.

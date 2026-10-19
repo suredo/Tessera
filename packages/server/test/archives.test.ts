@@ -154,6 +154,41 @@ describe("export and import (DATA-05)", () => {
     wiped.close();
   });
 
+  // Codex's review of #67: 100 KB of repeated text exported fine but deflated past the reader's
+  // compression ratio, so Tessera refused its own archive.
+  it("DATA-05: data that packs very tightly still exports, wipes and imports exactly", async () => {
+    for (const size of [100_000, 2_000_000]) {
+      const root = newFolder();
+      const first = await openDataFolder(root);
+      const { id } = createWorkspace(first, "Notes");
+      saveWorkspaceData(first, id, { text: "a".repeat(size), zeros: "0".repeat(size) }, 0);
+      const before = snapshot(first, id);
+      const bytes = exportWorkspace(first, id);
+      first.close();
+
+      fs.rmSync(root, { recursive: true, force: true });
+      const wiped = await openDataFolder(root);
+      importArchive(wiped, bytes);
+      expect(snapshot(wiped, id)).toEqual(before);
+      wiped.close();
+    }
+  });
+
+  it("DATA-05: an export Tessera couldn't import is refused when exporting, plainly", async () => {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Huge");
+    // Random-looking text doesn't pack, so the manifest stays over the 8 MB a file may unpack to.
+    const noise = createHash("sha256");
+    const text = Array.from({ length: 140_000 }, (_, i) =>
+      noise.copy().update(String(i)).digest("hex"),
+    ).join("");
+    saveWorkspaceData(folder, id, { text }, 0);
+    expect(() => exportWorkspace(folder, id)).toThrow(
+      /^"Huge" is too large to export as one archive\. "manifest\.json" in this archive is larger than 8 MB/,
+    );
+    folder.close();
+  });
+
   it("DATA-05: a saved tool exports with the workspace it follows, and imports back", async () => {
     const clock = testClock();
     const from = await openDataFolder(newFolder(), { now: clock.now });

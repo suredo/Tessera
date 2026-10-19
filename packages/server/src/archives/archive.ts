@@ -76,13 +76,23 @@ function archive(
     savedTools,
   });
   const text = (value: string) => new TextEncoder().encode(value);
-  return writeZip(
+  const bytes = writeZip(
     [
       { name: MANIFEST, data: text(`${JSON.stringify(manifest, null, 2)}\n`) },
       ...[...bodies].map(([hash, body]) => ({ name: `versions/${hash}.json`, data: text(body) })),
     ],
     exportedAt,
+    { maxCompressionRatio: ARCHIVE_LIMITS.compressionRatio },
   );
+  // An export must import: the reader's limits are the one definition of what an archive may be.
+  try {
+    readZip(bytes, ARCHIVE_LIMITS);
+  } catch (error) {
+    if (!(error instanceof ArchiveError)) throw error;
+    const title = workspaces[0]?.title ?? "This workspace";
+    throw new ArchiveError(`"${title}" is too large to export as one archive. ${error.message}`);
+  }
+  return bytes;
 }
 
 /** A workspace, with its version history, data and the saved tools that open it, as an archive. */

@@ -43,21 +43,36 @@ function dosDateTime(at: Date): [number, number] {
   return [time, date];
 }
 
-/** Packs entries into a ZIP archive, compressed, with UTF-8 names and the given time on each. */
-export function writeZip(entries: readonly ZipEntry[], at: Date): Uint8Array {
+/** Whether `readZip` refuses an entry for packing too tightly; the writer avoids the same. */
+const tooTight = (size: number, packedSize: number, ratio: number) =>
+  size > RATIO_FLOOR_BYTES && size > packedSize * ratio;
+
+/**
+ * Packs entries into a ZIP archive with UTF-8 names and the given time on each. Each is deflated,
+ * or stored as it is when deflating would pack it tighter than `maxCompressionRatio`, so an archive
+ * written for `readZip`'s limits is never refused by them.
+ */
+export function writeZip(
+  entries: readonly ZipEntry[],
+  at: Date,
+  { maxCompressionRatio = Infinity }: { maxCompressionRatio?: number } = {},
+): Uint8Array {
   const [time, date] = dosDateTime(at);
   const locals: Buffer[] = [];
   const centrals: Buffer[] = [];
   let offset = 0;
   for (const entry of entries) {
     const name = Buffer.from(entry.name, "utf8");
-    const packed = deflateRawSync(entry.data);
+    const deflated = deflateRawSync(entry.data);
+    const stored = tooTight(entry.data.length, deflated.length, maxCompressionRatio);
+    const packed = stored ? Buffer.from(entry.data) : deflated;
+    const method = stored ? STORED : DEFLATE;
     const crc = crc32(entry.data);
     const local = Buffer.alloc(30);
     local.writeUInt32LE(LOCAL, 0);
     local.writeUInt16LE(20, 4);
     local.writeUInt16LE(UTF8_NAMES, 6);
-    local.writeUInt16LE(DEFLATE, 8);
+    local.writeUInt16LE(method, 8);
     local.writeUInt16LE(time, 10);
     local.writeUInt16LE(date, 12);
     local.writeUInt32LE(crc, 14);
@@ -69,7 +84,7 @@ export function writeZip(entries: readonly ZipEntry[], at: Date): Uint8Array {
     central.writeUInt16LE(20, 4);
     central.writeUInt16LE(20, 6);
     central.writeUInt16LE(UTF8_NAMES, 8);
-    central.writeUInt16LE(DEFLATE, 10);
+    central.writeUInt16LE(method, 10);
     central.writeUInt16LE(time, 12);
     central.writeUInt16LE(date, 14);
     central.writeUInt32LE(crc, 16);
@@ -195,7 +210,7 @@ export function readZip(bytes: Uint8Array, limits: ZipLimits): Map<string, Uint8
         `"${name}" in this archive is larger than ${limits.entryBytes / 1024 / 1024} MB, the most Tessera imports.`,
       );
     }
-    if (size > RATIO_FLOOR_BYTES && size > packedSize * limits.compressionRatio) {
+    if (tooTight(size, packedSize, limits.compressionRatio)) {
       throw new ArchiveError(`"${name}" in this archive is packed too tightly to be safe to open.`);
     }
     total += size;
