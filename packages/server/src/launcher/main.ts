@@ -30,6 +30,10 @@ const launched = await launch({
   webRoot: fileURLToPath(new URL("../../../web/dist", import.meta.url)),
   // Tests start the launcher without a browser.
   openBrowser: process.env["TESSERA_OPEN_BROWSER"] === "0" ? async () => {} : openInBrowser,
+}).catch((error: unknown) => {
+  // A plain sentence, not a stack trace; Tessera.cmd keeps the window open to read it.
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
 });
 const opened = launched.browserOpened ? "" : ` Open ${launched.url} in your browser.`;
 if (launched.status === "already-running") {

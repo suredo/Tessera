@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:31:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T02:47:13Z }
 ---
 
 # Purpose
@@ -24,22 +24,22 @@ Starts Tessera with one double-click (`PLAT-02`): it starts the [local server](l
 
 - **Development and tests choose their own data folder** with `TESSERA_DATA_DIR` (`ENG-19`). `TESSERA_OPEN_BROWSER=0` starts Tessera without a browser, for tests.
 
-- **One copy per data folder.** The copy that runs keeps `tessera.lock` in the data folder, naming its address and a random instance ID. A second launch asks that address for its instance ID; if it answers, the launch only opens the browser there and starts nothing.
-- **A lock is written only once its server answers,** and is created whole, through a hard link that fails when the name is taken, so another launcher never reads half a lock. When two launches race, one wins and the other closes its server and opens the winner's.
-- **A lock nobody answers for is replaced.** A copy that was killed, or a computer that lost power, leaves its lock behind; the next launch removes it, unless another launcher has replaced it in the meantime.
-- **Only addresses on this computer are opened.** A lock naming anything but `http://127.0.0.1:<port>` counts as left behind.
+- **One copy per data folder.** The copy that runs holds an exclusive lock on `tessera.lock` in the data folder for as long as it runs, through `tryLockFile` from [storage](storage.md). A launch that can't take the lock starts nothing: it waits up to 10 seconds for the holder's address and opens the browser there, or says that Tessera is already starting in another window.
+- **The system releases the lock** when its holder ends, however it ends, so a copy that was killed, or a computer that lost power, leaves nothing that blocks the next start. There is no stale lock to check and remove, so two launches recovering at the same moment can't both start: whichever takes the lock is the only one.
+- **Only the lock's holder writes the address.** It removes any address left in `tessera.address`, which a killed copy can leave, then starts the server and writes its address and a random instance ID there. Another launch trusts an address only once the server there answers `/api/instance` with that ID, so a half-written or left-behind address is never opened.
+- **Only addresses on this computer are opened.** An address naming anything but `http://127.0.0.1:<port>` is never used.
 - **The browser opens without a shell,** through `runProcess`: `rundll32` on Windows, `open` on macOS and `xdg-open` elsewhere. If it fails, Tessera keeps running and prints the address to open.
-- **A clean stop removes the lock, then closes the server** and its open connections, so the port is free.
+- **A clean stop removes the address, closes the server** and its open connections, so the port is free, **and then releases the lock.**
 
 # Depends on / used by
 
-The [local server](local-server.md) and the [platform helpers](platform.md) (`runProcess`, `findExecutable`). The setup check (`PLAT-03`, M2) will run from here.
+The [local server](local-server.md), [storage](storage.md)'s `tryLockFile`, and the [platform helpers](platform.md) (`runProcess`, `findExecutable`). The setup check (`PLAT-03`, M2) will run from here.
 
 # Pitfalls
 
 - **The data folder's default is provisional:** `%LOCALAPPDATA%\Tessera` on Windows. The storage work (`PLAT-04`) settles where it lives and moves the default with it.
-- **Windows has no stop signals between programs.** A test can't close the window the way a person does, so on Windows the tests stop a copy through `stop()` and kill one outright to leave its lock behind; the signal path is tested on Linux.
-- **Replacing a stale lock is not atomic.** The launcher checks that the lock is still the stale one, then removes it. Two launchers replacing the same stale lock at that same instant could both start, with the lock naming only one of them.
+- **Windows has no stop signals between programs.** A test can't close the window the way a person does, so on Windows the tests stop a copy through `stop()` and kill one outright to check that its lock is released; the signal path is tested on Linux.
+- **A launch can wait up to 10 seconds** while the holder starts. A holder that is stuck, rather than killed, keeps the lock; the launch then says so and starts nothing.
 - **Node must be on the PATH** for `Tessera.cmd`; the setup check and the installer handle that later.
 
 # Symbols (generated)

@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { launch, type Launched } from "../src/launcher/index.ts";
+import { tryLockFile } from "../src/storage/index.ts";
 
 // Runs on Linux and on Windows in CI. Every launch gets its own data folder under the system's
 // temporary folder, never the real one (ENG-19), and a browser that only records what it opened.
@@ -30,8 +31,12 @@ const browser = () => {
   };
   return { opened, openBrowser };
 };
-const start = async (dataDir: string, openBrowser: (url: string) => Promise<void>) => {
-  const launched = await launch({ dataDir, port: 0, openBrowser });
+const start = async (
+  dataDir: string,
+  openBrowser: (url: string) => Promise<void>,
+  waitMs?: number,
+) => {
+  const launched = await launch({ dataDir, port: 0, openBrowser, waitMs });
   running.push(launched);
   return launched;
 };
@@ -45,6 +50,16 @@ const portFree = (url: string) =>
     socket.on("error", () => resolve(true));
   });
 const lockOf = (dataDir: string) => path.join(dataDir, "tessera.lock");
+const addressOf = (dataDir: string) => path.join(dataDir, "tessera.address");
+// What a copy that was killed leaves behind: its address, with nothing answering there.
+const leaveStaleAddress = (dataDir: string, url = "http://127.0.0.1:9") =>
+  fs.writeFileSync(addressOf(dataDir), JSON.stringify({ url, instanceId: "gone" }));
+// Whether nobody holds the data folder's lock.
+const lockFree = (dataDir: string) => {
+  const lock = tryLockFile(lockOf(dataDir));
+  lock?.release();
+  return lock !== null;
+};
 
 describe("the launcher (PLAT-02)", () => {
   it("starts one copy, opens the browser at it, and stops cleanly", async () => {
@@ -58,8 +73,10 @@ describe("the launcher (PLAT-02)", () => {
     expect(second).toMatchObject({ status: "already-running", url: first.url });
     expect(opened).toEqual([first.url, first.url]);
     if (first.status !== "started") throw new Error("not started");
+    expect(lockFree(dataDir)).toBe(false);
     await first.stop();
-    expect(fs.existsSync(lockOf(dataDir))).toBe(false);
+    expect(fs.existsSync(addressOf(dataDir))).toBe(false);
+    expect(lockFree(dataDir)).toBe(true);
     expect(await portFree(first.url)).toBe(true);
     expect((await start(dataDir, openBrowser)).status).toBe("started");
   });
@@ -72,21 +89,40 @@ describe("the launcher (PLAT-02)", () => {
     expect(both[0].url).toBe(both[1].url);
   });
 
-  it("replaces a lock no running copy answers for, and never opens an address outside this computer", async () => {
+  it("never starts a second copy while another holds the lock, even with a stale address left behind", async () => {
+    // The race Codex found in review: a launch recovering a stale address while another copy
+    // has taken over. Here the test holds the lock, as a copy that is still starting does.
     const dataDir = dataFolder();
     const { opened, openBrowser } = browser();
-    fs.writeFileSync(
-      lockOf(dataDir),
-      JSON.stringify({ url: "http://127.0.0.1:9", instanceId: "gone" }),
+    leaveStaleAddress(dataDir);
+    const starting = tryLockFile(lockOf(dataDir));
+    expect(starting).not.toBeNull();
+    await expect(start(dataDir, openBrowser, 300)).rejects.toThrow(
+      "Tessera is already starting in another window.",
     );
+    expect(opened).toEqual([]);
+    starting?.release();
     expect((await start(dataDir, openBrowser)).status).toBe("started");
-    const other = dataFolder();
-    fs.writeFileSync(
-      lockOf(other),
-      JSON.stringify({ url: "https://attacker.example", instanceId: "x" }),
-    );
-    expect((await start(other, openBrowser)).status).toBe("started");
-    expect(opened.every((url) => url.startsWith("http://127.0.0.1:"))).toBe(true);
+  });
+
+  it("starts exactly one copy when several launches recover a stale address at once", async () => {
+    const dataDir = dataFolder();
+    const { openBrowser } = browser();
+    leaveStaleAddress(dataDir);
+    const all = await Promise.all([1, 2, 3, 4, 5].map(() => start(dataDir, openBrowser)));
+    const started = all.filter((l) => l.status === "started");
+    expect(started).toHaveLength(1);
+    expect(all.every((l) => l.url === started[0]?.url)).toBe(true);
+  });
+
+  it("never opens an address outside this computer", async () => {
+    const dataDir = dataFolder();
+    const { opened, openBrowser } = browser();
+    leaveStaleAddress(dataDir, "https://attacker.example");
+    const starting = tryLockFile(lockOf(dataDir));
+    await expect(start(dataDir, openBrowser, 300)).rejects.toThrow();
+    starting?.release();
+    expect(opened).toEqual([]);
   });
 
   it("keeps running when the browser can't be opened, and says so", async () => {
@@ -115,7 +151,7 @@ function runMain(dataDir: string) {
 
 // Each case starts Node up to three times, which takes seconds on a busy Windows machine.
 describe("the launcher's entry point (PLAT-02)", { timeout: 30_000 }, () => {
-  it("runs one copy per data folder, and a copy that was killed doesn't block the next", async () => {
+  it("runs one copy per data folder, and a copy that was killed leaves nothing that blocks the next", async () => {
     const dataDir = dataFolder();
     const first = runMain(dataDir);
     const url = (await first.line).match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];
@@ -126,10 +162,18 @@ describe("the launcher's entry point (PLAT-02)", { timeout: 30_000 }, () => {
     // Killed outright, as Windows ends a process, so the lock stays behind.
     first.child.kill("SIGKILL");
     await first.exit;
-    const third = runMain(dataDir);
-    expect(await third.line).toContain("Tessera is running at");
+    // The system released its lock; of two launches at once, exactly one starts.
+    const [third, fourth] = [runMain(dataDir), runMain(dataDir)];
+    const lines = await Promise.all(
+      [third, fourth].map((r) => r.line.catch((e: Error) => e.message)),
+    );
+    const started = lines.filter((l) => l.includes("Tessera is running at"));
+    expect(started).toHaveLength(1);
+    const url2 = started[0]?.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];
+    expect(lines.filter((l) => l.includes(`already running at ${url2}`))).toHaveLength(1);
     third.child.kill("SIGKILL");
-    await third.exit;
+    fourth.child.kill("SIGKILL");
+    await Promise.all([third.exit, fourth.exit]);
   });
 
   it.skipIf(process.platform === "win32")(
@@ -140,7 +184,8 @@ describe("the launcher's entry point (PLAT-02)", { timeout: 30_000 }, () => {
       await run.line;
       run.child.kill("SIGTERM");
       expect(await run.exit).toBe(0);
-      expect(fs.existsSync(lockOf(dataDir))).toBe(false);
+      expect(fs.existsSync(addressOf(dataDir))).toBe(false);
+      expect(lockFree(dataDir)).toBe(true);
     },
   );
 });
