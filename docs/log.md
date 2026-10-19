@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-19
+
+* **Update**: ESLint and the secret scan skip `.claude/worktrees/`, Claude Code's checkouts of other branches, as Prettier already does, so local checks read only this checkout. CI has no such folder and is unchanged.
+
 ## 2026-10-17
 
 * **Creation**: The [CI workflow](code/ci/workflow.md) code doc, so the coverage report counts CI's evidence for `ENG-02` and `TEST-01`: `.github/workflows/ci.yml` names it in a `# Docs:` comment, and `scripts/test/ci-workflow.test.ts` checks that the workflow runs on every change, runs each check, keeps one Windows job and gives no job a secret. CI's Windows job now runs the OKF check's tests too. The [web package](code/web/package.md) implements `RUN-06`: Chrome and Edge are the supported browsers, and its browser test names it. The [OKF check](code/scripts/okf-check.md) reads `Docs:` comments in `.github/workflows/`, and checks the frontmatter of reports in `evals/reports/` (type `Evaluation Report`, with `tags`), which no check read before, as Codex's review of [pull request 42](https://github.com/suredo/Tessera/pull/42) found; the [documentation practice](practices/documentation.md) says so. These close the M0 report's tooling items.
