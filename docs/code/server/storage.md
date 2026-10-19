@@ -7,18 +7,18 @@ implements: [DATA-01, ENG-18, CON-01, CON-04, PLAT-01]
 tests: [../../../packages/server/test/storage.test.ts]
 tags: [code, server, storage, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T02:47:13Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T02:55:21Z }
 ---
 
 # Purpose
 
-The one way the local server reads and writes its SQLite database (`DATA-01`), chosen in [ADR 0003](../../decisions/adr/0003-sqlite-access-layer.md): Node's built-in `node:sqlite`, plain SQL, rows checked against the zod contracts (`CON-01`), and numbered migration files (`ENG-18`). So far it has no tables of its own: Tessera's data model and its migrations come in M1.
+The one way the local server reads and writes its SQLite database (`DATA-01`), chosen in [ADR 0003](../../decisions/adr/0003-sqlite-access-layer.md): Node's built-in `node:sqlite`, plain SQL, rows checked against the zod contracts (`CON-01`), and numbered migration files (`ENG-18`). Tessera's own schema is the numbered migrations in `src/storage/schema/`; the first, `0001-tool-versions.sql`, holds [tool versions](versions.md). The rest of the data model comes with M1's data issues.
 
 # Entry points
 
 - `src/storage/database.ts`: `openDatabase` returns a `Database`: it runs SQL, returns rows each checked against a zod schema, runs a transaction and closes. `SqlValue` is what a parameter can be, and `SyncResult` keeps a transaction's work synchronous in the types.
 - `src/storage/file-lock.ts`: `tryLockFile` takes an exclusive lock on a file without waiting, or returns null when someone else holds it; the `FileLock` it returns releases it. The [launcher](launcher.md) holds one for as long as Tessera runs (`PLAT-02`).
-- `src/storage/migrations.ts`: `readMigrations` reads the numbered `.sql` files of a folder, and `migrate` applies the ones the database doesn't have yet.
+- `src/storage/migrations.ts`: `readMigrations` reads the numbered `.sql` files of a folder, and `migrate` applies the ones the database doesn't have yet; `schemaMigrations` reads Tessera's own, in `src/storage/schema/`.
 
 # Invariants
 
@@ -49,5 +49,5 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `database.ts`: `SqlValue` (type), `SyncResult` (type), `Database` (type), `openDatabase`
 - `file-lock.ts`: `FileLock` (type), `tryLockFile`
-- `index.ts`: `openDatabase`, `Database` (type), `SqlValue` (type), `SyncResult` (type), `tryLockFile`, `FileLock` (type), `migrate`, `readMigrations`, `Migration` (type)
-- `migrations.ts`: `Migration` (type), `readMigrations`, `migrate`
+- `index.ts`: `openDatabase`, `Database` (type), `SqlValue` (type), `SyncResult` (type), `tryLockFile`, `FileLock` (type), `migrate`, `readMigrations`, `schemaMigrations`, `Migration` (type)
+- `migrations.ts`: `Migration` (type), `schemaMigrations`, `readMigrations`, `migrate`

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import type { Database } from "./database.ts";
 
@@ -9,6 +10,10 @@ import type { Database } from "./database.ts";
 export type Migration = { version: number; name: string; sql: string };
 
 const FILE_NAME = /^(\d{4})-[a-z0-9-]+\.sql$/;
+
+/** Tessera's own schema: the migrations in `schema/`, in order. */
+export const schemaMigrations = (): Migration[] =>
+  readMigrations(path.join(path.dirname(fileURLToPath(import.meta.url)), "schema"));
 
 /** The migration files in a folder, in order. Numbers start at 0001 and have no gaps. */
 export function readMigrations(folder: string): Migration[] {
