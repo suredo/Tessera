@@ -7,7 +7,7 @@ implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:31:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:48:01Z }
 ---
 
 # Purpose

@@ -7,7 +7,7 @@ implements: [PLAT-01]
 tests: [../../../packages/server/test/platform.test.ts]
 tags: [code, server, platform]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:31:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:48:01Z }
 ---
 
 # Purpose

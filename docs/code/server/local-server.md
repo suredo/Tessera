@@ -7,7 +7,7 @@ implements: [SEC-03]
 tests: [../../../packages/server/test/local-server.test.ts]
 tags: [code, server, security, http]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T02:40:09Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:48:01Z }
 ---
 
 # Purpose
