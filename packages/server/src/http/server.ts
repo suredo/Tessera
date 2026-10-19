@@ -62,8 +62,27 @@ function serveFile(webRoot: string | undefined, pathname: string, res: ServerRes
   }
   const type = CONTENT_TYPES[path.extname(file).toLowerCase()] ?? "application/octet-stream";
   res.writeHead(200, { "content-type": type });
-  fs.createReadStream(file).pipe(res);
+  // A file that can't be read after all ends this answer, never the server.
+  fs.createReadStream(file)
+    .on("error", () => res.destroy())
+    .pipe(res);
 }
+
+// The path of an origin-form request target ("/path?query"), or undefined for anything else, such
+// as "//[" or "http://other/": only the path is used, so the target can't choose another host.
+function pathOf(target: string | undefined): string | undefined {
+  if (target === undefined || !target.startsWith("/") || target.startsWith("//")) return undefined;
+  try {
+    return new URL(target, "http://tessera.invalid").pathname;
+  } catch {
+    return undefined;
+  }
+}
+
+const fail = (res: ServerResponse) => {
+  if (!res.headersSent) send(res, 500, "Something went wrong in Tessera's server.");
+  else res.destroy();
+};
 
 function listen(server: http.Server, port: number): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -88,9 +107,9 @@ export async function startLocalServer(options: ServerOptions = {}): Promise<Loc
       throw new Error(`Route ${route} must start with /api/ or /runtime/.`);
   }
   let port = 0;
-  const server = http.createServer((req, res) => {
-    // Only the path is used: a full address in the request line can't choose another host.
-    const { pathname } = new URL(req.url ?? "/", "http://tessera.invalid");
+  const handle = (req: IncomingMessage, res: ServerResponse) => {
+    const pathname = pathOf(req.url);
+    if (pathname === undefined) return send(res, 400, "That address isn't valid.");
     const verdict = checkRequest(pathname, req.headers, port);
     if (!verdict.ok) return send(res, verdict.status, verdict.message);
     for (const [name, value] of Object.entries(verdict.headers)) res.setHeader(name, value);
@@ -98,14 +117,19 @@ export async function startLocalServer(options: ServerOptions = {}): Promise<Loc
     if (route !== undefined) {
       Promise.resolve()
         .then(() => route(req, res))
-        .catch(() => {
-          if (!res.headersSent) send(res, 500, "Something went wrong in Tessera's server.");
-          else res.destroy();
-        });
+        .catch(() => fail(res));
     } else if (verdict.kind === "app" && (req.method === "GET" || req.method === "HEAD")) {
       serveFile(options.webRoot, pathname, res);
     } else {
       send(res, 404, "Nothing here.");
+    }
+  };
+  // Nothing a request sends may stop the server: whatever fails is answered here.
+  const server = http.createServer((req, res) => {
+    try {
+      handle(req, res);
+    } catch {
+      fail(res);
     }
   });
   const preferred = options.port ?? DEFAULT_PORT;
