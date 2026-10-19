@@ -1,4 +1,4 @@
-import { DatabaseSync, type SQLInputValue } from "node:sqlite";
+import { backup as sqliteBackup, DatabaseSync, type SQLInputValue } from "node:sqlite";
 import type { z } from "zod";
 
 // Tessera's own data lives in one SQLite file in the data folder (DATA-01, PLAT-04), reached
@@ -21,6 +21,8 @@ export type Database = {
   get<T>(row: z.ZodType<T>, sql: string, ...params: SqlValue[]): T | undefined;
   /** Runs `work` in one transaction: everything it wrote is kept, or nothing if it throws. */
   transaction<T>(work: () => SyncResult<T>): T;
+  /** Copies the whole database to a new file with SQLite's online backup, never a file copy. */
+  backup(file: string): Promise<void>;
   close(): void;
 };
 
@@ -106,6 +108,9 @@ export function openDatabase(file: string): Database {
       return found === undefined ? undefined : row.parse(found);
     },
     transaction,
+    backup: async (file) => {
+      await sqliteBackup(open(), file);
+    },
     close: () => {
       if (closedBecause === null) db.close();
     },

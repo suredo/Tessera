@@ -15,9 +15,9 @@ export const UNIT_SUFFIXES = [
   "Usd",
 ] as const;
 
-/** Numbers that have no unit: counts, positions and versions. Keep this list short. */
-export const UNITLESS_SUFFIXES = ["Count", "Index", "Version"] as const;
-export const UNITLESS_NAMES = ["count", "index", "version"] as const;
+/** Numbers that have no unit: counts, positions, versions and revisions. Keep this list short. */
+export const UNITLESS_SUFFIXES = ["Count", "Index", "Version", "Revision"] as const;
+export const UNITLESS_NAMES = ["count", "index", "version", "revision"] as const;
 
 type JsonSchema = { [key: string]: unknown };
 const COMPOSED = ["anyOf", "oneOf", "allOf"] as const;

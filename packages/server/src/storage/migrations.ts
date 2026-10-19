@@ -41,13 +41,24 @@ export function readMigrations(folder: string): Migration[] {
 
 const versionRow = z.object({ version: z.number().nullable() });
 
+const tableRow = z.object({ n: z.number() });
+
+/** The number of the last migration the database has; 0 for a new, empty one. */
+export function schemaVersion(db: Database): number {
+  const hasTable = db.get(
+    tableRow,
+    "SELECT COUNT(*) AS n FROM sqlite_schema WHERE type = 'table' AND name = 'schema_migrations'",
+  );
+  if (hasTable?.n !== 1) return 0;
+  return db.get(versionRow, "SELECT MAX(version) AS version FROM schema_migrations")?.version ?? 0;
+}
+
 /** Applies the migrations the database doesn't have yet, and returns their numbers. */
 export function migrate(db: Database, migrations: readonly Migration[]): number[] {
   db.exec(
     "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)",
   );
-  const current =
-    db.get(versionRow, "SELECT MAX(version) AS version FROM schema_migrations")?.version ?? 0;
+  const current = schemaVersion(db);
   const latest = migrations.at(-1)?.version ?? 0;
   if (current > latest) {
     // An older Tessera must not write to data it doesn't understand (CON-04).

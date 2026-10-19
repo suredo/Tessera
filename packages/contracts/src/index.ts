@@ -50,3 +50,11 @@ export {
   UNITLESS_NAMES,
   UNITLESS_SUFFIXES,
 } from "./units.ts";
+export {
+  savedToolSchema,
+  workspaceSchema,
+  workspaceVersionSchema,
+  type SavedTool,
+  type Workspace,
+  type WorkspaceVersion,
+} from "./workspace.ts";
