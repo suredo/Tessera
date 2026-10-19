@@ -3,23 +3,38 @@
 // and the protocol names repeat src/protocol.ts (a test keeps them equal).
 (() => {
   const MOUNT_MESSAGE = "tessera:mount";
+  const HELLO_MESSAGE = "tessera:hello";
   const PORT_MESSAGE = "tessera:port";
+  const MAX_RESTARTS = 3;
+  // How long after the tool's frame loads its page may take to say hello.
+  const HELLO_GRACE_MS = 1000;
   const appOrigin = `${location.protocol}//127.0.0.1:${location.port}`;
 
   let toolFrame: HTMLIFrameElement | undefined;
   let hostPort: MessagePort | undefined;
   let toolPort: MessagePort | undefined;
+  let onHello: (() => void) | undefined;
 
-  const unmount = () => {
-    hostPort?.close();
+  const unmountTool = () => {
     toolPort?.close();
-    hostPort = toolPort = undefined;
+    toolPort = undefined;
     toolFrame?.remove();
     toolFrame = undefined;
+    onHello = undefined;
+  };
+  const unmount = () => {
+    unmountTool();
+    hostPort?.close();
+    hostPort = undefined;
   };
 
-  // Only the host app's page that framed this wrapper may mount a tool, with a port of its own.
   addEventListener("message", (event: MessageEvent) => {
+    // The page in the tool's own frame says hello; a frame nested inside it can't.
+    if (toolFrame?.contentWindow && event.source === toolFrame.contentWindow) {
+      if ((event.data as { type?: unknown })?.type === HELLO_MESSAGE) onHello?.();
+      return;
+    }
+    // Only the host app's page that framed this wrapper may mount a tool, with a port of its own.
     if (event.origin !== appOrigin || event.source !== parent) return;
     const data = event.data as { type?: unknown; mountId?: unknown; instanceId?: unknown };
     const port = event.ports[0];
@@ -31,30 +46,57 @@
   function mount(mountId: string, instanceId: string, port: MessagePort) {
     unmount();
     hostPort = port;
-    const frame = document.createElement("iframe");
-    frame.setAttribute("sandbox", "allow-scripts");
-    frame.title = "Tool";
-    frame.src = `/runtime/tool?mount=${encodeURIComponent(mountId)}`;
-    // The tool's first document gets one fresh port, bound to this frame and this instance. If the
-    // tool later reloads or navigates its frame, the new document gets no port.
-    frame.addEventListener(
-      "load",
-      () => {
-        if (toolFrame !== frame || !frame.contentWindow) return;
+    port.onmessage = (e: MessageEvent) => {
+      const data = e.data as { instanceId?: unknown; message?: unknown };
+      if (data?.instanceId === instanceId) toolPort?.postMessage(data.message);
+    };
+    let restarts = 0;
+    const start = () => {
+      unmountTool();
+      const frame = document.createElement("iframe");
+      frame.setAttribute("sandbox", "allow-scripts");
+      frame.title = "Tool";
+      frame.src = `/runtime/tool?mount=${encodeURIComponent(mountId)}`;
+      // Each page of the tool loads once and says hello once. A load with no hello, or a second
+      // hello, means the tool left its page (SBX-07). The server keeps a tool in place when it asks
+      // for a runtime document, so this is a page it may not leave for, such as a blank or a blocked
+      // one. That page gets no port; the tool starts again in a fresh frame, a few times at most.
+      let loads = 0;
+      let hellos = 0;
+      let left = false;
+      const leave = () => {
+        if (left || toolFrame !== frame) return;
+        left = true;
+        if (restarts < MAX_RESTARTS) {
+          restarts += 1;
+          hostPort?.postMessage({ instanceId, event: "restarted" });
+          start();
+        } else {
+          unmountTool();
+          hostPort?.postMessage({ instanceId, event: "stopped" });
+        }
+      };
+      onHello = () => {
+        hellos += 1;
+        if (hellos > 1 || !frame.contentWindow) return leave();
+        // The tool's page gets one fresh port, bound to this frame and this instance.
         const channel = new MessageChannel();
         toolPort = channel.port1;
         toolPort.onmessage = (e: MessageEvent) =>
           hostPort?.postMessage({ instanceId, message: e.data as unknown });
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
         frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
-      },
-      { once: true },
-    );
-    port.onmessage = (e: MessageEvent) => {
-      const data = e.data as { instanceId?: unknown; message?: unknown };
-      if (data?.instanceId === instanceId) toolPort?.postMessage(data.message);
+      };
+      frame.addEventListener("load", () => {
+        if (toolFrame !== frame) return;
+        loads += 1;
+        setTimeout(() => {
+          if (loads > hellos) leave();
+        }, HELLO_GRACE_MS);
+      });
+      toolFrame = frame;
+      document.body.replaceChildren(frame);
     };
-    toolFrame = frame;
-    document.body.replaceChildren(frame);
+    start();
   }
 })();

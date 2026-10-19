@@ -5,8 +5,12 @@ export { TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "./csp.ts";
 export { mountTool, type MountedTool } from "./host.ts";
 export {
   APP_HOST,
+  HELLO_MESSAGE,
+  MAX_RESTARTS,
   MOUNT_MESSAGE,
   PORT_MESSAGE,
   RUNTIME_HOST,
   runtimeOriginFor,
+  TOOL_EVENTS,
+  type ToolEvent,
 } from "./protocol.ts";

@@ -80,6 +80,18 @@ describe("the runtime's routes (RUN-01)", () => {
     expect((await get("/runtime/tool?mount=mount-1", onAppName)).status).toBe(403);
   });
 
+  it("answers a tool that navigates its own frame with no content, so it keeps its page (SBX-07)", async () => {
+    // The tool's origin is opaque: its own navigations are cross-site and carry no referrer.
+    const fromTool = {
+      host: `localhost:${server.port}`,
+      "sec-fetch-dest": "iframe",
+      "sec-fetch-site": "cross-site",
+    };
+    const answer = await get("/runtime/tool?mount=mount-1&leak=private", fromTool);
+    expect(answer.status).toBe(204);
+    expect(answer.body).toBe("");
+  });
+
   it("serves scripts a browser can run, with their types stripped", async () => {
     const wrapper = await get("/runtime/wrapper", asFrame());
     const tool = await get("/runtime/tool?mount=mount-1", asFrame());

@@ -3,11 +3,11 @@ type: Code Package
 title: "Runtime package"
 description: "@tessera/runtime: the sandbox a tool runs in. The wrapper on the opposite loopback name, the tool's sandboxed frame under a strict CSP, and the one MessageChannel port between them and the host."
 resource: ../../../packages/runtime/
-implements: [RUN-01, SEC-05]
+implements: [RUN-01, SEC-05, SBX-07]
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:31:50Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:49:11Z }
 ---
 
 # Purpose
@@ -16,16 +16,17 @@ Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`
 
 # Entry points
 
-- `src/host.ts`: `mountTool`, the host app's side: it frames the wrapper and returns a `MountedTool` to send to and hear from the tool.
-- `src/wrapper.ts`: the wrapper document's script. `src/tool-preamble.ts`: the first script in the tool's document, which takes the port and gives the tool its one way to talk to the host, a global named tessera. Both are inlined by the server as plain scripts.
-- `src/csp.ts`: `TOOL_CSP`, `TOOL_SANDBOX` and `wrapperCsp`, the documents' policies. `src/protocol.ts`: the message names, the two loopback names and `runtimeOriginFor`.
+- `src/host.ts`: `mountTool`, the host app's side: it frames the wrapper and returns a `MountedTool` to send to and hear from the tool, and to hear when it was started again or stopped.
+- `src/wrapper.ts`: the wrapper document's script. `src/tool-preamble.ts`: the first script in the tool's document, which says hello as the page loads, takes the port and gives the tool its one way to talk to the host, a global named tessera. Both are inlined by the server as plain scripts.
+- `src/csp.ts`: `TOOL_CSP`, `TOOL_SANDBOX` and `wrapperCsp`, the documents' policies. `src/protocol.ts`: the message names (`HELLO_MESSAGE` among them), the tool's events (`TOOL_EVENTS`), `MAX_RESTARTS`, the two loopback names and `runtimeOriginFor`.
 - `src/policy.ts`, imported as `@tessera/runtime/policy`: what the server needs, without browser code.
 
 # Invariants
 
 - **Two origins and a sandbox.** The host app is on 127.0.0.1, the wrapper on localhost (the same port), and the tool's document is sandboxed with scripts only, so its origin is `null`. The tool's document carries the sandbox in a header too, so it is sandboxed even if something framed it without the attribute.
 - **The tool loads nothing.** Its CSP allows its own inline code and blob: images and media; network, fonts, frames from URLs, workers, objects, forms and base changes are refused.
-- **One port per mount.** The wrapper accepts a mount only from the host app's origin, through its own parent window, with a port. It gives the tool's first document one fresh port and drops messages of any other instance. A document the tool reloads or navigates to gets no port.
+- **One port per page of the tool.** The wrapper accepts a mount only from the host app's origin, through its own parent window, with a port. The tool's page says hello from its own frame as it loads, and the wrapper answers with one fresh port; it drops messages of any other instance. A frame nested in the tool can't say hello for it.
+- **The tool stays on its page (`SBX-07`).** When the tool navigates its own frame to a runtime document, by assigning `location`, a link, a reload or a refresh, the server answers "No Content", so the browser keeps the tool's page, its memory and its port. Any other page it leaves for (a blank one, or one the wrapper's policy blocks) loads without saying hello: the wrapper starts the tool again in a fresh frame with a fresh port, and the host hears `restarted`. After `MAX_RESTARTS` it stops the tool, and the host hears `stopped`. A second hello from the same frame counts as leaving too.
 - **The protocol names are defined once** in `src/protocol.ts`; the inlined scripts repeat them, and a test keeps them equal. The server's guard takes the loopback names from here.
 
 # Depends on / used by
@@ -35,6 +36,8 @@ Nothing at run time. The server's runtime routes serve its documents, and the ho
 # Pitfalls
 
 - **A nested `srcdoc` frame loads.** CSP doesn't govern `srcdoc`, so a tool can still create a `srcdoc` frame inside its own; the spec says such a frame inherits the sandbox and the CSP. Blocking it with Trusted Types would also forbid `innerHTML`, which ordinary tools need. Whether SBX-06 accepts this, with tests that the nested frame is just as confined, is the owner's decision with the boundary checks (#45's next pull request).
+- **A restarted tool forgets what it held in memory.** The host should send it what it needs again when it hears `restarted`; the lifecycle (#45's next pull request, `RUN-02`) builds on this.
+- **A slow page may be taken for one that left.** The wrapper waits a second after the frame loads for its hello; a page that takes longer is started again.
 - **The inlined scripts can't import.** Change a protocol name in `src/protocol.ts` and in both scripts, or the test fails.
 - **Node prints an experimental warning** the first time the server strips the scripts' types (`stripTypeScriptTypes`), as it does for `node:sqlite`.
 
@@ -44,6 +47,6 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `src/csp.ts`: `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`
 - `src/host.ts`: `MountedTool` (type), `mountTool`
-- `src/index.ts`: `packageName`, `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `mountTool`, `MountedTool` (type), `APP_HOST`, `MOUNT_MESSAGE`, `PORT_MESSAGE`, `RUNTIME_HOST`, `runtimeOriginFor`
+- `src/index.ts`: `packageName`, `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `mountTool`, `MountedTool` (type), `APP_HOST`, `HELLO_MESSAGE`, `MAX_RESTARTS`, `MOUNT_MESSAGE`, `PORT_MESSAGE`, `RUNTIME_HOST`, `runtimeOriginFor`, `TOOL_EVENTS`, `ToolEvent` (type)
 - `src/policy.ts`: `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `APP_HOST`, `RUNTIME_HOST`
-- `src/protocol.ts`: `MOUNT_MESSAGE`, `PORT_MESSAGE`, `APP_HOST`, `RUNTIME_HOST`, `runtimeOriginFor`
+- `src/protocol.ts`: `MOUNT_MESSAGE`, `HELLO_MESSAGE`, `PORT_MESSAGE`, `TOOL_EVENTS`, `ToolEvent` (type), `MAX_RESTARTS`, `APP_HOST`, `RUNTIME_HOST`, `runtimeOriginFor`

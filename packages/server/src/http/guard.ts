@@ -71,8 +71,13 @@ export function checkRequest(
   if (kind === "runtime") {
     // A runtime document loads only as a frame, asked for by the host app or the runtime itself.
     const from = originOf(headers.referer);
-    if (one(headers["sec-fetch-dest"]) !== "iframe" || (from !== app && from !== runtime)) {
+    if (one(headers["sec-fetch-dest"]) !== "iframe") {
       return refuse("Runtime documents open only inside Tessera.");
+    }
+    if (from !== app && from !== runtime) {
+      // A frame asking for itself: a tool navigating its own frame (SBX-07), from its opaque origin.
+      // "No Content" makes the browser keep the document the frame shows, so the tool stays as it was.
+      return { ok: false, status: 204, message: "" };
     }
     // The browser enforces it too: no other page may frame the document.
     const csp = `frame-ancestors ${app} ${runtime}`;

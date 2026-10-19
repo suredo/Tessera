@@ -7,7 +7,7 @@ implements: [SEC-03]
 tests: [../../../packages/server/test/local-server.test.ts]
 tags: [code, server, security, http]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:31:50Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:49:11Z }
 ---
 
 # Purpose
@@ -25,7 +25,7 @@ Serves the host app, its API and the runtime's documents to the browser on this 
 - **Nothing a request sends stops the server.** Only an origin-form target (`/path?query`) is read, and only its path; anything else, such as `//[` or `http://other/`, gets 400 whatever its Host. Any other failure while answering gets 500, or ends that one connection, and the server keeps running.
 - **Every route checks the Host header**, before any route runs. The host app and its API answer only to `127.0.0.1:<port>`, runtime documents only to `localhost:<port>`: the opposite loopback name, so the sandbox never shares the host app's origin (`RUN-01`). Any other Host, a missing one included, gets 403. This stops DNS rebinding: a page that points its own name at 127.0.0.1 still sends its own name.
 - **API routes take same-origin requests only.** A browser's `Sec-Fetch-Site` must say `same-origin`; a client that isn't a browser, such as the [launcher](launcher.md), must send the app's origin as `Origin`, and an `Origin` that is sent must be the app's. A page can neither set nor leave out `Sec-Fetch-Site` in current browsers. API answers are never cached.
-- **Runtime documents load only as frames of the host app or the runtime.** `Sec-Fetch-Dest` must be `iframe` and the `Referer` must come from one of the two origins. The answer carries `frame-ancestors` naming them, so the browser itself refuses any other page that frames it.
+- **Runtime documents load only as frames of the host app or the runtime.** `Sec-Fetch-Dest` must be `iframe` and the `Referer` must come from one of the two origins. The answer carries `frame-ancestors` naming them, so the browser itself refuses any other page that frames it. A frame that asks with no such `Referer` gets 204 "No Content", not 403, so the browser keeps the page the frame already shows: that is how a tool navigating its own frame, from its opaque origin, stays on its page (`SBX-07`).
 - **No other page may frame the host app** (`frame-ancestors 'none'`). Its pages open from anywhere, such as the launcher or a bookmark.
 - **Files come only from inside the built app.** A path that decodes to outside it, such as `/..%2fsecret`, is not found. A path without an extension gets `index.html`, for the app's own routes.
 

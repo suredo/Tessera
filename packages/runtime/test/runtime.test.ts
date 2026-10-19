@@ -3,10 +3,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  HELLO_MESSAGE,
+  MAX_RESTARTS,
   MOUNT_MESSAGE,
   PORT_MESSAGE,
   runtimeOriginFor,
   TOOL_CSP,
+  TOOL_EVENTS,
   TOOL_SANDBOX,
   wrapperCsp,
 } from "../src/index.ts";
@@ -63,6 +66,11 @@ describe("the runtime's documents (RUN-01)", () => {
     expect(source("wrapper.ts")).toContain(`const MOUNT_MESSAGE = "${MOUNT_MESSAGE}"`);
     expect(source("wrapper.ts")).toContain(`const PORT_MESSAGE = "${PORT_MESSAGE}"`);
     expect(source("tool-preamble.ts")).toContain(`const PORT_MESSAGE = "${PORT_MESSAGE}"`);
+    for (const file of ["wrapper.ts", "tool-preamble.ts"]) {
+      expect(source(file)).toContain(`const HELLO_MESSAGE = "${HELLO_MESSAGE}"`);
+    }
+    expect(source("wrapper.ts")).toContain(`const MAX_RESTARTS = ${MAX_RESTARTS};`);
+    for (const event of TOOL_EVENTS) expect(source("wrapper.ts")).toContain(`event: "${event}"`);
     // And the wrapper only trusts the host app on the other loopback name.
     expect(source("wrapper.ts")).toContain("//127.0.0.1:${location.port}");
   });
