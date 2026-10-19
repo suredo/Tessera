@@ -1,0 +1,196 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "contractVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "code": {
+      "type": "object",
+      "properties": {
+        "html": {
+          "type": "string"
+        },
+        "css": {
+          "type": "string"
+        },
+        "js": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "html",
+        "css",
+        "js"
+      ],
+      "additionalProperties": false,
+      "description": "The tool itself: what runs in the sandbox (RUN-01)."
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "schemaVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "schema": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/__schema0"
+          },
+          "description": "The JSON Schema of the tool's data (DATA-03)."
+        },
+        "defaults": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/__schema1"
+          },
+          "description": "Reusable defaults, never session entries or examples (DATA-03, DATA-07)."
+        }
+      },
+      "required": [
+        "schemaVersion",
+        "schema",
+        "defaults"
+      ],
+      "additionalProperties": false,
+      "description": "The tool's declared data shape and reusable defaults (DATA-03)."
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9.-]*$"
+      },
+      "description": "The host capabilities the tool declares (CAP-01)."
+    },
+    "pins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "version"
+        ],
+        "additionalProperties": false
+      },
+      "description": "The exact dependency versions it was built against, such as engines (DATA-04)."
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "standardVersion": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "custom"
+          ]
+        }
+      },
+      "required": [
+        "standardVersion",
+        "mode"
+      ],
+      "additionalProperties": false,
+      "description": "Which UI standard it follows, and whether in standard or custom mode (VER-06)."
+    }
+  },
+  "required": [
+    "contractVersion",
+    "code",
+    "data",
+    "capabilities",
+    "pins",
+    "ui"
+  ],
+  "additionalProperties": false,
+  "description": "An immutable tool version: code, data shape, defaults and pins (CON-04, DATA-04).",
+  "definitions": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/__schema0"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/__schema0"
+          }
+        }
+      ]
+    },
+    "__schema1": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/__schema1"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/__schema1"
+          }
+        }
+      ]
+    }
+  }
+}
