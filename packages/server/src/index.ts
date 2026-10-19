@@ -3,3 +3,4 @@ export const packageName = "@tessera/server";
 export * from "./platform/index.ts";
 export * from "./providers/index.ts";
 export * from "./storage/index.ts";
+export * from "./versions/index.ts";

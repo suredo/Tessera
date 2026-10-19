@@ -2,6 +2,8 @@
 
 ## 2026-10-19
 
+* **Creation**: The [tool versions](code/server/versions.md) code doc ([issue 44](https://github.com/suredo/Tessera/issues/44)): every tool version, the artifact, is stored once under the SHA-256 of its canonical JSON, can't be changed once stored, and is read back as current, upgraded or plainly incompatible (`DATA-04`, `CON-04`). The [contracts package](code/contracts/package.md) gains the artifact contract with its JSON Schema, and [storage](code/server/storage.md) its first schema migration, `0001-tool-versions.sql`.
+
 * **Update**: ESLint and the secret scan skip `.claude/worktrees/`, Claude Code's checkouts of other branches, as Prettier already does, so local checks read only this checkout. CI has no such folder and is unchanged.
 
 ## 2026-10-17
