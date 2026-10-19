@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-04, CON-01]
 tests: [../../../packages/server/test/workspaces.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:58:03Z }
 ---
 
 # Purpose
@@ -35,7 +35,7 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
 
 # Depends on / used by
 
-Depends on [storage](storage.md), [tool versions](versions.md) (through the foreign key) and the contracts. The [trash](trash.md), export and import ([issue 48](https://github.com/suredo/Tessera/issues/48)), activation and restore (#50) and the host app's screens (#53) build on it.
+Depends on [storage](storage.md), [tool versions](versions.md) (through the foreign key) and the contracts. The [trash](trash.md), [export and import](archives.md), activation and restore (#50) and the host app's screens (#53) build on it.
 
 # Pitfalls
 

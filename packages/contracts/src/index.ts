@@ -1,6 +1,14 @@
 // Docs: docs/code/contracts/package.md
 // @tessera/contracts: every shape that crosses a boundary, defined once with zod (CON-01).
 export {
+  ARCHIVE_FORMAT,
+  ARCHIVE_FORMAT_VERSION,
+  archivedWorkspaceSchema,
+  archiveManifestSchema,
+  type ArchivedWorkspace,
+  type ArchiveManifest,
+} from "./archive.ts";
+export {
   ARTIFACT_CONTRACT_VERSION,
   ARTIFACT_UPGRADES,
   artifactSchema,

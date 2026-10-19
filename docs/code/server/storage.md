@@ -7,7 +7,7 @@ implements: [DATA-01, PLAT-04, ENG-18, ENG-19, CON-01, CON-04, PLAT-01]
 tests: [../../../packages/server/test/storage.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, storage, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:58:03Z }
 ---
 
 # Purpose
@@ -23,7 +23,7 @@ The one way the local server reads and writes its SQLite database (`DATA-01`), c
 
 # Invariants
 
-- **One data folder holds everything** (`PLAT-04`): `tessera.db`, `assets/`, `exports/`, `logs/` and `backups/`, with the launcher's `tessera.lock` and `tessera.address`. `TESSERA_DATA_DIR` chooses it; otherwise it is `%LOCALAPPDATA%\Tessera` on Windows, `~/Library/Application Support/Tessera` on macOS and `$XDG_DATA_HOME/tessera` (or `~/.local/share/tessera`) elsewhere: per-computer folders that cloud services don't sync (L-02). A folder inside OneDrive, Dropbox, Google Drive or iCloud Drive is named, so the launcher can warn.
+- **One data folder holds everything** (`PLAT-04`): `tessera.db`, `assets/`, `exports/` (where [archives](archives.md) are saved), `logs/` and `backups/`, with the launcher's `tessera.lock` and `tessera.address`. `TESSERA_DATA_DIR` chooses it; otherwise it is `%LOCALAPPDATA%\Tessera` on Windows, `~/Library/Application Support/Tessera` on macOS and `$XDG_DATA_HOME/tessera` (or `~/.local/share/tessera`) elsewhere: per-computer folders that cloud services don't sync (L-02). A folder inside OneDrive, Dropbox, Google Drive or iCloud Drive is named, so the launcher can warn.
 - **Existing data is backed up before it is migrated** (`ENG-18`). When the database has data from an earlier schema, `openDataFolder` first copies it with SQLite's online backup to `backups/tessera-schema-<from>-<time>.db`. A backup stays until the next successful start, when `started` removes the ones earlier starts made; a start whose migration fails leaves its backup. Files in `backups/` with other names are left alone. A new, empty database has nothing to back up.
 - **Migrations are tested on fixture databases from earlier versions** (`ENG-18`): each file in `test/fixtures/databases/` is a database as one schema left it (`schema-1.sql` with a tool version, `schema-2.sql` with a workspace, its data and a saved tool), and is never edited to match a newer schema. A migration that changes existing tables adds the fixture for the schema before it.
 - **Only this module touches the driver.** Nothing else imports `node:sqlite`, so a change of driver stays here (ADR 0003).
