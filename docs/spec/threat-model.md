@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:33:14Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T09:17:46Z }
 ---
 # Threat model and boundary checks
 
@@ -76,7 +76,7 @@ Each check is a hand-written tool that attempts the forbidden thing from inside 
 | SBX-03 | Loading resources by URL: `<img>`, `<audio>`, `<video>`, `<script src>`, a stylesheet, CSS `url()` and `@import`, a web font | Nothing loads and nothing arrives. As a control, an image from a `blob:` URL the host handed over loads (`DATA-11`). |
 | SBX-04 | Storage: `localStorage`, `sessionStorage`, IndexedDB, `document.cookie`, the Cache API | Each throws or is unavailable, and nothing persists to the next mount. |
 | SBX-05 | Workers: `Worker`, `SharedWorker` and a service worker, from a script URL and from a `blob:` URL | None starts. |
-| SBX-06 | Nested content: `<iframe>` (with a URL, `srcdoc`, `data:` and `blob:`), `<frame>`, `<object>`, `<embed>` | No nested document loads. |
+| SBX-06 | Nested content: `<iframe>` (with a URL, `srcdoc`, `data:`, `blob:` and `javascript:`), `<frame>`, `<object>`, `<embed>` | Frames from a URL, `data:` or `blob:`, `<frame>`, `<object>` and `<embed>` don't load. `srcdoc` and `javascript:` frames, which the browser runs, are exactly as confined as the tool: an opaque origin, no bridge, no network, storage or popups, no reach into the host page. A blank frame can't be written into by the tool ([ADR 0004](../decisions/adr/0004-nested-frames-in-the-sandbox.md)). |
 | SBX-07 | Navigating its own frame: assigning `location`, clicking a link, a `<meta http-equiv="refresh">` | The frame still shows the tool, and nothing arrives at the probe server. |
 | SBX-08 | Submitting a form, to the probe server and to the host | No submission is sent and the frame does not navigate. |
 | SBX-09 | Navigating the host page: `top.location` and `parent.location` | The host page stays where it is. |

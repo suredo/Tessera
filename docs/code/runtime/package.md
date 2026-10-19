@@ -3,11 +3,11 @@ type: Code Package
 title: "Runtime package"
 description: "@tessera/runtime: the sandbox a tool runs in. The wrapper on the opposite loopback name, the tool's sandboxed frame under a strict CSP, and the one MessageChannel port between them and the host."
 resource: ../../../packages/runtime/
-implements: [RUN-01, SEC-05, SBX-07]
+implements: [RUN-01, SEC-05, SBX-06, SBX-07]
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:49:11Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T09:17:46Z }
 ---
 
 # Purpose
@@ -25,7 +25,8 @@ Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`
 
 - **Two origins and a sandbox.** The host app is on 127.0.0.1, the wrapper on localhost (the same port), and the tool's document is sandboxed with scripts only, so its origin is `null`. The tool's document carries the sandbox in a header too, so it is sandboxed even if something framed it without the attribute.
 - **The tool loads nothing.** Its CSP allows its own inline code and blob: images and media; network, fonts, frames from URLs, workers, objects, forms and base changes are refused.
-- **One port per page of the tool.** The wrapper accepts a mount only from the host app's origin, through its own parent window, with a port. The tool's page says hello from its own frame as it loads, and the wrapper answers with one fresh port; it drops messages of any other instance. A frame nested in the tool can't say hello for it.
+- **Nested frames are as confined as the tool (`SBX-06`, [ADR 0004](../../decisions/adr/0004-nested-frames-in-the-sandbox.md)).** Frames from a URL, `data:` or `blob:`, objects and embeds don't load. A `srcdoc` or `javascript:` frame inside the tool runs, since CSP doesn't govern it, but it inherits the tool's sandbox and CSP and has an opaque origin of its own, no bridge, no network, storage or popups. The tool can't write into a nested blank frame.
+- **One port per page of the tool.** The wrapper accepts a mount only from the host app's origin, through its own parent window, with a port. The tool's page says hello from its own frame as it loads, and the wrapper answers with one fresh port; it drops messages of any other instance. The host's messages sent before that port exists wait for it, as the tool's do. A frame nested in the tool can't say hello for it.
 - **The tool stays on its page (`SBX-07`).** When the tool navigates its own frame to a runtime document, by assigning `location`, a link, a reload or a refresh, the server answers "No Content", so the browser keeps the tool's page, its memory and its port. Any other page it leaves for (a blank one, or one the wrapper's policy blocks) loads without saying hello: the wrapper starts the tool again in a fresh frame with a fresh port, and the host hears `restarted`. After `MAX_RESTARTS` it stops the tool, and the host hears `stopped`. A second hello from the same frame counts as leaving too.
 - **The protocol names are defined once** in `src/protocol.ts`; the inlined scripts repeat them, and a test keeps them equal. The server's guard takes the loopback names from here.
 
@@ -35,7 +36,6 @@ Nothing at run time. The server's runtime routes serve its documents, and the ho
 
 # Pitfalls
 
-- **A nested `srcdoc` frame loads.** CSP doesn't govern `srcdoc`, so a tool can still create a `srcdoc` frame inside its own; the spec says such a frame inherits the sandbox and the CSP. Blocking it with Trusted Types would also forbid `innerHTML`, which ordinary tools need. Whether SBX-06 accepts this, with tests that the nested frame is just as confined, is the owner's decision with the boundary checks (#45's next pull request).
 - **A restarted tool forgets what it held in memory.** The host should send it what it needs again when it hears `restarted`; the lifecycle (#45's next pull request, `RUN-02`) builds on this.
 - **A slow page may be taken for one that left.** The wrapper waits a second after the frame loads for its hello; a page that takes longer is started again.
 - **The inlined scripts can't import.** Change a protocol name in `src/protocol.ts` and in both scripts, or the test fails.

@@ -14,6 +14,8 @@
   let hostPort: MessagePort | undefined;
   let toolPort: MessagePort | undefined;
   let onHello: (() => void) | undefined;
+  // The host's messages that came before the tool's page was ready for them, in order.
+  let waiting: unknown[] = [];
 
   const unmountTool = () => {
     toolPort?.close();
@@ -26,6 +28,7 @@
     unmountTool();
     hostPort?.close();
     hostPort = undefined;
+    waiting = [];
   };
 
   addEventListener("message", (event: MessageEvent) => {
@@ -48,7 +51,9 @@
     hostPort = port;
     port.onmessage = (e: MessageEvent) => {
       const data = e.data as { instanceId?: unknown; message?: unknown };
-      if (data?.instanceId === instanceId) toolPort?.postMessage(data.message);
+      if (data?.instanceId !== instanceId) return;
+      if (toolPort) toolPort.postMessage(data.message);
+      else waiting.push(data.message);
     };
     let restarts = 0;
     const start = () => {
@@ -86,6 +91,7 @@
           hostPort?.postMessage({ instanceId, message: e.data as unknown });
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
         frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
+        for (const message of waiting.splice(0)) toolPort.postMessage(message);
       };
       frame.addEventListener("load", () => {
         if (toolFrame !== frame) return;
