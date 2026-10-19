@@ -136,6 +136,18 @@ describe("the local server (SEC-03, PLAT-02)", () => {
     expect(own.headers["cache-control"]).toBe("no-store");
   });
 
+  it("answers a malformed request target with a refusal and keeps running", async () => {
+    const server = await start({ port: 0, webRoot: path.join(webRoot, "dist") });
+    const host = `127.0.0.1:${server.port}`;
+    for (const target of ["//[", "//[/", "http://attacker.example/", "*"]) {
+      for (const h of [host, `attacker.example:${server.port}`]) {
+        const reply = await request(server.port, target, { host: h });
+        expect(reply).toMatchObject({ status: 400, body: "That address isn't valid." });
+      }
+    }
+    expect(await request(server.port, "/", { host })).toMatchObject({ status: 200 });
+  });
+
   it("serves the built host app and nothing outside it", async () => {
     const server = await start({ port: 0, webRoot: path.join(webRoot, "dist") });
     const host = `127.0.0.1:${server.port}`;

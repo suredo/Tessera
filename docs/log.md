@@ -2,7 +2,7 @@
 
 ## 2026-10-19
 
-* **Creation**: The [local server](code/server/local-server.md) code doc ([issue 54](https://github.com/suredo/Tessera/issues/54), first part): the server binds to 127.0.0.1 only, on port 4317 or a free one, refuses any foreign Host header, takes same-origin API requests only, and serves runtime documents on `localhost` only as frames of the host app or the runtime (`SEC-03`). CI's Windows job runs its tests, as the [CI workflow](code/ci/workflow.md) doc says, and the [platform helpers](code/server/platform.md) doc names its new user.
+* **Creation**: The [local server](code/server/local-server.md) code doc ([issue 54](https://github.com/suredo/Tessera/issues/54), first part): the server binds to 127.0.0.1 only, on port 4317 or a free one, refuses any foreign Host header, takes same-origin API requests only, and serves runtime documents on `localhost` only as frames of the host app or the runtime (`SEC-03`). CI's Windows job runs its tests, as the [CI workflow](code/ci/workflow.md) doc says, and the [platform helpers](code/server/platform.md) doc names its new user. After Codex's review of [pull request 60](https://github.com/suredo/Tessera/pull/60), a malformed request target such as `//[` gets 400 instead of stopping the server, and the doc says nothing a request sends stops it.
 
 ## 2026-10-17
 
