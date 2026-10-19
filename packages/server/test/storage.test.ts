@@ -1,10 +1,11 @@
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { migrate, openDatabase, readMigrations } from "../src/storage/index.ts";
+import { migrate, openDatabase, readMigrations, tryLockFile } from "../src/storage/index.ts";
 
 // Runs on Linux and on Windows in CI. Every database is in a new temporary folder, never in a
 // real data folder (ENG-19).
@@ -149,5 +150,52 @@ describe("storage (DATA-01, ENG-18)", () => {
     migrate(db, readMigrations(fixtures));
     expect(() => migrate(db, readMigrations(fixtures).slice(0, 1))).toThrow(/newer version/);
     db.close();
+  });
+});
+
+// A process that takes the lock, says so, and holds it until it is killed.
+const fileLock = pathToFileURL(
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "storage", "file-lock.ts"),
+).href;
+function holdInAnotherProcess(file: string) {
+  const script = `import { tryLockFile } from ${JSON.stringify(fileLock)};
+    console.log(tryLockFile(process.argv[1]) ? "held" : "busy"); setInterval(() => {}, 1000);`;
+  const child = spawn(process.execPath, ["--input-type=module", "-e", script, file], {
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  const said = new Promise<string>((resolve) =>
+    child.stdout.setEncoding("utf8").once("data", (chunk: string) => resolve(chunk.trim())),
+  );
+  const exited = new Promise((resolve) => child.on("exit", resolve));
+  return { child, said, exited };
+}
+
+describe("file locks (PLAT-02)", { timeout: 30_000 }, () => {
+  it("lets one holder at a time take a lock, in this process or another", async () => {
+    const file = path.join(newFolder(), "tessera.lock");
+    const lock = tryLockFile(file);
+    expect(lock).not.toBeNull();
+    expect(tryLockFile(file)).toBeNull();
+    const other = holdInAnotherProcess(file);
+    expect(await other.said).toBe("busy");
+    other.child.kill("SIGKILL");
+    await other.exited;
+    lock?.release();
+    lock?.release();
+    const again = tryLockFile(file);
+    expect(again).not.toBeNull();
+    again?.release();
+  });
+
+  it("is released by the system when its holder is killed", async () => {
+    const file = path.join(newFolder(), "tessera.lock");
+    const holder = holdInAnotherProcess(file);
+    expect(await holder.said).toBe("held");
+    expect(tryLockFile(file)).toBeNull();
+    holder.child.kill("SIGKILL");
+    await holder.exited;
+    const lock = tryLockFile(file);
+    expect(lock).not.toBeNull();
+    lock?.release();
   });
 });
