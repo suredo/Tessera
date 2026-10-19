@@ -4,20 +4,21 @@ title: "Contracts package"
 description: "@tessera/contracts: every shape that crosses a boundary, defined once with zod, with its generated JSON Schema and the unit rule for numbers."
 resource: ../../../packages/contracts/
 implements: [CON-01, CON-02, CON-04, CON-05, GEN-01, CLI-04, OBS-01]
-tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
+tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:34:37Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:34:46Z }
 ---
 
 # Purpose
 
-Defines each shape that crosses a boundary once, with zod (`CON-01`): model outputs now, and bridge messages, artifacts and stored records from M1. The host validates with the zod schema, TypeScript takes its types from it, and the JSON Schema handed to the CLI is generated from it, so the three can't drift apart. So far it holds the draft answer of the intent stage (`GEN-01`), which the M0 live spikes will use, and what crosses the provider boundary: stages, efforts, error kinds, normalized usage (`CLI-04`) and the scripts a scripted provider answers from. The first stored records are an evaluation run's call ledger and request log (`OBS-01`, `OBS-02`), and the first artifact is a tool version (`CON-04`, `DATA-04`).
+Defines each shape that crosses a boundary once, with zod (`CON-01`): model outputs now, and bridge messages, artifacts and stored records from M1. The host validates with the zod schema, TypeScript takes its types from it, and the JSON Schema handed to the CLI is generated from it, so the three can't drift apart. So far it holds the draft answer of the intent stage (`GEN-01`), which the M0 live spikes will use, and what crosses the provider boundary: stages, efforts, error kinds, normalized usage (`CLI-04`) and the scripts a scripted provider answers from. The first stored records are an evaluation run's call ledger and request log (`OBS-01`, `OBS-02`), the first artifact is a tool version (`CON-04`, `DATA-04`), and the first change to a tool's data is a patch batch (`DATA-02`).
 
 # Entry points
 
 - `src/index.ts`: everything the package exports.
 - `src/artifact.ts`: `artifactSchema`, a tool version: code, data schema, reusable defaults, capabilities, pins and UI mode; `canonicalJson`, the text its hash is taken of; and `readArtifact`, which reads a stored version of any contract version as current, upgraded (through `ARTIFACT_UPGRADES`) or incompatible with a reason (`CON-04`, [tool versions](../server/versions.md)).
+- `src/patch.ts`: `patchBatchSchema`, a batch of add, replace and remove operations on records with stable IDs, which the [patch engine](../server/patches.md) applies; `recordIdSchema`; and `TOOL_DATA_LIMIT_BYTES`, the data limit (`DATA-06`). A replace names its fields in a map, `fields: { done: true }`, so the tool's own field names carry any unit (`CON-05`).
 - `src/intent.ts`: `intentSchema` and its `Intent` type.
 - `src/provider.ts`: `STAGES`, `EFFORTS`, `PROVIDER_ERROR_KINDS`, `usageSchema`, where unknown is null and never 0, and `providerScriptSchema`, the canned replies of a scripted provider ([provider adapters](../server/providers.md)).
 - `src/ledger.ts`: `ledgerEntrySchema` and `requestLogEntrySchema`, one line each per call of an evaluation run ([evaluation harness](../evals/harness.md)). A ledger entry's outcome is a discriminated union, so an error kind exists only on a failed call (`CON-02`).
@@ -41,6 +42,7 @@ Depends on zod. The server uses it, its provider adapters included, and so does 
 # Pitfalls
 
 - **After changing a contract, run `pnpm contracts:schemas`** and commit the result, or the schema test fails.
+- **zod drops a `__proto__` key that the JSON Schema refuses.** A patch's field names start with a letter, so the generated schema refuses `__proto__`; zod's record parsing silently leaves it out instead. Either way it never sets a prototype, and the patch test checks both.
 - **The script format is not in `contracts`,** since it never leaves the process: it has no schema file. Usage reaches `contracts` inside the ledger entry. A canned reply's value is any JSON: its shape is the stage's own contract.
 - **The intent contract is a draft.** The intent spike (#20) and the generation pipeline (M2) may change it. Claude Code's acceptance of the generated schema, including `oneOf`, is checked by the CLI spike (#19).
 - **zod features that only draft 2020-12 can express** (such as tuples written as `prefixItems`) would be written differently or refused by the CLI. Check a new contract's generated file before relying on it.
@@ -51,9 +53,10 @@ Depends on zod. The server uses it, its provider adapters included, and so does 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `src/artifact.ts`: `ARTIFACT_CONTRACT_VERSION`, `UI_MODES`, `artifactSchema`, `Artifact` (type), `canonicalJson`, `ArtifactUpgrades` (type), `ARTIFACT_UPGRADES`, `ArtifactReading` (type), `readArtifact`
-- `src/index.ts`: `ARTIFACT_CONTRACT_VERSION`, `ARTIFACT_UPGRADES`, `artifactSchema`, `canonicalJson`, `readArtifact`, `UI_MODES`, `Artifact` (type), `ArtifactReading` (type), `ArtifactUpgrades` (type), `INTENT_KINDS`, `intentSchema`, `Intent` (type), `contracts`, `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `renderSchemaFiles`, `toJsonSchema`, `ContractName` (type), `ledgerEntrySchema`, `requestLogEntrySchema`, `RUN_MODES`, `LedgerEntry` (type), `RequestLogEntry` (type), `EFFORTS`, `effortSchema`, `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `providerScriptSchema`, `scriptedReplySchema`, `STAGES`, `stageSchema`, `usageSchema`, `Effort` (type), `ProviderErrorKind` (type), `ProviderScript` (type), `ScriptedReply` (type), `Stage` (type), `Usage` (type), `numericFieldsWithoutUnit`, `UNIT_SUFFIXES`, `UNITLESS_NAMES`, `UNITLESS_SUFFIXES`
+- `src/index.ts`: `ARTIFACT_CONTRACT_VERSION`, `ARTIFACT_UPGRADES`, `artifactSchema`, `canonicalJson`, `readArtifact`, `UI_MODES`, `Artifact` (type), `ArtifactReading` (type), `ArtifactUpgrades` (type), `INTENT_KINDS`, `intentSchema`, `Intent` (type), `contracts`, `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `renderSchemaFiles`, `toJsonSchema`, `ContractName` (type), `ledgerEntrySchema`, `requestLogEntrySchema`, `RUN_MODES`, `LedgerEntry` (type), `RequestLogEntry` (type), `patchBatchSchema`, `patchOperationSchema`, `recordIdSchema`, `TOOL_DATA_LIMIT_BYTES`, `PatchBatch` (type), `PatchOperation` (type), `EFFORTS`, `effortSchema`, `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `providerScriptSchema`, `scriptedReplySchema`, `STAGES`, `stageSchema`, `usageSchema`, `Effort` (type), `ProviderErrorKind` (type), `ProviderScript` (type), `ScriptedReply` (type), `Stage` (type), `Usage` (type), `numericFieldsWithoutUnit`, `UNIT_SUFFIXES`, `UNITLESS_NAMES`, `UNITLESS_SUFFIXES`
 - `src/intent.ts`: `INTENT_KINDS`, `intentSchema`, `Intent` (type)
 - `src/json-schema.ts`: `contracts`, `ContractName` (type), `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `toJsonSchema`, `renderSchemaFiles`
 - `src/ledger.ts`: `RUN_MODES`, `ledgerEntrySchema`, `LedgerEntry` (type), `requestLogEntrySchema`, `RequestLogEntry` (type)
+- `src/patch.ts`: `TOOL_DATA_LIMIT_BYTES`, `recordIdSchema`, `patchOperationSchema`, `PatchOperation` (type), `patchBatchSchema`, `PatchBatch` (type)
 - `src/provider.ts`: `STAGES`, `stageSchema`, `Stage` (type), `EFFORTS`, `effortSchema`, `Effort` (type), `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `ProviderErrorKind` (type), `usageSchema`, `Usage` (type), `scriptedReplySchema`, `ScriptedReply` (type), `providerScriptSchema`, `ProviderScript` (type)
 - `src/units.ts`: `UNIT_SUFFIXES`, `UNITLESS_SUFFIXES`, `UNITLESS_NAMES`, `numericFieldsWithoutUnit`

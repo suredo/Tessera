@@ -7,7 +7,7 @@ implements: [DATA-04, CON-04, CON-01]
 tests: [../../../packages/server/test/versions.test.ts, ../../../packages/contracts/test/artifact.test.ts]
 tags: [code, server, versions, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:34:37Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:34:46Z }
 ---
 
 # Purpose
@@ -28,7 +28,7 @@ Stores every tool version, the artifact, so that restore, undo, Continue and Use
 
 # Depends on / used by
 
-Depends on the [storage](storage.md) module, the artifact contract and Node's `crypto`. The patch engine (#47), activation and restore (#50), the asset store's references (#49) and the app shell (#53) build on it.
+Depends on the [storage](storage.md) module, the artifact contract and Node's `crypto`. Activation and restore (#50), the asset store's references (#49) and the app shell (#53) build on it.
 
 # Pitfalls
 
