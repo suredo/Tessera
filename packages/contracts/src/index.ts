@@ -11,6 +11,7 @@ export {
   type ArtifactReading,
   type ArtifactUpgrades,
 } from "./artifact.ts";
+export { jsonObjectSchema, jsonValueSchema, RESERVED_JSON_KEY, type JsonValue } from "./json.ts";
 export { INTENT_KINDS, intentSchema, type Intent } from "./intent.ts";
 export {
   contracts,

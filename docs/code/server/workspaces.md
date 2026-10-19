@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-04, CON-01]
 tests: [../../../packages/server/test/workspaces.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:38:13Z }
 ---
 
 # Purpose
@@ -27,6 +27,7 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
 - **Saved as it happens.** Each function commits its change before it returns; a test changes everything, restarts, and finds it all, both through `openDataFolder` and through a full launch and stop.
 - **Rows are checked by their contracts when read** (`CON-01`): each row is turned into its contract's shape and parsed, so a stored record that breaks its contract is never handed on.
 - **The history only grows** (`DATA-04`). A workspace's current version is the last entry of its history; going back to an older version adds a new entry, so the newer one stays restorable. A trigger refuses any change to an entry, and an entry must name a stored version (a foreign key).
+- **Data is kept exactly, or refused whole.** Data the contract can't keep exactly, such as an object with a `__proto__` key, is refused before anything is saved, so a save that succeeds always reads back the same ([contracts package](../contracts/package.md)).
 - **A stale data write is refused.** `saveWorkspaceData` takes the revision the new data was made from; if the data changed since, it saves nothing and says so plainly, so a slower writer never replaces newer work.
 - **A new workspace has no tool and no data**: its current version and data are null until a version is added and activation fills the data from the tool's defaults (`DATA-03`, [issue 50](https://github.com/suredo/Tessera/issues/50)).
 - **A saved tool follows its workspace** (A32): it names the workspace that Continue opens, not a version, so later improvements are kept.

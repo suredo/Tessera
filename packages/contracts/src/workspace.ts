@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonObjectSchema } from "./json.ts";
 
 // Workspaces and the saved-tools library (DATA-08): what the local server stores and hands to the
 // host app. Each is saved as it changes; there is no "unsaved work".
@@ -17,8 +18,7 @@ export const workspaceSchema = z
     currentVersion: versionHash
       .nullable()
       .describe("The tool version in use; null until the workspace has a tool."),
-    data: z
-      .record(z.string(), z.json())
+    data: jsonObjectSchema
       .nullable()
       .describe("The tool's data; null until the tool's defaults fill it (DATA-03)."),
     dataRevision: z
