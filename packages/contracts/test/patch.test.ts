@@ -39,12 +39,34 @@ describe("patch contract (DATA-02, CON-01)", () => {
     }
   });
 
-  it("never lets a record's fields set its prototype: the JSON Schema refuses __proto__, zod drops it", () => {
-    const record = JSON.parse('{"__proto__": {"polluted": true}, "title": "x"}') as unknown;
-    const sample = { operations: [{ op: "add", collection: "tasks", record }] };
-    expect(validateWithJsonSchema(sample)).toBe(false);
-    const parsed = patchBatchSchema.parse(sample).operations[0];
-    expect(parsed).toEqual({ op: "add", collection: "tasks", record: { title: "x" } });
+  it("refuses a __proto__ key anywhere in zod and in its JSON Schema alike, and sets no prototype", () => {
+    const samples = [
+      '{"operations":[{"op":"add","collection":"tasks","record":{"__proto__":{"polluted":true}}}]}',
+      '{"operations":[{"op":"add","collection":"tasks","record":{"meta":{"__proto__":1}}}]}',
+      '{"operations":[{"op":"replace","collection":"tasks","id":"a","revisionCount":1,"fields":{"__proto__":1}}]}',
+      '{"operations":[{"op":"replace","collection":"tasks","id":"a","revisionCount":1,"fields":{"tags":[{"__proto__":1}]}}]}',
+      '{"operations":[{"op":"remove","collection":"tasks","id":"a","revisionCount":1,"__proto__":1}]}',
+      '{"__proto__":1,"operations":[{"op":"remove","collection":"tasks","id":"a","revisionCount":1}]}',
+    ];
+    for (const text of samples) {
+      const sample = JSON.parse(text) as unknown;
+      expect(patchBatchSchema.safeParse(sample).success, text).toBe(false);
+      expect(validateWithJsonSchema(sample), text).toBe(false);
+    }
     expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
+  });
+
+  it("keeps nested values whole: any JSON without a __proto__ key passes both validators unchanged", () => {
+    const sample = {
+      operations: [
+        {
+          op: "add",
+          collection: "tasks",
+          record: { meta: { tags: ["a", 1, null, { proto: true }] } },
+        },
+      ],
+    };
+    expect(patchBatchSchema.parse(sample)).toEqual(sample);
+    expect(validateWithJsonSchema(sample)).toBe(true);
   });
 });

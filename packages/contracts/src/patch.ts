@@ -26,13 +26,31 @@ const revisionCount = z
     "The record's revision count when this change was planned; the whole batch is refused if it has changed since (DATA-02).",
   );
 
-export const patchOperationSchema = z
+// Any JSON value, but no object key anywhere may be `__proto__`. zod's records silently drop that
+// key while the JSON Schema refuses it, so the batch refuses it before zod parses (CON-01).
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(jsonValue),
+    z.record(z.string().regex(/^(?!__proto__$)/), jsonValue),
+  ]),
+);
+const hasProtoKey = (value: unknown): boolean =>
+  value !== null &&
+  typeof value === "object" &&
+  (Object.hasOwn(value, "__proto__") || Object.values(value).some(hasProtoKey));
+
+const patchOperationSchema = z
   .discriminatedUnion("op", [
     z
       .strictObject({
         op: z.literal("add"),
         collection: collectionName,
-        record: z.record(fieldName, z.json()),
+        record: z.record(fieldName, jsonValue),
       })
       .describe("Adds a record; the host gives it its ID. Adds never conflict."),
     z
@@ -41,7 +59,7 @@ export const patchOperationSchema = z
         collection: collectionName,
         id: recordIdSchema,
         revisionCount,
-        fields: z.record(fieldName, z.json()),
+        fields: z.record(fieldName, jsonValue),
       })
       .describe("Sets the named fields of one record and keeps the rest: never a whole record."),
     z
@@ -57,6 +75,12 @@ export const patchOperationSchema = z
 export type PatchOperation = z.infer<typeof patchOperationSchema>;
 
 export const patchBatchSchema = z
-  .strictObject({ operations: z.array(patchOperationSchema).min(1) })
+  .preprocess(
+    (batch, ctx) => {
+      if (hasProtoKey(batch)) ctx.addIssue({ code: "custom", message: "No key may be __proto__." });
+      return batch;
+    },
+    z.strictObject({ operations: z.array(patchOperationSchema).min(1) }),
+  )
   .describe("Changes applied in order, all or nothing (DATA-02).");
 export type PatchBatch = z.infer<typeof patchBatchSchema>;

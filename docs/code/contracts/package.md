@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-04, CON-05, GEN-01, CLI-04, OBS-01]
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:34:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:34:21Z }
 ---
 
 # Purpose
@@ -42,7 +42,7 @@ Depends on zod. The server uses it, its provider adapters included, and so does 
 # Pitfalls
 
 - **After changing a contract, run `pnpm contracts:schemas`** and commit the result, or the schema test fails.
-- **zod drops a `__proto__` key that the JSON Schema refuses.** A patch's field names start with a letter, so the generated schema refuses `__proto__`; zod's record parsing silently leaves it out instead. Either way it never sets a prototype, and the patch test checks both.
+- **zod records drop a `__proto__` key silently,** while the JSON Schema refuses it. The patch contract keeps them agreeing (`CON-01`): its JSON values refuse `__proto__` as a key at any depth, and `patchBatchSchema` refuses a batch holding one before zod parses it, so both validators refuse the same batches and nothing sets a prototype. A new contract carrying free-form JSON across a boundary should do the same; the artifact's `z.json()` data schema and defaults don't yet.
 - **The script format is not in `contracts`,** since it never leaves the process: it has no schema file. Usage reaches `contracts` inside the ledger entry. A canned reply's value is any JSON: its shape is the stage's own contract.
 - **The intent contract is a draft.** The intent spike (#20) and the generation pipeline (M2) may change it. Claude Code's acceptance of the generated schema, including `oneOf`, is checked by the CLI spike (#19).
 - **zod features that only draft 2020-12 can express** (such as tuples written as `prefixItems`) would be written differently or refused by the CLI. Check a new contract's generated file before relying on it.
@@ -53,10 +53,10 @@ Depends on zod. The server uses it, its provider adapters included, and so does 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `src/artifact.ts`: `ARTIFACT_CONTRACT_VERSION`, `UI_MODES`, `artifactSchema`, `Artifact` (type), `canonicalJson`, `ArtifactUpgrades` (type), `ARTIFACT_UPGRADES`, `ArtifactReading` (type), `readArtifact`
-- `src/index.ts`: `ARTIFACT_CONTRACT_VERSION`, `ARTIFACT_UPGRADES`, `artifactSchema`, `canonicalJson`, `readArtifact`, `UI_MODES`, `Artifact` (type), `ArtifactReading` (type), `ArtifactUpgrades` (type), `INTENT_KINDS`, `intentSchema`, `Intent` (type), `contracts`, `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `renderSchemaFiles`, `toJsonSchema`, `ContractName` (type), `ledgerEntrySchema`, `requestLogEntrySchema`, `RUN_MODES`, `LedgerEntry` (type), `RequestLogEntry` (type), `patchBatchSchema`, `patchOperationSchema`, `recordIdSchema`, `TOOL_DATA_LIMIT_BYTES`, `PatchBatch` (type), `PatchOperation` (type), `EFFORTS`, `effortSchema`, `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `providerScriptSchema`, `scriptedReplySchema`, `STAGES`, `stageSchema`, `usageSchema`, `Effort` (type), `ProviderErrorKind` (type), `ProviderScript` (type), `ScriptedReply` (type), `Stage` (type), `Usage` (type), `numericFieldsWithoutUnit`, `UNIT_SUFFIXES`, `UNITLESS_NAMES`, `UNITLESS_SUFFIXES`
+- `src/index.ts`: `ARTIFACT_CONTRACT_VERSION`, `ARTIFACT_UPGRADES`, `artifactSchema`, `canonicalJson`, `readArtifact`, `UI_MODES`, `Artifact` (type), `ArtifactReading` (type), `ArtifactUpgrades` (type), `INTENT_KINDS`, `intentSchema`, `Intent` (type), `contracts`, `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `renderSchemaFiles`, `toJsonSchema`, `ContractName` (type), `ledgerEntrySchema`, `requestLogEntrySchema`, `RUN_MODES`, `LedgerEntry` (type), `RequestLogEntry` (type), `patchBatchSchema`, `recordIdSchema`, `TOOL_DATA_LIMIT_BYTES`, `PatchBatch` (type), `PatchOperation` (type), `EFFORTS`, `effortSchema`, `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `providerScriptSchema`, `scriptedReplySchema`, `STAGES`, `stageSchema`, `usageSchema`, `Effort` (type), `ProviderErrorKind` (type), `ProviderScript` (type), `ScriptedReply` (type), `Stage` (type), `Usage` (type), `numericFieldsWithoutUnit`, `UNIT_SUFFIXES`, `UNITLESS_NAMES`, `UNITLESS_SUFFIXES`
 - `src/intent.ts`: `INTENT_KINDS`, `intentSchema`, `Intent` (type)
 - `src/json-schema.ts`: `contracts`, `ContractName` (type), `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `toJsonSchema`, `renderSchemaFiles`
 - `src/ledger.ts`: `RUN_MODES`, `ledgerEntrySchema`, `LedgerEntry` (type), `requestLogEntrySchema`, `RequestLogEntry` (type)
-- `src/patch.ts`: `TOOL_DATA_LIMIT_BYTES`, `recordIdSchema`, `patchOperationSchema`, `PatchOperation` (type), `patchBatchSchema`, `PatchBatch` (type)
+- `src/patch.ts`: `TOOL_DATA_LIMIT_BYTES`, `recordIdSchema`, `PatchOperation` (type), `patchBatchSchema`, `PatchBatch` (type)
 - `src/provider.ts`: `STAGES`, `stageSchema`, `Stage` (type), `EFFORTS`, `effortSchema`, `Effort` (type), `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `ProviderErrorKind` (type), `usageSchema`, `Usage` (type), `scriptedReplySchema`, `ScriptedReply` (type), `providerScriptSchema`, `ProviderScript` (type)
 - `src/units.ts`: `UNIT_SUFFIXES`, `UNITLESS_SUFFIXES`, `UNITLESS_NAMES`, `numericFieldsWithoutUnit`

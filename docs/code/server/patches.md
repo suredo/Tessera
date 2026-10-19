@@ -7,7 +7,7 @@ implements: [DATA-02, DATA-06]
 tests: [../../../packages/server/test/patches.test.ts, ../../../packages/contracts/test/patch.test.ts]
 tags: [code, server, data, patches]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:34:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:34:21Z }
 ---
 
 # Purpose
@@ -26,7 +26,7 @@ Every change to a tool's data, from the tool itself or later from chat, is a sma
 
 - **Records and collections.** A collection is a top-level list of the tool's data whose items are all objects with an `id`, such as `tasks: [{ id, title }]`. Other fields, such as `title` or `units: ["kg"]`, are not records and no operation changes them.
 - **Stable IDs from the host.** `add` never names an ID: the engine gives one (a random UUID by default) and returns it in `addedIds`, so two adds never conflict, whoever planned them and when.
-- **Nothing replaces a whole record.** `replace` sets the fields it names and keeps the others; no operation sets `id`. A field name starts with a letter, so it is never `__proto__`.
+- **Nothing replaces a whole record.** `replace` sets the fields it names and keeps the others; no operation sets `id`. A field name starts with a letter, and the contract refuses a batch with a `__proto__` key anywhere, as its JSON Schema does, so no change sets a prototype.
 - **Resolved one at a time.** Each operation finds its record by ID in the working copy left by the ones before it, so removing a record never shifts which record a later operation changes (L-23). Editing a record the same batch removed is refused.
 - **Per-record revisions.** Each `replace` and `remove` carries the record's revision count from when it was planned. The batch is refused as stale if any record it touches has a different count now, or is gone; records it doesn't touch never make it stale. The count rises by one for each batch that changes the record, however many of its operations do.
 - **All or nothing.** The engine works on a copy and never changes the state it was given; a refused batch leaves no trace.

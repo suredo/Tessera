@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Changes applied in order, all or nothing (DATA-02).",
   "type": "object",
   "properties": {
     "operations": {
@@ -68,7 +69,7 @@
                   "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$"
                 },
                 "additionalProperties": {
-                  "$ref": "#/definitions/__schema1"
+                  "$ref": "#/definitions/__schema0"
                 }
               }
             },
@@ -124,7 +125,6 @@
     "operations"
   ],
   "additionalProperties": false,
-  "description": "Changes applied in order, all or nothing (DATA-02).",
   "definitions": {
     "__schema0": {
       "anyOf": [
@@ -149,41 +149,11 @@
         {
           "type": "object",
           "propertyNames": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^(?!__proto__$)"
           },
           "additionalProperties": {
             "$ref": "#/definitions/__schema0"
-          }
-        }
-      ]
-    },
-    "__schema1": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/__schema1"
-          }
-        },
-        {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {
-            "$ref": "#/definitions/__schema1"
           }
         }
       ]

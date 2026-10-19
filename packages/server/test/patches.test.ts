@@ -192,6 +192,15 @@ describe("patch engine (DATA-02)", () => {
     expect(grow).toMatchObject({ ok: false, reason: "too-large" });
   });
 
+  it("refuses a batch with a __proto__ key anywhere, as the contract's JSON Schema does (DATA-02, CON-01)", () => {
+    const state = createDataState(start());
+    const batch = JSON.parse(
+      '{"operations":[{"op":"add","collection":"tasks","record":{"title":"x","__proto__":{"done":true}}}]}',
+    ) as unknown;
+    expect(applyPatch(state, batch)).toMatchObject({ ok: false, reason: "invalid" });
+    expect(titles(state)).toEqual(["Milk", "Eggs", "Bread"]);
+  });
+
   it("refuses data whose list has two records with one ID (DATA-02)", () => {
     expect(() => createDataState({ tasks: [{ id: "a" }, { id: "a" }] })).toThrow(/two entries/);
   });

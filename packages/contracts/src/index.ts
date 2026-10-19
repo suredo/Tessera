@@ -29,7 +29,6 @@ export {
 } from "./ledger.ts";
 export {
   patchBatchSchema,
-  patchOperationSchema,
   recordIdSchema,
   TOOL_DATA_LIMIT_BYTES,
   type PatchBatch,
