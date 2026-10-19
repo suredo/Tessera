@@ -2,6 +2,8 @@
 
 ## 2026-10-19
 
+* **Creation**: The [launcher](code/server/launcher.md) code doc ([issue 54](https://github.com/suredo/Tessera/issues/54), second part): `Tessera.cmd` starts one copy per data folder through the [local server](code/server/local-server.md), on port 4317 or a free one, opens the browser and stops cleanly when its window closes (`PLAT-02`). CI's Windows job runs its tests, as the [CI workflow](code/ci/workflow.md) doc says, and the [platform helpers](code/server/platform.md) doc names it as a user. The data folder's default stays provisional until `PLAT-04`.
+
 * **Creation**: The [local server](code/server/local-server.md) code doc ([issue 54](https://github.com/suredo/Tessera/issues/54), first part): the server binds to 127.0.0.1 only, on port 4317 or a free one, refuses any foreign Host header, takes same-origin API requests only, and serves runtime documents on `localhost` only as frames of the host app or the runtime (`SEC-03`). CI's Windows job runs its tests, as the [CI workflow](code/ci/workflow.md) doc says, and the [platform helpers](code/server/platform.md) doc names its new user.
 
 ## 2026-10-17

@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:31:05Z }
 
 # Purpose
 
-Serves the host app, its API and the runtime's documents to the browser on this computer only (A2), and refuses every request a web page elsewhere could send (`SEC-03`). The launcher (`PLAT-02`) will start it.
+Serves the host app, its API and the runtime's documents to the browser on this computer only (A2), and refuses every request a web page elsewhere could send (`SEC-03`). The [launcher](launcher.md) starts it.
 
 # Entry points
 
@@ -23,14 +23,14 @@ Serves the host app, its API and the runtime's documents to the browser on this 
 
 - **Bound to 127.0.0.1 only.** Nothing on the network, and not `::1`, reaches it.
 - **Every route checks the Host header**, before any route runs. The host app and its API answer only to `127.0.0.1:<port>`, runtime documents only to `localhost:<port>`: the opposite loopback name, so the sandbox never shares the host app's origin (`RUN-01`). Any other Host, a missing one included, gets 403. This stops DNS rebinding: a page that points its own name at 127.0.0.1 still sends its own name.
-- **API routes take same-origin requests only.** A browser's `Sec-Fetch-Site` must say `same-origin`; a client that isn't a browser, such as the launcher, must send the app's origin as `Origin`, and an `Origin` that is sent must be the app's. A page can neither set nor leave out `Sec-Fetch-Site` in current browsers. API answers are never cached.
+- **API routes take same-origin requests only.** A browser's `Sec-Fetch-Site` must say `same-origin`; a client that isn't a browser, such as the [launcher](launcher.md), must send the app's origin as `Origin`, and an `Origin` that is sent must be the app's. A page can neither set nor leave out `Sec-Fetch-Site` in current browsers. API answers are never cached.
 - **Runtime documents load only as frames of the host app or the runtime.** `Sec-Fetch-Dest` must be `iframe` and the `Referer` must come from one of the two origins. The answer carries `frame-ancestors` naming them, so the browser itself refuses any other page that frames it.
 - **No other page may frame the host app** (`frame-ancestors 'none'`). Its pages open from anywhere, such as the launcher or a bookmark.
 - **Files come only from inside the built app.** A path that decodes to outside it, such as `/..%2fsecret`, is not found. A path without an extension gets `index.html`, for the app's own routes.
 
 # Depends on / used by
 
-Node's `http` and `fs`, and `isInsideFolder` from the [platform helpers](platform.md). The launcher (`PLAT-02`) will start it. The API (M1 onwards) and the runtime's wrapper and documents (`RUN-01`) add their routes here.
+Node's `http` and `fs`, and `isInsideFolder` from the [platform helpers](platform.md). The [launcher](launcher.md) starts it. The API (M1 onwards) and the runtime's wrapper and documents (`RUN-01`) add their routes here.
 
 # Pitfalls
 
