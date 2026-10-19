@@ -7,7 +7,7 @@ implements: [SEC-03]
 tests: [../../../packages/server/test/local-server.test.ts]
 tags: [code, server, security, http]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:48:01Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:31:50Z }
 ---
 
 # Purpose
@@ -31,7 +31,7 @@ Serves the host app, its API and the runtime's documents to the browser on this 
 
 # Depends on / used by
 
-Node's `http` and `fs`, and `isInsideFolder` from the [platform helpers](platform.md). The [launcher](launcher.md) starts it. The API (M1 onwards) and the runtime's wrapper and documents (`RUN-01`) add their routes here.
+Node's `http` and `fs`, `isInsideFolder` from the [platform helpers](platform.md), and the two loopback names from `@tessera/runtime/policy`, defined once there. The [launcher](launcher.md) starts it. The [runtime routes](runtime-routes.md) add the wrapper and tool documents (`RUN-01`); the API adds its routes from M1 on.
 
 # Pitfalls
 

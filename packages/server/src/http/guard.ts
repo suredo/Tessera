@@ -1,11 +1,11 @@
 import type { IncomingHttpHeaders } from "node:http";
+import { APP_HOST, RUNTIME_HOST } from "@tessera/runtime/policy";
 
 // The checks every request passes before any route runs (SEC-03). The host app and its API live
 // on 127.0.0.1; runtime documents live on the opposite loopback name, localhost (RUN-01), so the
-// sandbox never shares the host app's origin.
+// sandbox never shares the host app's origin. The two names are defined once, by the runtime.
 
-export const APP_HOST = "127.0.0.1";
-export const RUNTIME_HOST = "localhost";
+export { APP_HOST, RUNTIME_HOST };
 
 /** Which rules a path follows: the host app's pages, its API, or a runtime document. */
 export type RouteKind = "app" | "api" | "runtime";
