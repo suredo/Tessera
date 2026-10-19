@@ -2,6 +2,8 @@
 
 ## 2026-10-19
 
+* **Update**: After Codex's second review of [pull request 59](https://github.com/suredo/Tessera/pull/59), the tripwires in the [threat model](spec/threat-model.md)'s shared test helper check every entry a recursive copy (`cp`) reaches, since Node follows links inside the copy where no patch sees them; a link deep in the copied folder that leads outside is refused.
+
 * **Update**: After Codex's review of [pull request 59](https://github.com/suredo/Tessera/pull/59), the tripwires in the [threat model](spec/threat-model.md)'s shared test helper judge a file by where its path really leads, so a link or junction inside an allowed folder can't reach outside unseen, and they refuse requests on connections opened before arming, such as fetch's pool; the threat model says what they still don't see.
 
 * **Update**: In the [threat model](spec/threat-model.md), BRG-04 expects a stale record to refuse its whole batch, never a partial commit, as `DATA-02`'s atomic batches require; a separate batch touching other records still succeeds. Codex's review of [pull request 56](https://github.com/suredo/Tessera/pull/56) found it.

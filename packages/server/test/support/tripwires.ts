@@ -42,15 +42,17 @@ type Patchable = Record<string, unknown>;
 // How each path argument of a file function is checked, by position. "follow" checks where the
 // path really leads, through links and junctions, as the call itself would; "link" checks the
 // link itself, for calls that act on it without following it; "target" is a new link's target,
-// read from the link's folder. Each function is patched in its callback, Sync and promise forms.
-type PathRule = "follow" | "link" | "target";
+// read from the link's folder; "tree" checks every entry under the path, for a recursive copy,
+// which follows links inside Node where no patch sees it. Each function is patched in its
+// callback, Sync and promise forms.
+type PathRule = "follow" | "link" | "target" | "tree";
 const FILE_FUNCTIONS: Record<string, readonly PathRule[]> = {
   access: ["follow"],
   appendFile: ["follow"],
   chmod: ["follow"],
   chown: ["follow"],
   copyFile: ["follow", "follow"],
-  cp: ["follow", "follow"],
+  cp: ["tree", "tree"],
   createReadStream: ["follow"],
   createWriteStream: ["follow"],
   exists: ["follow"],
@@ -85,6 +87,8 @@ const PROCESS = ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFile
 const realpathNative = fs.realpathSync.native;
 const lstatSync = fs.lstatSync;
 const readlinkSync = fs.readlinkSync;
+const statSync = fs.statSync;
+const readdirSync = fs.readdirSync;
 
 let armed = false;
 
@@ -178,20 +182,36 @@ export function armTripwires(options: { allowFolders?: readonly string[] } = {})
       const p = pathOf(args[i]);
       if (p === null) return;
       const linkPath = pathOf(args[i + 1]);
-      const real =
-        rule === "target" && linkPath !== null
-          ? realPath(path.resolve(path.dirname(path.resolve(linkPath)), p))
-          : realPath(p, rule !== "link");
-      if (real !== null && allowFolders.some((folder) => isInsideFolder(folder, real))) return;
-      trip(
-        "file",
-        real === null
-          ? `${p}, a link loop`
-          : real === path.resolve(p)
-            ? p
-            : `${p}, which leads to ${real}`,
-      );
+      if (rule === "tree") checkTree(p, new Set());
+      else if (rule === "target" && linkPath !== null)
+        checkReal(p, realPath(path.resolve(path.dirname(path.resolve(linkPath)), p)));
+      else checkReal(p, realPath(p, rule !== "link"));
     });
+  };
+  const checkReal = (p: string, real: string | null) => {
+    if (real !== null && allowFolders.some((folder) => isInsideFolder(folder, real))) return;
+    trip(
+      "file",
+      real === null
+        ? `${p}, a link loop`
+        : real === path.resolve(p)
+          ? p
+          : `${p}, which leads to ${real}`,
+    );
+  };
+  // Every entry under a folder, through links that stay inside; each real folder is read once.
+  const checkTree = (p: string, seen: Set<string>) => {
+    const real = realPath(p);
+    checkReal(p, real);
+    if (real === null || seen.has(real)) return;
+    seen.add(real);
+    let isFolder: boolean;
+    try {
+      isFolder = statSync(real).isDirectory();
+    } catch {
+      return; // Doesn't exist yet.
+    }
+    if (isFolder) for (const name of readdirSync(real)) checkTree(path.join(real, name), seen);
   };
 
   const fsModule = fs as unknown as Patchable;
@@ -265,6 +285,8 @@ export function createCanary(): Canary {
   const file = path.join(folder, "canary.txt");
   const content = "If this file changes, a boundary check failed.\n";
   fs.writeFileSync(file, content);
+  // A time long past, so any later write changes it, even within the same millisecond.
+  fs.utimesSync(file, new Date(2000, 0, 1), new Date(2000, 0, 1));
   const { mtimeMs } = fs.statSync(file);
   return {
     folder,

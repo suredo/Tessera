@@ -130,6 +130,33 @@ describe("tripwires", () => {
     expect(fs.readdirSync(outside)).toEqual(["outside.txt"]);
   });
 
+  it("check every entry a recursive copy reaches, links deep inside included", async () => {
+    const clean = path.join(allowed, "clean");
+    const src = path.join(allowed, "src");
+    fs.mkdirSync(path.join(clean, "sub"), { recursive: true });
+    fs.writeFileSync(path.join(clean, "sub", "a.txt"), "a");
+    fs.mkdirSync(path.join(src, "sub"), { recursive: true });
+    fs.symlinkSync(outside, path.join(src, "sub", "escape"), "junction");
+    const options = { recursive: true, dereference: true };
+    try {
+      const w = arm();
+      fs.cpSync(clean, path.join(allowed, "clean-copy"), options);
+      expect(readFileSync(path.join(allowed, "clean-copy", "sub", "a.txt"), "utf8")).toBe("a");
+      expect(() => fs.cpSync(src, path.join(allowed, "dst"), options)).toThrow(TripwireError);
+      await expect(fs.promises.cp(src, path.join(allowed, "dst"), options)).rejects.toThrow(
+        TripwireError,
+      );
+      expect(() => fs.cp(src, path.join(allowed, "dst"), options, () => {})).toThrow(TripwireError);
+      expect(w.trips.map((t) => t.kind)).toEqual(["file", "file", "file"]);
+      expect(w.trips[0]?.what).toContain("which leads to");
+    } finally {
+      wires?.disarm();
+      for (const dir of [clean, src, path.join(allowed, "clean-copy")])
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
+    expect(fs.existsSync(path.join(allowed, "dst"))).toBe(false);
+  });
+
   it("follow a file link out of the allowed folder", (ctx) => {
     const link = path.join(allowed, "file-link.txt");
     try {
