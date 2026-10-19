@@ -45,7 +45,8 @@
               {
                 "type": "object",
                 "propertyNames": {
-                  "type": "string"
+                  "type": "string",
+                  "pattern": "^(?!__proto__$)"
                 },
                 "additionalProperties": {
                   "$ref": "#/definitions/__schema0"
@@ -197,7 +198,8 @@
         {
           "type": "object",
           "propertyNames": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^(?!__proto__$)"
           },
           "additionalProperties": {
             "$ref": "#/definitions/__schema0"

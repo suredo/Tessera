@@ -4,10 +4,10 @@ title: "Contracts package"
 description: "@tessera/contracts: every shape that crosses a boundary, defined once with zod, with its generated JSON Schema and the unit rule for numbers."
 resource: ../../../packages/contracts/
 implements: [CON-01, CON-02, CON-04, CON-05, GEN-01, CLI-04, OBS-01, DATA-08, DATA-09, DATA-05]
-tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
+tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:58:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:38:13Z }
 ---
 
 # Purpose
@@ -21,6 +21,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 - `src/workspace.ts`: `workspaceSchema`, `workspaceVersionSchema` and `savedToolSchema`, what the server stores for each workspace, version history entry and saved tool ([workspaces](../server/workspaces.md)).
 - `src/trash.ts`: `TRASH_RETENTION_DAYS` (30), `trashEntrySchema`, a deleted workspace (with the saved tools that went with it) or saved tool, and `trashSchema`, the trash with the confirmation that empties exactly it ([trash](../server/trash.md)).
 - `src/archive.ts`: `archiveManifestSchema`, the manifest of an export archive, with `archivedWorkspaceSchema`, a workspace with its whole history; `ARCHIVE_FORMAT` and `ARCHIVE_FORMAT_VERSION` name the format ([archives](../server/archives.md)).
+- `src/json.ts`: `jsonValueSchema` and `jsonObjectSchema`, the JSON Tessera stores (a tool version's data schema and defaults, a workspace's data), and `RESERVED_JSON_KEY`.
 - `src/intent.ts`: `intentSchema` and its `Intent` type.
 - `src/provider.ts`: `STAGES`, `EFFORTS`, `PROVIDER_ERROR_KINDS`, `usageSchema`, where unknown is null and never 0, and `providerScriptSchema`, the canned replies of a scripted provider ([provider adapters](../server/providers.md)).
 - `src/ledger.ts`: `ledgerEntrySchema` and `requestLogEntrySchema`, one line each per call of an evaluation run ([evaluation harness](../evals/harness.md)). A ledger entry's outcome is a discriminated union, so an error kind exists only on a failed call (`CON-02`).
@@ -30,6 +31,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 
 # Invariants
 
+- **Stored JSON is kept exactly or refused whole.** A JavaScript object can't keep an own `__proto__` key, and zod's own JSON schemas silently drop one, so `jsonValueSchema` and `jsonObjectSchema` refuse any object with that key, at any depth, before parsing; the generated JSON Schema refuses it too (`propertyNames`). Every other key is kept, including `constructor` and `toString`. Codex's review of [pull request 63](https://github.com/suredo/Tessera/pull/63) found the silent loss.
 - **One definition.** A shape exists only as a zod schema here. The files in `schemas/` are generated and never edited by hand. A test fails while they differ from the zod definitions.
 - **zod and the JSON Schema agree.** Constraints are written so they appear in the JSON Schema too: discriminated unions, enums, patterns, strict objects. A zod-only refinement would let the model's contract and the host's check disagree. The intent tests check both on the same valid and invalid samples.
 - **JSON Schema draft-07.** Claude Code checks `--json-schema` with a draft-07 validator and refuses draft 2020-12: the CLI contract spike's first live call found it on 2.1.296 (#19). Every schema that leaves the process comes from `jsonSchemaOf`, and the intent tests validate with the same kind of validator. For today's contracts the two drafts differ only in `$schema`.
@@ -55,9 +57,10 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `src/archive.ts`: `ARCHIVE_FORMAT`, `ARCHIVE_FORMAT_VERSION`, `archivedWorkspaceSchema`, `ArchivedWorkspace` (type), `archiveManifestSchema`, `ArchiveManifest` (type)
 - `src/artifact.ts`: `ARTIFACT_CONTRACT_VERSION`, `UI_MODES`, `artifactSchema`, `Artifact` (type), `canonicalJson`, `ArtifactUpgrades` (type), `ARTIFACT_UPGRADES`, `ArtifactReading` (type), `readArtifact`
-- `src/index.ts`: `ARCHIVE_FORMAT`, `ARCHIVE_FORMAT_VERSION`, `archivedWorkspaceSchema`, `archiveManifestSchema`, `ArchivedWorkspace` (type), `ArchiveManifest` (type), `ARTIFACT_CONTRACT_VERSION`, `ARTIFACT_UPGRADES`, `artifactSchema`, `canonicalJson`, `readArtifact`, `UI_MODES`, `Artifact` (type), `ArtifactReading` (type), `ArtifactUpgrades` (type), `INTENT_KINDS`, `intentSchema`, `Intent` (type), `contracts`, `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `renderSchemaFiles`, `toJsonSchema`, `ContractName` (type), `ledgerEntrySchema`, `requestLogEntrySchema`, `RUN_MODES`, `LedgerEntry` (type), `RequestLogEntry` (type), `EFFORTS`, `effortSchema`, `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `providerScriptSchema`, `scriptedReplySchema`, `STAGES`, `stageSchema`, `usageSchema`, `Effort` (type), `ProviderErrorKind` (type), `ProviderScript` (type), `ScriptedReply` (type), `Stage` (type), `Usage` (type), `numericFieldsWithoutUnit`, `UNIT_SUFFIXES`, `UNITLESS_NAMES`, `UNITLESS_SUFFIXES`, `TRASH_RETENTION_DAYS`, `trashEntrySchema`, `trashSchema`, `Trash` (type), `TrashEntry` (type), `savedToolSchema`, `workspaceSchema`, `workspaceVersionSchema`, `SavedTool` (type), `Workspace` (type), `WorkspaceVersion` (type)
+- `src/index.ts`: `ARCHIVE_FORMAT`, `ARCHIVE_FORMAT_VERSION`, `archivedWorkspaceSchema`, `archiveManifestSchema`, `ArchivedWorkspace` (type), `ArchiveManifest` (type), `ARTIFACT_CONTRACT_VERSION`, `ARTIFACT_UPGRADES`, `artifactSchema`, `canonicalJson`, `readArtifact`, `UI_MODES`, `Artifact` (type), `ArtifactReading` (type), `ArtifactUpgrades` (type), `jsonObjectSchema`, `jsonValueSchema`, `RESERVED_JSON_KEY`, `JsonValue` (type), `INTENT_KINDS`, `intentSchema`, `Intent` (type), `contracts`, `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `renderSchemaFiles`, `toJsonSchema`, `ContractName` (type), `ledgerEntrySchema`, `requestLogEntrySchema`, `RUN_MODES`, `LedgerEntry` (type), `RequestLogEntry` (type), `EFFORTS`, `effortSchema`, `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `providerScriptSchema`, `scriptedReplySchema`, `STAGES`, `stageSchema`, `usageSchema`, `Effort` (type), `ProviderErrorKind` (type), `ProviderScript` (type), `ScriptedReply` (type), `Stage` (type), `Usage` (type), `numericFieldsWithoutUnit`, `UNIT_SUFFIXES`, `UNITLESS_NAMES`, `UNITLESS_SUFFIXES`, `TRASH_RETENTION_DAYS`, `trashEntrySchema`, `trashSchema`, `Trash` (type), `TrashEntry` (type), `savedToolSchema`, `workspaceSchema`, `workspaceVersionSchema`, `SavedTool` (type), `Workspace` (type), `WorkspaceVersion` (type)
 - `src/intent.ts`: `INTENT_KINDS`, `intentSchema`, `Intent` (type)
 - `src/json-schema.ts`: `contracts`, `ContractName` (type), `JSON_SCHEMA_TARGET`, `jsonSchemaOf`, `toJsonSchema`, `renderSchemaFiles`
+- `src/json.ts`: `RESERVED_JSON_KEY`, `JsonValue` (type), `jsonValueSchema`, `jsonObjectSchema`
 - `src/ledger.ts`: `RUN_MODES`, `ledgerEntrySchema`, `LedgerEntry` (type), `requestLogEntrySchema`, `RequestLogEntry` (type)
 - `src/provider.ts`: `STAGES`, `stageSchema`, `Stage` (type), `EFFORTS`, `effortSchema`, `Effort` (type), `PROVIDER_ERROR_KINDS`, `providerErrorKindSchema`, `ProviderErrorKind` (type), `usageSchema`, `Usage` (type), `scriptedReplySchema`, `ScriptedReply` (type), `providerScriptSchema`, `ProviderScript` (type)
 - `src/trash.ts`: `TRASH_RETENTION_DAYS`, `trashEntrySchema`, `TrashEntry` (type), `trashSchema`, `Trash` (type)
