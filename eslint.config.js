@@ -8,7 +8,8 @@ import noHostText from "./scripts/eslint/no-host-text.mjs";
 
 export default defineConfig(
   {
-    ignores: ["**/node_modules/", "**/dist/", "test-output/", "coverage/"],
+    // .claude/worktrees/: Claude Code's checkouts of other branches, checked on their own.
+    ignores: ["**/node_modules/", "**/dist/", "test-output/", "coverage/", ".claude/worktrees/"],
   },
   js.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
