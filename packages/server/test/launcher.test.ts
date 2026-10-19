@@ -158,8 +158,8 @@ describe("the launcher (PLAT-02)", () => {
 
 // The entry point Tessera.cmd runs, as its own process.
 const main = fileURLToPath(new URL("../src/launcher/main.ts", import.meta.url));
-function runMain(dataDir: string) {
-  const child = spawn(process.execPath, [main], {
+function runMain(dataDir: string, nodeArgs: string[] = []) {
+  const child = spawn(process.execPath, [...nodeArgs, main], {
     env: { ...process.env, TESSERA_DATA_DIR: dataDir, TESSERA_OPEN_BROWSER: "0" },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -199,6 +199,23 @@ describe("the launcher's entry point (PLAT-02)", { timeout: 30_000 }, () => {
     third.child.kill("SIGKILL");
     fourth.child.kill("SIGKILL");
     await Promise.all([third.exit, fourth.exit]);
+  });
+
+  it("can stop cleanly by the time it says it's running", async () => {
+    // CI caught a stop signal sent the moment the ready line appeared ending the process before
+    // its handler existed. Loaded first, this module marks the line with how many SIGTERM
+    // handlers there were when it was written, on every platform.
+    const marker = `const write = process.stdout.write.bind(process.stdout);
+      process.stdout.write = (chunk, ...rest) => write(String(chunk).includes("Tessera is running")
+        ? "[stop handlers: " + process.listenerCount("SIGTERM") + "] " + chunk : chunk, ...rest);`;
+    const run = runMain(dataFolder(), [
+      "--import",
+      `data:text/javascript,${encodeURIComponent(marker)}`,
+    ]);
+    const handlers = Number((await run.line).match(/^\[stop handlers: (\d+)\]/)?.[1]);
+    expect(handlers).toBeGreaterThan(0);
+    run.child.kill("SIGKILL");
+    await run.exit;
   });
 
   it.skipIf(process.platform === "win32")(

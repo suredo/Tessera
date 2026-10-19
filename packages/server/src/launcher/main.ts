@@ -25,6 +25,16 @@ function dataFolder(): string {
   );
 }
 
+// The stop handlers come first, before anything can say Tessera is running: a stop that arrived
+// in between would end the process without removing its address or closing its server. A stop
+// during the launch just exits; the system releases the lock, and the next copy that takes it
+// removes the address left behind.
+let stop: (() => Promise<void>) | undefined;
+// SIGHUP is how Windows reports a closed console window; SIGBREAK is Ctrl+Break.
+for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"] as const) {
+  process.on(signal, () => void (stop?.() ?? Promise.resolve()).finally(() => process.exit(0)));
+}
+
 const launched = await launch({
   dataDir: dataFolder(),
   webRoot: fileURLToPath(new URL("../../../web/dist", import.meta.url)),
@@ -39,9 +49,6 @@ const opened = launched.browserOpened ? "" : ` Open ${launched.url} in your brow
 if (launched.status === "already-running") {
   console.log(`Tessera is already running at ${launched.url}.${opened}`);
 } else {
+  stop = () => launched.stop();
   console.log(`Tessera is running at ${launched.url}.${opened} Close this window to stop it.`);
-  // SIGHUP is how Windows reports a closed console window; SIGBREAK is Ctrl+Break.
-  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"] as const) {
-    process.on(signal, () => void launched.stop().finally(() => process.exit(0)));
-  }
 }

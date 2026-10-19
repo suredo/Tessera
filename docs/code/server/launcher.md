@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:33:18Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T04:33:49Z }
 ---
 
 # Purpose
@@ -30,6 +30,7 @@ Starts Tessera with one double-click (`PLAT-02`): it starts the [local server](l
 - **A copy that fails to start leaves nothing running.** Whatever fails after it takes the lock, such as a full disk when it writes its address, its server closes before the lock is released, so the next launch never takes the lock while that copy still listens.
 - **Only addresses on this computer are opened.** An address naming anything but `http://127.0.0.1:<port>` is never used.
 - **The browser opens without a shell,** through `runProcess`: `rundll32` on Windows, `open` on macOS and `xdg-open` elsewhere. If it fails, Tessera keeps running and prints the address to open.
+- **It can stop cleanly once it says it's running.** `main.ts` installs its stop handlers before it launches, so a stop that comes right after the ready line still removes the address and closes the server. A stop during the launch just exits: the system releases the lock, and the next copy removes the address left behind.
 - **A clean stop removes the address, closes the server** and its open connections, so the port is free, **and then releases the lock.**
 
 # Depends on / used by
