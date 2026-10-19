@@ -7,7 +7,7 @@ implements: [PLAT-01]
 tests: [../../../packages/server/test/platform.test.ts]
 tags: [code, server, platform]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-14T01:23:49Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:31:05Z }
 ---
 
 # Purpose
@@ -28,7 +28,7 @@ Keeps Windows-only assumptions (path separators, letter case, line endings, how 
 
 # Depends on / used by
 
-Node's `child_process`, `fs` and `path` only. The CLI adapter (M2) will start Claude Code with `runProcess`, and the setup check (`PLAT-03`) will look for it with `findExecutable`.
+Node's `child_process`, `fs` and `path` only. The [local server](local-server.md) keeps files inside the built app with `isInsideFolder`. The CLI adapter (M2) will start Claude Code with `runProcess`, and the setup check (`PLAT-03`) will look for it with `findExecutable`.
 
 # Pitfalls
 

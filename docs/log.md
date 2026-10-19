@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-19
+
+* **Creation**: The [local server](code/server/local-server.md) code doc ([issue 54](https://github.com/suredo/Tessera/issues/54), first part): the server binds to 127.0.0.1 only, on port 4317 or a free one, refuses any foreign Host header, takes same-origin API requests only, and serves runtime documents on `localhost` only as frames of the host app or the runtime (`SEC-03`). CI's Windows job runs its tests, as the [CI workflow](code/ci/workflow.md) doc says, and the [platform helpers](code/server/platform.md) doc names its new user.
+
 ## 2026-10-17
 
 * **Creation**: The [CI workflow](code/ci/workflow.md) code doc, so the coverage report counts CI's evidence for `ENG-02` and `TEST-01`: `.github/workflows/ci.yml` names it in a `# Docs:` comment, and `scripts/test/ci-workflow.test.ts` checks that the workflow runs on every change, runs each check, keeps one Windows job and gives no job a secret. CI's Windows job now runs the OKF check's tests too. The [web package](code/web/package.md) implements `RUN-06`: Chrome and Edge are the supported browsers, and its browser test names it. The [OKF check](code/scripts/okf-check.md) reads `Docs:` comments in `.github/workflows/`, and checks the frontmatter of reports in `evals/reports/` (type `Evaluation Report`, with `tags`), which no check read before, as Codex's review of [pull request 42](https://github.com/suredo/Tessera/pull/42) found; the [documentation practice](practices/documentation.md) says so. These close the M0 report's tooling items.
