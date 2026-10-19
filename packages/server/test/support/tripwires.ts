@@ -11,9 +11,9 @@ import workerThreads from "node:worker_threads";
 import { isInsideFolder } from "../../src/platform/index.ts";
 
 // Tripwires for the server-side boundary checks in the threat model (docs/spec/threat-model.md):
-// while armed, opening a network connection, starting a process or worker, or touching a file
-// outside the allowed folders is recorded and refused. It is a test aid that detects a breach in
-// code that should never try; it is not an isolation mechanism (SEC-01).
+// while armed, opening a network connection, sending on one opened before, starting a process or
+// worker, or touching a file outside the allowed folders is recorded and refused. It is a test aid
+// that detects a breach in code that should never try; it is not an isolation mechanism (SEC-01).
 
 export type TripKind = "network" | "process" | "worker" | "file";
 export interface Trip {
@@ -39,73 +39,113 @@ export interface Tripwires {
 type AnyFn = (this: unknown, ...args: unknown[]) => unknown;
 type Patchable = Record<string, unknown>;
 
-// File functions whose first argument is a path, and those whose second is one too. Each is
-// patched in its callback, Sync and promise forms where they exist.
-const ONE_PATH = [
-  "access",
-  "appendFile",
-  "chmod",
-  "chown",
-  "exists",
-  "lchown",
-  "lstat",
-  "lutimes",
-  "mkdir",
-  "mkdtemp",
-  "open",
-  "opendir",
-  "readdir",
-  "readFile",
-  "readlink",
-  "realpath",
-  "rm",
-  "rmdir",
-  "stat",
-  "statfs",
-  "truncate",
-  "unlink",
-  "utimes",
-  "writeFile",
-];
-const TWO_PATHS = ["copyFile", "cp", "link", "rename", "symlink"];
-const STREAMS_AND_WATCHERS = ["createReadStream", "createWriteStream", "watch", "watchFile"];
+// How each path argument of a file function is checked, by position. "follow" checks where the
+// path really leads, through links and junctions, as the call itself would; "link" checks the
+// link itself, for calls that act on it without following it; "target" is a new link's target,
+// read from the link's folder. Each function is patched in its callback, Sync and promise forms.
+type PathRule = "follow" | "link" | "target";
+const FILE_FUNCTIONS: Record<string, readonly PathRule[]> = {
+  access: ["follow"],
+  appendFile: ["follow"],
+  chmod: ["follow"],
+  chown: ["follow"],
+  copyFile: ["follow", "follow"],
+  cp: ["follow", "follow"],
+  createReadStream: ["follow"],
+  createWriteStream: ["follow"],
+  exists: ["follow"],
+  lchown: ["link"],
+  link: ["follow", "link"],
+  lstat: ["link"],
+  lutimes: ["link"],
+  mkdir: ["follow"],
+  mkdtemp: ["follow"],
+  open: ["follow"],
+  opendir: ["follow"],
+  readdir: ["follow"],
+  readFile: ["follow"],
+  readlink: ["link"],
+  realpath: ["follow"],
+  rename: ["link", "link"],
+  rm: ["link"],
+  rmdir: ["link"],
+  stat: ["follow"],
+  statfs: ["follow"],
+  symlink: ["target", "link"],
+  truncate: ["follow"],
+  unlink: ["link"],
+  utimes: ["follow"],
+  watch: ["follow"],
+  watchFile: ["follow"],
+  writeFile: ["follow"],
+};
 const PROCESS = ["spawn", "spawnSync", "exec", "execSync", "execFile", "execFileSync", "fork"];
+
+// The real functions, taken before anything is patched, so checking a path never trips itself.
+const realpathNative = fs.realpathSync.native;
+const lstatSync = fs.lstatSync;
+const readlinkSync = fs.readlinkSync;
 
 let armed = false;
 
 const pathOf = (value: unknown): string | null => {
-  if (typeof value === "string") return value.startsWith("file:") ? fileURLToPath(value) : value;
+  if (typeof value === "string") return value;
   if (value instanceof URL) return fileURLToPath(value);
   if (Buffer.isBuffer(value)) return value.toString();
   return null; // A file descriptor: it was opened through a checked path.
 };
 
 /**
+ * Where a path really leads: links and junctions resolved, a dangling one included, and for a
+ * file that doesn't exist yet, the real folder it would go in. With `follow` false only the
+ * folders above are resolved, for a call that acts on a link itself. Null for a link loop.
+ */
+function realPath(p: string, follow = true, depth = 0): string | null {
+  const abs = path.resolve(p);
+  const parent = path.dirname(abs);
+  const inParent = (): string | null => {
+    if (parent === abs) return abs; // The root.
+    const real = realPath(parent, true, depth + 1);
+    return real === null ? null : path.join(real, path.basename(abs));
+  };
+  if (depth > 40) return null;
+  if (!follow) return inParent();
+  try {
+    return realpathNative(abs);
+  } catch {
+    // Missing, a dangling link, or a loop: look at the entry itself.
+  }
+  let isLink: boolean;
+  try {
+    isLink = lstatSync(abs).isSymbolicLink();
+  } catch {
+    return inParent(); // Doesn't exist yet: its folders decide where it would go.
+  }
+  return isLink ? realPath(path.resolve(parent, readlinkSync(abs)), true, depth + 1) : inParent();
+}
+
+/**
  * Arms the tripwires until `disarm`. Files are allowed only inside `allowFolders` (none by
- * default). Only one set can be armed at a time.
+ * default), judged by where a path really leads. Only one set can be armed at a time.
  */
 export function armTripwires(options: { allowFolders?: readonly string[] } = {}): Tripwires {
   if (armed) throw new Error("Tripwires are already armed; disarm the first set.");
   armed = true;
-  const allowFolders = options.allowFolders ?? [];
+  const allowFolders = (options.allowFolders ?? []).map((f) => realPath(f) ?? path.resolve(f));
   const trips: Trip[] = [];
   const restore: (() => void)[] = [];
 
-  const trip = (kind: TripKind, what: string): never => {
+  const record = (kind: TripKind, what: string): TripwireError => {
     const t = { kind, what };
     trips.push(t);
-    throw new TripwireError(t);
+    return new TripwireError(t);
   };
-  // A promise API rejects instead of throwing, as the real call would fail.
-  const patch = (
-    target: Patchable,
-    name: string,
-    check: (args: unknown[]) => void,
-    promises = false,
-  ) => {
-    const original = target[name];
-    if (typeof original !== "function") return;
-    const fn = original as AnyFn;
+  const trip = (kind: TripKind, what: string): never => {
+    throw record(kind, what);
+  };
+  // A promise API rejects instead of throwing, as the real call would fail. Functions hung on
+  // the original, such as realpathSync.native, are checked the same way.
+  const wrap = (fn: AnyFn, check: (args: unknown[]) => void, promises: boolean): AnyFn => {
     const wrapper = function (this: unknown, ...args: unknown[]) {
       if (!promises) check(args);
       else {
@@ -117,35 +157,71 @@ export function armTripwires(options: { allowFolders?: readonly string[] } = {})
       }
       return fn.apply(this, args);
     };
-    Object.assign(wrapper, fn); // Keeps properties such as realpathSync.native.
-    target[name] = wrapper;
+    for (const [key, value] of Object.entries(fn))
+      (wrapper as unknown as Patchable)[key] =
+        typeof value === "function" ? wrap(value as AnyFn, check, promises) : value;
+    return wrapper;
+  };
+  const patch = (
+    target: Patchable,
+    name: string,
+    check: (args: unknown[]) => void,
+    promises = false,
+  ) => {
+    const original = target[name];
+    if (typeof original !== "function") return;
+    target[name] = wrap(original as AnyFn, check, promises);
     restore.push(() => (target[name] = original));
   };
-  const checkPaths = (count: number) => (args: unknown[]) => {
-    for (const arg of args.slice(0, count)) {
-      const p = pathOf(arg);
-      if (p !== null && !allowFolders.some((folder) => isInsideFolder(folder, p))) trip("file", p);
-    }
+  const checkPaths = (rules: readonly PathRule[]) => (args: unknown[]) => {
+    rules.forEach((rule, i) => {
+      const p = pathOf(args[i]);
+      if (p === null) return;
+      const linkPath = pathOf(args[i + 1]);
+      const real =
+        rule === "target" && linkPath !== null
+          ? realPath(path.resolve(path.dirname(path.resolve(linkPath)), p))
+          : realPath(p, rule !== "link");
+      if (real !== null && allowFolders.some((folder) => isInsideFolder(folder, real))) return;
+      trip(
+        "file",
+        real === null
+          ? `${p}, a link loop`
+          : real === path.resolve(p)
+            ? p
+            : `${p}, which leads to ${real}`,
+      );
+    });
   };
 
   const fsModule = fs as unknown as Patchable;
   const fsPromises = fs.promises as unknown as Patchable;
-  for (const [names, count] of [
-    [ONE_PATH, 1],
-    [TWO_PATHS, 2],
-    [STREAMS_AND_WATCHERS, 1],
-  ] as const) {
-    for (const name of names) {
-      patch(fsModule, name, checkPaths(count));
-      patch(fsModule, `${name}Sync`, checkPaths(count));
-      patch(fsPromises, name, checkPaths(count), true);
-    }
+  for (const [name, rules] of Object.entries(FILE_FUNCTIONS)) {
+    patch(fsModule, name, checkPaths(rules));
+    patch(fsModule, `${name}Sync`, checkPaths(rules));
+    patch(fsPromises, name, checkPaths(rules), true);
   }
 
-  // Sockets cover net, http, https, tls and fetch, which all connect through net.Socket.
+  // New connections: net, http, https, tls and fetch all connect through net.Socket.
   const where = (args: unknown[]) => JSON.stringify(args[0] ?? null) ?? "";
   patch(net.Socket.prototype as unknown as Patchable, "connect", (a) => trip("network", where(a)));
   patch(net.Server.prototype as unknown as Patchable, "listen", (a) => trip("network", where(a)));
+  // Connections opened before arming and kept for reuse, as the pools behind fetch and http do:
+  // every write to a socket goes through _writeGeneric. On a network socket the write fails and
+  // the socket closes, so the request errors where the code under test sees it. Pipes, such as
+  // the test runner's own output, have no remote port and pass.
+  const socketProto = net.Socket.prototype as unknown as Patchable;
+  const writeGeneric = socketProto["_writeGeneric"];
+  if (typeof writeGeneric === "function") {
+    socketProto["_writeGeneric"] = function (this: net.Socket, ...args: unknown[]) {
+      if (this.remotePort === undefined) return (writeGeneric as AnyFn).apply(this, args);
+      const error = record("network", `${this.remoteAddress}:${this.remotePort}, kept open`);
+      const callback = args[3];
+      if (typeof callback === "function") (callback as (e: Error) => void)(error);
+      this.destroy(error);
+    };
+    restore.push(() => (socketProto["_writeGeneric"] = writeGeneric));
+  }
   for (const name of ["bind", "connect", "send"])
     patch(dgram.Socket.prototype as unknown as Patchable, name, () => trip("network", "dgram"));
   for (const name of ["lookup", "resolve"]) {

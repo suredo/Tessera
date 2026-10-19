@@ -83,6 +83,71 @@ describe("tripwires", () => {
     expect(w.trips.map((t) => t.kind)).toEqual(["file", "file", "file", "file", "file"]);
   });
 
+  it("refuse a request on a connection opened before arming", async () => {
+    const before = received;
+    await (await fetch(url)).text(); // Leaves a connection in fetch's pool.
+    const agent = new http.Agent({ keepAlive: true });
+    await new Promise<void>((resolve) =>
+      http.get(url, { agent }, (res) => res.resume().on("end", resolve)),
+    );
+    expect(received).toBe(before + 2);
+    const w = arm();
+    await expect(fetch(url)).rejects.toThrow();
+    await new Promise<void>((resolve) => http.get(url, { agent }).on("error", () => resolve()));
+    w.disarm();
+    agent.destroy();
+    expect(received).toBe(before + 2);
+    expect(w.trips.length).toBeGreaterThanOrEqual(2);
+    expect(w.trips.every((t) => t.kind === "network")).toBe(true);
+  });
+
+  it("follow links and junctions out of the allowed folder, dangling ones too", () => {
+    const junction = path.join(allowed, "junction");
+    const dangling = path.join(allowed, "dangling");
+    fs.symlinkSync(outside, junction, "junction");
+    fs.symlinkSync(path.join(outside, "missing"), dangling, "junction");
+    try {
+      const w = arm();
+      expect(() => readFileSync(path.join(junction, "outside.txt"))).toThrow(TripwireError);
+      expect(() => fs.writeFileSync(path.join(junction, "new.txt"), "x")).toThrow(TripwireError);
+      expect(() => fs.mkdirSync(dangling)).toThrow(TripwireError);
+      expect(() => fs.writeFileSync(path.join(dangling, "new.txt"), "x")).toThrow(TripwireError);
+      expect(() => fs.realpathSync.native(path.join(outside, "outside.txt"))).toThrow(
+        TripwireError,
+      );
+      expect(() => fs.symlinkSync(outside, path.join(allowed, "another"), "junction")).toThrow(
+        TripwireError,
+      );
+      // Calls on the link itself stay inside.
+      expect(fs.lstatSync(junction).isSymbolicLink()).toBe(true);
+      expect(w.trips.map((t) => t.kind)).toEqual(Array(6).fill("file"));
+      expect(w.trips[0]?.what).toContain("which leads to");
+    } finally {
+      wires?.disarm();
+      fs.rmSync(junction);
+      fs.rmSync(dangling);
+    }
+    expect(fs.readdirSync(outside)).toEqual(["outside.txt"]);
+  });
+
+  it("follow a file link out of the allowed folder", (ctx) => {
+    const link = path.join(allowed, "file-link.txt");
+    try {
+      fs.symlinkSync(path.join(outside, "outside.txt"), link, "file");
+    } catch {
+      ctx.skip(); // Windows allows file links only in developer mode or as administrator.
+    }
+    try {
+      arm();
+      expect(() => readFileSync(link)).toThrow(TripwireError);
+      expect(() => fs.writeFileSync(link, "x")).toThrow(TripwireError);
+    } finally {
+      wires?.disarm();
+      fs.rmSync(link);
+    }
+    expect(readFileSync(path.join(outside, "outside.txt"), "utf8")).toBe("outside");
+  });
+
   it("put everything back when disarmed", async () => {
     const before = received;
     arm().disarm();
