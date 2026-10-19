@@ -125,6 +125,25 @@ describe("always saved (DATA-08)", () => {
     folder.close();
   });
 
+  // Codex's review of #63: a "__proto__" key was dropped on save, and the save still succeeded.
+  it("DATA-08: refuses data it can't keep exactly, saving nothing, and keeps the rest across a restart", async () => {
+    const root = newFolder();
+    const folder = await openDataFolder(root);
+    const { id } = createWorkspace(folder, "Plans");
+    const kept: unknown = JSON.parse('{"constructor":{"prototype":1},"toString":"x","a":[{}]}');
+    saveWorkspaceData(folder, id, kept, 0);
+    for (const text of ['{"__proto__":{"notes":"keep me"},"other":1}', '{"a":[{"__proto__":1}]}']) {
+      expect(() => saveWorkspaceData(folder, id, JSON.parse(text), 1)).toThrow(/__proto__/);
+    }
+    folder.close();
+
+    const again = await openDataFolder(root);
+    const after = getWorkspace(again, id);
+    expect(after?.dataRevision).toBe(1);
+    expect(JSON.stringify(after?.data)).toBe(JSON.stringify(kept));
+    again.close();
+  });
+
   it("DATA-04: the version history only grows, and needs a stored version", async () => {
     const folder = await openDataFolder(newFolder());
     const { id } = createWorkspace(folder, "Plans");
