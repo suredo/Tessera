@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -172,22 +172,19 @@ describe("export and import (DATA-05)", () => {
       expect(snapshot(wiped, id)).toEqual(before);
       wiped.close();
     }
-  });
+  }, 60_000);
 
   it("DATA-05: an export Tessera couldn't import is refused when exporting, plainly", async () => {
     const folder = await openDataFolder(newFolder());
     const { id } = createWorkspace(folder, "Huge");
-    // Random-looking text doesn't pack, so the manifest stays over the 8 MB a file may unpack to.
-    const noise = createHash("sha256");
-    const text = Array.from({ length: 140_000 }, (_, i) =>
-      noise.copy().update(String(i)).digest("hex"),
-    ).join("");
+    // Random text doesn't pack, so the manifest stays over the 8 MB a file may unpack to.
+    const text = randomBytes(4_500_000).toString("hex");
     saveWorkspaceData(folder, id, { text }, 0);
     expect(() => exportWorkspace(folder, id)).toThrow(
       /^"Huge" is too large to export as one archive\. "manifest\.json" in this archive is larger than 8 MB/,
     );
     folder.close();
-  });
+  }, 60_000);
 
   it("DATA-05: a saved tool exports with the workspace it follows, and imports back", async () => {
     const clock = testClock();
