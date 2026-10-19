@@ -11,6 +11,7 @@
 * [Provider adapters](providers.md) - Model connections: the Claude Code and Codex CLI adapters now, API keys and other providers later (CLI-01 to CLI-10).
 * [Observability, cost and speed](observability.md) - The call ledger, evaluation budget guard, metrics and speed targets (OBS-01 to OBS-04).
 * [Security](security.md) - Execution boundaries, untrusted text, local-only serving, least tools and the threat model (SEC-01 to SEC-05).
+* [Threat model and boundary checks](threat-model.md) - Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG).
 * [User experience](ux.md) - Useful immediately, progress, honest labels, accessibility, translation and lifecycle (UX-01 to UX-07).
 * [Simulation engines](simulation.md) - Versioned engines, isolated checks and research before code, for a later milestone (SIM-01 to SIM-06).
 * [Testing](testing.md) - The test layers required in CI and at milestones (TEST-01 to TEST-06).
