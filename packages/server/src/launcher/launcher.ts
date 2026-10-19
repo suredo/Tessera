@@ -120,32 +120,39 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
     }
     return { status: "already-running", url, browserOpened: await opened(url) };
   }
-  // This copy holds the lock, so any address left in the folder is from one that was killed.
-  fs.rmSync(addressPath, { force: true });
   const instanceId = randomUUID();
-  let server: LocalServer;
+  // What /api/instance answers: nothing until this copy has published its address.
+  let published = "";
+  let server: LocalServer | undefined;
   try {
+    // This copy holds the lock, so any address left in the folder is from one that was killed.
+    fs.rmSync(addressPath, { force: true });
     server = await startLocalServer({
       port: options.port,
       webRoot: options.webRoot,
       routes: {
         [INSTANCE_ROUTE]: (_req, res) => {
           res.writeHead(200, { "content-type": "application/json" });
-          res.end(JSON.stringify({ url: server.url, instanceId }));
+          res.end(published);
         },
       },
     });
-    fs.writeFileSync(addressPath, JSON.stringify({ url: server.url, instanceId }));
+    published = JSON.stringify({ url: server.url, instanceId });
+    fs.writeFileSync(addressPath, published);
   } catch (error) {
+    // A copy that fails to start leaves nothing running: its server closes before the lock goes,
+    // so the next launch never takes the lock while this one still listens.
+    await server?.close().catch(() => {});
     lock.release();
     throw error;
   }
+  const running = server;
   let stopping: Promise<void> | undefined;
   const stop = () =>
     (stopping ??= (async () => {
       fs.rmSync(addressPath, { force: true });
-      await server.close();
+      await running.close();
       lock.release();
     })());
-  return { status: "started", url: server.url, browserOpened: await opened(server.url), stop };
+  return { status: "started", url: running.url, browserOpened: await opened(running.url), stop };
 }

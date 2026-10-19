@@ -4,7 +4,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { launch, type Launched } from "../src/launcher/index.ts";
 import { tryLockFile } from "../src/storage/index.ts";
 
@@ -123,6 +123,31 @@ describe("the launcher (PLAT-02)", () => {
     await expect(start(dataDir, openBrowser, 300)).rejects.toThrow();
     starting?.release();
     expect(opened).toEqual([]);
+  });
+
+  it("leaves nothing running when it fails after starting its server", async () => {
+    // Codex's review: publishing the address failed, and the server kept listening without the lock.
+    const dataDir = dataFolder();
+    const { opened, openBrowser } = browser();
+    const port = await new Promise<number>((resolve) => {
+      const probe = net.createServer().listen(0, "127.0.0.1", () => {
+        const { port } = probe.address() as net.AddressInfo;
+        probe.close(() => resolve(port));
+      });
+    });
+    const full = Object.assign(new Error("no space left on device"), { code: "ENOSPC" });
+    const write = vi.spyOn(fs, "writeFileSync").mockImplementationOnce(() => {
+      throw full;
+    });
+    try {
+      await expect(launch({ dataDir, port, openBrowser })).rejects.toBe(full);
+    } finally {
+      write.mockRestore();
+    }
+    expect(await portFree(`http://127.0.0.1:${port}`)).toBe(true);
+    expect(lockFree(dataDir)).toBe(true);
+    expect(opened).toEqual([]);
+    expect((await start(dataDir, openBrowser)).status).toBe("started");
   });
 
   it("keeps running when the browser can't be opened, and says so", async () => {

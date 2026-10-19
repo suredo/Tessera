@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T02:47:13Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:33:18Z }
 ---
 
 # Purpose
@@ -27,6 +27,7 @@ Starts Tessera with one double-click (`PLAT-02`): it starts the [local server](l
 - **One copy per data folder.** The copy that runs holds an exclusive lock on `tessera.lock` in the data folder for as long as it runs, through `tryLockFile` from [storage](storage.md). A launch that can't take the lock starts nothing: it waits up to 10 seconds for the holder's address and opens the browser there, or says that Tessera is already starting in another window.
 - **The system releases the lock** when its holder ends, however it ends, so a copy that was killed, or a computer that lost power, leaves nothing that blocks the next start. There is no stale lock to check and remove, so two launches recovering at the same moment can't both start: whichever takes the lock is the only one.
 - **Only the lock's holder writes the address.** It removes any address left in `tessera.address`, which a killed copy can leave, then starts the server and writes its address and a random instance ID there. Another launch trusts an address only once the server there answers `/api/instance` with that ID, so a half-written or left-behind address is never opened.
+- **A copy that fails to start leaves nothing running.** Whatever fails after it takes the lock, such as a full disk when it writes its address, its server closes before the lock is released, so the next launch never takes the lock while that copy still listens.
 - **Only addresses on this computer are opened.** An address naming anything but `http://127.0.0.1:<port>` is never used.
 - **The browser opens without a shell,** through `runProcess`: `rundll32` on Windows, `open` on macOS and `xdg-open` elsewhere. If it fails, Tessera keeps running and prints the address to open.
 - **A clean stop removes the address, closes the server** and its open connections, so the port is free, **and then releases the lock.**
