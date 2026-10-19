@@ -3,8 +3,8 @@
 # the merge-ready job that stays red while a task handoff is left (ENG-25), and the workspace's
 # typecheck, lint, format check, unit tests (ENG-04, TEST-01), secret scan, with the same rules
 # as the pre-commit hook (ENG-19), the web app's build, and the coverage report (ENG-17), all on
-# Linux; then one Windows job for the OKF check's tests, the platform helpers, the SQLite storage
-# and the browser tests (PLAT-01, DATA-01, TEST-06, RUN-06). No secrets and no model calls.
+# Linux; then one Windows job for the OKF check's tests, the platform helpers, the SQLite storage,
+# the local server, and the browser tests (PLAT-01, DATA-01, SEC-03, TEST-06, RUN-06). No secrets and no model calls.
 name: CI
 
 on:
@@ -86,7 +86,7 @@ jobs:
       - run: pnpm run ${{ matrix.check }}
 
   # The one Windows job (ENG-02): the OKF check's tests, which handle paths and line endings, the
-  # platform helpers' tests and the browser tests in Chrome and Edge, both preinstalled on the
+  # platform helpers' and local server's tests and the browser tests in Chrome and Edge, both preinstalled on the
   # runner. Windows minutes cost more, so the fast checks stay above.
   windows:
     name: Windows (platform, Chrome and Edge)
@@ -103,8 +103,8 @@ jobs:
       # A Windows-only failure in them reached review in pull request 41.
       - name: Checker tests (ENG-08, ENG-24)
         run: node --test scripts/okf-check.test.mjs
-      - name: Platform helpers and SQLite storage (PLAT-01, DATA-01)
-        run: pnpm exec vitest run packages/server/test/platform.test.ts packages/server/test/storage.test.ts
+      - name: Platform helpers, SQLite storage and local server (PLAT-01, DATA-01, SEC-03)
+        run: pnpm exec vitest run packages/server/test/platform.test.ts packages/server/test/storage.test.ts packages/server/test/local-server.test.ts
       - name: Playwright's video encoder
         run: pnpm exec playwright install ffmpeg
       - name: Browser tests in Chrome and Edge (TEST-06)
