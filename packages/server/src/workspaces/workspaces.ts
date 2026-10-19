@@ -59,25 +59,41 @@ const savedToolFromRow = z
   }))
   .pipe(savedToolSchema);
 
-// The current version is the last entry of the history.
+// Only what isn't in the trash (DATA-09). The current version is the last entry of the history.
 const SELECT_WORKSPACE = `SELECT w.id, w.title, w.data, w.data_revision, w.created_at, w.updated_at,
   (SELECT v.hash FROM workspace_versions v WHERE v.workspace_id = w.id
     ORDER BY v.number DESC LIMIT 1) AS current_version
-  FROM workspaces w`;
+  FROM workspaces w WHERE w.deleted_at IS NULL`;
 
-const SELECT_SAVED_TOOL = "SELECT id, name, workspace_id, created_at, updated_at FROM saved_tools";
+const SELECT_SAVED_TOOL =
+  "SELECT id, name, workspace_id, created_at, updated_at FROM saved_tools WHERE deleted_at IS NULL";
 
 const stamp = (store: Store) => store.now().toISOString();
 
-const noWorkspace = (id: string) => new Error(`There is no workspace with the ID ${id}.`);
-const noSavedTool = (id: string) => new Error(`There is no saved tool with the ID ${id}.`);
+const inTrash = z.object({ n: z.number() });
+
+// Says plainly whether it is missing or in the trash, where it can't be changed.
+const missing = (store: Store, table: "workspaces" | "saved_tools", what: string, id: string) => {
+  const trashed = store.db.get(
+    inTrash,
+    `SELECT COUNT(*) AS n FROM ${table} WHERE id = ? AND deleted_at IS NOT NULL`,
+    id,
+  );
+  return new Error(
+    trashed?.n
+      ? `The ${what} is in the trash; restore it first.`
+      : `There is no ${what} with the ID ${id}.`,
+  );
+};
+const noWorkspace = (store: Store, id: string) => missing(store, "workspaces", "workspace", id);
+const noSavedTool = (store: Store, id: string) => missing(store, "saved_tools", "saved tool", id);
 
 export const getWorkspace = (store: Store, id: string): Workspace | undefined =>
-  store.db.get(workspaceFromRow, `${SELECT_WORKSPACE} WHERE w.id = ?`, id);
+  store.db.get(workspaceFromRow, `${SELECT_WORKSPACE} AND w.id = ?`, id);
 
 const existingWorkspace = (store: Store, id: string): Workspace => {
   const found = getWorkspace(store, id);
-  if (!found) throw noWorkspace(id);
+  if (!found) throw noWorkspace(store, id);
   return found;
 };
 
@@ -101,12 +117,12 @@ export function createWorkspace(store: Store, title: string): Workspace {
 
 export function renameWorkspace(store: Store, id: string, title: string): Workspace {
   const changed = store.db.run(
-    "UPDATE workspaces SET title = ?, updated_at = ? WHERE id = ?",
+    "UPDATE workspaces SET title = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
     workspaceSchema.shape.title.parse(title),
     stamp(store),
     id,
   );
-  if (changed === 0) throw noWorkspace(id);
+  if (changed === 0) throw noWorkspace(store, id);
   return existingWorkspace(store, id);
 }
 
@@ -176,7 +192,7 @@ export function saveWorkspaceData(
 }
 
 export const getSavedTool = (store: Store, id: string): SavedTool | undefined =>
-  store.db.get(savedToolFromRow, `${SELECT_SAVED_TOOL} WHERE id = ?`, id);
+  store.db.get(savedToolFromRow, `${SELECT_SAVED_TOOL} AND id = ?`, id);
 
 /** The saved-tools library, by name. */
 export const listSavedTools = (store: Store): SavedTool[] =>
@@ -209,12 +225,12 @@ export function saveTool(store: Store, workspaceId: string, name: string): Saved
 
 export function renameSavedTool(store: Store, id: string, name: string): SavedTool {
   const changed = store.db.run(
-    "UPDATE saved_tools SET name = ?, updated_at = ? WHERE id = ?",
+    "UPDATE saved_tools SET name = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
     savedToolSchema.shape.name.parse(name),
     stamp(store),
     id,
   );
   const found = changed === 0 ? undefined : getSavedTool(store, id);
-  if (!found) throw noSavedTool(id);
+  if (!found) throw noSavedTool(store, id);
   return found;
 }

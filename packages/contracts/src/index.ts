@@ -51,6 +51,13 @@ export {
   UNITLESS_SUFFIXES,
 } from "./units.ts";
 export {
+  TRASH_RETENTION_DAYS,
+  trashEntrySchema,
+  trashSchema,
+  type Trash,
+  type TrashEntry,
+} from "./trash.ts";
+export {
   savedToolSchema,
   workspaceSchema,
   workspaceVersionSchema,

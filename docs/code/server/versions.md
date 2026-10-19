@@ -7,7 +7,7 @@ implements: [DATA-04, CON-04, CON-01]
 tests: [../../../packages/server/test/versions.test.ts, ../../../packages/contracts/test/artifact.test.ts]
 tags: [code, server, versions, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:34:37Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
 ---
 
 # Purpose
@@ -34,7 +34,7 @@ Depends on the [storage](storage.md) module, the artifact contract and Node's `c
 
 - **An upgraded version has a new hash.** Reading an old version upgrades it in memory; saving the upgraded artifact stores it as a new version. Whatever pointed at the old hash still does, until activation (#50) decides to move it.
 - **The data schema and defaults are free-form JSON here.** Whether a tool's schema is a valid JSON Schema, and whether its defaults fit it, is checked by activation (#50, `DATA-03`), not by the artifact contract.
-- **No removal yet.** Removing versions that nothing refers to comes with the trash and asset cleanup (#48, #49).
+- **Removed only with what used it.** When the [trash](trash.md) removes a workspace for good, it removes the versions that workspace used and no workspace refers to any more; a version no workspace has referred to yet is kept. A new table that refers to versions must join that check (#49, #50).
 
 # Symbols (generated)
 

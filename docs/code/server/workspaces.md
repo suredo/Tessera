@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-04, CON-01]
 tests: [../../../packages/server/test/workspaces.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:33:07Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
 ---
 
 # Purpose
@@ -30,16 +30,17 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
 - **A stale data write is refused.** `saveWorkspaceData` takes the revision the new data was made from; if the data changed since, it saves nothing and says so plainly, so a slower writer never replaces newer work.
 - **A new workspace has no tool and no data**: its current version and data are null until a version is added and activation fills the data from the tool's defaults (`DATA-03`, [issue 50](https://github.com/suredo/Tessera/issues/50)).
 - **A saved tool follows its workspace** (A32): it names the workspace that Continue opens, not a version, so later improvements are kept.
+- **What is in the trash is out of reach.** Trashed workspaces and saved tools are not returned or listed, and changing one is refused with "restore it first" ([trash](trash.md)).
 - **Times come from the store's clock**, which tests replace, so the trash's 30 days can be tested without waiting (`DATA-09`).
 
 # Depends on / used by
 
-Depends on [storage](storage.md), [tool versions](versions.md) (through the foreign key) and the contracts. The trash, export and import ([issue 48](https://github.com/suredo/Tessera/issues/48)), activation and restore (#50) and the host app's screens (#53) build on it.
+Depends on [storage](storage.md), [tool versions](versions.md) (through the foreign key) and the contracts. The [trash](trash.md), export and import ([issue 48](https://github.com/suredo/Tessera/issues/48)), activation and restore (#50) and the host app's screens (#53) build on it.
 
 # Pitfalls
 
 - **Whole data, not patches.** `saveWorkspaceData` stores the data the [patch engine](https://github.com/suredo/Tessera/issues/47) produced; it doesn't apply patches or check per-record revisions, and it doesn't check the data against the tool's schema (#50).
-- **Deleting is the trash's job.** Nothing here deletes a workspace or saved tool; the trash (`DATA-09`) does, so nothing is removed without passing through it.
+- **Deleting is the trash's job.** Nothing here deletes a workspace or saved tool; the [trash](trash.md) (`DATA-09`) does, so nothing is removed without passing through it.
 - **Errors for a missing ID are plain sentences**, but a title or name that breaks its contract (empty, or over 200 characters) throws zod's error; the API layer turns it into a plain message (#53).
 
 # Symbols (generated)
