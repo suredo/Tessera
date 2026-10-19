@@ -2,6 +2,8 @@
 
 ## 2026-10-19
 
+* **Update**: The [threat model](spec/threat-model.md) names the shared test helper for its server-side checks, `packages/server/test/support/tripwires.ts`: while armed, it records and refuses network connections, processes, workers and file access outside the allowed folders, and a canary file shows whether anything outside was changed. IMP-07 and MIG-05 use it; it is a test aid, not an isolation mechanism (`SEC-01`).
+
 * **Creation**: The [threat model](spec/threat-model.md) (`SEC-05`, [issue 55](https://github.com/suredo/Tessera/issues/55)): what Tessera protects, who is untrusted, each trust boundary with its requirements and the milestone that tests it, what M1 covers and the limits it leaves open, and numbered negative checks for the sandbox (SBX-01 to SBX-13), the bridge (BRG), imports (IMP), assets (AST) and migrations (MIG). The POC's 13 sandbox checks were never listed in this repository, so SBX-01 to SBX-13 are reconstructed from `RUN-01` and the POC's design, and say so. Executable migrations stay disabled (`SEC-01`). The [M1 roadmap](roadmap/m1-runtime-and-data.md) schedules every check, [`SEC-05`](spec/security.md) links the threat model, and [what worked](lessons/what-worked.md) points to the reconstructed list.
 
 ## 2026-10-17
