@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-19
+
+* **Creation**: The [threat model](spec/threat-model.md) (`SEC-05`, [issue 55](https://github.com/suredo/Tessera/issues/55)): what Tessera protects, who is untrusted, each trust boundary with its requirements and the milestone that tests it, what M1 covers and the limits it leaves open, and numbered negative checks for the sandbox (SBX-01 to SBX-13), the bridge (BRG), imports (IMP), assets (AST) and migrations (MIG). The POC's 13 sandbox checks were never listed in this repository, so SBX-01 to SBX-13 are reconstructed from `RUN-01` and the POC's design, and say so. Executable migrations stay disabled (`SEC-01`). The [M1 roadmap](roadmap/m1-runtime-and-data.md) schedules every check, [`SEC-05`](spec/security.md) links the threat model, and [what worked](lessons/what-worked.md) points to the reconstructed list.
+
 ## 2026-10-17
 
 * **Creation**: The [CI workflow](code/ci/workflow.md) code doc, so the coverage report counts CI's evidence for `ENG-02` and `TEST-01`: `.github/workflows/ci.yml` names it in a `# Docs:` comment, and `scripts/test/ci-workflow.test.ts` checks that the workflow runs on every change, runs each check, keeps one Windows job and gives no job a secret. CI's Windows job now runs the OKF check's tests too. The [web package](code/web/package.md) implements `RUN-06`: Chrome and Edge are the supported browsers, and its browser test names it. The [OKF check](code/scripts/okf-check.md) reads `Docs:` comments in `.github/workflows/`, and checks the frontmatter of reports in `evals/reports/` (type `Evaluation Report`, with `tags`), which no check read before, as Codex's review of [pull request 42](https://github.com/suredo/Tessera/pull/42) found; the [documentation practice](practices/documentation.md) says so. These close the M0 report's tooling items.

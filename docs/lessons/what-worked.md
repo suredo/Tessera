@@ -4,7 +4,7 @@ title: "What worked: keep these"
 description: "The designs and practices from the POC that Tessera keeps."
 tags: [lessons, what-worked]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:25:05Z }
 ---
 # What worked: keep these
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
 | --- | --- | --- |
 | Core idea | Generated code, not templates, can make useful tools from everyday requests: a study planner with enforced scheduling, notes to flashcards, a drawing tool, a task board, a converter, an event planner | Live runs on Codex and Claude |
 | Ownership | **The host owns data, permissions, versions and lifecycle; generated code only presents.** Every safety fix was possible because of this split | All evaluations |
-| Sandbox | Opaque-origin child frame, opposite-loopback wrapper, strict CSP and MessageChannel bridge. Passed 13/13 boundary checks every time it was tested; network probes never reached the server | POC boundary evaluations, repeated after each runtime change |
+| Sandbox | Opaque-origin child frame, opposite-loopback wrapper, strict CSP and MessageChannel bridge. Passed 13/13 boundary checks every time it was tested; network probes never reached the server | POC boundary evaluations, repeated after each runtime change. The list itself did not come across; the [threat model](../spec/threat-model.md) reconstructs it as SBX-01 to SBX-13 |
 | Data safety | Atomic, revision-checked patch batches with stable IDs; stale changes rejected; AI changes never replace whole objects | 250-operation stress test |
 | Versions | Immutable, hashed tool versions; staging and rollback; undo that refuses to overwrite newer work | Many live runs |
 | Behavior checks | Host-driven checks with synthetic data before activation (study suite, flow suite), with failures sent to repair. They turned "the model says it works" into "the host saw it work" | Study and flow gates live |
