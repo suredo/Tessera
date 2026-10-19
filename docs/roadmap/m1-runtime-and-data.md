@@ -4,7 +4,7 @@ title: "M1: Runtime and data core"
 description: "The sandboxed runtime, data model, storage, assets and host app shell, with no model calls."
 tags: [roadmap, runtime-and-data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:21:34Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:25:05Z }
 ---
 # M1: Runtime and data core (size L, no model calls)
 
@@ -26,9 +26,14 @@ This is the largest milestone. Split it into pull requests by area (storage and 
 | Host app shell around a hand-written test tool: main screen, empty state, workspaces, saved-tools library with Continue and Use again, versions with restore, undo, trash, export and import screens; host accessibility checked in CI | APP-01, APP-02, APP-03, APP-04, APP-05, APP-06, APP-08, APP-11, DATA-07, UX-07 |
 | Launcher (start, free port, single instance, open browser); server bound to 127.0.0.1 with Host-header and same-origin checks on every route | PLAT-02, SEC-03 |
 | Threat model and negative runtime/import/migration boundary tests. Executable migrations stay disabled until isolation is demonstrated; declarative migrations may be used first | SEC-01, SEC-05 |
+| Sandbox boundary checks: the POC's 13, reconstructed in the [threat model](../spec/threat-model.md), in Playwright | SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX-06, SBX-07, SBX-08, SBX-09, SBX-10, SBX-11, SBX-12, SBX-13 |
+| Bridge boundary checks | BRG-01, BRG-02, BRG-03, BRG-04, BRG-05, BRG-06, BRG-07 |
+| Import boundary checks | IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07 |
+| Asset boundary checks | AST-01, AST-02, AST-03, AST-04, AST-05, AST-06 |
+| Migration boundary checks | MIG-01, MIG-02, MIG-03, MIG-04, MIG-05, MIG-06 |
 
 **Exit criteria:**
-- The POC's 13 boundary checks are ported to Playwright and pass.
+- The POC's 13 boundary checks (SBX-01 to SBX-13, reconstructed in the [threat model](../spec/threat-model.md)) are ported to Playwright and pass.
 - The 250-operation patch stress test is ported and passes.
 - A chat-style patch planned before an in-tool edit to a different record still applies; one that touches the same record is rejected with a plain message.
 - A hand-written tool shows an image asset through a `blob:` URL under the strict CSP. The asset survives a restart and an export/import round trip, and is removed only after nothing references it. Replacing it with a cropped copy, running cleanup, restarting and then undoing the crop brings the original back; once that undo entry is discarded, cleanup removes the original.
