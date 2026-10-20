@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-20
+
+* **Update**: The [runtime package](code/runtime/package.md) doc says a message sent while a tool leaves its page, before the host hears `restarted`, is lost, and its SBX-07 browser test now waits for `restarted` and the new page's hello before counting again. A fixed 1.5 s pause raced the wrapper's 1 s hello grace and failed on CI's Windows runner at 320 px, on `main` and on every pull request that merged it.
+
 ## 2026-10-19
 
 * **Update**: After Codex's review of [pull request 63](https://github.com/suredo/Tessera/pull/63), stored JSON (a workspace's data, a tool version's data schema and defaults) is kept exactly or refused whole: the [contracts package](code/contracts/package.md)'s new `jsonValueSchema` and `jsonObjectSchema` refuse an object with a `__proto__` key at any depth, which zod's own JSON schemas silently dropped while the save succeeded, and the JSON Schema refuses it too. The [workspaces](code/server/workspaces.md) doc says so.
