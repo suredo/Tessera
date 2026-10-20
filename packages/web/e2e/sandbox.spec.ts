@@ -180,11 +180,16 @@ test("mounts a tool behind the wrapper and talks to it only through the bridge (
 type Leave = { by: "assigning" | "reloading" | "link" | "refresh"; to?: string };
 type Outcome = { messages: unknown[]; events: string[]; frameText: string | undefined };
 
-// Mounts the wanderer, asks it to count, to leave its page, then to count again.
-async function leavePage(page: Page, leave: Leave): Promise<Outcome> {
+// Mounts the wanderer, asks it to count, to leave its page, then to count again. A tool that
+// leaves for a page it may not load is started again, and only once the host hears "restarted" and
+// the new page says hello can a message reach it: one sent before goes to the page that left, and
+// the host sends what it needs again (docs/code/runtime/package.md). So when `restarts`, the second
+// count waits for both; a fixed pause raced the wrapper's 1 s hello grace on slow machines.
+async function leavePage(page: Page, leave: Leave, restarts = false): Promise<Outcome> {
   await page.goto(`${server.url}/`);
   await page.waitForFunction(() => "mountTool" in window);
-  const { messages, events } = await page.evaluate(async (leave) => {
+  const args = { leave, restarts };
+  const { messages, events } = await page.evaluate(async ({ leave, restarts }) => {
     type Mount = (
       container: HTMLElement,
       mountId: string,
@@ -200,18 +205,23 @@ async function leavePage(page: Page, leave: Leave): Promise<Outcome> {
     tool.onMessage((message) => messages.push(message));
     tool.onEvent((event) => events.push(event));
     const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-    const said = async (count: number) => {
-      for (let i = 0; i < 100 && messages.length < count; i += 1) await settle(50);
+    const until = async (done: () => boolean) => {
+      for (let i = 0; i < 100 && !done(); i += 1) await settle(50);
     };
+    const said = (count: number) => until(() => messages.length >= count);
     await said(1);
     tool.send("count");
     await said(2);
     tool.send(leave);
     await settle(1500);
+    if (restarts) {
+      await until(() => events.length > 0);
+      await said(3);
+    }
     tool.send("count");
     await said(4);
     return { messages, events };
-  }, leave);
+  }, args);
   const wrapper = page.frames().find((f) => f.url().includes("/runtime/wrapper"));
   const frameText = await wrapper?.locator("iframe").contentFrame().locator("body").innerText();
   return { messages, events, frameText };
@@ -248,7 +258,7 @@ test("SBX-07: starts a tool again when it leaves for a page it may not load", as
   ];
   probeHits = 0;
   for (const leave of leaves) {
-    const { messages, events, frameText } = await leavePage(page, leave);
+    const { messages, events, frameText } = await leavePage(page, leave, true);
     // A fresh run of the tool, on a fresh port; the old page never got one.
     const [first, , again] = messages as { run: string }[];
     expect(again?.run, leave.to).not.toBe(first?.run);
