@@ -5,6 +5,7 @@ export * from "./launcher/index.ts";
 export * from "./patches/index.ts";
 export * from "./platform/index.ts";
 export * from "./providers/index.ts";
+export * from "./runtime/index.ts";
 export * from "./storage/index.ts";
 export * from "./versions/index.ts";
 export * from "./workspaces/index.ts";

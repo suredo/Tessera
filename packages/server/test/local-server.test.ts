@@ -63,6 +63,11 @@ describe("the request guard (SEC-03)", () => {
       false,
     );
     expect(verdict("/runtime/w", frame).ok).toBe(false);
+    // A tool navigating its own frame sends no referrer: "No Content" keeps the tool in place (SBX-07).
+    expect(verdict("/runtime/w", { ...frame, "sec-fetch-site": "cross-site" })).toMatchObject({
+      ok: false,
+      status: 204,
+    });
     expect(
       verdict("/runtime/w", { host, "sec-fetch-dest": "document", referer: `${app}/` }).ok,
     ).toBe(false);
