@@ -1,27 +1,17 @@
 // Docs: docs/code/server/launcher.md
 // Starts Tessera from Tessera.cmd or `node packages/server/src/launcher/main.ts` (PLAT-02), and
 // stops it cleanly on Ctrl+C or when its window closes.
-import os from "node:os";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { chooseDataFolder, syncedFolderOf } from "../storage/index.ts";
 import { launch, openInBrowser } from "./launcher.ts";
 
-// Where the data folder is until the storage work settles it (PLAT-04). TESSERA_DATA_DIR chooses
-// another one, as development and tests must (ENG-19).
-function dataFolder(): string {
-  const chosen = process.env["TESSERA_DATA_DIR"];
-  if (chosen) return path.resolve(chosen);
-  if (process.platform === "win32") {
-    return path.join(
-      process.env["LOCALAPPDATA"] ?? path.join(os.homedir(), "AppData", "Local"),
-      "Tessera",
-    );
-  }
-  if (process.platform === "darwin")
-    return path.join(os.homedir(), "Library", "Application Support", "Tessera");
-  return path.join(
-    process.env["XDG_DATA_HOME"] ?? path.join(os.homedir(), ".local", "share"),
-    "tessera",
+// The data folder (PLAT-04); TESSERA_DATA_DIR chooses another one, as development and tests must
+// (ENG-19).
+const dataDir = chooseDataFolder();
+const syncedBy = syncedFolderOf(dataDir);
+if (syncedBy !== undefined) {
+  console.warn(
+    `Your data folder, ${dataDir}, is synced by ${syncedBy}. Syncing can damage Tessera's data while it is being saved; choose a folder that isn't synced.`,
   );
 }
 
@@ -36,7 +26,7 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"] as const) {
 }
 
 const launched = await launch({
-  dataDir: dataFolder(),
+  dataDir,
   webRoot: fileURLToPath(new URL("../../../web/dist", import.meta.url)),
   // Tests start the launcher without a browser.
   openBrowser: process.env["TESSERA_OPEN_BROWSER"] === "0" ? async () => {} : openInBrowser,

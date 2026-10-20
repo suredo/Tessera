@@ -3,6 +3,7 @@ import { artifactSchema } from "./artifact.ts";
 import { intentSchema } from "./intent.ts";
 import { ledgerEntrySchema, requestLogEntrySchema } from "./ledger.ts";
 import { patchBatchSchema } from "./patch.ts";
+import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./workspace.ts";
 
 // Every contract whose JSON Schema leaves the process: the CLI's --json-schema, evaluations,
 // stored records. Add a contract here and run `pnpm contracts:schemas` (CON-01).
@@ -12,6 +13,9 @@ export const contracts = {
   ledgerEntry: ledgerEntrySchema,
   patchBatch: patchBatchSchema,
   requestLogEntry: requestLogEntrySchema,
+  savedTool: savedToolSchema,
+  workspace: workspaceSchema,
+  workspaceVersion: workspaceVersionSchema,
 } as const;
 
 export type ContractName = keyof typeof contracts;

@@ -36,24 +36,26 @@
           "maximum": 9007199254740991
         },
         "schema": {
+          "description": "The JSON Schema of the tool's data (DATA-03).",
           "type": "object",
           "propertyNames": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^(?!__proto__$)"
           },
           "additionalProperties": {
             "$ref": "#/definitions/__schema0"
-          },
-          "description": "The JSON Schema of the tool's data (DATA-03)."
+          }
         },
         "defaults": {
+          "description": "Reusable defaults, never session entries or examples (DATA-03, DATA-07).",
           "type": "object",
           "propertyNames": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^(?!__proto__$)"
           },
           "additionalProperties": {
-            "$ref": "#/definitions/__schema1"
-          },
-          "description": "Reusable defaults, never session entries or examples (DATA-03, DATA-07)."
+            "$ref": "#/definitions/__schema0"
+          }
         }
       },
       "required": [
@@ -153,41 +155,11 @@
         {
           "type": "object",
           "propertyNames": {
-            "type": "string"
+            "type": "string",
+            "pattern": "^(?!__proto__$)"
           },
           "additionalProperties": {
             "$ref": "#/definitions/__schema0"
-          }
-        }
-      ]
-    },
-    "__schema1": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/__schema1"
-          }
-        },
-        {
-          "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
-          "additionalProperties": {
-            "$ref": "#/definitions/__schema1"
           }
         }
       ]

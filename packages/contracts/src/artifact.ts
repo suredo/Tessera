@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonObjectSchema } from "./json.ts";
 
 // A tool version, the artifact (CON-04, DATA-04): everything that has to change together when a
 // tool changes. It is immutable and named by the hash of its canonical JSON. Data, workspaces and
@@ -18,12 +19,10 @@ export const artifactSchema = z
     data: z
       .strictObject({
         schemaVersion: z.int().min(1),
-        schema: z
-          .record(z.string(), z.json())
-          .describe("The JSON Schema of the tool's data (DATA-03)."),
-        defaults: z
-          .record(z.string(), z.json())
-          .describe("Reusable defaults, never session entries or examples (DATA-03, DATA-07)."),
+        schema: jsonObjectSchema.describe("The JSON Schema of the tool's data (DATA-03)."),
+        defaults: jsonObjectSchema.describe(
+          "Reusable defaults, never session entries or examples (DATA-03, DATA-07).",
+        ),
       })
       .describe("The tool's declared data shape and reusable defaults (DATA-03)."),
     capabilities: z

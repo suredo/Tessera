@@ -8,3 +8,4 @@ export * from "./providers/index.ts";
 export * from "./runtime/index.ts";
 export * from "./storage/index.ts";
 export * from "./versions/index.ts";
+export * from "./workspaces/index.ts";

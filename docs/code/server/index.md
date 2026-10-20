@@ -5,6 +5,7 @@
 * [Patch engine](patches.md) - Applies a batch of changes to a tool's data in memory: add, replace and remove on stable IDs, resolved one at a time, all or nothing, refused if a record it touches changed after it was planned, and within the data limit.
 * [Platform helpers](platform.md) - Paths and starting other programs, the same on Windows, macOS and Linux: absolute paths, no shell, and no Windows batch files.
 * [Provider adapters](providers.md) - The one interface every model connection implements, and the scripted provider that answers from a script chosen by test configuration, never by the request's words.
-* [Storage](storage.md) - Tessera's SQLite database through Node's built-in node:sqlite: opening it, rows checked by their contracts, transactions, and numbered migrations.
+* [Storage](storage.md) - The user data folder and Tessera's SQLite database in it, through Node's built-in node:sqlite: rows checked by their contracts, transactions, numbered migrations and the backup before migrating.
 * [Tool versions](versions.md) - Immutable tool versions stored once under the SHA-256 of their canonical JSON, checked against the artifact contract on the way in and read back as current, upgraded or plainly incompatible.
 * [Runtime routes](runtime-routes.md) - The local server's runtime documents on the opposite loopback name: the wrapper with a nonce-bound script, and a tool's document sandboxed under the strict CSP.
+* [Workspaces and saved tools](workspaces.md) - Workspaces, their version history and data, and the saved-tools library, each change committed to the data folder's database before the call returns.

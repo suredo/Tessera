@@ -11,6 +11,7 @@ export {
   type ArtifactReading,
   type ArtifactUpgrades,
 } from "./artifact.ts";
+export { jsonObjectSchema, jsonValueSchema, RESERVED_JSON_KEY, type JsonValue } from "./json.ts";
 export { INTENT_KINDS, intentSchema, type Intent } from "./intent.ts";
 export {
   contracts,
@@ -57,3 +58,11 @@ export {
   UNITLESS_NAMES,
   UNITLESS_SUFFIXES,
 } from "./units.ts";
+export {
+  savedToolSchema,
+  workspaceSchema,
+  workspaceVersionSchema,
+  type SavedTool,
+  type Workspace,
+  type WorkspaceVersion,
+} from "./workspace.ts";

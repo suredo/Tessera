@@ -4,12 +4,12 @@ import http from "node:http";
 import path from "node:path";
 import { startLocalServer, type LocalServer } from "../http/index.ts";
 import { findExecutable, runProcess } from "../platform/index.ts";
-import { tryLockFile } from "../storage/index.ts";
+import { openDataFolder, tryLockFile, type Clock, type DataFolder } from "../storage/index.ts";
 
 // Starting Tessera (PLAT-02): one copy per data folder, on a free port, opened in the browser,
 // and stopped cleanly. The copy that runs holds an exclusive lock on a file in the data folder for
-// as long as it runs, and writes its address and a random instance ID, which its own API confirms,
-// beside it.
+// as long as it runs, opens the database there (PLAT-04), and writes its address and a random
+// instance ID, which its own API confirms, beside it.
 
 /** Held by the copy that runs; the system releases it if that copy is killed. */
 const LOCK_FILE = "tessera.lock";
@@ -28,10 +28,13 @@ export type LaunchOptions = {
   openBrowser?: (url: string) => Promise<void>;
   /** How long to wait for a copy that holds the lock to answer; 10 seconds unless a test passes its own. */
   waitMs?: number;
+  /** What time it is; tests pass a clock they can move (DATA-09). */
+  now?: Clock;
 };
 
 export type Launched = { url: string; browserOpened: boolean } & (
-  { status: "started"; stop(): Promise<void> } | { status: "already-running" }
+  | { status: "started"; dataFolder: DataFolder; stop(): Promise<void> }
+  | { status: "already-running" }
 );
 
 type Address = { url: string; instanceId: string };
@@ -124,9 +127,12 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
   // What /api/instance answers: nothing until this copy has published its address.
   let published = "";
   let server: LocalServer | undefined;
+  let dataFolder: DataFolder | undefined;
   try {
     // This copy holds the lock, so any address left in the folder is from one that was killed.
     fs.rmSync(addressPath, { force: true });
+    // Only the lock's holder opens the database, so a second copy never migrates it.
+    dataFolder = await openDataFolder(options.dataDir, { now: options.now });
     server = await startLocalServer({
       port: options.port,
       webRoot: options.webRoot,
@@ -139,20 +145,31 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
     });
     published = JSON.stringify({ url: server.url, instanceId });
     fs.writeFileSync(addressPath, published);
+    // A successful start: backups made before earlier migrations are no longer needed (ENG-18).
+    dataFolder.started();
   } catch (error) {
     // A copy that fails to start leaves nothing running: its server closes before the lock goes,
     // so the next launch never takes the lock while this one still listens.
     await server?.close().catch(() => {});
+    dataFolder?.close();
     lock.release();
     throw error;
   }
   const running = server;
+  const folder = dataFolder;
   let stopping: Promise<void> | undefined;
   const stop = () =>
     (stopping ??= (async () => {
       fs.rmSync(addressPath, { force: true });
       await running.close();
+      folder.close();
       lock.release();
     })());
-  return { status: "started", url: running.url, browserOpened: await opened(running.url), stop };
+  return {
+    status: "started",
+    url: running.url,
+    browserOpened: await opened(running.url),
+    dataFolder: folder,
+    stop,
+  };
 }
