@@ -9,3 +9,4 @@
 * [Tool versions](versions.md) - Immutable tool versions stored once under the SHA-256 of their canonical JSON, checked against the artifact contract on the way in and read back as current, upgraded or plainly incompatible.
 * [Runtime routes](runtime-routes.md) - The local server's runtime documents on the opposite loopback name: the wrapper with a nonce-bound script, and a tool's document sandboxed under the strict CSP.
 * [Workspaces and saved tools](workspaces.md) - Workspaces, their version history and data, and the saved-tools library, each change committed to the data folder's database before the call returns.
+* [Trash](trash.md) - Deleted workspaces and saved tools wait in the trash, restorable for 30 days, then are removed for good; emptying it early names what it removes and is confirmed against that list.

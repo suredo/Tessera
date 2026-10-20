@@ -5,6 +5,7 @@ import path from "node:path";
 import { startLocalServer, type LocalServer } from "../http/index.ts";
 import { findExecutable, runProcess } from "../platform/index.ts";
 import { openDataFolder, tryLockFile, type Clock, type DataFolder } from "../storage/index.ts";
+import { removeExpired } from "../trash/index.ts";
 
 // Starting Tessera (PLAT-02): one copy per data folder, on a free port, opened in the browser,
 // and stopped cleanly. The copy that runs holds an exclusive lock on a file in the data folder for
@@ -18,6 +19,8 @@ const ADDRESS_FILE = "tessera.address";
 const INSTANCE_ROUTE = "/api/instance";
 const ANSWER_TIMEOUT_MS = 2000;
 const POLL_MS = 100;
+/** How often a running copy removes what has been in the trash for 30 days (DATA-09). */
+const TRASH_SWEEP_MS = 60 * 60 * 1000;
 
 export type LaunchOptions = {
   /** The data folder; tests and development pass their own (ENG-19). */
@@ -133,6 +136,8 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
     fs.rmSync(addressPath, { force: true });
     // Only the lock's holder opens the database, so a second copy never migrates it.
     dataFolder = await openDataFolder(options.dataDir, { now: options.now });
+    // What has been in the trash for 30 days goes at every start, and hourly while running.
+    removeExpired(dataFolder);
     server = await startLocalServer({
       port: options.port,
       webRoot: options.webRoot,
@@ -157,9 +162,17 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
   }
   const running = server;
   const folder = dataFolder;
+  const sweep = setInterval(() => {
+    try {
+      removeExpired(folder);
+    } catch {
+      // Such as a busy database: the next sweep, or the next start, tries again.
+    }
+  }, TRASH_SWEEP_MS).unref();
   let stopping: Promise<void> | undefined;
   const stop = () =>
     (stopping ??= (async () => {
+      clearInterval(sweep);
       fs.rmSync(addressPath, { force: true });
       await running.close();
       folder.close();

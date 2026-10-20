@@ -3,6 +3,7 @@ import { artifactSchema } from "./artifact.ts";
 import { intentSchema } from "./intent.ts";
 import { ledgerEntrySchema, requestLogEntrySchema } from "./ledger.ts";
 import { patchBatchSchema } from "./patch.ts";
+import { trashEntrySchema, trashSchema } from "./trash.ts";
 import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./workspace.ts";
 
 // Every contract whose JSON Schema leaves the process: the CLI's --json-schema, evaluations,
@@ -14,6 +15,8 @@ export const contracts = {
   patchBatch: patchBatchSchema,
   requestLogEntry: requestLogEntrySchema,
   savedTool: savedToolSchema,
+  trash: trashSchema,
+  trashEntry: trashEntrySchema,
   workspace: workspaceSchema,
   workspaceVersion: workspaceVersionSchema,
 } as const;

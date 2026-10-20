@@ -7,12 +7,12 @@ implements: [DATA-01, PLAT-04, ENG-18, ENG-19, CON-01, CON-04, PLAT-01]
 tests: [../../../packages/server/test/storage.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, storage, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:33:07Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
 ---
 
 # Purpose
 
-The one way the local server reads and writes its SQLite database (`DATA-01`), chosen in [ADR 0003](../../decisions/adr/0003-sqlite-access-layer.md): Node's built-in `node:sqlite`, plain SQL, rows checked against the zod contracts (`CON-01`), and numbered migration files (`ENG-18`). The database lives in the user data folder with assets, exports, logs and the backups made before migrating (`PLAT-04`). Tessera's own schema is the numbered migrations in `src/storage/schema/`: `0001-tool-versions.sql` holds [tool versions](versions.md), and `0002-workspaces.sql` holds [workspaces and saved tools](workspaces.md). The trash and the rest of the data model come with M1's data issues.
+The one way the local server reads and writes its SQLite database (`DATA-01`), chosen in [ADR 0003](../../decisions/adr/0003-sqlite-access-layer.md): Node's built-in `node:sqlite`, plain SQL, rows checked against the zod contracts (`CON-01`), and numbered migration files (`ENG-18`). The database lives in the user data folder with assets, exports, logs and the backups made before migrating (`PLAT-04`). Tessera's own schema is the numbered migrations in `src/storage/schema/`: `0001-tool-versions.sql` holds [tool versions](versions.md), `0002-workspaces.sql` holds [workspaces and saved tools](workspaces.md), and `0003-trash.sql` marks what is in the [trash](trash.md). The rest of the data model comes with M1's data issues.
 
 # Entry points
 
@@ -25,7 +25,7 @@ The one way the local server reads and writes its SQLite database (`DATA-01`), c
 
 - **One data folder holds everything** (`PLAT-04`): `tessera.db`, `assets/`, `exports/`, `logs/` and `backups/`, with the launcher's `tessera.lock` and `tessera.address`. `TESSERA_DATA_DIR` chooses it; otherwise it is `%LOCALAPPDATA%\Tessera` on Windows, `~/Library/Application Support/Tessera` on macOS and `$XDG_DATA_HOME/tessera` (or `~/.local/share/tessera`) elsewhere: per-computer folders that cloud services don't sync (L-02). A folder inside OneDrive, Dropbox, Google Drive or iCloud Drive is named, so the launcher can warn.
 - **Existing data is backed up before it is migrated** (`ENG-18`). When the database has data from an earlier schema, `openDataFolder` first copies it with SQLite's online backup to `backups/tessera-schema-<from>-<time>.db`. A backup stays until the next successful start, when `started` removes the ones earlier starts made; a start whose migration fails leaves its backup. Files in `backups/` with other names are left alone. A new, empty database has nothing to back up.
-- **Migrations are tested on fixture databases from earlier versions** (`ENG-18`): `test/fixtures/databases/schema-1.sql` is a database as schema 1 left it, with a tool version, and is never edited to match a newer schema.
+- **Migrations are tested on fixture databases from earlier versions** (`ENG-18`): each file in `test/fixtures/databases/` is a database as one schema left it (`schema-1.sql` with a tool version, `schema-2.sql` with a workspace, its data and a saved tool), and is never edited to match a newer schema. A migration that changes existing tables adds the fixture for the schema before it.
 - **Only this module touches the driver.** Nothing else imports `node:sqlite`, so a change of driver stays here (ADR 0003).
 - **Rows are checked when read.** `all` and `get` take the row's zod schema and parse every row, so a query can't hand back a shape its contract doesn't allow.
 - **A transaction is all or nothing.** `transaction` keeps everything its work wrote, or nothing if the work throws or the commit fails (as when a deferred foreign key is checked at commit); either way the connection is free for the next transaction. It rolls back only while SQLite still has the transaction open, so an error after which SQLite rolled back on its own isn't hidden by a second rollback. It starts with `BEGIN IMMEDIATE`, so two writers can't both start and then collide. It can't start inside another transaction.
@@ -36,7 +36,7 @@ The one way the local server reads and writes its SQLite database (`DATA-01`), c
 
 # Depends on / used by
 
-Depends on Node's `node:sqlite`, `fs`, `path` and zod. M1's data layer will use it for workspaces, versions, saved tools, the trash and the ledger.
+Depends on Node's `node:sqlite`, `fs`, `path` and zod. [Tool versions](versions.md), [workspaces and saved tools](workspaces.md) and the [trash](trash.md) use it; the ledger and the rest of M1's data layer will.
 
 # Pitfalls
 

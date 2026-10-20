@@ -13,7 +13,9 @@ import {
   schemaVersion,
   syncedFolderOf,
 } from "../src/storage/index.ts";
+import { listTrash } from "../src/trash/index.ts";
 import { loadVersion } from "../src/versions/index.ts";
+import { getWorkspace, listSavedTools } from "../src/workspaces/index.ts";
 
 // Every data folder is a new temporary one, never the real one (ENG-19).
 const temps: string[] = [];
@@ -103,6 +105,22 @@ describe("migrating real data (ENG-18)", () => {
     expect(schemaVersion(backup)).toBe(1);
     expect(backup.get(count, "SELECT COUNT(*) AS n FROM tool_versions")).toEqual({ n: 1 });
     backup.close();
+  });
+
+  it("ENG-18: migrates a schema 2 database to the trash's schema, keeping its workspaces", async () => {
+    const root = folderFromFixture("schema-2.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated[0]).toBe(3);
+    expect(backups(root)).toHaveLength(1);
+    expect(getWorkspace(folder, "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b")).toMatchObject({
+      title: "Shopping list",
+      currentVersion: FIXTURE_VERSION,
+      data: { items: [{ id: "a", text: "milk" }] },
+      dataRevision: 1,
+    });
+    expect(listSavedTools(folder).map((tool) => tool.name)).toEqual(["Weekly shop"]);
+    expect(listTrash(folder).entries).toEqual([]);
+    folder.close();
   });
 
   it("ENG-18: keeps the backup until the next successful start", async () => {
