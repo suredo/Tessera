@@ -7,7 +7,7 @@ implements: [RUN-01, SEC-05, SBX-06, SBX-07]
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T09:17:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-20T05:15:50Z }
 ---
 
 # Purpose
@@ -36,7 +36,7 @@ Nothing at run time. The server's runtime routes serve its documents, and the ho
 
 # Pitfalls
 
-- **A restarted tool forgets what it held in memory.** The host should send it what it needs again when it hears `restarted`; the lifecycle (#45's next pull request, `RUN-02`) builds on this.
+- **A restarted tool forgets what it held in memory, and misses what was sent while it left.** A message the host sends after the tool leaves its page but before the host hears `restarted` goes to the page that left and is lost, so the host should send what the tool needs again when it hears `restarted`; the lifecycle (#45's next pull request, `RUN-02`) builds on this. Tests wait for `restarted` and the new page's hello before sending to it: a fixed pause raced the wrapper's one-second hello grace on CI's Windows runner.
 - **A slow page may be taken for one that left.** The wrapper waits a second after the frame loads for its hello; a page that takes longer is started again.
 - **The inlined scripts can't import.** Change a protocol name in `src/protocol.ts` and in both scripts, or the test fails.
 - **Node prints an experimental warning** the first time the server strips the scripts' types (`stripTypeScriptTypes`), as it does for `node:sqlite`.

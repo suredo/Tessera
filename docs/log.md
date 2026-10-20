@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-20
+
+* **Update**: The [runtime package](code/runtime/package.md) doc says a message sent while a tool leaves its page, before the host hears `restarted`, is lost, and its SBX-07 browser test now waits for `restarted` and the new page's hello before counting again. A fixed 1.5 s pause raced the wrapper's 1 s hello grace and failed on CI's Windows runner at 320 px, on `main` and on every pull request that merged it.
+
 ## 2026-10-19
 
 * **Creation**: The [runtime package](code/runtime/package.md) and [runtime routes](code/server/runtime-routes.md) code docs ([issue 45](https://github.com/suredo/Tessera/issues/45), first part): a tool runs in a `sandbox="allow-scripts"` frame inside a wrapper on the opposite loopback name, under a strict CSP sent as a header, and talks to the host only through one fresh MessageChannel port bound to its mount's instance (`RUN-01`). The [local server](code/server/local-server.md)'s guard takes the two loopback names from the runtime, so they're defined once.
