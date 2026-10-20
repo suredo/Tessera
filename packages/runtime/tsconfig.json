@@ -1,7 +1,9 @@
 {
+  // The runtime runs in the browser: no Node types, so no Node API can slip into it.
+  // Its tests read files and have their own config, test/tsconfig.json.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"]
   },
-  "include": ["src", "test"]
+  "include": ["src"]
 }

@@ -37,6 +37,13 @@ export {
   type RequestLogEntry,
 } from "./ledger.ts";
 export {
+  patchBatchSchema,
+  recordIdSchema,
+  TOOL_DATA_LIMIT_BYTES,
+  type PatchBatch,
+  type PatchOperation,
+} from "./patch.ts";
+export {
   EFFORTS,
   effortSchema,
   PROVIDER_ERROR_KINDS,
