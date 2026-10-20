@@ -2,6 +2,7 @@ import { z } from "zod";
 import { artifactSchema } from "./artifact.ts";
 import { intentSchema } from "./intent.ts";
 import { ledgerEntrySchema, requestLogEntrySchema } from "./ledger.ts";
+import { patchBatchSchema } from "./patch.ts";
 import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./workspace.ts";
 
 // Every contract whose JSON Schema leaves the process: the CLI's --json-schema, evaluations,
@@ -10,6 +11,7 @@ export const contracts = {
   artifact: artifactSchema,
   intent: intentSchema,
   ledgerEntry: ledgerEntrySchema,
+  patchBatch: patchBatchSchema,
   requestLogEntry: requestLogEntrySchema,
   savedTool: savedToolSchema,
   workspace: workspaceSchema,
