@@ -7,7 +7,7 @@ implements: [DATA-09]
 tests: [../../../packages/server/test/trash.test.ts]
 tags: [code, server, data, trash]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:58:03Z }
 ---
 
 # Purpose
@@ -34,7 +34,7 @@ Makes deleting safe (`DATA-09`, A31): deleting a [workspace or saved tool](works
 
 # Depends on / used by
 
-Depends on the [workspace functions](workspaces.md), [storage](storage.md) and the contracts. The [launcher](launcher.md) sweeps expired entries; export and import (the next part of [issue 48](https://github.com/suredo/Tessera/issues/48)) and the trash screen (#53) build on it.
+Depends on the [workspace functions](workspaces.md), [storage](storage.md) and the contracts. The [launcher](launcher.md) sweeps expired entries; [Export](archives.md) leaves out what is in the trash, and an import never reuses an ID still in it; the trash screen (#53) builds on it.
 
 # Pitfalls
 

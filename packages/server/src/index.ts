@@ -1,5 +1,6 @@
 // @tessera/server: the local server on 127.0.0.1: API, storage and model adapters.
 export const packageName = "@tessera/server";
+export * from "./archives/index.ts";
 export * from "./http/index.ts";
 export * from "./launcher/index.ts";
 export * from "./patches/index.ts";

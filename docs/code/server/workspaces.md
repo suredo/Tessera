@@ -36,7 +36,7 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
 
 # Depends on / used by
 
-Depends on [storage](storage.md), [tool versions](versions.md) (through the foreign key) and the contracts. The [trash](trash.md), export and import ([issue 48](https://github.com/suredo/Tessera/issues/48)), activation and restore (#50) and the host app's screens (#53) build on it.
+Depends on [storage](storage.md), [tool versions](versions.md) (through the foreign key) and the contracts. The [trash](trash.md), [export and import](archives.md), activation and restore (#50) and the host app's screens (#53) build on it.
 
 # Pitfalls
 
