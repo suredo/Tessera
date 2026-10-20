@@ -2,6 +2,7 @@ import { z } from "zod";
 import { artifactSchema } from "./artifact.ts";
 import { intentSchema } from "./intent.ts";
 import { ledgerEntrySchema, requestLogEntrySchema } from "./ledger.ts";
+import { patchBatchSchema } from "./patch.ts";
 
 // Every contract whose JSON Schema leaves the process: the CLI's --json-schema, evaluations,
 // stored records. Add a contract here and run `pnpm contracts:schemas` (CON-01).
@@ -9,6 +10,7 @@ export const contracts = {
   artifact: artifactSchema,
   intent: intentSchema,
   ledgerEntry: ledgerEntrySchema,
+  patchBatch: patchBatchSchema,
   requestLogEntry: requestLogEntrySchema,
 } as const;
 

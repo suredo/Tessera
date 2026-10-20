@@ -2,6 +2,7 @@
 export const packageName = "@tessera/server";
 export * from "./http/index.ts";
 export * from "./launcher/index.ts";
+export * from "./patches/index.ts";
 export * from "./platform/index.ts";
 export * from "./providers/index.ts";
 export * from "./runtime/index.ts";
