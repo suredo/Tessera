@@ -27,7 +27,11 @@
                   "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$"
                 },
                 "additionalProperties": {
-                  "$ref": "#/definitions/__schema0"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema0"
+                    }
+                  ]
                 }
               }
             },
@@ -69,7 +73,11 @@
                   "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$"
                 },
                 "additionalProperties": {
-                  "$ref": "#/definitions/__schema0"
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/__schema0"
+                    }
+                  ]
                 }
               }
             },

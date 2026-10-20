@@ -37,8 +37,14 @@ const noReservedKey = z
   .unknown()
   .refine((value) => !hasReservedKey(value), `"${RESERVED_JSON_KEY}" can't be stored.`);
 
+/**
+ * `schema`, but the whole value is refused first if any object in it, at any depth, has a
+ * "__proto__" key. For a contract whose own keys could otherwise hide one, such as a patch batch.
+ */
+export const refusingReservedKey = <T extends z.ZodType>(schema: T) => noReservedKey.pipe(schema);
+
 /** Any JSON value, refused whole if any object in it has a "__proto__" key. */
-export const jsonValueSchema: z.ZodType<JsonValue> = noReservedKey.pipe(jsonValue);
+export const jsonValueSchema: z.ZodType<JsonValue> = refusingReservedKey(jsonValue);
 
 /** A JSON object, refused whole if any object in it has a "__proto__" key. */
-export const jsonObjectSchema = noReservedKey.pipe(z.record(jsonKey, jsonValue));
+export const jsonObjectSchema = refusingReservedKey(z.record(jsonKey, jsonValue));

@@ -1,8 +1,11 @@
 import { Ajv } from "ajv";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   artifactSchema,
   jsonValueSchema,
+  patchBatchSchema,
+  refusingReservedKey,
   toJsonSchema,
   workspaceSchema,
   type Artifact,
@@ -64,5 +67,19 @@ describe("stored JSON (CON-01, DATA-08)", () => {
     const parsed = workspaceSchema.parse(workspace(data));
     expect(JSON.stringify(parsed.data)).toBe(JSON.stringify(data));
     expect(validateWorkspace(workspace(data))).toBe(true);
+  });
+
+  it("CON-01: is one rule, which any contract can wrap itself in, the patch batch among them", () => {
+    // The batch's own keys are checked as well as its values, wherever the key hides.
+    const strict = refusingReservedKey(z.strictObject({ a: z.number() }));
+    expect(strict.safeParse(JSON.parse('{"a":1}')).success).toBe(true);
+    expect(strict.safeParse(JSON.parse('{"a":1,"__proto__":{}}')).success).toBe(false);
+    expect(strict.safeParse(JSON.parse('[{"a":{"__proto__":1}}]')).success).toBe(false);
+    const add = (record: string) =>
+      JSON.parse(
+        `{"operations":[{"op":"add","collection":"tasks","record":${record}}]}`,
+      ) as unknown;
+    expect(patchBatchSchema.safeParse(add('{"title":"x"}')).success).toBe(true);
+    expect(patchBatchSchema.safeParse(add('{"meta":{"__proto__":1}}')).success).toBe(false);
   });
 });
