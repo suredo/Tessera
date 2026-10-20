@@ -4,7 +4,7 @@ title: "Runtime and sandbox"
 description: "The sandbox, one active runtime, staging before activation, bridge enforcement and the host clock (RUN-01 to RUN-07)."
 tags: [spec, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T09:17:46Z }
 ---
 # Runtime and sandbox (`RUN`)
 
@@ -12,7 +12,7 @@ Port the POC design; it held up in every boundary test.
 
 | ID | Requirement |
 | --- | --- |
-| RUN-01 | **Sandbox.** Generated code runs in an opaque-origin `sandbox="allow-scripts"` child frame inside a wrapper on the opposite loopback host (127.0.0.1 versus localhost). A strict CSP blocks network, storage, workers, nested frames and navigation; images and media load only from local `blob:` URLs made from assets the host handed over (`DATA-11`). The bridge is a fresh MessageChannel bound to the expected frame and instance. |
+| RUN-01 | **Sandbox.** Generated code runs in an opaque-origin `sandbox="allow-scripts"` child frame inside a wrapper on the opposite loopback host (127.0.0.1 versus localhost). A strict CSP blocks network, storage, workers, nested frames from URLs and navigation; a nested `srcdoc` or `javascript:` frame may run, exactly as confined as the tool ([ADR 0004](../decisions/adr/0004-nested-frames-in-the-sandbox.md)); images and media load only from local `blob:` URLs made from assets the host handed over (`DATA-11`). The bridge is a fresh MessageChannel bound to the expected frame and instance. |
 | RUN-02 | **One active runtime.** Exactly one tool executes at a time. Minimized and suspended tools are disposed (frames, channels, timers), and a watchdog recovers from busy loops. |
 | RUN-03 | **Staging before activation.** A candidate first mounts in a hidden verification panel against synthetic data. It is activated against real data only after its checks pass. On failure the previous version is restored. |
 | RUN-04 | **Bridge enforcement.** Every bridge call is checked against the manifest (`CON-03`), the tool's declared capabilities, the current revision and the instance identity. Calls before activation are rejected (`GEN-06`). |

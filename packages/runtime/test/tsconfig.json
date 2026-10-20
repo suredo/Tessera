@@ -1,0 +1,9 @@
+{
+  // The runtime's tests: the browser code they test, plus Node to read its source files.
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": [".", "../src"]
+}
