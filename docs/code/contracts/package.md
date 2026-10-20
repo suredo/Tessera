@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-04, CON-05, GEN-01, CLI-04, OBS-01, DATA-08, DA
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-20T07:40:12Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-20T15:00:06Z }
 ---
 
 # Purpose
@@ -47,7 +47,7 @@ Depends on zod. The server uses it, its provider adapters included, and so does 
 # Pitfalls
 
 - **After changing a contract, run `pnpm contracts:schemas`** and commit the result, or the schema test fails.
-- **zod records drop a `__proto__` key silently,** while the JSON Schema refuses it. The patch contract keeps them agreeing (`CON-01`): its JSON values refuse `__proto__` as a key at any depth, and `patchBatchSchema` refuses a batch holding one before zod parses it, so both validators refuse the same batches and nothing sets a prototype. A new contract carrying free-form JSON across a boundary should do the same; the artifact's `z.json()` data schema and defaults don't yet.
+- **zod records drop a `__proto__` key silently,** while the JSON Schema refuses it. `refusingReservedKey` keeps the two agreeing (`CON-01`): it refuses the whole value before zod parses it if any object in it has that key, at any depth, so both validators refuse the same input and nothing sets a prototype. The stored JSON schemas (an artifact's data schema and defaults, a workspace's data) and the patch batch all use it; a new contract carrying free-form JSON across a boundary should too, through `jsonValueSchema`, `jsonObjectSchema` or `refusingReservedKey` itself, never `z.json()` or a bare `z.record`.
 - **The script format is not in `contracts`,** since it never leaves the process: it has no schema file. Usage reaches `contracts` inside the ledger entry. A canned reply's value is any JSON: its shape is the stage's own contract.
 - **The intent contract is a draft.** The intent spike (#20) and the generation pipeline (M2) may change it. Claude Code's acceptance of the generated schema, including `oneOf`, is checked by the CLI spike (#19).
 - **zod features that only draft 2020-12 can express** (such as tuples written as `prefixItems`) would be written differently or refused by the CLI. Check a new contract's generated file before relying on it.
