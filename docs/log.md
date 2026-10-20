@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-20
+
+* **Update**: The [runtime package](code/runtime/package.md) doc says a message sent while a tool leaves its page, before the host hears `restarted`, is lost, and its SBX-07 browser test now waits for `restarted` and the new page's hello before counting again. A fixed 1.5 s pause raced the wrapper's 1 s hello grace and failed on CI's Windows runner at 320 px, on `main` and on every pull request that merged it.
+
 ## 2026-10-19
 
 * **Update**: After Codex's review of [pull request 67](https://github.com/suredo/Tessera/pull/67), an export always imports: [archives](code/server/archives.md) store an entry uncompressed when deflating would pass the import's compression-ratio guard, which stays as it was, and an export the import would refuse is refused when exporting, with the reason.
