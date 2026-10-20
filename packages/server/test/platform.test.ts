@@ -86,15 +86,31 @@ describe("processes (PLAT-01)", () => {
     expect(result).toMatchObject({ exitCode: 0, stdout: "done\n", timedOut: false });
   });
 
-  it("returns when the program exits, even if a program it started still holds the output", async () => {
-    // The parent exits at once; its child is detached and released but still holds the output.
-    const leavesChild =
-      'const c = require("child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 4000)"], { stdio: "inherit", detached: true }); c.unref(); console.log("parent done");';
-    const started = Date.now();
-    const result = await runProcess(node, ["-e", leavesChild]);
-    expect(Date.now() - started).toBeLessThan(2000);
-    expect(result).toMatchObject({ exitCode: 0, stdout: "parent done\n", timedOut: false });
-  });
+  it(
+    "returns when the program exits, even if a program it started still holds the output",
+    {
+      timeout: 20_000,
+    },
+    async () => {
+      // The parent exits at once; its child is detached and released but still holds the output for
+      // 15 s. Returning within 8 s shows runProcess didn't wait for it, however slowly a loaded
+      // machine starts Node (ENG-20).
+      const leavesChild =
+        'const c = require("child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 15000)"], { stdio: "inherit", detached: true }); c.unref(); console.log("parent done " + c.pid);';
+      const started = Date.now();
+      const result = await runProcess(node, ["-e", leavesChild]);
+      const elapsed = Date.now() - started;
+      const child = Number(/parent done (\d+)/.exec(result.stdout)?.[1]);
+      try {
+        process.kill(child);
+      } catch {
+        // Already gone.
+      }
+      expect(elapsed).toBeLessThan(8000);
+      expect(result).toMatchObject({ exitCode: 0, timedOut: false });
+      expect(result.stdout).toMatch(/^parent done \d+\n$/);
+    },
+  );
 
   it("refuses a relative path and a Windows batch file, saying what to do (L-45)", async () => {
     await expect(runProcess("node", ["-v"])).rejects.toThrow(/full path/);

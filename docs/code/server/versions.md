@@ -28,7 +28,7 @@ Stores every tool version, the artifact, so that restore, undo, Continue and Use
 
 # Depends on / used by
 
-Depends on the [storage](storage.md) module, the artifact contract and Node's `crypto`. The patch engine (#47), activation and restore (#50), the asset store's references (#49) and the app shell (#53) build on it.
+Depends on the [storage](storage.md) module, the artifact contract and Node's `crypto`. Activation and restore (#50), the asset store's references (#49) and the app shell (#53) build on it.
 
 # Pitfalls
 
