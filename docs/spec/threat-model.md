@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T22:03:56Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T22:38:58Z }
 ---
 # Threat model and boundary checks
 
@@ -60,7 +60,7 @@ Its limits, which stay open after M1:
 
 ## How the checks run
 
-- **Browser checks** (SBX, and BRG through a test tool): Playwright in Chrome and Edge, with a probe server that records every request it receives and every connection it accepts, and the local server's requests on both loopback names. The sandbox issue ([#45](https://github.com/suredo/Tessera/issues/45)) builds them, as a shared host for the browser tests (`packages/web/e2e/support/sandbox-host.ts`).
+- **Browser checks** (SBX, and BRG through a test tool): Playwright in Chrome and Edge, with a probe server and the local server, on both loopback names, recording every request and every connection they receive. A request the tool sees fail counts as refused only if its policy reported refusing it, since one that left and failed the destination's CORS rules looks the same from inside the tool. The sandbox issue ([#45](https://github.com/suredo/Tessera/issues/45)) builds them, as a shared host for the browser tests (`packages/web/e2e/support/sandbox-host.ts`).
 - **Server checks** (BRG, IMP, AST, MIG): Node tests in a test data folder (`ENG-19`), with a canary file outside it and tripwires that fail the test on any network connection opened, any request sent on a connection opened before, any process or worker started, or any file touched outside the folders the test allows, judged by where its path really leads through links and junctions, and for a recursive copy by every entry it reaches. The tripwires and the canary are a shared test helper, `packages/server/test/support/tripwires.ts` ([#55](https://github.com/suredo/Tessera/issues/55)). They detect an attempt in code that should never make one; they are not an isolation mechanism (`SEC-01`). They see only calls made through Node's public modules: a file opened before arming, by its descriptor, or an HTTP/2 session opened before arming is not checked.
 - **Each check is a test whose name starts with its ID,** in the pull request that builds its path, so the coverage report shows which checks pass and which are still missing.
 

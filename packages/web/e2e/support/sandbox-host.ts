@@ -1,7 +1,7 @@
 import diagnostics from "node:diagnostics_channel";
 import fs from "node:fs";
 import http, { type IncomingMessage } from "node:http";
-import type { AddressInfo } from "node:net";
+import type { AddressInfo, Socket } from "node:net";
 import { stripTypeScriptTypes } from "node:module";
 import os from "node:os";
 import path from "node:path";
@@ -33,6 +33,8 @@ export type SandboxHost = {
   probeUrl: string;
   /** Requests the local server received, on either loopback name, since the last reset. */
   hostRequests: string[];
+  /** Connections the local server accepted since the last reset, whether or not a request came. */
+  hostConnections: () => number;
   /** Requests the probe server received since the last reset. */
   probeRequests: string[];
   /**
@@ -76,30 +78,39 @@ export async function startSandboxHost(
     routes: runtimeRoutes((id) => tools[id]),
   });
 
-  // Node announces every request its HTTP servers receive; keep this server's.
+  // Node announces every request its HTTP servers receive, and every connection its servers
+  // accept; keep this server's.
   const hostRequests: string[] = [];
+  let hostConnections = 0;
   const record = (message: unknown) => {
     const request = (message as { request: IncomingMessage }).request;
     if (request.socket.localPort === server.port) {
       hostRequests.push(`${request.method} ${request.headers.host} ${request.url}`);
     }
   };
+  const count = (message: unknown) => {
+    if ((message as { socket: Socket }).socket.localPort === server.port) hostConnections += 1;
+  };
   diagnostics.subscribe("http.server.request.start", record);
+  diagnostics.subscribe("net.server.socket", count);
 
   return {
     url: server.url,
     port: server.port,
     probeUrl: `http://127.0.0.1:${(probe.address() as AddressInfo).port}/`,
     hostRequests,
+    hostConnections: () => hostConnections,
     probeRequests,
     probeConnections: () => connections,
     reset: () => {
       hostRequests.length = 0;
+      hostConnections = 0;
       probeRequests.length = 0;
       connections = 0;
     },
     close: async () => {
       diagnostics.unsubscribe("http.server.request.start", record);
+      diagnostics.unsubscribe("net.server.socket", count);
       await server.close();
       probe.closeAllConnections();
       await new Promise((resolve) => probe.close(resolve));

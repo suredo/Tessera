@@ -23,6 +23,19 @@ const loads = (element, ok = "load") => new Promise((done) => {
   element.addEventListener("error", () => done("refused"));
 });
 const add = (element) => { document.body.append(element); return element; };
+// Every refusal the tool's policies report, so a check can tell a refusal by policy from a request
+// that left and failed for another reason, such as the destination's CORS rules.
+const violations = [];
+addEventListener("securitypolicyviolation", (event) => violations.push(event));
+const byPolicy = async (url, directive, run) => {
+  const before = violations.length;
+  const result = await run();
+  await wait(100);
+  const origin = new URL(url).origin;
+  const reported = violations.slice(before).some((event) =>
+    event.effectiveDirective === directive && event.blockedURI.startsWith(origin));
+  return result === "refused" && reported ? "refused by policy" : result + (reported ? "" : ", no policy report");
+};
 
 const checks = {
   // SBX-01: fetch and XMLHttpRequest, also after the tool adds a looser policy of its own.
@@ -30,13 +43,15 @@ const checks = {
     const found = {};
     const tryAll = async (suffix) => {
       for (const [name, url] of Object.entries(targets)) {
-        found["fetch " + name + suffix] = await within(fetch(url).then(() => "loaded", () => "refused"));
-        found["XMLHttpRequest " + name + suffix] = await within(new Promise((done) => {
-          const request = new XMLHttpRequest();
-          request.onload = () => done("loaded");
-          request.onerror = () => done("refused");
-          try { request.open("GET", url); request.send(); } catch { done("refused"); }
-        }));
+        found["fetch " + name + suffix] = await byPolicy(url, "connect-src", () =>
+          within(fetch(url).then(() => "loaded", () => "refused")));
+        found["XMLHttpRequest " + name + suffix] = await byPolicy(url, "connect-src", () =>
+          within(new Promise((done) => {
+            const request = new XMLHttpRequest();
+            request.onload = () => done("loaded");
+            request.onerror = () => done("refused");
+            try { request.open("GET", url); request.send(); } catch { done("refused"); }
+          })));
       }
     };
     await tryAll("");
@@ -171,11 +186,12 @@ async function probe(page: Page, check: string, payload: object = {}) {
   return found ?? {};
 }
 
-// Nothing the tool did reached either server.
+// Nothing the tool did reached either server: no request, and no connection either.
 function nothingArrived() {
   expect(host.probeRequests).toEqual([]);
   expect(host.probeConnections()).toBe(0);
   expect(host.hostRequests).toEqual([]);
+  expect(host.hostConnections()).toBe(0);
 }
 
 const runtimeOrigin = () => `http://localhost:${host.port}`;
@@ -192,7 +208,11 @@ test("SBX-01: fetch and XMLHttpRequest fail and send nothing, even after the too
     },
   });
   expect(Object.keys(found)).toHaveLength(16);
-  for (const [attempt, result] of Object.entries(found)) expect(result, attempt).toBe("refused");
+  // Refused by the policy itself: a request that left and failed the destination's CORS rules
+  // would also fail in the tool, but with no policy report.
+  for (const [attempt, result] of Object.entries(found)) {
+    expect(result, attempt).toBe("refused by policy");
+  }
   nothingArrived();
 
   // Sent straight to the server with the tool's origin, the API refuses it too (SEC-03).
@@ -212,6 +232,9 @@ test("SBX-01: fetch and XMLHttpRequest fail and send nothing, even after the too
     request.on("error", reject);
   });
   expect(status).toBe(403);
+  // The counters see what arrives: that request was one connection and one request.
+  expect(host.hostConnections()).toBe(1);
+  expect(host.hostRequests).toHaveLength(1);
 });
 
 test("SBX-02: WebSocket, EventSource and sendBeacon reach nothing", async ({ page }) => {
