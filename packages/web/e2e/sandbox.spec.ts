@@ -1,25 +1,11 @@
-import fs from "node:fs";
-import http from "node:http";
-import type { AddressInfo } from "node:net";
-import { stripTypeScriptTypes } from "node:module";
-import os from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
-import { startLocalServer, type LocalServer } from "../../server/src/http/index.ts";
-import { runtimeRoutes } from "../../server/src/runtime/index.ts";
+import { ask, startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 
 // The sandboxed runtime in a real browser (RUN-01, TEST-06): the local server with its guard, the
-// wrapper on the opposite loopback name and the tool in its sandboxed frame. A small test host page
-// stands in for the host app, using the runtime's own mountTool.
-const runtimeSrc = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "runtime",
-  "src",
-);
+// wrapper on the opposite loopback name and the tool in its sandboxed frame, through the shared
+// sandbox host and its probe server. Frame navigations to a blocked address still make Chrome and
+// Edge connect to it without sending a request (issue 72), so these checks count requests.
 // What a nested document tries (SBX-06): each attempt should fail, as it does in the tool itself.
 const NESTED_CHECKS = `(async () => {
   const probe = PROBE;
@@ -112,41 +98,16 @@ tessera.onMessage(({ probe, how }) => {
   runaway: { html: "<p>Runaway</p>", css: "", js: 'location.href = "about:blank";' },
 };
 
-let server: LocalServer;
-let webRoot: string;
-// Stands in for the outside world: nothing a tool does may reach it.
-let probe: http.Server;
-let probeHits = 0;
+let host: SandboxHost;
 test.beforeAll(async () => {
-  probe = http.createServer((_req, res) => {
-    probeHits += 1;
-    res.end("probe");
-  });
-  await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
-  webRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-sandbox-host-"));
-  const strip = (file: string) =>
-    stripTypeScriptTypes(fs.readFileSync(path.join(runtimeSrc, file), "utf8")).replace(
-      /from "\.\/(\w+)\.ts"/g,
-      'from "./$1.js"',
-    );
-  fs.writeFileSync(path.join(webRoot, "protocol.js"), strip("protocol.ts"));
-  fs.writeFileSync(path.join(webRoot, "host.js"), strip("host.ts"));
-  fs.writeFileSync(
-    path.join(webRoot, "index.html"),
-    `<!doctype html><title>Sandbox test host</title><script type="module">import { mountTool } from "./host.js"; window.mountTool = mountTool;</script>`,
-  );
-  server = await startLocalServer({ port: 0, webRoot, routes: runtimeRoutes((id) => tools[id]) });
+  host = await startSandboxHost(tools);
 });
-test.afterAll(async () => {
-  await server.close();
-  probe.close();
-  fs.rmSync(webRoot, { recursive: true, force: true });
-});
+test.afterAll(() => host.close());
 
 test("mounts a tool behind the wrapper and talks to it only through the bridge (RUN-01)", async ({
   page,
 }) => {
-  await page.goto(`${server.url}/`);
+  await page.goto(`${host.url}/`);
   await page.waitForFunction(() => "mountTool" in window);
   const exchange = await page.evaluate(async () => {
     type Mount = (
@@ -186,7 +147,7 @@ type Outcome = { messages: unknown[]; events: string[]; frameText: string | unde
 // the host sends what it needs again (docs/code/runtime/package.md). So when `restarts`, the second
 // count waits for both; a fixed pause raced the wrapper's 1 s hello grace on slow machines.
 async function leavePage(page: Page, leave: Leave, restarts = false): Promise<Outcome> {
-  await page.goto(`${server.url}/`);
+  await page.goto(`${host.url}/`);
   await page.waitForFunction(() => "mountTool" in window);
   const args = { leave, restarts };
   const { messages, events } = await page.evaluate(async ({ leave, restarts }) => {
@@ -235,7 +196,7 @@ test("SBX-07: keeps a tool on its page when it navigates its own frame", async (
     { by: "reloading" },
     { by: "refresh", to: "/runtime/tool?mount=wanderer" },
   ];
-  probeHits = 0;
+  host.reset();
   for (const leave of leaves) {
     const { messages, events, frameText } = await leavePage(page, leave);
     // The same run of the tool answers before and after: its page and its memory stayed.
@@ -244,19 +205,19 @@ test("SBX-07: keeps a tool on its page when it navigates its own frame", async (
     expect(events, leave.by).toEqual([]);
     expect(frameText, leave.by).toMatch(/^Wanderer/);
   }
-  expect(probeHits).toBe(0);
+  expect(host.probeRequests).toEqual([]);
 });
 
 test("SBX-07: starts a tool again when it leaves for a page it may not load", async ({ page }) => {
   test.setTimeout(60_000);
-  const outside = `http://127.0.0.1:${(probe.address() as AddressInfo).port}/`;
+  const outside = host.probeUrl;
   const leaves: Leave[] = [
     { by: "assigning", to: "about:blank" },
     { by: "assigning", to: outside },
     { by: "link", to: outside },
     { by: "assigning", to: "/runtime/wrapper" },
   ];
-  probeHits = 0;
+  host.reset();
   for (const leave of leaves) {
     const { messages, events, frameText } = await leavePage(page, leave, true);
     // A fresh run of the tool, on a fresh port; the old page never got one.
@@ -269,11 +230,11 @@ test("SBX-07: starts a tool again when it leaves for a page it may not load", as
     expect(events, leave.to).toEqual(["restarted"]);
     expect(frameText, leave.to).toBe("Wanderer");
   }
-  expect(probeHits).toBe(0);
+  expect(host.probeRequests).toEqual([]);
 });
 
 test("SBX-07: stops a tool that keeps leaving its page", async ({ page }) => {
-  await page.goto(`${server.url}/`);
+  await page.goto(`${host.url}/`);
   await page.waitForFunction(() => "mountTool" in window);
   const events = await page.evaluate(async () => {
     type Mount = (
@@ -297,56 +258,20 @@ test("SBX-07: stops a tool that keeps leaving its page", async ({ page }) => {
   await expect(wrapper!.locator("iframe")).toHaveCount(0);
 });
 
-type Asked = { messages: unknown[]; events: string[] };
-
-// Mounts a tool, waits for it, sends it one message and collects what it says back.
-async function ask(page: Page, mountId: string, message: unknown, replies: number): Promise<Asked> {
-  await page.goto(`${server.url}/`);
-  await page.waitForFunction(() => "mountTool" in window);
-  return page.evaluate(
-    async ({ mountId, message, replies }) => {
-      type Mount = (
-        container: HTMLElement,
-        mountId: string,
-      ) => Promise<{
-        send(message: unknown): void;
-        onMessage(listen: (message: unknown) => void): () => void;
-        onEvent(listen: (event: string) => void): () => void;
-      }>;
-      const mount = (window as unknown as { mountTool: Mount }).mountTool;
-      const tool = await mount(document.body, mountId);
-      const messages: unknown[] = [];
-      const events: string[] = [];
-      tool.onMessage((m) => messages.push(m));
-      tool.onEvent((event) => events.push(event));
-      tool.send(message);
-      for (let i = 0; i < 100 && messages.length < replies; i += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
-      // Anything late, such as a restart, has time to show.
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      return { messages, events };
-    },
-    { mountId, message, replies },
-  );
-}
-
-const probeUrl = () => `http://127.0.0.1:${(probe.address() as AddressInfo).port}/`;
-
 test("SBX-06: frames from URLs, data: and blob: frames, objects and embeds don't load", async ({
   page,
 }) => {
-  probeHits = 0;
-  const { messages, events } = await ask(page, "loader", { probe: probeUrl() }, 1);
+  host.reset();
+  const { messages, events } = await ask(page, host, "loader", { probe: host.probeUrl }, 1);
   expect(messages).toEqual([{ loaded: [], blankScriptable: false }]);
   expect(events).toEqual([]);
-  expect(probeHits).toBe(0);
+  expect(host.probeRequests).toEqual([]);
 });
 
 for (const how of ["srcdoc", "javascript:"]) {
   test(`SBX-06: a nested ${how} frame runs, but is as confined as the tool`, async ({ page }) => {
-    probeHits = 0;
-    const { messages, events } = await ask(page, "nester", { probe: probeUrl(), how }, 1);
+    host.reset();
+    const { messages, events } = await ask(page, host, "nester", { probe: host.probeUrl, how }, 1);
     const [found] = messages as { violations: string[] }[];
     // It inherits the tool's sandbox (an opaque origin, no popups, no top navigation) and its CSP.
     expect(found).toMatchObject({
@@ -365,8 +290,8 @@ for (const how of ["srcdoc", "javascript:"]) {
     );
     // Its hello to the wrapper changed nothing, the host page stayed, and nothing got out.
     expect(events).toEqual([]);
-    expect(page.url()).toBe(`${server.url}/`);
+    expect(page.url()).toBe(`${host.url}/`);
     expect(page.context().pages()).toHaveLength(1);
-    expect(probeHits).toBe(0);
+    expect(host.probeRequests).toEqual([]);
   });
 }
