@@ -4,7 +4,7 @@ title: "Overview"
 description: "What Tessera is, the key decisions and how to read these docs."
 tags: [overview, README]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T04:41:26Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T05:40:05Z }
 ---
 # POC results: from Harness to Tessera
 
@@ -32,7 +32,7 @@ Each folder has an `index.md` listing its documents with a one-line description;
 - **Saving:** always auto-saved, a named library, saved tools found by asking and opened as Continue or Use again, trash with 30-day restore. SQLite holds records; images and other binary files live in a content-addressed file store beside it.
 - **Models, for now:** the signed-in Claude Code CLI (from M2) and Codex CLI (from M3) on your machine, for local development and testing. Before anyone else runs Tessera, connections move to API keys or the person's own provider account; other providers (z.ai, Kimi, Grok and others) come later.
 - **Stack:** Node 22, pnpm, Vite, zod, TypeScript, React 19 with the React Compiler. English first, translatable.
-- **Way of working:** a private repository on GitHub Free with CI on every pull request; solo, with Claude Code and Codex writing and reviewing each other's work; small pull requests that you merge.
+- **Way of working:** a public repository on GitHub Free ([ADR 0005](decisions/adr/0005-public-repository.md)) with CI on every pull request; solo, with Claude Code and Codex writing and reviewing each other's work; small pull requests that you merge.
 - **Evaluation:** real-life scenarios judged by host facts, an AI technical review and your verdict, a few in Portuguese. Sign-off after every milestone.
 - **Docs:** the [Open Knowledge Format](practices/documentation.md) (OKF v0.2): one file per area with frontmatter saying who wrote and who checked it, an index per folder, and code documented the same way and checked against the code.
 

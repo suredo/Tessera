@@ -7,7 +7,7 @@ implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:48:01Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T08:14:31Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ Runs every check on every pull request and on every push to `main` (`ENG-02`), s
 
 - **Every pull request and every push to `main` runs it.** A pull request also runs again when its description is edited, since a "No doc change needed" line can change the drift check's result.
 - **No secrets, read-only access.** No job reads `secrets.*`, and the token can only read the repository, so CI can't reach a model provider or change the repository.
-- **One Windows job, kept lean.** Windows minutes use the private repository's Actions allowance faster than Linux minutes (`ENG-02`). Only tests that depend on the platform run there: paths and line endings in the OKF check, the platform helpers, SQLite storage, the launcher and local server, and the browsers. If the allowance gets tight, `ENG-02` says to run it only on pull requests that touch runtime, platform or web code.
+- **One Windows job, kept lean.** Windows runners are slower to start and run, so the job stays small to keep CI fast (`ENG-02`); Actions minutes are free since the repository went public ([ADR 0005](../../decisions/adr/0005-public-repository.md)). Only tests that depend on the platform run there: paths and line endings in the OKF check, the platform helpers, SQLite storage, the launcher and local server, and the browsers.
 - **Actions are pinned by commit,** with the version in a comment; Dependabot proposes updates.
 - **A check is never weakened to make CI pass** (`AGENTS.md`).
 
@@ -34,6 +34,8 @@ Depends on GitHub Actions' Ubuntu and Windows runners, with Chrome and Edge prei
 
 # Pitfalls
 
+- **The ruleset on `main` requires the jobs by name** (`ENG-15`, [ADR 0005](../../decisions/adr/0005-public-repository.md)): `OKF check`, `merge-ready`, the seven checks of the Linux matrix and `Windows (platform, Chrome and Edge)`. Renaming, splitting or removing one leaves the ruleset waiting for a check that never reports, and no pull request can merge. Change the ruleset in the same pull request (`gh api repos/suredo/Tessera/rulesets`), which is the owner's setting.
+- **Every required job must run on every pull request.** The two ways to skip one fail differently. A job skipped by its own `if:` counts as passed, so the pull request could merge without that check ever running. A workflow that doesn't start at all, because of path or branch filters or a skip instruction in the commit message, leaves its checks pending, and the merge is blocked. Add neither to these jobs; if a check truly shouldn't run on some changes, change the ruleset with it ([GitHub: troubleshooting required status checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)).
 - **The tests read the workflow, not a run.** They show what CI is told to run; a green run on the pull request shows it passed.
 - **`ENG-02` lists checks that later milestones bring:** CLI contract tests, scripted end-to-end tests, host accessibility checks (`APP-11`) and prompt-size budgets (`GEN-03`). Each joins this workflow, and its test, when its code lands.
 - **The checker's tests ran only on Linux until M1,** so a failure that only Windows paths or line endings cause reached review in [pull request 41](https://github.com/suredo/Tessera/pull/41).

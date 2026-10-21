@@ -4,7 +4,7 @@ title: "Decision log"
 description: "Every decision made so far (A1–A54), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-12T02:02:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T06:13:43Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -22,7 +22,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A5 | Providers in the first release | **Claude Code (M2), then the Codex CLI (M3)** | Both behind the same adapter interface and contract tests (`CLI-01`). Live acceptance runs use Claude Code unless you approve a Codex run. |
 | A6 | POC code | **Fresh build, POC as reference** | New repository; port designs and tests deliberately. |
 | A7 | Simulation engines | **Later milestone (M5)** | Core platform first. |
-| A8 | Way of working | **Solo with AI assistants, GitHub with CI** | Pull requests into `main` and CI gates. Branch protection is not available for private repositories on GitHub Free, so the rules are kept by setup and habit (`ENG-15`). |
+| A8 | Way of working | **Solo with AI assistants, GitHub with CI** | Pull requests into `main` and CI gates. Branch protection was not available while the repository was private on GitHub Free, so the rules are kept by setup and habit (`ENG-15`); public since [ADR 0005](adr/0005-public-repository.md), a ruleset now enforces most of them. |
 | A9 | Where data lives | **SQLite on the local server** | Survives browser changes; backup and export are easy; the browser holds no source of truth (`DATA-01`). Proposed limit: 256 KiB of structured data per tool. Images and other binary files live beside it as files (A48). |
 | A10 | Languages | **English first, translatable** | All host text goes through a translation layer from day one; only English ships at first (`UX-05`). Generated tools follow the person's language. |
 | A11 | Host UI framework | **React** | Generated tools stay plain HTML, CSS and JS in the sandbox, independent of React. |
@@ -30,7 +30,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A13 | Product framing | **An environment for UIs on demand** | People get the interface they need inside one environment, either by creating it now or by opening one they saved. Later, possibly from a shared store. |
 | A14 | Runtime and tooling | **Node.js 22 LTS, pnpm workspaces, Vite, zod** | `.nvmrc` and `engines` pin versions for assistants and CI. zod schemas generate the TypeScript types and the JSON Schema passed to the CLI; verify zod's JSON Schema output against Claude Code's `--json-schema` in an M0 contract test. |
 | A15 | React setup | **React 19 with the React Compiler** | The compiler handles memoization, so no hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case (with a comment saying so). Enforced with the React Compiler ESLint rules. |
-| A16 | Repository visibility | **Private GitHub repository on GitHub Free** | Research sources and fixtures can be committed as they are; licensing can be decided later. GitHub Free (decided 2026-10-11) means no branch protection or rulesets for private repositories and a limited monthly Actions allowance (`ENG-02`, `ENG-15`). |
+| A16 | Repository visibility | **Private GitHub repository on GitHub Free** (replaced by [ADR 0005](adr/0005-public-repository.md): public since 2026-10-21) | Research sources and fixtures can be committed as they are; licensing can be decided later. GitHub Free (decided 2026-10-11) means no branch protection or rulesets for private repositories and a limited monthly Actions allowance (`ENG-02`, `ENG-15`). |
 | A17 | Generation of big tools | **Two passes, as a starting point to measure** | When the intent stage judges a request as large: first a small working core (fast, verified), then features as edits. Measured in M2 against single-pass before it becomes final. |
 | A18 | Default model routing | **Haiku 5.5 low for intent and data actions; Sonnet 5.5 medium for creation and repairs; Sonnet 5.5 low for edits; Sonnet 5.5 medium for research (M5); Opus only by explicit configuration** | Starting point; revisited with M2 metrics. Never an automatic expensive fallback. |
 | A19 | Verification profiles | **Accepted: matching tools get hidden test hooks** | Profiles are internal, never shown as tools. A tool whose request matches a profile is asked for stable hooks so the host can verify it. This is what makes "create, edit, save, reopen" dependable. |
