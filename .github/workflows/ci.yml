@@ -88,7 +88,7 @@ jobs:
 
   # The one Windows job (ENG-02): the OKF check's tests, which handle paths and line endings, the
   # platform helpers', launcher's and local server's tests and the browser tests in Chrome and Edge, both preinstalled on the
-  # runner. Windows minutes cost more, so the fast checks stay above.
+  # runner. Windows runners are slower, so the fast checks stay above.
   windows:
     name: Windows (platform, Chrome and Edge)
     runs-on: windows-latest

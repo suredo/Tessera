@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-21
+
+* **Creation**: [ADR 0005. A public repository](decisions/adr/0005-public-repository.md): the repository is public from 2026-10-21, after October's CI used up GitHub Free's 2,000 minutes for private repositories. It replaces A16 in the [decision log](decisions/decision-log.md), whose A8 notes branch protection is now possible. `AGENTS.md`, the [documentation guide](README.md), `ENG-01` and `ENG-02` in the [repository practices](practices/repository.md), `ENG-15` in the [assistant practices](practices/assistants.md) and the [CI workflow](code/ci/workflow.md) doc say so.
+
 ## 2026-10-20
 
 * **Update**: The [contracts package](code/contracts/package.md) doc names `refusingReservedKey`, now the one definition of the rule that refuses a `__proto__` key at any depth (`CON-01`, `P3`). The patch batch, which had its own copy since [pull request 62](https://github.com/suredo/Tessera/pull/62) and [pull request 63](https://github.com/suredo/Tessera/pull/63) fixed the same gap separately, now uses it and `jsonValueSchema`. After Codex's review of [pull request 70](https://github.com/suredo/Tessera/pull/70), the doc's pitfall no longer says the artifact's data schema and defaults lack the rule: they have used it since pull request 63.

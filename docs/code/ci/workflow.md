@@ -7,7 +7,7 @@ implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:48:01Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T05:40:05Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ Runs every check on every pull request and on every push to `main` (`ENG-02`), s
 
 - **Every pull request and every push to `main` runs it.** A pull request also runs again when its description is edited, since a "No doc change needed" line can change the drift check's result.
 - **No secrets, read-only access.** No job reads `secrets.*`, and the token can only read the repository, so CI can't reach a model provider or change the repository.
-- **One Windows job, kept lean.** Windows minutes use the private repository's Actions allowance faster than Linux minutes (`ENG-02`). Only tests that depend on the platform run there: paths and line endings in the OKF check, the platform helpers, SQLite storage, the launcher and local server, and the browsers. If the allowance gets tight, `ENG-02` says to run it only on pull requests that touch runtime, platform or web code.
+- **One Windows job, kept lean.** Windows runners are slower to start and run, so the job stays small to keep CI fast (`ENG-02`); Actions minutes are free since the repository went public ([ADR 0005](../../decisions/adr/0005-public-repository.md)). Only tests that depend on the platform run there: paths and line endings in the OKF check, the platform helpers, SQLite storage, the launcher and local server, and the browsers. If the allowance gets tight, `ENG-02` says to run it only on pull requests that touch runtime, platform or web code.
 - **Actions are pinned by commit,** with the version in a comment; Dependabot proposes updates.
 - **A check is never weakened to make CI pass** (`AGENTS.md`).
 
