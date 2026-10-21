@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T21:53:48Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T22:03:56Z }
 ---
 # Threat model and boundary checks
 
@@ -50,7 +50,7 @@ M1 tests the sandbox, the bridge, imports, assets and migrations, each in the is
 Its limits, which stay open after M1:
 
 - **The browser is trusted.** The checks show that the listed attempts fail in Chrome and Edge as tested. A browser bug that escapes the iframe sandbox or ignores the CSP is outside them. Firefox is best effort and not tested; embedded panes that can't mount sandboxed frames are unsupported (`RUN-06`).
-- **A frame navigation can still resolve and connect.** When a tool sends a frame, its own or a nested one, to an address the policy blocks, Chrome and Edge look up the name and open a connection before refusing the navigation. No request is sent, but the name the tool chooses reaches a DNS server, which is a slow way out ([#72](https://github.com/suredo/Tessera/issues/72)). Settings and headers a page controls don't stop it; the owner decides how to treat it.
+- **A frame navigation can still resolve and connect.** When a tool sends a frame, its own or a nested one, to an address the policy blocks, Chrome and Edge look up the name and open a connection before refusing the navigation. No request is sent, but the name the tool chooses reaches a DNS server, which is a slow way out ([#72](https://github.com/suredo/Tessera/issues/72)). It is a known limit of CSP, which governs what a page loads, not which names the browser resolves: leaking data through DNS lookups under a strict policy was shown in 2016 ([Van Acker, Hausknecht and Sabelfeld, "Data Exfiltration in the Face of CSP"](https://www.cse.chalmers.se/~andrei/asiaccs16.pdf)). Headers and settings a page controls don't stop it; the owner decides how to treat it.
 - **Inside its frame, a tool can still mislead.** It can show false or alarming content, or ask the person to type something. The sandbox limits what the tool can reach, not what it says.
 - **Resource use is limited, not prevented.** The watchdog recovers from a busy loop (`RUN-02`), and size limits apply (`DATA-06`, `DATA-11`), but a tool can still make its own frame slow.
 - **Data a tool may write is still its data.** A tool can store what the person types in its own data, through declared bridge calls. That stays on the machine, but it can reach a model later as tool data, where `SEC-02` treats it as quoted data.
