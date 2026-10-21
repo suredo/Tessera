@@ -3,11 +3,11 @@ type: Code Package
 title: "Runtime package"
 description: "@tessera/runtime: the sandbox a tool runs in. The wrapper on the opposite loopback name, the tool's sandboxed frame under a strict CSP, and the one MessageChannel port between them and the host."
 resource: ../../../packages/runtime/
-implements: [RUN-01, SEC-05, SBX-06, SBX-07]
-tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts]
+implements: [RUN-01, SEC-05, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX-06, SBX-07]
+tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/boundary.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-20T05:15:50Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T23:01:15Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`
 # Invariants
 
 - **Two origins and a sandbox.** The host app is on 127.0.0.1, the wrapper on localhost (the same port), and the tool's document is sandboxed with scripts only, so its origin is `null`. The tool's document carries the sandbox in a header too, so it is sandboxed even if something framed it without the attribute.
-- **The tool loads nothing.** Its CSP allows its own inline code and blob: images and media; network, fonts, frames from URLs, workers, objects, forms and base changes are refused.
+- **The tool loads nothing.** Its CSP allows its own inline code and blob: images and media; network, fonts, frames from URLs, workers, objects, forms and base changes are refused. The boundary checks prove it in Chrome and Edge (`SBX-01` to `SBX-05`): a hostile test tool tries every kind of request, connection, resource, storage and worker, and neither the probe server nor the local server receives anything, not even a connection. In `SBX-01`, a refused request counts only if the tool's policy reported refusing it, so a request that left and failed for another reason, such as the destination's CORS rules, fails the check. One gap is the browser's: a frame navigation to a blocked address still makes Chrome and Edge resolve its name and connect, with no request sent ([#72](https://github.com/suredo/Tessera/issues/72)).
 - **Nested frames are as confined as the tool (`SBX-06`, [ADR 0004](../../decisions/adr/0004-nested-frames-in-the-sandbox.md)).** Frames from a URL, `data:` or `blob:`, objects and embeds don't load. A `srcdoc` or `javascript:` frame inside the tool runs, since CSP doesn't govern it, but it inherits the tool's sandbox and CSP and has an opaque origin of its own, no bridge, no network, storage or popups. The tool can't write into a nested blank frame.
 - **One port per page of the tool.** The wrapper accepts a mount only from the host app's origin, through its own parent window, with a port. The tool's page says hello from its own frame as it loads, and the wrapper answers with one fresh port; it drops messages of any other instance. The host's messages sent before that port exists wait for it, as the tool's do. A frame nested in the tool can't say hello for it.
 - **The tool stays on its page (`SBX-07`).** When the tool navigates its own frame to a runtime document, by assigning `location`, a link, a reload or a refresh, the server answers "No Content", so the browser keeps the tool's page, its memory and its port. Any other page it leaves for (a blank one, or one the wrapper's policy blocks) loads without saying hello: the wrapper starts the tool again in a fresh frame with a fresh port, and the host hears `restarted`. After `MAX_RESTARTS` it stops the tool, and the host hears `stopped`. A second hello from the same frame counts as leaving too.
@@ -36,6 +36,7 @@ Nothing at run time. The server's runtime routes serve its documents, and the ho
 
 # Pitfalls
 
+- **The browser tests share one host:** `packages/web/e2e/support/sandbox-host.ts` starts the local server and the probe server, records every request and every connection both receive, and mounts tools on a small test page. A check resets it once the tool is ready, so whatever arrives after came from the tool.
 - **A restarted tool forgets what it held in memory, and misses what was sent while it left.** A message the host sends after the tool leaves its page but before the host hears `restarted` goes to the page that left and is lost, so the host should send what the tool needs again when it hears `restarted`; the lifecycle (#45's next pull request, `RUN-02`) builds on this. Tests wait for `restarted` and the new page's hello before sending to it: a fixed pause raced the wrapper's one-second hello grace on CI's Windows runner.
 - **A slow page may be taken for one that left.** The wrapper waits a second after the frame loads for its hello; a page that takes longer is started again.
 - **The inlined scripts can't import.** Change a protocol name in `src/protocol.ts` and in both scripts, or the test fails.

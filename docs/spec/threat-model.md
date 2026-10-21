@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T09:17:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T23:01:15Z }
 ---
 # Threat model and boundary checks
 
@@ -50,6 +50,7 @@ M1 tests the sandbox, the bridge, imports, assets and migrations, each in the is
 Its limits, which stay open after M1:
 
 - **The browser is trusted.** The checks show that the listed attempts fail in Chrome and Edge as tested. A browser bug that escapes the iframe sandbox or ignores the CSP is outside them. Firefox is best effort and not tested; embedded panes that can't mount sandboxed frames are unsupported (`RUN-06`).
+- **A frame navigation can still resolve and connect.** When a tool sends a frame, its own or a nested one, to an address the policy blocks, Chrome and Edge look up the name and open a connection before refusing the navigation. No request is sent, but the name the tool chooses reaches a DNS server, which is a slow way out ([#72](https://github.com/suredo/Tessera/issues/72)). It is a known limit of CSP, which governs what a page loads, not which names the browser resolves: leaking data through DNS lookups under a strict policy was shown in 2016 ([Van Acker, Hausknecht and Sabelfeld, "Data Exfiltration in the Face of CSP"](https://www.cse.chalmers.se/~andrei/asiaccs16.pdf)). Headers and settings a page controls don't stop it; the owner decides how to treat it.
 - **Inside its frame, a tool can still mislead.** It can show false or alarming content, or ask the person to type something. The sandbox limits what the tool can reach, not what it says.
 - **Resource use is limited, not prevented.** The watchdog recovers from a busy loop (`RUN-02`), and size limits apply (`DATA-06`, `DATA-11`), but a tool can still make its own frame slow.
 - **Data a tool may write is still its data.** A tool can store what the person types in its own data, through declared bridge calls. That stays on the machine, but it can reach a model later as tool data, where `SEC-02` treats it as quoted data.
@@ -59,7 +60,7 @@ Its limits, which stay open after M1:
 
 ## How the checks run
 
-- **Browser checks** (SBX, and BRG through a test tool): Playwright in Chrome and Edge, with a probe server that records every request it receives. The sandbox issue ([#45](https://github.com/suredo/Tessera/issues/45)) builds the probe server with the runtime.
+- **Browser checks** (SBX, and BRG through a test tool): Playwright in Chrome and Edge, with a probe server and the local server, on both loopback names, recording every request and every connection they receive. In `SBX-01`, a request the tool sees fail counts as refused only if its policy reported refusing it, since one that left and failed the destination's CORS rules looks the same from inside the tool; the other checks rely on what the tool sees and on nothing arriving at either server. The sandbox issue ([#45](https://github.com/suredo/Tessera/issues/45)) builds them, as a shared host for the browser tests (`packages/web/e2e/support/sandbox-host.ts`).
 - **Server checks** (BRG, IMP, AST, MIG): Node tests in a test data folder (`ENG-19`), with a canary file outside it and tripwires that fail the test on any network connection opened, any request sent on a connection opened before, any process or worker started, or any file touched outside the folders the test allows, judged by where its path really leads through links and junctions, and for a recursive copy by every entry it reaches. The tripwires and the canary are a shared test helper, `packages/server/test/support/tripwires.ts` ([#55](https://github.com/suredo/Tessera/issues/55)). They detect an attempt in code that should never make one; they are not an isolation mechanism (`SEC-01`). They see only calls made through Node's public modules: a file opened before arming, by its descriptor, or an HTTP/2 session opened before arming is not checked.
 - **Each check is a test whose name starts with its ID,** in the pull request that builds its path, so the coverage report shows which checks pass and which are still missing.
 
@@ -76,8 +77,8 @@ Each check is a hand-written tool that attempts the forbidden thing from inside 
 | SBX-03 | Loading resources by URL: `<img>`, `<audio>`, `<video>`, `<script src>`, a stylesheet, CSS `url()` and `@import`, a web font | Nothing loads and nothing arrives. As a control, an image from a `blob:` URL the host handed over loads (`DATA-11`). |
 | SBX-04 | Storage: `localStorage`, `sessionStorage`, IndexedDB, `document.cookie`, the Cache API | Each throws or is unavailable, and nothing persists to the next mount. |
 | SBX-05 | Workers: `Worker`, `SharedWorker` and a service worker, from a script URL and from a `blob:` URL | None starts. |
-| SBX-06 | Nested content: `<iframe>` (with a URL, `srcdoc`, `data:`, `blob:` and `javascript:`), `<frame>`, `<object>`, `<embed>` | Frames from a URL, `data:` or `blob:`, `<frame>`, `<object>` and `<embed>` don't load. `srcdoc` and `javascript:` frames, which the browser runs, are exactly as confined as the tool: an opaque origin, no bridge, no network, storage or popups, no reach into the host page. A blank frame can't be written into by the tool ([ADR 0004](../decisions/adr/0004-nested-frames-in-the-sandbox.md)). |
-| SBX-07 | Navigating its own frame: assigning `location`, clicking a link, a `<meta http-equiv="refresh">` | The frame still shows the tool, and nothing arrives at the probe server. |
+| SBX-06 | Nested content: `<iframe>` (with a URL, `srcdoc`, `data:`, `blob:` and `javascript:`), `<frame>`, `<object>`, `<embed>` | Frames from a URL, `data:` or `blob:`, `<frame>`, `<object>` and `<embed>` don't load. `srcdoc` and `javascript:` frames, which the browser runs, are exactly as confined as the tool: an opaque origin, no bridge, no network, storage or popups, no reach into the host page. A blank frame can't be written into by the tool ([ADR 0004](../decisions/adr/0004-nested-frames-in-the-sandbox.md)). No request from a frame with a URL arrives, but Chrome and Edge still resolve its address and connect to it ([#72](https://github.com/suredo/Tessera/issues/72)). |
+| SBX-07 | Navigating its own frame: assigning `location`, clicking a link, a `<meta http-equiv="refresh">` | The frame still shows the tool, and no request arrives at the probe server. Chrome and Edge still resolve and connect to an outside address the frame is sent to, as for `SBX-06`'s frames from a URL ([#72](https://github.com/suredo/Tessera/issues/72)). |
 | SBX-08 | Submitting a form, to the probe server and to the host | No submission is sent and the frame does not navigate. |
 | SBX-09 | Navigating the host page: `top.location` and `parent.location` | The host page stays where it is. |
 | SBX-10 | Popups, dialogs and downloads: `window.open`, a `target="_blank"` link, `alert`, `confirm`, `prompt`, `print`, a link with `download` | No window opens, no dialog blocks the host, and no file is downloaded. |
