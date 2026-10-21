@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { jsonValueSchema, refusingReservedKey } from "./json.ts";
 
 // A batch of data changes (DATA-02): small operations on records with stable IDs, resolved one at
 // a time and applied all or nothing. A record is an object in a top-level list of the tool's data,
@@ -26,31 +27,13 @@ const revisionCount = z
     "The record's revision count when this change was planned; the whole batch is refused if it has changed since (DATA-02).",
   );
 
-// Any JSON value, but no object key anywhere may be `__proto__`. zod's records silently drop that
-// key while the JSON Schema refuses it, so the batch refuses it before zod parses (CON-01).
-type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
-const jsonValue: z.ZodType<JsonValue> = z.lazy(() =>
-  z.union([
-    z.string(),
-    z.number(),
-    z.boolean(),
-    z.null(),
-    z.array(jsonValue),
-    z.record(z.string().regex(/^(?!__proto__$)/), jsonValue),
-  ]),
-);
-const hasProtoKey = (value: unknown): boolean =>
-  value !== null &&
-  typeof value === "object" &&
-  (Object.hasOwn(value, "__proto__") || Object.values(value).some(hasProtoKey));
-
 const patchOperationSchema = z
   .discriminatedUnion("op", [
     z
       .strictObject({
         op: z.literal("add"),
         collection: collectionName,
-        record: z.record(fieldName, jsonValue),
+        record: z.record(fieldName, jsonValueSchema),
       })
       .describe("Adds a record; the host gives it its ID. Adds never conflict."),
     z
@@ -59,7 +42,7 @@ const patchOperationSchema = z
         collection: collectionName,
         id: recordIdSchema,
         revisionCount,
-        fields: z.record(fieldName, jsonValue),
+        fields: z.record(fieldName, jsonValueSchema),
       })
       .describe("Sets the named fields of one record and keeps the rest: never a whole record."),
     z
@@ -74,13 +57,9 @@ const patchOperationSchema = z
   .describe("One change to a tool's data (DATA-02).");
 export type PatchOperation = z.infer<typeof patchOperationSchema>;
 
-export const patchBatchSchema = z
-  .preprocess(
-    (batch, ctx) => {
-      if (hasProtoKey(batch)) ctx.addIssue({ code: "custom", message: "No key may be __proto__." });
-      return batch;
-    },
-    z.strictObject({ operations: z.array(patchOperationSchema).min(1) }),
-  )
-  .describe("Changes applied in order, all or nothing (DATA-02).");
+// zod's records silently drop a "__proto__" key while the JSON Schema refuses it, so the whole batch
+// is refused before zod parses it, wherever the key is (CON-01).
+export const patchBatchSchema = refusingReservedKey(
+  z.strictObject({ operations: z.array(patchOperationSchema).min(1) }),
+).describe("Changes applied in order, all or nothing (DATA-02).");
 export type PatchBatch = z.infer<typeof patchBatchSchema>;

@@ -2,6 +2,8 @@
 
 ## 2026-10-20
 
+* **Update**: The [contracts package](code/contracts/package.md) doc names `refusingReservedKey`, now the one definition of the rule that refuses a `__proto__` key at any depth (`CON-01`, `P3`). The patch batch, which had its own copy since [pull request 62](https://github.com/suredo/Tessera/pull/62) and [pull request 63](https://github.com/suredo/Tessera/pull/63) fixed the same gap separately, now uses it and `jsonValueSchema`. After Codex's review of [pull request 70](https://github.com/suredo/Tessera/pull/70), the doc's pitfall no longer says the artifact's data schema and defaults lack the rule: they have used it since pull request 63.
+
 * **Update**: The [runtime package](code/runtime/package.md) doc says a message sent while a tool leaves its page, before the host hears `restarted`, is lost, and its SBX-07 browser test now waits for `restarted` and the new page's hello before counting again. A fixed 1.5 s pause raced the wrapper's 1 s hello grace and failed on CI's Windows runner at 320 px, on `main` and on every pull request that merged it.
 
 ## 2026-10-19
