@@ -150,23 +150,28 @@ export const send = (page: Page, message: unknown): Promise<void> =>
   page.evaluate((message) => (window as unknown as TestWindow).tool.send(message), message);
 
 /**
- * Waits until the tool has said `count` messages in all, then a while longer so anything late
- * shows too, and returns what it said and the wrapper's events.
+ * Waits until the tool has said `count` messages in all, for at most `maxWaitMs`, then
+ * `settleMs` longer so anything late shows too, and returns what it said and the wrapper's events.
+ * A check waiting on slow refusals answers late, but answers; one expecting silence passes a short
+ * `maxWaitMs`.
  */
 export const collect = (
   page: Page,
   count: number,
   settleMs = 1500,
+  maxWaitMs = 60_000,
 ): Promise<{ messages: unknown[]; events: string[] }> =>
   page.evaluate(
-    async ({ count, settleMs }) => {
+    async ({ count, settleMs, maxWaitMs }) => {
       const w = window as unknown as TestWindow;
       const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-      for (let i = 0; i < 200 && w.messages.length < count; i += 1) await wait(50);
+      for (let waited = 0; waited < maxWaitMs && w.messages.length < count; waited += 50) {
+        await wait(50);
+      }
       await wait(settleMs);
       return { messages: [...w.messages], events: [...w.events] };
     },
-    { count, settleMs },
+    { count, settleMs, maxWaitMs },
   );
 
 /** Mounts a tool, sends it one message and collects what it says. */
