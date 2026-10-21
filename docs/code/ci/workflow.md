@@ -7,7 +7,7 @@ implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T05:40:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T06:13:43Z }
 ---
 
 # Purpose
@@ -34,6 +34,7 @@ Depends on GitHub Actions' Ubuntu and Windows runners, with Chrome and Edge prei
 
 # Pitfalls
 
+- **The ruleset on `main` requires the jobs by name** (`ENG-15`, [ADR 0005](../../decisions/adr/0005-public-repository.md)): `OKF check`, `merge-ready`, the seven checks of the Linux matrix and `Windows (platform, Chrome and Edge)`. Renaming, splitting or removing one leaves the ruleset waiting for a check that never reports, and no pull request can merge. Change the ruleset in the same pull request (`gh api repos/suredo/Tessera/rulesets`), which is the owner's setting. A job that skips itself on some pull requests would block them the same way.
 - **The tests read the workflow, not a run.** They show what CI is told to run; a green run on the pull request shows it passed.
 - **`ENG-02` lists checks that later milestones bring:** CLI contract tests, scripted end-to-end tests, host accessibility checks (`APP-11`) and prompt-size budgets (`GEN-03`). Each joins this workflow, and its test, when its code lands.
 - **The checker's tests ran only on Linux until M1,** so a failure that only Windows paths or line endings cause reached review in [pull request 41](https://github.com/suredo/Tessera/pull/41).

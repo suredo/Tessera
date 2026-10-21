@@ -4,7 +4,7 @@ title: "ADR 0005. A public repository"
 description: "Tessera's repository is public from 2026-10-21, so CI's Actions minutes are free; replaces A16, and what it changes for CI, branch protection and the owner's details in the history."
 tags: [decisions, repository, ci]
 status: stable
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T05:40:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T06:13:43Z }
 ---
 # ADR 0005. A public repository
 
@@ -32,5 +32,5 @@ Option 3. Before the switch, the whole history, the issues, the pull requests an
 - **Everything is public**: the code, the documents, the history, issues, pull requests and reviews. Nothing secret or personal goes into any of them, which was already the rule (`ENG-19`, the secret scan and the pre-commit hook).
 - **The owner's email address and name stay in the existing commits.** The owner accepted that. New commits can use GitHub's private no-reply address instead, set in the owner's GitHub and git settings.
 - **No license yet.** People can read the code but have no right to reuse it until the owner adds one.
-- **Branch protection and rulesets are now available** for a public repository on GitHub Free, and so are secret scanning and push protection. `ENG-15` still keeps the merge rules by setup and habit; requiring green CI on `main` through a ruleset, and turning on secret scanning, are the owner's settings to choose.
+- **A ruleset now enforces the merge rules** (`ENG-15`), set up by the owner's decision the same day: `main` changes only through pull requests, squash merges only, the ten CI checks must pass, no force pushes and no deleting it, and no one may bypass it, the owner included, since merges run as the owner's account. Secret scanning and push protection are on too, so GitHub refuses a push that holds a known kind of secret.
 - **Pull requests from forks** run CI with a read-only token and no secrets, since the workflow uses `pull_request` and has none. GitHub asks the owner to approve CI runs for first-time contributors.

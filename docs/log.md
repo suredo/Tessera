@@ -2,7 +2,7 @@
 
 ## 2026-10-21
 
-* **Creation**: [ADR 0005. A public repository](decisions/adr/0005-public-repository.md): the repository is public from 2026-10-21, after October's CI used up GitHub Free's 2,000 minutes for private repositories. It replaces A16 in the [decision log](decisions/decision-log.md), whose A8 notes branch protection is now possible. `AGENTS.md`, the [documentation guide](README.md), `ENG-01` and `ENG-02` in the [repository practices](practices/repository.md), `ENG-15` in the [assistant practices](practices/assistants.md) and the [CI workflow](code/ci/workflow.md) doc say so.
+* **Creation**: [ADR 0005. A public repository](decisions/adr/0005-public-repository.md): the repository is public from 2026-10-21, after October's CI used up GitHub Free's 2,000 minutes for private repositories. It replaces A16 in the [decision log](decisions/decision-log.md), whose A8 notes branch protection is now possible. `AGENTS.md`, the [documentation guide](README.md), `ENG-01` and `ENG-02` in the [repository practices](practices/repository.md), `ENG-15` in the [assistant practices](practices/assistants.md) and the [CI workflow](code/ci/workflow.md) doc say so. The owner then had a ruleset added on `main` (pull requests only, squash only, the ten CI checks green, no force pushes or deletion, no bypass) and secret scanning with push protection turned on; ADR 0005, A8 and `ENG-15` say so, and the CI workflow doc warns that the ruleset requires the jobs by name.
 
 ## 2026-10-20
 

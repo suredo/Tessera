@@ -4,7 +4,7 @@ title: "Decision log"
 description: "Every decision made so far (A1–A54), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T05:40:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T06:13:43Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -22,7 +22,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A5 | Providers in the first release | **Claude Code (M2), then the Codex CLI (M3)** | Both behind the same adapter interface and contract tests (`CLI-01`). Live acceptance runs use Claude Code unless you approve a Codex run. |
 | A6 | POC code | **Fresh build, POC as reference** | New repository; port designs and tests deliberately. |
 | A7 | Simulation engines | **Later milestone (M5)** | Core platform first. |
-| A8 | Way of working | **Solo with AI assistants, GitHub with CI** | Pull requests into `main` and CI gates. Branch protection was not available while the repository was private on GitHub Free, so the rules are kept by setup and habit (`ENG-15`); public since [ADR 0005](adr/0005-public-repository.md), it could now enforce them. |
+| A8 | Way of working | **Solo with AI assistants, GitHub with CI** | Pull requests into `main` and CI gates. Branch protection was not available while the repository was private on GitHub Free, so the rules are kept by setup and habit (`ENG-15`); public since [ADR 0005](adr/0005-public-repository.md), a ruleset now enforces most of them. |
 | A9 | Where data lives | **SQLite on the local server** | Survives browser changes; backup and export are easy; the browser holds no source of truth (`DATA-01`). Proposed limit: 256 KiB of structured data per tool. Images and other binary files live beside it as files (A48). |
 | A10 | Languages | **English first, translatable** | All host text goes through a translation layer from day one; only English ships at first (`UX-05`). Generated tools follow the person's language. |
 | A11 | Host UI framework | **React** | Generated tools stay plain HTML, CSS and JS in the sandbox, independent of React. |
