@@ -50,9 +50,12 @@
     unmount();
     hostPort = port;
     port.onmessage = (e: MessageEvent) => {
-      const data = e.data as { instanceId?: unknown; message?: unknown };
+      const data = e.data as { instanceId?: unknown; message?: unknown; ping?: unknown };
       if (data?.instanceId !== instanceId) return;
-      if (toolPort) toolPort.postMessage(data.message);
+      // The host's watchdog pings the tool's page; with no page ready yet, the ping goes nowhere
+      // and the watchdog sends another (RUN-02).
+      if ("ping" in data) toolPort?.postMessage({ ping: data.ping });
+      else if (toolPort) toolPort.postMessage({ message: data.message });
       else waiting.push(data.message);
     };
     let restarts = 0;
@@ -61,7 +64,11 @@
       const frame = document.createElement("iframe");
       frame.setAttribute("sandbox", "allow-scripts");
       frame.title = "Tool";
-      frame.src = `/runtime/tool?mount=${encodeURIComponent(mountId)}`;
+      // From a host of its own for this start, so it runs in a process of its own (RUN-02).
+      const label = Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) =>
+        byte.toString(16).padStart(2, "0"),
+      ).join("");
+      frame.src = `${location.protocol}//t${label}.${location.hostname}:${location.port}/runtime/tool?mount=${encodeURIComponent(mountId)}`;
       // Each page of the tool loads once and says hello once. A load with no hello, or a second
       // hello, means the tool left its page (SBX-07). The server keeps a tool in place when it asks
       // for a runtime document, so this is a page it may not leave for, such as a blank or a blocked
@@ -87,11 +94,14 @@
         // The tool's page gets one fresh port, bound to this frame and this instance.
         const channel = new MessageChannel();
         toolPort = channel.port1;
-        toolPort.onmessage = (e: MessageEvent) =>
-          hostPort?.postMessage({ instanceId, message: e.data as unknown });
+        toolPort.onmessage = (e: MessageEvent) => {
+          const data = e.data as { message?: unknown; pong?: unknown };
+          if (data && "pong" in data) hostPort?.postMessage({ instanceId, pong: data.pong });
+          else hostPort?.postMessage({ instanceId, message: data?.message });
+        };
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
         frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
-        for (const message of waiting.splice(0)) toolPort.postMessage(message);
+        for (const message of waiting.splice(0)) toolPort.postMessage({ message });
       };
       frame.addEventListener("load", () => {
         if (toolFrame !== frame) return;

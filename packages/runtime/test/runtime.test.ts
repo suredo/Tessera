@@ -54,7 +54,8 @@ describe("the runtime's documents (RUN-01)", () => {
     const wrapper = directives(wrapperCsp("http://localhost:4317", "abc"));
     expect(wrapper["default-src"]).toEqual(["'none'"]);
     expect(wrapper["script-src"]).toEqual(["'nonce-abc'"]);
-    expect(wrapper["frame-src"]).toEqual(["http://localhost:4317/runtime/tool"]);
+    // Only from a tool host of its own, never from the wrapper's own host (RUN-02).
+    expect(wrapper["frame-src"]).toEqual(["http://*.localhost:4317/runtime/tool"]);
   });
 
   it("puts the runtime on the opposite loopback name, on the same port", () => {

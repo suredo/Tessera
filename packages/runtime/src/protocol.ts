@@ -22,6 +22,15 @@ export const MAX_RESTARTS = 3;
 export const APP_HOST = "127.0.0.1";
 export const RUNTIME_HOST = "localhost";
 
+/**
+ * Each start of a tool loads its document from a host of its own under the runtime's name,
+ * `t<16 hex digits>.localhost`. Chrome and Edge give each such host its own process, so a tool
+ * stuck in a busy loop can't hold up the next one, and its process ends once its frame is gone
+ * (RUN-02). The server answers the tool's document, and only it, at a host like this.
+ */
+export const isToolHost = (host: string, port: number | string): boolean =>
+  new RegExp(`^t[0-9a-f]{16}\\.${RUNTIME_HOST}:${port}$`).test(host);
+
 /** The runtime's origin for a host app page: the same port on the other loopback name. */
 export const runtimeOriginFor = (appLocation: { protocol: string; port: string }): string =>
   `${appLocation.protocol}//${RUNTIME_HOST}:${appLocation.port}`;

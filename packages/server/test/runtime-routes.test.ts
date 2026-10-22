@@ -52,7 +52,7 @@ describe("the runtime's routes (RUN-01)", () => {
     // The guard's frame-ancestors stays, beside the wrapper's own policy.
     expect(all.some((p) => p.startsWith("frame-ancestors"))).toBe(true);
     expect(all).toContainEqual(expect.stringContaining(`script-src 'nonce-${nonce}'`) as string);
-    expect(all.join(" ")).toContain(`frame-src http://localhost:${server.port}/runtime/tool`);
+    expect(all.join(" ")).toContain(`frame-src http://*.localhost:${server.port}/runtime/tool`);
     // A new nonce every time.
     const again = await get("/runtime/wrapper", asFrame());
     expect(/script nonce="([^"]+)"/.exec(again.body)?.[1]).not.toBe(nonce);

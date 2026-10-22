@@ -30,13 +30,16 @@ export const TOOL_CSP = [
  */
 export const TOOL_SANDBOX = "sandbox allow-scripts";
 
-/** The wrapper's document: its own script, and one frame, the tool's document. */
+/**
+ * The wrapper's document: its own script, and one frame, the tool's document, from a host of its
+ * own under the runtime's name (`isToolHost`), never from the wrapper's own host.
+ */
 export const wrapperCsp = (runtimeOrigin: string, nonce: string): string =>
   [
     "default-src 'none'",
     `script-src 'nonce-${nonce}'`,
     `style-src 'nonce-${nonce}'`,
-    `frame-src ${runtimeOrigin}/runtime/tool`,
+    `frame-src ${runtimeOrigin.replace("://", "://*.")}/runtime/tool`,
     "form-action 'none'",
     "base-uri 'none'",
   ].join("; ");
