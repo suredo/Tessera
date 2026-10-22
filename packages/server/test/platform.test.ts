@@ -53,7 +53,9 @@ describe("paths (PLAT-01)", () => {
   });
 });
 
-describe("processes (PLAT-01)", () => {
+// Each process test starts Node at least once, which can take seconds on a loaded machine. Every
+// limit below leaves room for that and still fails when the behaviour breaks (ENG-20).
+describe("processes (PLAT-01)", { timeout: 20_000 }, () => {
   it("starts a program by absolute path in a folder with spaces, passing arguments exactly", async () => {
     const cwd = folderWithSpaces();
     const args = ["two words", 'a "quoted" bit', "50%", "a&b|c", path.join(cwd, "file name.txt")];
@@ -74,43 +76,40 @@ describe("processes (PLAT-01)", () => {
   it("ends a program that ignores the request to stop at the time limit", async () => {
     // Outside Windows a program can catch the request; Windows always ends it. Runs on both.
     const ignores = "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);";
+    // Stopped by about 2 s (the limit, then a second's grace); a program left running would only
+    // end at the test's 20 s limit, so 8 s allows a slow start without missing that.
     const started = Date.now();
     const result = await runProcess(node, ["-e", ignores], { timeoutMs: 1000 });
-    expect(Date.now() - started).toBeLessThan(4000);
+    expect(Date.now() - started).toBeLessThan(8000);
     expect(result).toMatchObject({ exitCode: null, timedOut: true });
   });
 
   it("gives a program no input, so one that reads until the end finishes", async () => {
     const readsAll = "process.stdin.resume(); process.stdin.on('end', () => console.log('done'));";
-    const result = await runProcess(node, ["-e", readsAll], { timeoutMs: 5000 });
+    // A program left waiting for input would reach the 8 s limit and report timedOut.
+    const result = await runProcess(node, ["-e", readsAll], { timeoutMs: 8000 });
     expect(result).toMatchObject({ exitCode: 0, stdout: "done\n", timedOut: false });
   });
 
-  it(
-    "returns when the program exits, even if a program it started still holds the output",
-    {
-      timeout: 20_000,
-    },
-    async () => {
-      // The parent exits at once; its child is detached and released but still holds the output for
-      // 15 s. Returning within 8 s shows runProcess didn't wait for it, however slowly a loaded
-      // machine starts Node (ENG-20).
-      const leavesChild =
-        'const c = require("child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 15000)"], { stdio: "inherit", detached: true }); c.unref(); console.log("parent done " + c.pid);';
-      const started = Date.now();
-      const result = await runProcess(node, ["-e", leavesChild]);
-      const elapsed = Date.now() - started;
-      const child = Number(/parent done (\d+)/.exec(result.stdout)?.[1]);
-      try {
-        process.kill(child);
-      } catch {
-        // Already gone.
-      }
-      expect(elapsed).toBeLessThan(8000);
-      expect(result).toMatchObject({ exitCode: 0, timedOut: false });
-      expect(result.stdout).toMatch(/^parent done \d+\n$/);
-    },
-  );
+  it("returns when the program exits, even if a program it started still holds the output", async () => {
+    // The parent exits at once; its child is detached and released but still holds the output for
+    // 15 s. Returning within 8 s shows runProcess didn't wait for it, however slowly a loaded
+    // machine starts Node (ENG-20).
+    const leavesChild =
+      'const c = require("child_process").spawn(process.execPath, ["-e", "setTimeout(() => {}, 15000)"], { stdio: "inherit", detached: true }); c.unref(); console.log("parent done " + c.pid);';
+    const started = Date.now();
+    const result = await runProcess(node, ["-e", leavesChild]);
+    const elapsed = Date.now() - started;
+    const child = Number(/parent done (\d+)/.exec(result.stdout)?.[1]);
+    try {
+      process.kill(child);
+    } catch {
+      // Already gone.
+    }
+    expect(elapsed).toBeLessThan(8000);
+    expect(result).toMatchObject({ exitCode: 0, timedOut: false });
+    expect(result.stdout).toMatch(/^parent done \d+\n$/);
+  });
 
   it("refuses a relative path and a Windows batch file, saying what to do (L-45)", async () => {
     await expect(runProcess("node", ["-v"])).rejects.toThrow(/full path/);
