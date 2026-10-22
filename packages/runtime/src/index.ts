@@ -2,7 +2,13 @@
 // @tessera/runtime: the sandboxed runtime that runs generated tools, framework-free (RUN-01).
 export const packageName = "@tessera/runtime";
 export { TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "./csp.ts";
-export { mountTool, type MountedTool } from "./host.ts";
+export {
+  mountTool,
+  WATCHDOG_DEFAULTS,
+  type MountedTool,
+  type MountEvent,
+  type WatchdogOptions,
+} from "./host.ts";
 export { createRuntime, type RuntimeState, type ToolRuntime } from "./runtime.ts";
 export {
   APP_HOST,

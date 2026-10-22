@@ -2,6 +2,8 @@
 
 ## 2026-10-22
 
+* **Update**: The watchdog ([issue 45](https://github.com/suredo/Tessera/issues/45), last part): the [runtime package](code/runtime/package.md) doc now claims `RUN-02` and describes the pings and their envelope, the stopped state, and why each start of a tool has a host of its own (with one shared host, a new tool landed in a stuck tool's process and never ran). The [local server](code/server/local-server.md) doc says the tool's document is also answered at such a host, and the [threat model](spec/threat-model.md)'s limit on resource use says how a stuck tool is recovered. After Codex's review of [pull request 78](https://github.com/suredo/Tessera/pull/78), the runtime doc adds that the watchdog uses a clock that only moves forward, gives a restarted tool a starting tool's time, and that everyone listening hears why a tool stopped. After Codex's second review, the lifecycle tests wait for a tool to say it's ready before giving its work a deadline (no doc change needed for that).
+
 * **Update**: The [runtime package](code/runtime/package.md) doc describes `createRuntime`, the one active runtime ([issue 45](https://github.com/suredo/Tessera/issues/45), last part, first half): one tool runs at a time, minimizing disposes it, and a minimized tool stays minimized after a reload (`RUN-02`, `UX-07`). The watchdog follows, so the doc doesn't yet claim `RUN-02`.
 
 ## 2026-10-21

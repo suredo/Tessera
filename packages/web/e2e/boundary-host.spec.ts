@@ -158,7 +158,10 @@ async function hostUnmoved(page: Page) {
   const wrapper = page.frames().find((frame) => frame.url().includes("/runtime/wrapper"));
   expect(wrapper, "the wrapper is still there").toBeDefined();
   await expect(wrapper!.locator("iframe")).toHaveCount(1);
-  expect(await wrapper!.locator("iframe").getAttribute("src")).toBe("/runtime/tool?mount=prober");
+  // The tool's document, from a tool host of its own under the runtime's name (RUN-02).
+  expect(await wrapper!.locator("iframe").getAttribute("src")).toMatch(
+    /^http:\/\/t[0-9a-f]{16}\.localhost:\d+\/runtime\/tool\?mount=prober$/,
+  );
 }
 
 test("SBX-08: forms are refused and send nothing, to the probe or the host", async ({ page }) => {

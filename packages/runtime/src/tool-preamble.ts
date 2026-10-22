@@ -17,8 +17,14 @@
     const given = event.ports[0];
     if (data?.type !== PORT_MESSAGE || !given) return;
     port = given;
-    port.onmessage = (e: MessageEvent) => listeners.forEach((listen) => listen(e.data));
-    for (const message of waiting.splice(0)) port.postMessage(message);
+    // On the port, the host's messages come as { message } and the watchdog's as { ping }, which
+    // is answered at once: an answer shows the tool's page isn't stuck (RUN-02).
+    port.onmessage = (e: MessageEvent) => {
+      const data = e.data as { message?: unknown; ping?: unknown };
+      if (data && "ping" in data) port?.postMessage({ pong: data.ping });
+      else listeners.forEach((listen) => listen(data?.message));
+    };
+    for (const message of waiting.splice(0)) port.postMessage({ message });
   });
 
   // Registered before the tool's code, so it runs first. A page in this frame that never says hello,
@@ -32,7 +38,7 @@
     value: Object.freeze({
       /** Sends a message to the host; it waits until the bridge is ready. */
       send(message: unknown) {
-        if (port) port.postMessage(message);
+        if (port) port.postMessage({ message });
         else waiting.push(message);
       },
       /** Calls `listen` with every message from the host; returns a way to stop. */

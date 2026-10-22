@@ -1,5 +1,5 @@
 import type { IncomingHttpHeaders } from "node:http";
-import { APP_HOST, RUNTIME_HOST } from "@tessera/runtime/policy";
+import { APP_HOST, isToolHost, RUNTIME_HOST } from "@tessera/runtime/policy";
 
 // The checks every request passes before any route runs (SEC-03). The host app and its API live
 // on 127.0.0.1; runtime documents live on the opposite loopback name, localhost (RUN-01), so the
@@ -53,7 +53,10 @@ export function checkRequest(
   const app = appOrigin(port);
   const runtime = runtimeOrigin(port);
   const expectedHost = kind === "runtime" ? `${RUNTIME_HOST}:${port}` : `${APP_HOST}:${port}`;
-  if (one(headers.host) !== expectedHost) {
+  const host = one(headers.host) ?? "";
+  // A tool's document is also answered at a host of its own under the runtime's name (RUN-02).
+  const toolHost = pathname === "/runtime/tool" && isToolHost(host, port);
+  if (host !== expectedHost && !toolHost) {
     return refuse(`Tessera answers only at ${kind === "runtime" ? runtime : app}.`);
   }
   // Sent by every current browser, and not something a page can set or leave out.

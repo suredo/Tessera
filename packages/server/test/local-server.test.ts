@@ -51,6 +51,25 @@ describe("the request guard (SEC-03)", () => {
     expect(verdict("/api/x", { host }).ok).toBe(false);
   });
 
+  it("answers a tool's document, and only it, at a tool host of its own (RUN-02)", () => {
+    const frame = { "sec-fetch-dest": "iframe", referer: `${runtime}/runtime/wrapper` };
+    const toolHost = `t0123456789abcdef.localhost:${PORT}`;
+    expect(verdict("/runtime/tool", { ...frame, host: toolHost }).ok).toBe(true);
+    // Only the tool's document there, and only a host of exactly that shape.
+    expect(verdict("/runtime/wrapper", { ...frame, host: toolHost }).ok).toBe(false);
+    expect(verdict("/api/x", { host: toolHost, "sec-fetch-site": "same-origin" }).ok).toBe(false);
+    for (const host of [
+      `t0123456789abcdefXlocalhost:${PORT}`,
+      `t0123456789abcde.localhost:${PORT}`,
+      `x0123456789abcdef.localhost:${PORT}`,
+      `a.t0123456789abcdef.localhost:${PORT}`,
+      `t0123456789abcdef.localhost:${PORT + 1}`,
+      `t0123456789abcdef.127.0.0.1:${PORT}`,
+    ]) {
+      expect(verdict("/runtime/tool", { ...frame, host }).ok, host).toBe(false);
+    }
+  });
+
   it("serves runtime documents only as frames of the host app or the runtime", () => {
     const host = `localhost:${PORT}`;
     const frame = { host, "sec-fetch-dest": "iframe" };
