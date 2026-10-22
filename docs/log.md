@@ -2,6 +2,8 @@
 
 ## 2026-10-21
 
+* **Update**: The [M2 roadmap](roadmap/m2-generation-pipeline.md) lists deciding again, before any generated tool runs, whether to block frame creation and navigation in the tool's preamble (ADR 0006, option 3), after Codex's note on [pull request 74](https://github.com/suredo/Tessera/pull/74).
+
 * **Update**: The sandbox's boundary checks `SBX-08` to `SBX-13` ([issue 45](https://github.com/suredo/Tessera/issues/45), third part): the [runtime package](code/runtime/package.md) doc names the new browser tests, the shared prober, and the layers that keep a tool from reaching the host page or the person. After Codex's review of [pull request 75](https://github.com/suredo/Tessera/pull/75), it says that `SBX-09` and fullscreen in `SBX-13` also try from a real click, since the browser's click rules alone would hide a weaker sandbox or a delegated permission.
 
 * **Creation**: [ADR 0006. DNS lookups from blocked frame navigations](decisions/adr/0006-dns-lookups-from-blocked-frame-navigations.md), deciding [issue 72](https://github.com/suredo/Tessera/issues/72): accepted as a known limit of CSP for M1, a report to Chromium left to the owner, and a partial runtime block reconsidered at the start of M2. The [threat model](spec/threat-model.md)'s limit names it.

@@ -4,7 +4,7 @@ title: "M2: Generation pipeline"
 description: "The Claude Code adapter and generation pipeline, ending in the internal alpha."
 tags: [roadmap, generation-pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T18:16:57Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T00:46:30Z }
 ---
 # M2: Generation pipeline (size L, live budget about 35 calls) → internal alpha
 
@@ -19,6 +19,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T18:16:57Z }
 | Finding saved tools by asking: saved-tools catalogue in the intent stage, Continue or Use again offered | GEN-18 |
 | Modular prompt assembly from versioned prompt files, with size budgets in CI and prompt versions recorded in the ledger; includes the UI standard's prompt part | GEN-03, ENG-16, VER-06 (prompt part) |
 | Create, edit and repair with explicit output unions, failure classes, change detection, starting data, mixed-request split, stage time limits | CON-02, GEN-04, GEN-05, GEN-07, GEN-09, GEN-11 |
+| Before any generated tool runs: decide again whether to block frame creation and navigation in the tool's preamble, against tools steered by pasted data ([ADR 0006](../decisions/adr/0006-dns-lookups-from-blocked-frame-navigations.md), option 3) | RUN-01, SEC-02 |
 | Static checks with a real parser (forbidden APIs, undeclared actions and capabilities, unknown methods, startup writes, system clock reads) | VER-01 |
 | Smoke check for every candidate (mount, render, no errors, accessibility floor, 320 px) | VER-02 |
 | Host-composed outcome messages, plain-language lint, name and declaration preservation, scoped CSS edits | GEN-08, GEN-12, GEN-13, GEN-14 |
