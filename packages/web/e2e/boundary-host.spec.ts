@@ -105,6 +105,24 @@ const HOST_CHECKS = `
       "pointer lock": await attempt(() => slow(pointerLock())),
     };
   },
+  // Puts a button in the tool that tries the action when the person really clicks it: moving the
+  // host page and going fullscreen are allowed only after a click, so an attempt without one would
+  // be refused whatever the sandbox allowed (SBX-09, SBX-13).
+  async armed({ probe, action }) {
+    const button = add(Object.assign(document.createElement("button"), { id: "go", textContent: "Go" }));
+    button.addEventListener("click", async () => {
+      const actions = {
+        top: () => attempt(() => { top.location.href = probe + "top-clicked"; return "no error"; }),
+        parent: () => attempt(() => { parent.location.href = probe + "parent-clicked"; return "no error"; }),
+        fullscreen: () => attempt(() => within(document.documentElement.requestFullscreen()
+          .then(() => (document.fullscreenElement ? "granted" : "refused"), () => "refused"), 10000)),
+      };
+      const result = await actions[action]();
+      await wait(1000);
+      tessera.send({ clicked: action, result });
+    }, { once: true });
+    return { armed: action };
+  },
   // Answers anything that reaches it, for SBX-12's port from an earlier mount.
   async echo() {
     return { heard: "yes" };
@@ -116,6 +134,22 @@ test.beforeAll(async () => {
   host = await startSandboxHost({ prober: proberTool(HOST_CHECKS) });
 });
 test.afterAll(() => host.close());
+
+/**
+ * Mounts the prober with a button that tries `action`, clicks it for real, and returns what the
+ * tool found. The click is Playwright's, inside the tool's frame: a click the tool makes itself
+ * gives no permission.
+ */
+async function clickToTry(page: Page, action: string): Promise<string | undefined> {
+  const armed = await probe(page, host, "armed", { action });
+  expect(armed).toEqual({ armed: action });
+  await page.frameLocator("iframe").frameLocator("iframe").locator("#go").click();
+  const { messages, events } = await collect(page, 3, 500, 20_000);
+  expect(events, "the tool stayed on its page").toEqual([]);
+  const answer = messages[2] as { clicked?: string; result?: string } | undefined;
+  expect(answer?.clicked, "the tool answered after the click").toBe(action);
+  return answer?.result;
+}
 
 // The host page is where it was, with one wrapper and one tool frame inside it.
 async function hostUnmoved(page: Page) {
@@ -141,6 +175,15 @@ test("SBX-09: the tool can't move the host page or the wrapper", async ({ page }
   expect(Object.keys(found)).toHaveLength(3);
   await hostUnmoved(page);
   nothingArrived(host);
+});
+
+test("SBX-09: not even right after the person clicks inside the tool", async ({ page }) => {
+  for (const action of ["top", "parent"]) {
+    const result = await clickToTry(page, action);
+    expect(["refused", "no error"], action).toContain(result);
+    await hostUnmoved(page);
+    nothingArrived(host);
+  }
 });
 
 test("SBX-10: no window opens, no dialog shows and no file downloads", async ({ page }) => {
@@ -232,4 +275,7 @@ test("SBX-13: device features are refused, even after the person allowed them fo
   expect(Object.keys(found)).toHaveLength(5);
   for (const [feature, result] of Object.entries(found)) expect(result, feature).toBe("refused");
   nothingArrived(host);
+  // Fullscreen needs a click, so try it from one as well.
+  expect(await clickToTry(page, "fullscreen")).toBe("refused");
+  expect(await page.evaluate(() => document.fullscreenElement)).toBeNull();
 });
