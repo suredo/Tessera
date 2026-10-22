@@ -67,10 +67,11 @@ export async function startSandboxHost(
     );
   fs.writeFileSync(path.join(webRoot, "protocol.js"), strip("protocol.ts"));
   fs.writeFileSync(path.join(webRoot, "host.js"), strip("host.ts"));
+  fs.writeFileSync(path.join(webRoot, "runtime.js"), strip("runtime.ts"));
   // No favicon request, which would arrive at any time and look like a tool's.
   fs.writeFileSync(
     path.join(webRoot, "index.html"),
-    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script type="module">import { mountTool } from "./host.js"; window.mountTool = mountTool;</script>`,
+    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script type="module">import { mountTool } from "./host.js"; import { createRuntime } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime });</script>`,
   );
   const server = await startLocalServer({
     port: 0,

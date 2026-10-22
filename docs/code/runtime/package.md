@@ -4,10 +4,10 @@ title: "Runtime package"
 description: "@tessera/runtime: the sandbox a tool runs in. The wrapper on the opposite loopback name, the tool's sandboxed frame under a strict CSP, and the one MessageChannel port between them and the host."
 resource: ../../../packages/runtime/
 implements: [RUN-01, SEC-05, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX-06, SBX-07, SBX-08, SBX-09, SBX-10, SBX-11, SBX-12, SBX-13]
-tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts]
+tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T00:26:08Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T07:06:25Z }
 ---
 
 # Purpose
@@ -16,13 +16,15 @@ Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`
 
 # Entry points
 
-- `src/host.ts`: `mountTool`, the host app's side: it frames the wrapper and returns a `MountedTool` to send to and hear from the tool, and to hear when it was started again or stopped.
+- `src/runtime.ts`: `createRuntime`, the one active runtime the host app keeps (`RUN-02`): it opens, minimizes, restores and closes a tool, and reports a `RuntimeState` on every change so the app can keep it and start from it after a reload (`UX-07`).
+- `src/host.ts`: `mountTool`, whose start can be cancelled through an abort signal when it's no longer wanted; the host app's side: it frames the wrapper and returns a `MountedTool` to send to and hear from the tool, and to hear when it was started again or stopped.
 - `src/wrapper.ts`: the wrapper document's script. `src/tool-preamble.ts`: the first script in the tool's document, which says hello as the page loads, takes the port and gives the tool its one way to talk to the host, a global named tessera. Both are inlined by the server as plain scripts.
 - `src/csp.ts`: `TOOL_CSP`, `TOOL_SANDBOX` and `wrapperCsp`, the documents' policies. `src/protocol.ts`: the message names (`HELLO_MESSAGE` among them), the tool's events (`TOOL_EVENTS`), `MAX_RESTARTS`, the two loopback names and `runtimeOriginFor`.
 - `src/policy.ts`, imported as `@tessera/runtime/policy`: what the server needs, without browser code.
 
 # Invariants
 
+- **One tool runs at a time** (`RUN-02`). Opening another tool disposes the running one first: its wrapper frame goes, and with it the tool's frame, channel and timers. A start still in progress is cancelled, and a start that finishes after something newer came is undone at once, so of several quick opens only the last runs. Minimizing disposes the tool the same way and remembers it; restoring starts it again from scratch. A runtime started from a minimized state stays minimized, so a reload keeps a minimized tool minimized.
 - **Two origins and a sandbox.** The host app is on 127.0.0.1, the wrapper on localhost (the same port), and the tool's document is sandboxed with scripts only, so its origin is `null`. The tool's document carries the sandbox in a header too, so it is sandboxed even if something framed it without the attribute.
 - **The tool loads nothing.** Its CSP allows its own inline code and blob: images and media; network, fonts, frames from URLs, workers, objects, forms and base changes are refused. The boundary checks prove it in Chrome and Edge (`SBX-01` to `SBX-05`): a hostile test tool tries every kind of request, connection, resource, storage and worker, and neither the probe server nor the local server receives anything, not even a connection. In `SBX-01`, a refused request counts only if the tool's policy reported refusing it, so a request that left and failed for another reason, such as the destination's CORS rules, fails the check. One gap is the browser's: a frame navigation to a blocked address still makes Chrome and Edge resolve its name and connect, with no request sent ([#72](https://github.com/suredo/Tessera/issues/72)).
 - **Nested frames are as confined as the tool (`SBX-06`, [ADR 0004](../../decisions/adr/0004-nested-frames-in-the-sandbox.md)).** Frames from a URL, `data:` or `blob:`, objects and embeds don't load. A `srcdoc` or `javascript:` frame inside the tool runs, since CSP doesn't govern it, but it inherits the tool's sandbox and CSP and has an opaque origin of its own, no bridge, no network, storage or popups. The tool can't write into a nested blank frame.
@@ -37,6 +39,8 @@ Nothing at run time. The server's runtime routes serve its documents, and the ho
 
 # Pitfalls
 
+- **The watchdog isn't here yet.** `RUN-02` also asks for recovery from a busy loop; it comes with #45's last pull request, so the code doc doesn't yet claim `RUN-02`.
+- **The host app keeps the state, not the runtime.** `createRuntime` reports each `RuntimeState` and starts from one it's given; where it is kept (the workspace, from #53) is the app's choice. The tests keep it in `sessionStorage`.
 - **The browser tests share one host and one prober:** `packages/web/e2e/support/prober.ts` is the hostile test tool each boundary spec gives its own checks to, with `probe` and `nothingArrived`. `packages/web/e2e/support/sandbox-host.ts` starts the local server and the probe server, records every request and every connection both receive, and mounts tools on a small test page. A check resets it once the tool is ready, so whatever arrives after came from the tool.
 - **A restarted tool forgets what it held in memory, and misses what was sent while it left.** A message the host sends after the tool leaves its page but before the host hears `restarted` goes to the page that left and is lost, so the host should send what the tool needs again when it hears `restarted`; the lifecycle (#45's next pull request, `RUN-02`) builds on this. Tests wait for `restarted` and the new page's hello before sending to it: a fixed pause raced the wrapper's one-second hello grace on CI's Windows runner.
 - **A slow page may be taken for one that left.** The wrapper waits a second after the frame loads for its hello; a page that takes longer is started again.
@@ -49,6 +53,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `src/csp.ts`: `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`
 - `src/host.ts`: `MountedTool` (type), `mountTool`
-- `src/index.ts`: `packageName`, `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `mountTool`, `MountedTool` (type), `APP_HOST`, `HELLO_MESSAGE`, `MAX_RESTARTS`, `MOUNT_MESSAGE`, `PORT_MESSAGE`, `RUNTIME_HOST`, `runtimeOriginFor`, `TOOL_EVENTS`, `ToolEvent` (type)
+- `src/index.ts`: `packageName`, `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `mountTool`, `MountedTool` (type), `createRuntime`, `RuntimeState` (type), `ToolRuntime` (type), `APP_HOST`, `HELLO_MESSAGE`, `MAX_RESTARTS`, `MOUNT_MESSAGE`, `PORT_MESSAGE`, `RUNTIME_HOST`, `runtimeOriginFor`, `TOOL_EVENTS`, `ToolEvent` (type)
 - `src/policy.ts`: `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `APP_HOST`, `RUNTIME_HOST`
 - `src/protocol.ts`: `MOUNT_MESSAGE`, `HELLO_MESSAGE`, `PORT_MESSAGE`, `TOOL_EVENTS`, `ToolEvent` (type), `MAX_RESTARTS`, `APP_HOST`, `RUNTIME_HOST`, `runtimeOriginFor`
+- `src/runtime.ts`: `RuntimeState` (type), `ToolRuntime` (type), `createRuntime`

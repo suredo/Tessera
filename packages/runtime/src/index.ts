@@ -3,6 +3,7 @@
 export const packageName = "@tessera/runtime";
 export { TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "./csp.ts";
 export { mountTool, type MountedTool } from "./host.ts";
+export { createRuntime, type RuntimeState, type ToolRuntime } from "./runtime.ts";
 export {
   APP_HOST,
   HELLO_MESSAGE,
