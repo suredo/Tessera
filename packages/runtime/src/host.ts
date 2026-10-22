@@ -23,12 +23,14 @@ export type MountedTool = {
 
 /**
  * Mounts the tool the server knows as `mountId` inside `container`. Resolves once the wrapper has
- * loaded and holds the channel; the tool's own document follows on its own.
+ * loaded and holds the channel; the tool's own document follows on its own. Aborting `signal`
+ * before then removes the frame and rejects, so a mount that is no longer wanted never runs.
  */
 export function mountTool(
   container: HTMLElement,
   mountId: string,
   appLocation: { protocol: string; port: string } = location,
+  signal?: AbortSignal,
 ): Promise<MountedTool> {
   const runtimeOrigin = runtimeOriginFor(appLocation);
   const frame = document.createElement("iframe");
@@ -49,10 +51,18 @@ export function mountTool(
       listeners.forEach((listen) => listen(data.message));
     }
   };
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      channel.port1.close();
+      frame.remove();
+      reject(new Error("The tool's start was cancelled."));
+    };
+    if (signal?.aborted) return abort();
+    signal?.addEventListener("abort", abort, { once: true });
     frame.addEventListener(
       "load",
       () => {
+        signal?.removeEventListener("abort", abort);
         frame.contentWindow?.postMessage(
           { type: MOUNT_MESSAGE, mountId, instanceId },
           runtimeOrigin,

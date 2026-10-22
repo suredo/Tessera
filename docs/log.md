@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-22
+
+* **Update**: The [runtime package](code/runtime/package.md) doc describes `createRuntime`, the one active runtime ([issue 45](https://github.com/suredo/Tessera/issues/45), last part, first half): one tool runs at a time, minimizing disposes it, and a minimized tool stays minimized after a reload (`RUN-02`, `UX-07`). The watchdog follows, so the doc doesn't yet claim `RUN-02`.
+
 ## 2026-10-21
 
 * **Update**: The [M2 roadmap](roadmap/m2-generation-pipeline.md) lists deciding again, before any generated tool runs, whether to block frame creation and navigation in the tool's preamble (ADR 0006, option 3), after Codex's note on [pull request 74](https://github.com/suredo/Tessera/pull/74).
