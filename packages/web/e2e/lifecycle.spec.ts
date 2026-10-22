@@ -17,27 +17,34 @@ test.beforeAll(async () => {
   host = await startSandboxHost({
     first: ticker("first"),
     second: ticker("second"),
-    // Answers each message, or spins for good when told to.
+    // Says it's ready, answers each message, or spins for good when told to.
     spinner: {
       html: "<p>Spinner</p>",
       css: "",
-      js: 'tessera.onMessage((m) => { if (m === "spin") for (;;) {} tessera.send({ tool: "spinner", echo: m }); });',
+      js: 'tessera.send({ tool: "spinner", ready: true }); tessera.onMessage((m) => { if (m === "spin") for (;;) {} tessera.send({ tool: "spinner", echo: m }); });',
     },
     // Spins from the moment it starts.
     stuck: { html: "<p>Stuck</p>", css: "", js: "for (;;) {}" },
     // Leaves its page as soon as it starts, until the wrapper stops it (SBX-07).
     runaway: { html: "<p>Runaway</p>", css: "", js: 'location.href = "about:blank";' },
-    // Busy for a second and a half, under the watchdog's limit, then answers.
+    // Says it's ready; then busy for a second and a half, under the watchdog's limit, then answers.
     slow: {
       html: "<p>Slow</p>",
       css: "",
-      js: 'tessera.onMessage((m) => { const end = Date.now() + 1500; while (Date.now() < end) {} tessera.send({ tool: "slow", done: m }); });',
+      js: 'tessera.send({ tool: "slow", ready: true }); tessera.onMessage((m) => { const end = Date.now() + 1500; while (Date.now() < end) {} tessera.send({ tool: "slow", done: m }); });',
     },
   });
 });
 test.afterAll(() => host.close());
 
-type Tick = { tool: string; run?: string; tick?: number; echo?: string; done?: string };
+type Tick = {
+  tool: string;
+  run?: string;
+  tick?: number;
+  echo?: string;
+  done?: string;
+  ready?: boolean;
+};
 // Short timings, so a stuck tool is stopped within seconds (the defaults are 1 s, 5 s and 10 s).
 // The slow tool works for 1.5 s, so a busy machine still leaves it room under the limit.
 const WATCHDOG = { pingMs: 200, unresponsiveMs: 4000, startupMs: 6000 };
@@ -84,6 +91,21 @@ async function openHost(page: Page) {
     w.runtime.onState((state) => sessionStorage.setItem("runtime", JSON.stringify(state)));
   }, WATCHDOG);
 }
+
+/**
+ * Waits until a tool says it's ready, within the watchdog's startup allowance: open() resolves
+ * once the wrapper loads, while the tool's page may still be starting. Work sent after this gets a
+ * deadline of its own, not one shared with the start.
+ */
+const readied = (page: Page, tool: string, after = 0) =>
+  expect
+    .poll(async () => (await ticks(page)).slice(after).some((t) => t.tool === tool && t.ready), {
+      timeout: WATCHDOG.startupMs + 5000,
+    })
+    .toBe(true);
+// Waits for a reply to work sent to a ready tool: the 1.5 s of work, with room for a busy machine.
+const replied = (page: Page, check: (tick: Tick) => boolean) =>
+  expect.poll(async () => (await ticks(page)).some(check), { timeout: 10_000 }).toBe(true);
 
 /** Sends the running tool a message. */
 const sendTool = (page: Page, message: unknown) =>
@@ -203,8 +225,9 @@ test("RUN-02: the watchdog stops a tool stuck in a busy loop, and the host stays
 }) => {
   await openHost(page);
   await open(page, "spinner");
+  await readied(page, "spinner");
   await sendTool(page, "hello");
-  await expect.poll(async () => (await ticks(page)).some((t) => t.echo === "hello")).toBe(true);
+  await replied(page, (t) => t.echo === "hello");
 
   await sendTool(page, "spin");
   // The host page runs apart from the tool: it answers at once while the tool spins.
@@ -217,13 +240,15 @@ test("RUN-02: the watchdog stops a tool stuck in a busy loop, and the host stays
   expect(await page.locator("body > iframe").count()).toBe(0);
 
   // Restored, it starts again and answers.
+  const beforeRestore = (await ticks(page)).length;
   await page.evaluate(async () => {
     const w = window as unknown as TestWindow;
     const tool = await w.runtime.restore();
     tool.onMessage((message) => w.ticks.push(message as Tick));
   });
+  await readied(page, "spinner", beforeRestore);
   await sendTool(page, "again");
-  await expect.poll(async () => (await ticks(page)).some((t) => t.echo === "again")).toBe(true);
+  await replied(page, (t) => t.echo === "again");
   expect(await state(page)).toEqual({ mode: "active", mountId: "spinner" });
 });
 
@@ -240,8 +265,9 @@ test("RUN-02: a tool that is busy for a while, under the limit, keeps running", 
 }) => {
   await openHost(page);
   await open(page, "slow");
+  await readied(page, "slow");
   await sendTool(page, "work");
-  await expect.poll(async () => (await ticks(page)).some((t) => t.done === "work")).toBe(true);
+  await replied(page, (t) => t.done === "work");
   await settle(page, 1000);
   expect(await state(page)).toEqual({ mode: "active", mountId: "slow" });
   expect(runningTools(page)).toEqual(["slow"]);
@@ -282,8 +308,9 @@ test("RUN-02: whoever opened a tool hears why it stopped, as the runtime does", 
 test("RUN-02: setting the computer's clock forward doesn't stop a tool", async ({ page }) => {
   await openHost(page);
   await open(page, "slow");
+  await readied(page, "slow");
   await sendTool(page, "warm up");
-  await expect.poll(async () => (await ticks(page)).some((t) => t.done === "warm up")).toBe(true);
+  await replied(page, (t) => t.done === "warm up");
   // The tool works for a second and a half, within its limit, so the pings sent meanwhile wait
   // for an answer; then the clock jumps a minute ahead, as a correction would make it.
   await sendTool(page, "work");
@@ -292,7 +319,7 @@ test("RUN-02: setting the computer's clock forward doesn't stop a tool", async (
     const real = Date.now.bind(Date);
     Date.now = () => real() + 60_000;
   });
-  await expect.poll(async () => (await ticks(page)).some((t) => t.done === "work")).toBe(true);
+  await replied(page, (t) => t.done === "work");
   await settle(page, 1000);
   expect(await state(page)).toEqual({ mode: "active", mountId: "slow" });
 });
