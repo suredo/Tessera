@@ -67,10 +67,12 @@ export function mountTool(
   const channel = new MessageChannel();
   const listeners = new Set<(message: unknown) => void>();
   const eventListeners = new Set<(event: MountEvent) => void>();
-  const emit = (event: MountEvent) => eventListeners.forEach((listen) => listen(event));
+  // Every listener there when the event happens hears it, even one that unmounts the tool first.
+  const emit = (event: MountEvent) => [...eventListeners].forEach((listen) => listen(event));
 
   // The watchdog judges only pings it sent: a timer slowed down in a background tab makes it ping
-  // less often, never makes a tool look stuck. Any answer clears the wait.
+  // less often, never makes a tool look stuck. Any answer clears the wait. Time is measured on a
+  // clock that only moves forward, so setting the computer's clock can't stop a tool.
   let answered = false;
   let unansweredSince: number | undefined;
   let watching: ReturnType<typeof setInterval> | undefined;
@@ -78,7 +80,7 @@ export function mountTool(
   // Set until the wrapper has loaded: a wrapper that never loads fails the start instead.
   let failStart: ((error: Error) => void) | undefined;
   const tick = () => {
-    const now = Date.now();
+    const now = performance.now();
     const limit = answered ? limits.unresponsiveMs : limits.startupMs;
     if (unansweredSince !== undefined && now - unansweredSince > limit) {
       stop();
@@ -107,6 +109,11 @@ export function mountTool(
     } else if ("event" in data) {
       const toolEvent = TOOL_EVENTS.find((name) => name === data.event);
       if (toolEvent === "stopped") clearInterval(watching);
+      // Started again, the tool gets the time a starting tool gets.
+      if (toolEvent === "restarted") {
+        answered = false;
+        unansweredSince = undefined;
+      }
       if (toolEvent) emit(toolEvent);
     } else {
       listeners.forEach((listen) => listen(data.message));

@@ -25,6 +25,8 @@ test.beforeAll(async () => {
     },
     // Spins from the moment it starts.
     stuck: { html: "<p>Stuck</p>", css: "", js: "for (;;) {}" },
+    // Leaves its page as soon as it starts, until the wrapper stops it (SBX-07).
+    runaway: { html: "<p>Runaway</p>", css: "", js: 'location.href = "about:blank";' },
     // Busy for a second and a half, under the watchdog's limit, then answers.
     slow: {
       html: "<p>Slow</p>",
@@ -37,10 +39,12 @@ test.afterAll(() => host.close());
 
 type Tick = { tool: string; run?: string; tick?: number; echo?: string; done?: string };
 // Short timings, so a stuck tool is stopped within seconds (the defaults are 1 s, 5 s and 10 s).
-const WATCHDOG = { pingMs: 200, unresponsiveMs: 2000, startupMs: 3000 };
+// The slow tool works for 1.5 s, so a busy machine still leaves it room under the limit.
+const WATCHDOG = { pingMs: 200, unresponsiveMs: 4000, startupMs: 6000 };
 type Mounted = {
   send(message: unknown): void;
   onMessage(listen: (message: unknown) => void): void;
+  onEvent(listen: (event: string) => void): void;
 };
 type Runtime = {
   state(): { mode: string; mountId?: string; reason?: string };
@@ -52,6 +56,7 @@ type Runtime = {
   onState(listen: (state: unknown) => void): void;
 };
 type TestWindow = {
+  events: string[];
   createRuntime(
     container: HTMLElement,
     initial: unknown,
@@ -73,6 +78,7 @@ async function openHost(page: Page) {
     const w = window as unknown as TestWindow;
     const kept = sessionStorage.getItem("runtime");
     w.ticks = [];
+    w.events = [];
     const initial = kept ? (JSON.parse(kept) as unknown) : undefined;
     w.runtime = w.createRuntime(document.body, initial, location, watchdog);
     w.runtime.onState((state) => sessionStorage.setItem("runtime", JSON.stringify(state)));
@@ -95,6 +101,7 @@ const open = (page: Page, mountId: string) =>
     const w = window as unknown as TestWindow;
     const tool = await w.runtime.open(mountId);
     tool.onMessage((message) => w.ticks.push(message as Tick));
+    tool.onEvent((event) => w.events.push(event));
   }, mountId);
 
 const ticks = (page: Page) => page.evaluate(() => [...(window as unknown as TestWindow).ticks]);
@@ -248,4 +255,44 @@ test("UX-07: a stopped tool is still stopped after a reload", async ({ page }) =
   expect(await state(page)).toEqual({ mode: "stopped", mountId: "stuck", reason: "unresponsive" });
   await settle(page, 600);
   expect(runningTools(page)).toEqual([]);
+});
+
+test("RUN-02: whoever opened a tool hears why it stopped, as the runtime does", async ({
+  page,
+}) => {
+  await openHost(page);
+  await open(page, "stuck");
+  await reaches(page, { mode: "stopped", mountId: "stuck", reason: "unresponsive" });
+  expect(await page.evaluate(() => (window as unknown as TestWindow).events)).toEqual([
+    "unresponsive",
+  ]);
+
+  await openHost(page);
+  await page.evaluate(() => (window as unknown as TestWindow).runtime.close());
+  await open(page, "runaway");
+  await reaches(page, { mode: "stopped", mountId: "runaway", reason: "kept leaving its page" });
+  expect(await page.evaluate(() => (window as unknown as TestWindow).events)).toEqual([
+    "restarted",
+    "restarted",
+    "restarted",
+    "stopped",
+  ]);
+});
+
+test("RUN-02: setting the computer's clock forward doesn't stop a tool", async ({ page }) => {
+  await openHost(page);
+  await open(page, "slow");
+  await sendTool(page, "warm up");
+  await expect.poll(async () => (await ticks(page)).some((t) => t.done === "warm up")).toBe(true);
+  // The tool works for a second and a half, within its limit, so the pings sent meanwhile wait
+  // for an answer; then the clock jumps a minute ahead, as a correction would make it.
+  await sendTool(page, "work");
+  await settle(page, 500);
+  await page.evaluate(() => {
+    const real = Date.now.bind(Date);
+    Date.now = () => real() + 60_000;
+  });
+  await expect.poll(async () => (await ticks(page)).some((t) => t.done === "work")).toBe(true);
+  await settle(page, 1000);
+  expect(await state(page)).toEqual({ mode: "active", mountId: "slow" });
 });

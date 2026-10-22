@@ -7,7 +7,7 @@ implements: [RUN-01, RUN-02, SEC-05, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T08:32:13Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T09:26:05Z }
 ---
 
 # Purpose
@@ -25,7 +25,7 @@ Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`
 # Invariants
 
 - **One tool runs at a time** (`RUN-02`). Opening another tool disposes the running one first: its wrapper frame goes, and with it the tool's frame, channel and timers. A start still in progress is cancelled, and a start that finishes after something newer came is undone at once, so of several quick opens only the last runs. Minimizing disposes the tool the same way and remembers it; restoring starts it again from scratch. A runtime started from a minimized state stays minimized, so a reload keeps a minimized tool minimized.
-- **A tool that stops answering is stopped** (`RUN-02`). The host pings the tool's page through the wrapper; the preamble answers each ping. The host runs apart from the tool, on the other loopback name, so a tool spinning in a loop can't hold it up. After a while without an answer, the host removes the tool's frames and reports `unresponsive`, and the runtime shows the tool as stopped, which a reload keeps; the app can start it again. Only pings it sent are judged, so a timer slowed in a background tab never makes a tool look stuck.
+- **A tool that stops answering is stopped** (`RUN-02`). The host pings the tool's page through the wrapper; the preamble answers each ping. The host runs apart from the tool, on the other loopback name, so a tool spinning in a loop can't hold it up. After a while without an answer, the host removes the tool's frames and reports `unresponsive`, and the runtime shows the tool as stopped, which a reload keeps; the app can start it again. Only pings it sent are judged, so a timer slowed in a background tab never makes a tool look stuck. Time is measured on a clock that only moves forward, so setting the computer's clock can't stop a tool, and a tool the wrapper started again gets a starting tool's time. Everyone listening when the tool stops hears why, the code that opened it as well as the runtime.
 - **Each start of a tool has a host of its own,** `t<16 hex digits>.localhost` (`isToolHost`), so Chrome and Edge run it in a process of its own: with one shared host, a new tool would land in a stuck tool's process and never run. The wrapper's policy frames only such hosts, and the server answers the tool's document, and only it, there.
 - **On the port, messages have an envelope.** Between the wrapper and the tool, the host's messages travel as `{ message }` and the watchdog's as `{ ping }` and `{ pong }`; the preamble unwraps them, so a tool's own message can't pass for a ping's answer.
 - **Two origins and a sandbox.** The host app is on 127.0.0.1, the wrapper on localhost (the same port), and the tool's document is sandboxed with scripts only, so its origin is `null`. The tool's document carries the sandbox in a header too, so it is sandboxed even if something framed it without the attribute.
