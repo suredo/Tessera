@@ -1,43 +1,15 @@
 import http from "node:http";
-import { expect, test, type Page } from "@playwright/test";
-import {
-  collect,
-  mount,
-  send,
-  startSandboxHost,
-  type SandboxHost,
-} from "./support/sandbox-host.ts";
+import { expect, test } from "@playwright/test";
+import { FAILED, nothingArrived, probe, proberTool } from "./support/prober.ts";
+import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 
 // The sandbox's boundary checks (SEC-05, docs/spec/threat-model.md), in Chrome and Edge (TEST-06).
 // A hand-written hostile tool attempts each forbidden thing and reports what happened. A check
 // passes only if every attempt failed inside the tool and nothing reached the probe server, not
 // even a connection, nor the local server on either loopback name.
 
-// What the prober can try. Plain JavaScript in a string: it runs inside the sandboxed tool.
-const PROBER = `
-const wait = (ms) => new Promise((done) => setTimeout(done, ms));
-const within = (promise, ms = 2000) => Promise.race([promise, wait(ms).then(() => "no answer")]);
-const attempt = async (work) => { try { return await work(); } catch { return "refused"; } };
-const loads = (element, ok = "load") => new Promise((done) => {
-  element.addEventListener(ok, () => done("loaded"));
-  element.addEventListener("error", () => done("refused"));
-});
-const add = (element) => { document.body.append(element); return element; };
-// Every refusal the tool's policies report, so a check can tell a refusal by policy from a request
-// that left and failed for another reason, such as the destination's CORS rules.
-const violations = [];
-addEventListener("securitypolicyviolation", (event) => violations.push(event));
-const byPolicy = async (url, directive, run) => {
-  const before = violations.length;
-  const result = await run();
-  await wait(100);
-  const origin = new URL(url).origin;
-  const reported = violations.slice(before).some((event) =>
-    event.effectiveDirective === directive && event.blockedURI.startsWith(origin));
-  return result === "refused" && reported ? "refused by policy" : result + (reported ? "" : ", no policy report");
-};
-
-const checks = {
+// The network checks the prober can run, inside the sandboxed tool.
+const NETWORK_CHECKS = `
   // SBX-01: fetch and XMLHttpRequest, also after the tool adds a looser policy of its own.
   async requests({ targets }) {
     const found = {};
@@ -148,12 +120,6 @@ const checks = {
       }),
     };
   },
-};
-
-tessera.send({ ready: true });
-tessera.onMessage(async (message) => {
-  tessera.send({ found: await checks[message.check](message) });
-});
 `;
 
 // A 1x1 PNG, standing in for an asset the host hands over (DATA-11).
@@ -164,42 +130,18 @@ const PNG = [
   ),
 ];
 
-// What counts as the attempt failing, in the tool's own words.
-const FAILED = ["refused", "no answer", "unavailable", "empty"];
-
 let host: SandboxHost;
 test.beforeAll(async () => {
-  host = await startSandboxHost({ prober: { html: "<p>Prober</p>", css: "", js: PROBER } });
+  host = await startSandboxHost({ prober: proberTool(NETWORK_CHECKS) });
 });
 test.afterAll(() => host.close());
-
-/** Mounts the prober, then runs one check with nothing else in flight, and returns its findings. */
-async function probe(page: Page, check: string, payload: object = {}) {
-  await mount(page, host, "prober");
-  await collect(page, 1, 0);
-  host.reset();
-  await send(page, { check, probe: host.probeUrl, ...payload });
-  const { messages, events } = await collect(page, 2, 1000);
-  const found = (messages[1] as { found?: Record<string, string> } | undefined)?.found;
-  expect(found, "the prober answered").toBeDefined();
-  expect(events, "the tool stayed on its page").toEqual([]);
-  return found ?? {};
-}
-
-// Nothing the tool did reached either server: no request, and no connection either.
-function nothingArrived() {
-  expect(host.probeRequests).toEqual([]);
-  expect(host.probeConnections()).toBe(0);
-  expect(host.hostRequests).toEqual([]);
-  expect(host.hostConnections()).toBe(0);
-}
 
 const runtimeOrigin = () => `http://localhost:${host.port}`;
 
 test("SBX-01: fetch and XMLHttpRequest fail and send nothing, even after the tool's own policy", async ({
   page,
 }) => {
-  const found = await probe(page, "requests", {
+  const found = await probe(page, host, "requests", {
     targets: {
       probe: `${host.probeUrl}fetch`,
       "host app": `${host.url}/api/instance`,
@@ -213,7 +155,7 @@ test("SBX-01: fetch and XMLHttpRequest fail and send nothing, even after the too
   for (const [attempt, result] of Object.entries(found)) {
     expect(result, attempt).toBe("refused by policy");
   }
-  nothingArrived();
+  nothingArrived(host);
 
   // Sent straight to the server with the tool's origin, the API refuses it too (SEC-03).
   const status = await new Promise<number>((resolve, reject) => {
@@ -238,33 +180,33 @@ test("SBX-01: fetch and XMLHttpRequest fail and send nothing, even after the too
 });
 
 test("SBX-02: WebSocket, EventSource and sendBeacon reach nothing", async ({ page }) => {
-  const found = await probe(page, "connections");
+  const found = await probe(page, host, "connections");
   expect(found["WebSocket"]).toMatch(/refused|no answer/);
   expect(found["EventSource"]).toMatch(/refused|no answer/);
-  nothingArrived();
+  nothingArrived(host);
 });
 
 test("SBX-03: nothing loads by URL, and an image from a blob: URL does", async ({ page }) => {
-  const found = await probe(page, "resources", { png: PNG });
+  const found = await probe(page, host, "resources", { png: PNG });
   const { ["control: blob: image"]: control, ...attempts } = found;
   expect(control).toBe("loaded");
   expect(Object.keys(attempts)).toHaveLength(6);
   for (const [attempt, result] of Object.entries(attempts))
     expect(FAILED, attempt).toContain(result);
-  nothingArrived();
+  nothingArrived(host);
 });
 
 test("SBX-04: storage is refused, and nothing is kept for the next mount", async ({ page }) => {
-  const written = await probe(page, "storage", { read: false });
+  const written = await probe(page, host, "storage", { read: false });
   for (const [store, result] of Object.entries(written)) expect(FAILED, store).toContain(result);
-  const read = await probe(page, "storage", { read: true });
+  const read = await probe(page, host, "storage", { read: true });
   for (const [store, result] of Object.entries(read)) expect(FAILED, store).toContain(result);
-  nothingArrived();
+  nothingArrived(host);
 });
 
 test("SBX-05: no worker starts, from a URL or a blob: URL", async ({ page }) => {
-  const found = await probe(page, "workers", { runtime: runtimeOrigin() });
+  const found = await probe(page, host, "workers", { runtime: runtimeOrigin() });
   expect(Object.keys(found)).toHaveLength(6);
   for (const [worker, result] of Object.entries(found)) expect(FAILED, worker).toContain(result);
-  nothingArrived();
+  nothingArrived(host);
 });
