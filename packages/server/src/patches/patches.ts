@@ -31,7 +31,13 @@ export type PatchOptions = {
   limitBytes?: number;
 };
 
-const recordKey = (collection: string, id: string) => `${collection}/${id}`;
+/** The key a record's revision is kept under: its collection and its ID. */
+export const recordKey = (collection: string, id: string) => `${collection}/${id}`;
+/** The collection and ID a key names; a collection name never holds a "/". */
+export const recordOfKey = (key: string): { collection: string; id: string } => ({
+  collection: key.slice(0, key.indexOf("/")),
+  id: key.slice(key.indexOf("/") + 1),
+});
 
 const isRecord = (value: unknown): value is DataRecord =>
   value !== null &&
@@ -151,7 +157,7 @@ export function applyPatch(
   for (const key of changed) revisions.set(key, state.revisions.get(key)! + 1);
   for (const key of removed) revisions.delete(key);
   for (const key of added) revisions.set(key, 1);
-  const addedIds = added.map((key) => key.slice(key.indexOf("/") + 1));
+  const addedIds = added.map((key) => recordOfKey(key).id);
   return { ok: true, state: { data, revisions }, addedIds };
 }
 

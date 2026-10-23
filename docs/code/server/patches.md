@@ -7,7 +7,7 @@ implements: [DATA-02, DATA-06]
 tests: [../../../packages/server/test/patches.test.ts, ../../../packages/contracts/test/patch.test.ts]
 tags: [code, server, data, patches]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T08:34:21Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T23:03:19Z }
 ---
 
 # Purpose
@@ -20,6 +20,7 @@ Every change to a tool's data, from the tool itself or later from chat, is a sma
   - `createDataState` starts tracking a tool's data: every record it already holds is at revision 1. It throws if a list holds two records with one ID.
   - `applyPatch` applies a batch, given as untrusted input, and returns `{ ok: true, state, addedIds }` or `{ ok: false, reason, message, operationIndex }`, where the reason is invalid, stale or too large and the message starts with "Nothing was changed:".
   - `revisionOf` gives a record's revision count, which a change planned against that record carries.
+  - `recordKey` and `recordOfKey` turn a collection and ID into the key a revision is kept under, and back. A collection name never holds a "/".
 - The patch contract and the data limit live in the contracts package's `src/patch.ts`.
 
 # Invariants
@@ -34,11 +35,11 @@ Every change to a tool's data, from the tool itself or later from chat, is a sma
 
 # Depends on / used by
 
-Depends on the patch contract and zod. The bridge (#46) will apply a tool's own changes through it and checks BRG-04 end to end; storage (#48) and activation (#50) will store the data and revisions and give the engine the tool's current state; chat (M2) will plan batches against a state it read earlier.
+Depends on the patch contract and zod. [Workspaces](workspaces.md) give it a workspace's data with its saved revisions and save the result; the bridge (#46) will apply a tool's own changes through them; activation (#50) will give it the tool's current state; chat (M2) will plan batches against a state it read earlier.
 
 # Pitfalls
 
-- **In memory only.** Nothing here is stored: persisting the data with its revisions, and applying a batch inside a transaction, comes with storage and activation. Revisions are a `Map` keyed by `collection/id`, never a plain object, so an ID can't reach `Object.prototype`.
+- **In memory only.** Nothing here is stored: [workspaces](workspaces.md) save the data with its revisions and apply a batch inside a transaction (`patchWorkspaceData`). Revisions are a `Map` keyed by `collection/id`, never a plain object, so an ID can't reach `Object.prototype`.
 - **No check against the tool's data schema.** A change that fits the patch contract but not the tool's declared schema is applied; checking data against the schema comes with activation (#50, `DATA-03`).
 - **A record is only found at the top level.** Lists nested inside a record, and top-level fields that aren't lists of records, can't be changed by a patch yet.
 - **An empty `fields` changes nothing,** but is still checked: its record must exist and be current. JSON Schema can't require a non-empty map without a zod-only rule, so the contract allows it.
@@ -48,5 +49,5 @@ Depends on the patch contract and zod. The bridge (#46) will apply a tool's own 
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `applyPatch`, `createDataState`, `revisionOf`, `DataState` (type), `PatchOptions` (type), `PatchRefusal` (type), `PatchResult` (type), `ToolData` (type)
-- `patches.ts`: `ToolData` (type), `DataState` (type), `PatchRefusal` (type), `PatchResult` (type), `PatchOptions` (type), `createDataState`, `revisionOf`, `applyPatch`
+- `index.ts`: `applyPatch`, `createDataState`, `recordKey`, `recordOfKey`, `revisionOf`, `DataState` (type), `PatchOptions` (type), `PatchRefusal` (type), `PatchResult` (type), `ToolData` (type)
+- `patches.ts`: `ToolData` (type), `DataState` (type), `PatchRefusal` (type), `PatchResult` (type), `PatchOptions` (type), `recordKey`, `recordOfKey`, `createDataState`, `revisionOf`, `applyPatch`

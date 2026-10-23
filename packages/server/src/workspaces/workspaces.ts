@@ -8,6 +8,16 @@ import {
   type WorkspaceVersion,
 } from "@tessera/contracts";
 import { z } from "zod";
+import {
+  applyPatch,
+  createDataState,
+  recordKey,
+  recordOfKey,
+  type DataState,
+  type PatchOptions,
+  type PatchRefusal,
+  type ToolData,
+} from "../patches/index.ts";
 import type { DataFolder } from "../storage/index.ts";
 
 // Workspaces, their version history and the saved-tools library (DATA-08). Every change is one
@@ -167,7 +177,8 @@ export function workspaceVersions(store: Store, id: string): WorkspaceVersion[] 
 
 /**
  * Replaces a workspace's data and raises its revision by one. `expectedRevision` is the revision
- * the new data was made from; if the data changed since, nothing is saved.
+ * the new data was made from; if the data changed since, nothing is saved. Every record it keeps
+ * moves to a new revision, so a change planned before the replacement is refused (DATA-02).
  */
 export function saveWorkspaceData(
   store: Store,
@@ -175,19 +186,115 @@ export function saveWorkspaceData(
   data: unknown,
   expectedRevision: number,
 ): Workspace {
-  const body = JSON.stringify(workspaceSchema.shape.data.parse(data));
+  const parsed = workspaceSchema.shape.data.parse(data);
+  const body = JSON.stringify(parsed);
   return store.db.transaction(() => {
     const current = existingWorkspace(store, id);
     if (current.dataRevision !== expectedRevision) {
       throw new Error("The data changed since it was read, so nothing was saved.");
     }
+    const before = savedState(store, id, current.data ?? {});
     store.db.run(
       "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
       body,
       stamp(store),
       id,
     );
+    const after = createDataState(parsed ?? {}).revisions;
+    const revisions = new Map(
+      [...after.keys()].map((key) => [key, (before.revisions.get(key) ?? 0) + 1]),
+    );
+    saveRevisions(store, id, revisions);
     return existingWorkspace(store, id);
+  });
+}
+
+const revisionRow = z.object({
+  collection: z.string(),
+  record_id: z.string(),
+  revision_count: z.number(),
+});
+
+// The workspace's data with each record's saved revision; a record with no saved row is at 1.
+function savedState(store: Store, id: string, data: ToolData): DataState {
+  const state = createDataState(data);
+  const revisions = new Map(state.revisions);
+  const rows = store.db.all(
+    revisionRow,
+    "SELECT collection, record_id, revision_count FROM record_revisions WHERE workspace_id = ?",
+    id,
+  );
+  for (const row of rows) {
+    const key = recordKey(row.collection, row.record_id);
+    if (revisions.has(key)) revisions.set(key, row.revision_count);
+  }
+  return { data: state.data, revisions };
+}
+
+// Inside the caller's transaction: the rows become exactly `revisions`.
+function saveRevisions(store: Store, id: string, revisions: ReadonlyMap<string, number>) {
+  store.db.run("DELETE FROM record_revisions WHERE workspace_id = ?", id);
+  for (const [key, count] of revisions) {
+    const { collection, id: recordId } = recordOfKey(key);
+    store.db.run(
+      "INSERT INTO record_revisions (workspace_id, collection, record_id, revision_count) VALUES (?, ?, ?, ?)",
+      id,
+      collection,
+      recordId,
+      count,
+    );
+  }
+}
+
+/** A tool's data as the bridge gives it (CON-03): the data, and each record's revision count. */
+export type WorkspaceData = {
+  data: ToolData;
+  revisions: Record<string, Record<string, number>>;
+};
+
+const asWorkspaceData = (state: DataState): WorkspaceData => {
+  const revisions: WorkspaceData["revisions"] = {};
+  for (const [key, count] of state.revisions) {
+    const { collection, id } = recordOfKey(key);
+    (revisions[collection] ??= {})[id] = count;
+  }
+  return { data: state.data, revisions };
+};
+
+/** A workspace's data and its records' revisions. Data the tool hasn't filled yet is empty. */
+export function readWorkspaceData(store: Store, id: string): WorkspaceData {
+  const workspace = existingWorkspace(store, id);
+  return asWorkspaceData(savedState(store, id, workspace.data ?? {}));
+}
+
+export type WorkspacePatchResult =
+  | { ok: true; addedIds: string[]; workspace: Workspace }
+  | { ok: false; reason: PatchRefusal; message: string };
+
+/**
+ * Applies a batch of changes to a workspace's data (DATA-02), against the records' saved
+ * revisions, in one transaction: the data, the workspace's revision and the records' revisions
+ * are saved together, or nothing is. A batch that touches a record changed since it was planned
+ * is refused whole, with a plain message; one that touches other records still applies.
+ */
+export function patchWorkspaceData(
+  store: Store,
+  id: string,
+  batch: unknown,
+  options: PatchOptions = {},
+): WorkspacePatchResult {
+  return store.db.transaction(() => {
+    const workspace = existingWorkspace(store, id);
+    const result = applyPatch(savedState(store, id, workspace.data ?? {}), batch, options);
+    if (!result.ok) return { ok: false, reason: result.reason, message: result.message };
+    store.db.run(
+      "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
+      JSON.stringify(result.state.data),
+      stamp(store),
+      id,
+    );
+    saveRevisions(store, id, result.state.revisions);
+    return { ok: true, addedIds: result.addedIds, workspace: existingWorkspace(store, id) };
   });
 }
 

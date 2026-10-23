@@ -2,6 +2,8 @@
 
 ## 2026-10-23
 
+* **Update**: Saved record revisions ([issue 46](https://github.com/suredo/Tessera/issues/46), fifth part): the [workspaces](code/server/workspaces.md) doc describes `readWorkspaceData` and `patchWorkspaceData`, the `record_revisions` table saved with the data in one transaction, whole replacements moving every record on, and that revisions don't travel in archives, and claims `DATA-02` and `BRG-04`. The [patch engine](code/server/patches.md) doc names `recordKey` and `recordOfKey` and says where its state is now stored. The [threat model](spec/threat-model.md) says where `BRG-04` runs.
+
 * **Update**: The bridge end to end ([issue 46](https://github.com/suredo/Tessera/issues/46), fourth part): the [runtime package](code/runtime/package.md) doc says the browser tests load the runtime as one Vite bundle, with the contracts and zod, and names the hostile tool's tests. The [threat model](spec/threat-model.md) says where each bridge check now runs: `BRG-01` to `BRG-03`, `BRG-06` and `BRG-07` through a hostile tool over the real port, `BRG-05` through the port's binding (`SBX-12`), and `BRG-04` still to come.
 
 * **Update**: Serving the bridge ([issue 46](https://github.com/suredo/Tessera/issues/46), third part): the [runtime package](code/runtime/package.md) doc describes `serveBridge`, its phases (a tool writes only once the person has used its page, again after a restart, never in staging), the checked results and plain failures, and the host clock, and claims `RUN-07` and `GEN-06`. The runtime now depends on the [contracts package](code/contracts/package.md), whose doc says so.
