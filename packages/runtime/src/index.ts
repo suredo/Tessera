@@ -1,6 +1,17 @@
 // Docs: docs/code/runtime/package.md
 // @tessera/runtime: the sandboxed runtime that runs generated tools, framework-free (RUN-01).
 export const packageName = "@tessera/runtime";
+export {
+  BridgeError,
+  clockReading,
+  serveBridge,
+  systemClock,
+  type BridgeOptions,
+  type BridgeTool,
+  type DataHandlers,
+  type HostClock,
+  type ServedBridge,
+} from "./bridge.ts";
 export { TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "./csp.ts";
 export {
   mountTool,

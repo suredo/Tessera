@@ -235,7 +235,11 @@ importers:
         specifier: 8.20.0
         version: 8.20.0
 
-  packages/runtime: {}
+  packages/runtime:
+    dependencies:
+      '@tessera/contracts':
+        specifier: workspace:*
+        version: link:../contracts
 
   packages/server:
     dependencies:
