@@ -36,6 +36,18 @@ export type MountedTool = {
   /** Calls `listen` with every message from this instance of the tool; returns a way to stop. */
   onMessage(listen: (message: unknown) => void): () => void;
   /**
+   * Calls `listen` with every bridge call from this instance, unchecked: whoever serves the
+   * bridge checks it (RUN-04). Returns a way to stop.
+   */
+  onCall(listen: (call: unknown) => void): () => void;
+  /** Sends the tool the reply to one of its calls. */
+  reply(reply: unknown): void;
+  /**
+   * Calls `listen` when the person first clicks, taps or presses a key in the tool's page: real
+   * input, which the tool's own code can't make (GEN-06). Once per page. Returns a way to stop.
+   */
+  onInteraction(listen: () => void): () => void;
+  /**
    * Calls `listen` when the tool left its page and was started again, losing what it held in
    * memory, or kept leaving it and was stopped (SBX-07), or stopped answering and was removed by
    * the watchdog (RUN-02); returns a way to stop.
@@ -66,6 +78,8 @@ export function mountTool(
   const instanceId = crypto.randomUUID();
   const channel = new MessageChannel();
   const listeners = new Set<(message: unknown) => void>();
+  const callListeners = new Set<(call: unknown) => void>();
+  const interactionListeners = new Set<() => void>();
   const eventListeners = new Set<(event: MountEvent) => void>();
   // Every listener there when the event happens hears it, even one that unmounts the tool first.
   const emit = (event: MountEvent) => [...eventListeners].forEach((listen) => listen(event));
@@ -95,14 +109,22 @@ export function mountTool(
   const stop = () => {
     clearInterval(watching);
     listeners.clear();
+    callListeners.clear();
+    interactionListeners.clear();
     channel.port1.close();
     frame.remove();
   };
   channel.port1.onmessage = (event: MessageEvent) => {
-    const data = event.data as { instanceId?: unknown; message?: unknown; event?: unknown };
+    const data = event.data as {
+      instanceId?: unknown;
+      message?: unknown;
+      event?: unknown;
+      call?: unknown;
+    };
     if (data?.instanceId !== instanceId) return;
-    // The wrapper's own events and the watchdog's answers sit beside the tool's messages, which
-    // the tool can't reach: its preamble wraps them.
+    // The wrapper's own events, the watchdog's answers, bridge calls and the first interaction sit
+    // beside the tool's messages, which can't pass for them: the preamble wraps each in its own
+    // envelope, and the tool's code has no port.
     if ("pong" in data) {
       answered = true;
       unansweredSince = undefined;
@@ -115,6 +137,10 @@ export function mountTool(
         unansweredSince = undefined;
       }
       if (toolEvent) emit(toolEvent);
+    } else if ("call" in data) {
+      callListeners.forEach((listen) => listen(data.call));
+    } else if ("interacted" in data) {
+      interactionListeners.forEach((listen) => listen());
     } else {
       listeners.forEach((listen) => listen(data.message));
     }
@@ -144,6 +170,15 @@ export function mountTool(
           onMessage: (listen) => {
             listeners.add(listen);
             return () => listeners.delete(listen);
+          },
+          onCall: (listen) => {
+            callListeners.add(listen);
+            return () => callListeners.delete(listen);
+          },
+          reply: (reply) => channel.port1.postMessage({ instanceId, reply }),
+          onInteraction: (listen) => {
+            interactionListeners.add(listen);
+            return () => interactionListeners.delete(listen);
           },
           onEvent: (listen) => {
             eventListeners.add(listen);

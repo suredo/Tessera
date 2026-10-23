@@ -2,6 +2,8 @@
 
 ## 2026-10-23
 
+* **Update**: The bridge's port ([issue 46](https://github.com/suredo/Tessera/issues/46), second part): the [runtime package](code/runtime/package.md) doc describes `tessera.call`, the call and reply envelopes, `onCall`, `reply` and `onInteraction`, and the person's first interaction, which only real input makes and after which a tool may write (`GEN-06`, owner's choice on #46). It names the new browser tests.
+
 * **Update**: The [runtime package](code/runtime/package.md) doc says the lifecycle test "whoever opened a tool hears why it stopped" is quarantined (`ENG-20`): reloading the host page right after a stuck tool was stopped timed out once in Edge on CI, during Codex's review of [pull request 82](https://github.com/suredo/Tessera/pull/82). Whether a reload that soon can hang is open in [issue 83](https://github.com/suredo/Tessera/issues/83).
 
 ## 2026-10-22

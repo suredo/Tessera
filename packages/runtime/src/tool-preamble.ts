@@ -7,8 +7,19 @@
   const PORT_MESSAGE = "tessera:port";
   const wrapper = parent;
   let port: MessagePort | undefined;
-  const waiting: unknown[] = [];
+  // What the page says before it has its port, in order, each in its envelope.
+  const waiting: object[] = [];
   const listeners = new Set<(message: unknown) => void>();
+  type Pending = { resolve(result: unknown): void; reject(error: Error): void };
+  const pending = new Map<string, Pending>();
+  let lastCall = 0;
+
+  // A waiting envelope is copied now, as the port would copy it, so what can't be sent fails here,
+  // and a later change to it by the tool doesn't change what is sent.
+  const post = (envelope: object) => {
+    if (port) port.postMessage(envelope);
+    else waiting.push(structuredClone(envelope));
+  };
 
   // Only the first port, from the wrapper that framed this document, is taken.
   addEventListener("message", (event: MessageEvent) => {
@@ -17,15 +28,46 @@
     const given = event.ports[0];
     if (data?.type !== PORT_MESSAGE || !given) return;
     port = given;
-    // On the port, the host's messages come as { message } and the watchdog's as { ping }, which
-    // is answered at once: an answer shows the tool's page isn't stuck (RUN-02).
+    // On the port, the host's messages come as { message }, replies to calls as { reply }, and the
+    // watchdog's pings as { ping }, which is answered at once: an answer shows the tool's page
+    // isn't stuck (RUN-02).
     port.onmessage = (e: MessageEvent) => {
-      const data = e.data as { message?: unknown; ping?: unknown };
+      const data = e.data as { message?: unknown; ping?: unknown; reply?: unknown };
       if (data && "ping" in data) port?.postMessage({ pong: data.ping });
+      else if (data && "reply" in data) settle(data.reply);
       else listeners.forEach((listen) => listen(data?.message));
     };
-    for (const message of waiting.splice(0)) port.postMessage({ message });
+    for (const envelope of waiting.splice(0)) port.postMessage(envelope);
   });
+
+  // A reply settles the call it names; any other is dropped.
+  function settle(reply: unknown) {
+    const r = reply as {
+      requestId?: unknown;
+      ok?: unknown;
+      result?: unknown;
+      error?: { code?: unknown; message?: unknown };
+    } | null;
+    const call = typeof r?.requestId === "string" ? pending.get(r.requestId) : undefined;
+    if (!call || !r) return;
+    pending.delete(r.requestId as string);
+    if (r.ok === true) return call.resolve(r.result);
+    const message = r.error?.message;
+    const error = new Error(typeof message === "string" ? message : "The host refused the call.");
+    call.reject(Object.assign(error, { code: r.error?.code }));
+  }
+
+  // The person's first click, tap or key press in the tool, which only the browser can make
+  // (isTrusted), lets the tool write their data (GEN-06). The tool's code can't send this: it
+  // has no port.
+  const interacted = (event: Event) => {
+    if (!event.isTrusted) return;
+    removeEventListener("pointerdown", interacted, true);
+    removeEventListener("keydown", interacted, true);
+    post({ interacted: true });
+  };
+  addEventListener("pointerdown", interacted, true);
+  addEventListener("keydown", interacted, true);
 
   // Registered before the tool's code, so it runs first. A page in this frame that never says hello,
   // such as a blank or a blocked one, isn't the tool's: the wrapper starts the tool again (SBX-07).
@@ -38,13 +80,30 @@
     value: Object.freeze({
       /** Sends a message to the host; it waits until the bridge is ready. */
       send(message: unknown) {
-        if (port) port.postMessage({ message });
-        else waiting.push(message);
+        post({ message });
       },
       /** Calls `listen` with every message from the host; returns a way to stop. */
       onMessage(listen: (message: unknown) => void) {
         listeners.add(listen);
         return () => listeners.delete(listen);
+      },
+      /**
+       * Asks the host to do `action` (CON-03); resolves with its result, or rejects with an error
+       * whose `code` says why it was refused.
+       */
+      call(action: string, args: unknown = {}): Promise<unknown> {
+        lastCall += 1;
+        const requestId = `c${lastCall}`;
+        return new Promise((resolve, reject) => {
+          pending.set(requestId, { resolve, reject });
+          try {
+            post({ call: { requestId, action, args } });
+          } catch (error) {
+            // Something the port can't carry, such as a function.
+            pending.delete(requestId);
+            reject(error instanceof Error ? error : new Error("The call couldn't be sent."));
+          }
+        });
       },
     }),
     enumerable: true,

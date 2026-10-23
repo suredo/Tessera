@@ -50,11 +50,18 @@
     unmount();
     hostPort = port;
     port.onmessage = (e: MessageEvent) => {
-      const data = e.data as { instanceId?: unknown; message?: unknown; ping?: unknown };
+      const data = e.data as {
+        instanceId?: unknown;
+        message?: unknown;
+        ping?: unknown;
+        reply?: unknown;
+      };
       if (data?.instanceId !== instanceId) return;
       // The host's watchdog pings the tool's page; with no page ready yet, the ping goes nowhere
-      // and the watchdog sends another (RUN-02).
+      // and the watchdog sends another (RUN-02). A reply goes to the page that called, the one
+      // with the port now; a page started since never made that call, and drops it.
       if ("ping" in data) toolPort?.postMessage({ ping: data.ping });
+      else if ("reply" in data) toolPort?.postMessage({ reply: data.reply });
       else if (toolPort) toolPort.postMessage({ message: data.message });
       else waiting.push(data.message);
     };
@@ -94,9 +101,13 @@
         // The tool's page gets one fresh port, bound to this frame and this instance.
         const channel = new MessageChannel();
         toolPort = channel.port1;
+        // The preamble's envelopes: a pong, a call, the first interaction, or a message.
         toolPort.onmessage = (e: MessageEvent) => {
-          const data = e.data as { message?: unknown; pong?: unknown };
+          const data = e.data as { message?: unknown; pong?: unknown; call?: unknown };
           if (data && "pong" in data) hostPort?.postMessage({ instanceId, pong: data.pong });
+          else if (data && "call" in data) hostPort?.postMessage({ instanceId, call: data.call });
+          else if (data && "interacted" in data)
+            hostPort?.postMessage({ instanceId, interacted: true });
           else hostPort?.postMessage({ instanceId, message: data?.message });
         };
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
