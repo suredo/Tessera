@@ -3,11 +3,11 @@ type: Code Package
 title: "Runtime package"
 description: "@tessera/runtime: the sandbox a tool runs in. The wrapper on the opposite loopback name, the tool's sandboxed frame under a strict CSP, and the one MessageChannel port between them and the host."
 resource: ../../../packages/runtime/
-implements: [RUN-01, RUN-02, SEC-05, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX-06, SBX-07, SBX-08, SBX-09, SBX-10, SBX-11, SBX-12, SBX-13]
-tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts]
+implements: [RUN-01, RUN-02, RUN-07, GEN-06, SEC-05, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX-06, SBX-07, SBX-08, SBX-09, SBX-10, SBX-11, SBX-12, SBX-13]
+tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/runtime/test/bridge.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T17:55:14Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T19:28:27Z }
 ---
 
 # Purpose
@@ -17,6 +17,7 @@ Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`
 # Entry points
 
 - `src/runtime.ts`: `createRuntime`, the one active runtime the host app keeps (`RUN-02`): it opens, minimizes, restores and closes a tool, and reports a `RuntimeState` on every change so the app can keep it and start from it after a reload (`UX-07`).
+- `src/bridge.ts`: `serveBridge`, the host's side of the bridge (`RUN-04`): it answers a mounted tool's calls, checked with the contracts' shared check, through `DataHandlers` for the tool's data and a `HostClock` for `clock.now` (`systemClock`, or a test's), and keeps the mount's phase. A handler refuses a call by throwing a `BridgeError` with a bridge code, such as stale. `clockReading` gives the date and UTC offset of a moment in a time zone.
 - `src/host.ts`: `mountTool`, whose start can be cancelled through an abort signal when it's no longer wanted; the host app's side: it frames the wrapper and returns a `MountedTool` to send to and hear from the tool, to hear its bridge calls and answer them, to hear the person's first interaction with it, and to hear when it was started again or stopped.
 - `src/wrapper.ts`: the wrapper document's script. `src/tool-preamble.ts`: the first script in the tool's document, which says hello as the page loads, takes the port and gives the tool its one way to talk to the host, a global named tessera: send and onMessage for messages, and call(action, args) for the bridge (`CON-03`), a promise that a reply settles. It also tells the host when the person first clicks, taps or presses a key in the tool. Both are inlined by the server as plain scripts.
 - `src/csp.ts`: `TOOL_CSP`, `TOOL_SANDBOX` and `wrapperCsp`, the documents' policies. `src/protocol.ts`: the message names (`HELLO_MESSAGE` among them), the tool's events (`TOOL_EVENTS`), `MAX_RESTARTS`, the two loopback names and `runtimeOriginFor`.
@@ -24,6 +25,9 @@ Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`
 
 # Invariants
 
+- **A tool writes only once the person has used its page** (`GEN-06`). `serveBridge` starts a mount as `starting`, makes it `active` when the wrapper reports the person's first interaction, and puts it back to `starting` when the tool is started again, since its start-up code runs again. A tool in the staging panel (`RUN-03`) stays `staging` and never writes. A write before then gets `not-active`, with a message that says nothing was saved; reads work in every phase. The rule's prompt part (`GEN-06`) and the static check for start-up writes (`VER-01`) come in M2.
+- **Nothing reaches a tool that the manifest doesn't describe** (`CON-03`). Every call is checked before a handler runs, and every result is checked against its action's result schema before it is sent; one that doesn't fit is a `failed` reply. A handler's own `BridgeError` passes on with its code and message; any other error becomes "The host couldn't do that.", so nothing of the host, such as a file path, leaks to the tool. TypeScript refuses `serveBridge` if an action in the manifest has no handler.
+- **The host clock is the tool's clock** (`RUN-07`). `clock.now` answers from the `HostClock` the host passes, with the date and UTC offset where the person is, so a test sets the next day instead of waiting for it. Only a tool that declares the `clock` capability gets it (`CAP-01`).
 - **One tool runs at a time** (`RUN-02`). Opening another tool disposes the running one first: its wrapper frame goes, and with it the tool's frame, channel and timers. A start still in progress is cancelled, and a start that finishes after something newer came is undone at once, so of several quick opens only the last runs. Minimizing disposes the tool the same way and remembers it; restoring starts it again from scratch. A runtime started from a minimized state stays minimized, so a reload keeps a minimized tool minimized.
 - **A tool that stops answering is stopped** (`RUN-02`). The host pings the tool's page through the wrapper; the preamble answers each ping. The host runs apart from the tool, on the other loopback name, so a tool spinning in a loop can't hold it up. After a while without an answer, the host removes the tool's frames and reports `unresponsive`, and the runtime shows the tool as stopped, which a reload keeps; the app can start it again. Only pings it sent are judged, so a timer slowed in a background tab never makes a tool look stuck. Time is measured on a clock that only moves forward, so setting the computer's clock can't stop a tool, and a tool the wrapper started again gets a starting tool's time. Everyone listening when the tool stops hears why, the code that opened it as well as the runtime.
 - **Each start of a tool has a host of its own,** `t<16 hex digits>.localhost` (`isToolHost`), so Chrome and Edge run it in a process of its own: with one shared host, a new tool would land in a stuck tool's process and never run. The wrapper's policy frames only such hosts, and the server answers the tool's document, and only it, there.
@@ -40,12 +44,13 @@ Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`
 
 # Depends on / used by
 
-Nothing at run time. The server's runtime routes serve its documents, and the host app (#53) mounts tools with `mountTool`. The bridge's checks on each call (#46) come from the [contracts package](../contracts/package.md); serving them on the port, with the mount's phase and the host clock, is #46's next part.
+The [contracts package](../contracts/package.md), for the bridge's manifest and its check on each call, and through it zod; the browser scripts the server inlines (the wrapper and the preamble) import nothing. The server's runtime routes serve its documents, and the host app (#53) mounts tools with `mountTool` and serves the bridge with `serveBridge`. The data handlers will call the server's data routes (#46's next part).
 
 # Pitfalls
 
 - **A stuck tool's process lasts a few seconds.** Once the watchdog removes its frames, Chrome and Edge end the process of its tool host within about five seconds; until then it keeps one core busy. One lifecycle test, which reloads the host page right after a stuck tool was stopped, is quarantined: its reload timed out once in Edge on CI, and whether a reload that soon can hang is still open ([#83](https://github.com/suredo/Tessera/issues/83), `ENG-20`).
 - **The watchdog's timings are the host's to set** (`WATCHDOG_DEFAULTS`: a ping a second, stopped after five seconds without an answer, ten while starting). The tests use shorter ones.
+- **The bridge doesn't check record revisions.** A stale change is the patch engine's to refuse, on the server (`DATA-02`, `BRG-04`); its data handler passes the refusal on as a `stale` `BridgeError`.
 - **The host app keeps the state, not the runtime.** `createRuntime` reports each `RuntimeState` and starts from one it's given; where it is kept (the workspace, from #53) is the app's choice. The tests keep it in `sessionStorage`.
 - **The browser tests share one host and one prober:** `packages/web/e2e/support/prober.ts` is the hostile test tool each boundary spec gives its own checks to, with `probe` and `nothingArrived`. `packages/web/e2e/support/sandbox-host.ts` starts the local server and the probe server, records every request and every connection both receive, and mounts tools on a small test page. A check resets it once the tool is ready, so whatever arrives after came from the tool.
 - **A restarted tool forgets what it held in memory, and misses what was sent while it left.** A message the host sends after the tool leaves its page but before the host hears `restarted` goes to the page that left and is lost, so the host should send what the tool needs again when it hears `restarted`; the lifecycle (#45's next pull request, `RUN-02`) builds on this. Tests wait for `restarted` and the new page's hello before sending to it: a fixed pause raced the wrapper's one-second hello grace on CI's Windows runner.
@@ -58,9 +63,10 @@ Nothing at run time. The server's runtime routes serve its documents, and the ho
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
+- `src/bridge.ts`: `HostClock` (type), `systemClock`, `clockReading`, `BridgeError`, `DataHandlers` (type), `BridgeOptions` (type), `ServedBridge` (type), `BridgeTool` (type), `serveBridge`
 - `src/csp.ts`: `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`
 - `src/host.ts`: `MountEvent` (type), `WatchdogOptions` (type), `WATCHDOG_DEFAULTS`, `MountedTool` (type), `mountTool`
-- `src/index.ts`: `packageName`, `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `mountTool`, `WATCHDOG_DEFAULTS`, `MountedTool` (type), `MountEvent` (type), `WatchdogOptions` (type), `createRuntime`, `RuntimeState` (type), `ToolRuntime` (type), `APP_HOST`, `HELLO_MESSAGE`, `MAX_RESTARTS`, `MOUNT_MESSAGE`, `PORT_MESSAGE`, `RUNTIME_HOST`, `runtimeOriginFor`, `TOOL_EVENTS`, `ToolEvent` (type)
+- `src/index.ts`: `packageName`, `BridgeError`, `clockReading`, `serveBridge`, `systemClock`, `BridgeOptions` (type), `BridgeTool` (type), `DataHandlers` (type), `HostClock` (type), `ServedBridge` (type), `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `mountTool`, `WATCHDOG_DEFAULTS`, `MountedTool` (type), `MountEvent` (type), `WatchdogOptions` (type), `createRuntime`, `RuntimeState` (type), `ToolRuntime` (type), `APP_HOST`, `HELLO_MESSAGE`, `MAX_RESTARTS`, `MOUNT_MESSAGE`, `PORT_MESSAGE`, `RUNTIME_HOST`, `runtimeOriginFor`, `TOOL_EVENTS`, `ToolEvent` (type)
 - `src/policy.ts`: `TOOL_CSP`, `TOOL_SANDBOX`, `wrapperCsp`, `APP_HOST`, `isToolHost`, `RUNTIME_HOST`
 - `src/protocol.ts`: `MOUNT_MESSAGE`, `HELLO_MESSAGE`, `PORT_MESSAGE`, `TOOL_EVENTS`, `ToolEvent` (type), `MAX_RESTARTS`, `APP_HOST`, `RUNTIME_HOST`, `isToolHost`, `runtimeOriginFor`
 - `src/runtime.ts`: `RuntimeState` (type), `ToolRuntime` (type), `createRuntime`

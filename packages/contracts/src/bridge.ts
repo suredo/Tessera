@@ -117,6 +117,12 @@ export const BRIDGE_ACTIONS = {
   },
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
+/** An action's arguments, once checked. */
+export type BridgeArgs<A extends BridgeActionName> = z.infer<(typeof BRIDGE_ACTIONS)[A]["args"]>;
+/** What an action answers. */
+export type BridgeResult<A extends BridgeActionName> = z.infer<
+  (typeof BRIDGE_ACTIONS)[A]["result"]
+>;
 
 /** The largest request the bridge reads: the largest arguments, with room for the envelope. */
 export const BRIDGE_REQUEST_LIMIT_BYTES =

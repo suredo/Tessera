@@ -32,6 +32,8 @@ export {
   checkBridgeCall,
   type AcceptedCall,
   type BridgeActionName,
+  type BridgeArgs,
+  type BridgeResult,
   type BridgeCapability,
   type BridgeContext,
   type BridgeErrorCode,
