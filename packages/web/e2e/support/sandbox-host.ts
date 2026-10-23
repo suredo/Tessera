@@ -132,6 +132,16 @@ type TestWindow = {
   events: string[];
 };
 
+/**
+ * The tool's frame, for a page with one tool: in the wrapper's frame, inside the page frame the
+ * wrapper makes for each page of the tool.
+ */
+export const toolFrame = (page: Page) =>
+  page.frameLocator("iframe").frameLocator("iframe").frameLocator("iframe");
+/** The tool's frame element, in the wrapper's page frame. */
+export const toolFrameElement = (page: Page) =>
+  page.frameLocator("iframe").frameLocator("iframe").locator("iframe");
+
 /** Opens the test host page and mounts a tool, keeping everything it says and every event. */
 export async function mount(page: Page, host: SandboxHost, mountId: string): Promise<void> {
   await page.goto(`${host.url}/`);

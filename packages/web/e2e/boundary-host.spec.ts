@@ -1,6 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
 import { nothingArrived, probe, proberTool } from "./support/prober.ts";
-import { collect, mount, startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
+import {
+  collect,
+  mount,
+  startSandboxHost,
+  toolFrame,
+  toolFrameElement,
+  type SandboxHost,
+} from "./support/sandbox-host.ts";
 
 // The sandbox's boundary checks that face the host page and the person (SEC-05,
 // docs/spec/threat-model.md), in Chrome and Edge (TEST-06): forms, moving the host page, popups,
@@ -143,7 +150,7 @@ test.afterAll(() => host.close());
 async function clickToTry(page: Page, action: string): Promise<string | undefined> {
   const armed = await probe(page, host, "armed", { action });
   expect(armed).toEqual({ armed: action });
-  await page.frameLocator("iframe").frameLocator("iframe").locator("#go").click();
+  await toolFrame(page).locator("#go").click();
   const { messages, events } = await collect(page, 3, 500, 20_000);
   expect(events, "the tool stayed on its page").toEqual([]);
   const answer = messages[2] as { clicked?: string; result?: string } | undefined;
@@ -151,15 +158,16 @@ async function clickToTry(page: Page, action: string): Promise<string | undefine
   return answer?.result;
 }
 
-// The host page is where it was, with one wrapper and one tool frame inside it.
+// The host page is where it was, with one wrapper, one page frame and one tool frame inside it.
 async function hostUnmoved(page: Page) {
   expect(page.url()).toBe(`${host.url}/`);
   expect(page.context().pages()).toHaveLength(1);
   const wrapper = page.frames().find((frame) => frame.url().includes("/runtime/wrapper"));
   expect(wrapper, "the wrapper is still there").toBeDefined();
   await expect(wrapper!.locator("iframe")).toHaveCount(1);
+  await expect(toolFrameElement(page)).toHaveCount(1);
   // The tool's document, from a tool host of its own under the runtime's name (RUN-02).
-  expect(await wrapper!.locator("iframe").getAttribute("src")).toMatch(
+  expect(await toolFrameElement(page).getAttribute("src")).toMatch(
     /^http:\/\/t[0-9a-f]{16}\.localhost:\d+\/runtime\/tool\?mount=prober$/,
   );
 }

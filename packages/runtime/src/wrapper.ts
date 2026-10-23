@@ -10,19 +10,31 @@
   const HELLO_GRACE_MS = 1000;
   const appOrigin = `${location.protocol}//127.0.0.1:${location.port}`;
 
+  // Each page of the tool runs in a frame of its own (toolFrame), inside a blank frame of this
+  // wrapper's origin made for that page alone (pageFrame): see "Real input" below.
+  let pageFrame: HTMLIFrameElement | undefined;
   let toolFrame: HTMLIFrameElement | undefined;
   let hostPort: MessagePort | undefined;
   let toolPort: MessagePort | undefined;
   let onHello: (() => void) | undefined;
   // The host's messages that came before the tool's page was ready for them, in order.
   let waiting: unknown[] = [];
+  // The request IDs of the current page's calls still waiting for a reply.
+  let calls = new Set<string>();
+  // Watches for the person's first real input in the tool's page (GEN-06).
+  let watchingInput: ReturnType<typeof setInterval> | undefined;
+  let checkInput: (() => void) | undefined;
 
   const unmountTool = () => {
     toolPort?.close();
     toolPort = undefined;
-    toolFrame?.remove();
+    pageFrame?.remove();
+    pageFrame = undefined;
     toolFrame = undefined;
     onHello = undefined;
+    calls = new Set();
+    clearInterval(watchingInput);
+    checkInput = undefined;
   };
   const unmount = () => {
     unmountTool();
@@ -32,11 +44,8 @@
   };
 
   addEventListener("message", (event: MessageEvent) => {
-    // The page in the tool's own frame says hello; a frame nested inside it can't.
-    if (toolFrame?.contentWindow && event.source === toolFrame.contentWindow) {
-      if ((event.data as { type?: unknown })?.type === HELLO_MESSAGE) onHello?.();
-      return;
-    }
+    // The tool's page says hello to its page frame, not here; anything it sends here is dropped.
+    if (toolFrame?.contentWindow && event.source === toolFrame.contentWindow) return;
     // Only the host app's page that framed this wrapper may mount a tool, with a port of its own.
     if (event.origin !== appOrigin || event.source !== parent) return;
     const data = event.data as { type?: unknown; mountId?: unknown; instanceId?: unknown };
@@ -50,17 +59,34 @@
     unmount();
     hostPort = port;
     port.onmessage = (e: MessageEvent) => {
-      const data = e.data as { instanceId?: unknown; message?: unknown; ping?: unknown };
+      const data = e.data as {
+        instanceId?: unknown;
+        message?: unknown;
+        ping?: unknown;
+        reply?: unknown;
+      };
       if (data?.instanceId !== instanceId) return;
       // The host's watchdog pings the tool's page; with no page ready yet, the ping goes nowhere
-      // and the watchdog sends another (RUN-02).
+      // and the watchdog sends another (RUN-02). A reply goes on only to the page that made the
+      // call, once: a reply for a page the tool has left goes nowhere.
       if ("ping" in data) toolPort?.postMessage({ ping: data.ping });
-      else if (toolPort) toolPort.postMessage({ message: data.message });
+      else if ("reply" in data) {
+        const id = (data.reply as { requestId?: unknown } | null)?.requestId;
+        if (typeof id === "string" && calls.delete(id))
+          toolPort?.postMessage({ reply: data.reply });
+      } else if (toolPort) toolPort.postMessage({ message: data.message });
       else waiting.push(data.message);
     };
     let restarts = 0;
     const start = () => {
       unmountTool();
+      // A blank srcdoc frame of this origin, for this page alone. Being srcdoc, the tool's request
+      // from it carries the wrapper's address as its referrer, as the server's guard expects; a
+      // plain blank frame's would carry none. Its policy is the wrapper's, which allows no inline
+      // styles, so it is sized through style properties once it has loaded.
+      const page = document.createElement("iframe");
+      page.title = "Tool";
+      page.srcdoc = "<!doctype html><html><body></body></html>";
       const frame = document.createElement("iframe");
       frame.setAttribute("sandbox", "allow-scripts");
       frame.title = "Tool";
@@ -76,6 +102,20 @@
       let loads = 0;
       let hellos = 0;
       let left = false;
+      // Real input (GEN-06). The tool's code shares its page with the preamble and can send
+      // anything on its port, so the page's word proves nothing. The browser activates a frame and
+      // every frame around it when the person clicks, taps or types in it (user activation), and
+      // nothing else does: not the tool's own clicks and events, nor input on the host page, which
+      // doesn't reach frames of another origin. The page frame is new for each page of the tool,
+      // so its sticky activation (hasBeenActive) says the person used this page, not one before
+      // it: a click on a page the tool left, still active for a few seconds, doesn't count, and a
+      // click on this page counts at once.
+      let interacted = false;
+      checkInput = () => {
+        if (interacted || !page.contentWindow?.navigator.userActivation.hasBeenActive) return;
+        interacted = true;
+        hostPort?.postMessage({ instanceId, interacted: true });
+      };
       const leave = () => {
         if (left || toolFrame !== frame) return;
         left = true;
@@ -94,10 +134,17 @@
         // The tool's page gets one fresh port, bound to this frame and this instance.
         const channel = new MessageChannel();
         toolPort = channel.port1;
+        // The preamble's envelopes: a pong, a call, or a message. Input is checked first, so a
+        // write the person's click caused reaches the host after the click does.
         toolPort.onmessage = (e: MessageEvent) => {
-          const data = e.data as { message?: unknown; pong?: unknown };
+          checkInput?.();
+          const data = e.data as { message?: unknown; pong?: unknown; call?: unknown };
           if (data && "pong" in data) hostPort?.postMessage({ instanceId, pong: data.pong });
-          else hostPort?.postMessage({ instanceId, message: data?.message });
+          else if (data && "call" in data) {
+            const id = (data.call as { requestId?: unknown } | null)?.requestId;
+            if (typeof id === "string") calls.add(id);
+            hostPort?.postMessage({ instanceId, call: data.call });
+          } else hostPort?.postMessage({ instanceId, message: data?.message });
         };
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
         frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
@@ -110,8 +157,33 @@
           if (loads > hellos) leave();
         }, HELLO_GRACE_MS);
       });
+      frame.style.border = "0";
+      frame.style.width = "100%";
+      frame.style.height = "100%";
+      frame.style.display = "block";
+      pageFrame = page;
       toolFrame = frame;
-      document.body.replaceChildren(frame);
+      page.addEventListener(
+        "load",
+        () => {
+          const pageWindow = page.contentWindow;
+          if (toolFrame !== frame || !pageWindow) return;
+          const { documentElement, body } = pageWindow.document;
+          documentElement.style.height = "100%";
+          body.style.margin = "0";
+          body.style.height = "100%";
+          // The page in the tool's own frame says hello to its parent, the page frame; a frame
+          // nested inside it can't.
+          pageWindow.addEventListener("message", (event: MessageEvent) => {
+            if (!frame.contentWindow || event.source !== frame.contentWindow) return;
+            if ((event.data as { type?: unknown })?.type === HELLO_MESSAGE) onHello?.();
+          });
+          watchingInput = setInterval(() => checkInput?.(), 100);
+          body.append(frame);
+        },
+        { once: true },
+      );
+      document.body.replaceChildren(page);
     };
     start();
   }
