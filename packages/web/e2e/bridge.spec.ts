@@ -15,7 +15,13 @@ const tools: Record<string, Artifact["code"]> = {
     html: '<button id="save">Save</button>',
     css: "button { width: 200px; height: 80px; }",
     js: `let raw;
-addEventListener("message", (e) => { if (e.ports[0]) raw = e.ports[0]; }, true);
+// Every reply that reaches the page, beside the preamble, which drops those it isn't waiting for.
+const replies = [];
+addEventListener("message", (e) => {
+  if (!e.ports[0]) return;
+  raw = e.ports[0];
+  raw.addEventListener("message", (r) => { if (r.data && "reply" in r.data) replies.push(r.data.reply); });
+}, true);
 const attempt = async (label, action, args) => {
   try { return { label, ok: true, result: await tessera.call(action, args) }; }
   catch (e) { return { label, ok: false, code: e.code, message: e.message }; }
@@ -32,6 +38,7 @@ tessera.onMessage(async (m) => {
   }
   if (m === "clock") tessera.send(await attempt("clock", "clock.now", {}));
   if (m !== "probe") return;
+  const probeStart = replies.length;
   const results = [
     await attempt("not plain data", "data.read", { when: new Date() }),
     await attempt("not an object", "data.read", "everything"),
@@ -47,11 +54,14 @@ tessera.onMessage(async (m) => {
     }),
   ];
   // Calls past the preamble, on the port itself, with no usable ID: no reply, and the host goes on.
+  // The read after them is answered after any reply to them would be, so it closes the wait.
   raw.postMessage({ call: 42 });
   raw.postMessage({ call: { requestId: "has spaces", action: "data.read", args: {} } });
   raw.postMessage({ call: { action: "data.read" } });
   results.push(await attempt("still answering", "data.read", {}));
-  tessera.send({ results });
+  // The preamble settles the last call before the listener above hears its reply: wait a task.
+  await new Promise((done) => setTimeout(done, 0));
+  tessera.send({ results, replies: replies.slice(probeStart) });
 });`,
   },
 };
@@ -120,9 +130,9 @@ test("BRG-01 to BRG-03, BRG-07: every refused call gets a plain reply, and the h
   await tell(page, "probe");
   const found = async () =>
     (await messages(page)).find((m) => typeof m === "object" && m !== null && "results" in m) as
-      { results: Reply[] } | undefined;
+      { results: Reply[]; replies: { requestId: unknown }[] } | undefined;
   await expect.poll(found, { timeout: 15_000 }).toBeDefined();
-  const { results } = (await found())!;
+  const { results, replies } = (await found())!;
   expect(Object.fromEntries(results.map((r) => [r.label, r.ok ? "ok" : r.code]))).toEqual({
     "not plain data": "malformed",
     "not an object": "malformed",
@@ -140,7 +150,14 @@ test("BRG-01 to BRG-03, BRG-07: every refused call gets a plain reply, and the h
   for (const r of results.filter((r) => !r.ok)) {
     expect(r.message!.length, r.label).toBeGreaterThan(20);
   }
-  expect(JSON.stringify(results)).not.toMatch(/[A-Za-z]:[\\/]|\/(Users|home)\/|tessera\.db/);
+  // Every reply that reached the page answered one of the tool's own calls, once each: the calls
+  // on the raw port got none.
+  expect(replies).toHaveLength(results.length);
+  for (const reply of replies) expect(reply.requestId).toMatch(/^p[0-9a-f]{8}-c\d+$/);
+  expect(new Set(replies.map((r) => r.requestId)).size).toBe(results.length);
+  expect(JSON.stringify({ results, replies })).not.toMatch(
+    /[A-Za-z]:[\\/]|\/(Users|home)\/|tessera\.db/,
+  );
   // Only the person's own write reached the data.
   expect(await writes(page)).toHaveLength(1);
 });
