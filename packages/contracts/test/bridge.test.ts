@@ -186,6 +186,41 @@ describe("checking a call (RUN-04)", () => {
     expect(refusal(call(req("clock.now", { note: "é".repeat(600) })))).toBe("too-large");
   });
 
+  // A port delivers what structuredClone makes, so these cases go through it as a call would.
+  const add = (record: unknown) =>
+    structuredClone(req("data.patch", { operations: [{ op: "add", collection: "c", record }] }));
+
+  it("BRG-01: counts shared references once per use, so a small graph can't expand without end", () => {
+    // 40 arrays, each holding the one before twice: tiny to send, about 2^40 values written out.
+    let doubled: unknown = 0;
+    for (let i = 0; i < 40; i++) doubled = [doubled, doubled];
+    expect(refusal(call(add({ v: doubled })))).toBe("too-large");
+    // Sharing a value that stays small is fine.
+    const empty: unknown[] = [];
+    expect(refusal(call(add({ a: empty, b: empty })))).toBe("accepted");
+  });
+
+  it("BRG-01: refuses a list that carries named properties or holes, which JSON would drop", () => {
+    const named: unknown[] & { extra?: string } = [1];
+    named.extra = "kept by the port";
+    expect(structuredClone(named)).toHaveProperty("extra");
+    expect(refusal(call(add({ values: named })))).toBe("malformed");
+    // eslint-disable-next-line no-sparse-arrays
+    expect(refusal(call(add({ values: [1, , 3] })))).toBe("malformed");
+  });
+
+  it("BRG-01: keeps a usable request ID in every refusal that has a reply", () => {
+    const refusals = [
+      call(req("data.read", { when: new Date() })),
+      call(req("data.read", { huge: "x".repeat(BRIDGE_REQUEST_LIMIT_BYTES) })),
+      call({ ...req("data.read"), extra: true }),
+      call(req("no.such.action")),
+    ];
+    for (const result of refusals) expect(!result.ok && result.reply?.requestId).toBe("r-1");
+    const otherInstance = checkBridgeCall("i-0", req("data.read", { when: new Date() }), active);
+    expect(otherInstance).toEqual({ ok: false, reply: null });
+  });
+
   it("BRG-02: refuses an action the manifest doesn't list, whatever its name", () => {
     for (const action of ["data.delete", "fs.read", "toString", "constructor", "__proto__"]) {
       expect(refusal(call(req(action))), action).toBe("unknown-action");

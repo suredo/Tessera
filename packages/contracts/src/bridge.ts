@@ -189,17 +189,54 @@ const kb = (bytes: number) => Math.ceil(bytes / 1024);
 /** How deeply a call's lists and objects may nest. */
 export const BRIDGE_MAX_DEPTH = 64;
 
-// Plain data only: a port carries any cloneable value, but only JSON is kept exactly, so a Date,
-// a Map, NaN or an undefined field is refused rather than changed on the way (CON-01). The depth
-// limit also stops a cycle, and keeps every later step from running out of stack.
-function isJsonData(value: unknown, depth = 0): boolean {
-  if (value === null || typeof value === "string" || typeof value === "boolean") return true;
-  if (typeof value === "number") return Number.isFinite(value);
-  if (typeof value !== "object" || depth >= BRIDGE_MAX_DEPTH) return false;
-  if (Array.isArray(value)) return value.every((item) => isJsonData(item, depth + 1));
-  const proto = Object.getPrototypeOf(value) as unknown;
-  if (proto !== Object.prototype && proto !== null) return false;
-  return Object.values(value).every((item) => isJsonData(item, depth + 1));
+/**
+ * Walks a call once, with bounded work, before anything reads it whole (CON-01, BRG-01). A port
+ * carries any cloneable value, but only JSON is kept exactly, so a Date, a Map, NaN, an undefined
+ * field, or a list with holes or named properties is `malformed`. A port also keeps shared
+ * references, which JSON writes out once per use: the walk counts a lower bound of that written
+ * size, every use included, and stops as soon as it passes `limitBytes`, so a small graph that
+ * would expand without end is `too-large` after bounded work. Each step adds at least a byte. The
+ * depth limit stops a cycle and keeps every later step on the stack.
+ */
+function walkCall(message: unknown, limitBytes: number): "ok" | "malformed" | "too-large" {
+  let bytes = 0;
+  // UTF-8 never takes fewer bytes than UTF-16 code units, so a string's length is a lower bound.
+  const visit = (value: unknown, depth: number): "ok" | "malformed" | "too-large" => {
+    if (value === null || typeof value === "boolean") bytes += 4;
+    else if (typeof value === "string") bytes += value.length + 2;
+    else if (typeof value === "number") {
+      if (!Number.isFinite(value)) return "malformed";
+      bytes += 1;
+    } else if (typeof value !== "object" || depth >= BRIDGE_MAX_DEPTH) {
+      return "malformed";
+    } else {
+      bytes += 2;
+      const isArray = Array.isArray(value);
+      const proto = Object.getPrototypeOf(value) as unknown;
+      if (isArray ? proto !== Array.prototype : proto !== Object.prototype && proto !== null) {
+        return "malformed";
+      }
+      const keys = Object.keys(value);
+      if (isArray && keys.length !== value.length) return "malformed";
+      for (const key of keys) {
+        bytes += isArray ? 1 : key.length + 3;
+        if (bytes > limitBytes) return "too-large";
+        const result = visit((value as Record<string, unknown>)[key], depth + 1);
+        if (result !== "ok") return result;
+      }
+    }
+    return bytes > limitBytes ? "too-large" : "ok";
+  };
+  return visit(message, 0);
+}
+
+// The call's request ID, if it has a usable one, read without walking the rest of it.
+function usableRequestId(message: unknown): string | null {
+  if (typeof message !== "object" || message === null || !Object.hasOwn(message, "requestId")) {
+    return null;
+  }
+  const id = (message as { requestId?: unknown }).requestId;
+  return requestIdSchema.safeParse(id).success ? (id as string) : null;
 }
 
 const refuse = (requestId: string | null, code: BridgeErrorCode, message: string): RefusedCall => ({
@@ -219,27 +256,25 @@ export function checkBridgeCall(
   context: BridgeContext,
 ): AcceptedCall | RefusedCall {
   if (instanceId !== context.instanceId) return { ok: false, reply: null };
+  // Every refusal from here on carries the request ID, if the call has a usable one.
+  const id = usableRequestId(message);
 
-  if (!isJsonData(message)) {
+  const walked = walkCall(message, BRIDGE_REQUEST_LIMIT_BYTES);
+  const tooLarge = `The call is larger than the bridge takes (${kb(BRIDGE_REQUEST_LIMIT_BYTES)} KB).`;
+  if (walked === "malformed") {
     return refuse(
-      null,
+      id,
       "malformed",
       `The call isn't plain data (objects, lists, text, numbers), at most ${BRIDGE_MAX_DEPTH} levels deep.`,
     );
   }
-  if (utf8Bytes(JSON.stringify(message)) > BRIDGE_REQUEST_LIMIT_BYTES) {
-    return refuse(
-      null,
-      "too-large",
-      `The call is larger than the bridge takes (${kb(BRIDGE_REQUEST_LIMIT_BYTES)} KB).`,
-    );
+  if (walked === "too-large" || utf8Bytes(JSON.stringify(message)) > BRIDGE_REQUEST_LIMIT_BYTES) {
+    return refuse(id, "too-large", tooLarge);
   }
   const request = bridgeRequestSchema.safeParse(message);
   if (!request.success) {
-    const id = (message as { requestId?: unknown } | null)?.requestId;
-    const requestId = requestIdSchema.safeParse(id).success ? (id as string) : null;
     return refuse(
-      requestId,
+      id,
       "malformed",
       "A call needs a requestId, an action and args, and nothing else.",
     );
