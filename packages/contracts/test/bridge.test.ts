@@ -200,6 +200,16 @@ describe("checking a call (RUN-04)", () => {
     expect(refusal(call(add({ a: empty, b: empty })))).toBe("accepted");
   });
 
+  it("BRG-01: never counts a call as larger than it is: one near the limit, of many small lists, passes", () => {
+    const nested = add({ value: Array.from({ length: 60_000 }, () => [0]) });
+    const bytes = new TextEncoder().encode(JSON.stringify(nested)).byteLength;
+    expect(bytes).toBeGreaterThan(0.9 * BRIDGE_ACTIONS["data.patch"].maxArgsBytes);
+    expect(refusal(call(nested))).toBe("accepted");
+    const objects = add({ value: Array.from({ length: 31_000 }, () => ({ a: 0 })) });
+    expect(new TextEncoder().encode(JSON.stringify(objects)).byteLength).toBeGreaterThan(240_000);
+    expect(refusal(call(objects))).toBe("accepted");
+  });
+
   it("BRG-01: refuses a list that carries named properties or holes, which JSON would drop", () => {
     const named: unknown[] & { extra?: string } = [1];
     named.extra = "kept by the port";

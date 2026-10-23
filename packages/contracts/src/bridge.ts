@@ -218,8 +218,10 @@ function walkCall(message: unknown, limitBytes: number): "ok" | "malformed" | "t
       }
       const keys = Object.keys(value);
       if (isArray && keys.length !== value.length) return "malformed";
-      for (const key of keys) {
-        bytes += isArray ? 1 : key.length + 3;
+      // A comma between entries, and an object's key with its quotes and colon: never more than
+      // JSON writes, so the count stays a lower bound and a call under the limit always passes.
+      for (const [index, key] of keys.entries()) {
+        bytes += (index > 0 ? 1 : 0) + (isArray ? 0 : key.length + 3);
         if (bytes > limitBytes) return "too-large";
         const result = visit((value as Record<string, unknown>)[key], depth + 1);
         if (result !== "ok") return result;
