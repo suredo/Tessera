@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-23
+
+* **Update**: The [runtime package](code/runtime/package.md) doc says the lifecycle test "whoever opened a tool hears why it stopped" is quarantined (`ENG-20`): reloading the host page right after a stuck tool was stopped timed out once in Edge on CI, during Codex's review of [pull request 82](https://github.com/suredo/Tessera/pull/82). Whether a reload that soon can hang is open in [issue 83](https://github.com/suredo/Tessera/issues/83).
+
 ## 2026-10-22
 
 * **Update**: The bridge manifest ([issue 46](https://github.com/suredo/Tessera/issues/46), first part): the [contracts package](code/contracts/package.md) doc describes `src/bridge.ts`, its actions and capabilities, the request and reply contracts, `bridge-manifest.json` and `checkBridgeCall`, with the order it checks a call in, and claims `CON-03`, `CAP-01` and the bridge checks except `BRG-04`. The [threat model](spec/threat-model.md) says where the bridge checks run so far, and that an action counts as declared through the capability it needs. After Codex's review of [pull request 82](https://github.com/suredo/Tessera/pull/82), the contracts doc says the check walks a call once with bounded work: shared references count once per use, so a tiny graph that would expand without end is refused; lists with holes or named properties are refused; and every refusal with a reply keeps a usable request ID. After Codex's second review, it adds that the walk's count never exceeds what JSON writes, so a call under the limit made of many small lists passes.
