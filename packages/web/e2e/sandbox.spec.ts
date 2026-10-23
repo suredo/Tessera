@@ -1,6 +1,12 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
-import { ask, startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
+import {
+  ask,
+  startSandboxHost,
+  toolFrame,
+  toolFrameElement,
+  type SandboxHost,
+} from "./support/sandbox-host.ts";
 
 // The sandboxed runtime in a real browser (RUN-01, TEST-06): the local server with its guard, the
 // wrapper on the opposite loopback name and the tool in its sandboxed frame, through the shared
@@ -134,7 +140,7 @@ test("mounts a tool behind the wrapper and talks to it only through the bridge (
   // The wrapper is on the opposite loopback name; the tool is sandboxed inside it.
   const wrapper = page.frames().find((f) => f.url().includes("/runtime/wrapper"));
   expect(new URL(wrapper?.url() ?? "about:blank").hostname).toBe("localhost");
-  const sandbox = await wrapper?.locator("iframe").getAttribute("sandbox");
+  const sandbox = await toolFrameElement(page).getAttribute("sandbox");
   expect(sandbox).toBe("allow-scripts");
 });
 
@@ -183,8 +189,7 @@ async function leavePage(page: Page, leave: Leave, restarts = false): Promise<Ou
     await said(4);
     return { messages, events };
   }, args);
-  const wrapper = page.frames().find((f) => f.url().includes("/runtime/wrapper"));
-  const frameText = await wrapper?.locator("iframe").contentFrame().locator("body").innerText();
+  const frameText = await toolFrame(page).locator("body").innerText();
   return { messages, events, frameText };
 }
 

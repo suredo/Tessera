@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
-import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
+import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
 
 // The bridge's two ends of the port (CON-03, RUN-04, GEN-06), in Chrome and Edge (TEST-06): a
 // tool's calls reach the host in their own envelope, each reply settles only the call it names, on
@@ -56,6 +56,21 @@ tessera.call("data.read").then((result) => tessera.send({ run, result }));
 tessera.send({ run, started: true });
 tessera.onMessage((m) => { if (m === "leave") location.href = "about:blank"; });`,
   },
+  // On the person's click, calls the host; told to, it then leaves its page at once, so the click's
+  // activation is still live when the page that replaces it starts.
+  leaver: {
+    html: '<button id="press">Press</button>',
+    css: "button { width: 200px; height: 80px; }",
+    js: `const run = Math.random().toString(36).slice(2);
+let leaveOnClick = false;
+tessera.onMessage((m) => { if (m === "leave on click") leaveOnClick = true; });
+document.getElementById("press").addEventListener("click", () => {
+  tessera.call("data.read");
+  tessera.send({ run, clicked: true });
+  if (leaveOnClick) location.href = "about:blank";
+});
+tessera.send({ run, ready: true });`,
+  },
 };
 
 let host: SandboxHost;
@@ -79,6 +94,7 @@ type TestWindow = {
   calls: { requestId: string; action: string; args: unknown }[];
   interactions: number;
   events: string[];
+  order: string[];
 };
 
 /** Mounts a tool and records its messages, calls and interactions from the start. */
@@ -91,10 +107,17 @@ async function mountRecording(page: Page, mountId: string) {
     w.calls = [];
     w.interactions = 0;
     w.events = [];
+    w.order = [];
     w.tool = await w.mountTool(document.body, mountId);
     w.tool.onMessage((message) => w.messages.push(message));
-    w.tool.onCall((call) => w.calls.push(call as TestWindow["calls"][number]));
-    w.tool.onInteraction(() => (w.interactions += 1));
+    w.tool.onCall((call) => {
+      w.calls.push(call as TestWindow["calls"][number]);
+      w.order.push("call");
+    });
+    w.tool.onInteraction(() => {
+      w.interactions += 1;
+      w.order.push("interaction");
+    });
     w.tool.onEvent((event) => w.events.push(event));
   }, mountId);
 }
@@ -107,6 +130,7 @@ const recorded = (page: Page) =>
       calls: [...w.calls],
       interactions: w.interactions,
       events: [...w.events],
+      order: [...w.order],
     };
   });
 
@@ -212,7 +236,7 @@ test("the host hears the person's first interaction, and none the tool fakes (GE
   await page.waitForTimeout(500);
   expect((await recorded(page)).interactions).toBe(0);
 
-  const button = page.frameLocator("iframe").frameLocator("iframe").locator("#press");
+  const button = toolFrame(page).locator("#press");
   await button.click();
   await expect.poll(async () => (await recorded(page)).interactions).toBe(1);
   // Only the first counts.
@@ -220,4 +244,31 @@ test("the host hears the person's first interaction, and none the tool fakes (GE
   await page.keyboard.press("a");
   await page.waitForTimeout(500);
   expect((await recorded(page)).interactions).toBe(1);
+});
+
+test("a page started again just after a click waits for its own, and counts it at once (GEN-06)", async ({
+  page,
+}) => {
+  await mountRecording(page, "leaver");
+  const ready = async () =>
+    (await recorded(page)).messages.filter((m) => (m as { ready?: boolean }).ready).length;
+  await expect.poll(ready).toBe(1);
+  await page.evaluate(() => (window as unknown as TestWindow).tool.send("leave on click"));
+  await toolFrame(page).locator("#press").click();
+  await expect
+    .poll(async () => (await recorded(page)).events, { timeout: 15_000 })
+    .toEqual(["restarted"]);
+  await expect.poll(ready, { timeout: 15_000 }).toBe(2);
+  // The first page's click counted once. The new page didn't inherit it, although the click's
+  // activation is still live in the wrapper: it lasts a few seconds.
+  await page.waitForTimeout(300);
+  expect((await recorded(page)).order).toEqual(["interaction", "call"]);
+  const wrapper = page.frames().find((frame) => frame.url().includes("/runtime/wrapper"));
+  expect(await wrapper!.evaluate(() => navigator.userActivation.isActive)).toBe(true);
+
+  // The person clicks the new page: that counts at once, before the call the click made.
+  await toolFrame(page).locator("#press").click();
+  await expect
+    .poll(async () => (await recorded(page)).order)
+    .toEqual(["interaction", "call", "interaction", "call"]);
 });

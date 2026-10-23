@@ -5,7 +5,10 @@
 (() => {
   const HELLO_MESSAGE = "tessera:hello";
   const PORT_MESSAGE = "tessera:port";
-  const wrapper = parent;
+  // The tool's frame sits in a page frame of the wrapper's own, made for this page alone: the
+  // page says hello to that frame, its parent, and takes its port from the wrapper around it.
+  const pageFrame = parent;
+  const wrapper = parent.parent;
   let port: MessagePort | undefined;
   // What the page says before it has its port, in order, each in its envelope.
   const waiting: object[] = [];
@@ -26,7 +29,7 @@
     else waiting.push(structuredClone(envelope));
   };
 
-  // Only the first port, from the wrapper that framed this document, is taken.
+  // Only the first port, from the wrapper, is taken.
   addEventListener("message", (event: MessageEvent) => {
     if (port || event.source !== wrapper) return;
     const data = event.data as { type?: unknown };
@@ -65,7 +68,7 @@
 
   // Registered before the tool's code, so it runs first. A page in this frame that never says hello,
   // such as a blank or a blocked one, isn't the tool's: the wrapper starts the tool again (SBX-07).
-  addEventListener("load", () => wrapper.postMessage({ type: HELLO_MESSAGE }, "*"), {
+  addEventListener("load", () => pageFrame.postMessage({ type: HELLO_MESSAGE }, "*"), {
     capture: true,
     once: true,
   });
