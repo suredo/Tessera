@@ -20,6 +20,27 @@ export {
   type ArtifactUpgrades,
 } from "./artifact.ts";
 export {
+  BRIDGE_ACTIONS,
+  BRIDGE_CAPABILITIES,
+  BRIDGE_ERROR_CODES,
+  BRIDGE_MANIFEST_VERSION,
+  BRIDGE_MAX_DEPTH,
+  BRIDGE_PHASES,
+  BRIDGE_REQUEST_LIMIT_BYTES,
+  bridgeReplySchema,
+  bridgeRequestSchema,
+  checkBridgeCall,
+  type AcceptedCall,
+  type BridgeActionName,
+  type BridgeCapability,
+  type BridgeContext,
+  type BridgeErrorCode,
+  type BridgePhase,
+  type BridgeReply,
+  type BridgeRequest,
+  type RefusedCall,
+} from "./bridge.ts";
+export {
   jsonObjectSchema,
   jsonValueSchema,
   refusingReservedKey,
@@ -28,6 +49,7 @@ export {
 } from "./json.ts";
 export { INTENT_KINDS, intentSchema, type Intent } from "./intent.ts";
 export {
+  bridgeManifest,
   contracts,
   JSON_SCHEMA_TARGET,
   jsonSchemaOf,
