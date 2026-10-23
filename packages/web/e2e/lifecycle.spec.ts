@@ -283,7 +283,9 @@ test("UX-07: a stopped tool is still stopped after a reload", async ({ page }) =
   expect(runningTools(page)).toEqual([]);
 });
 
-test("RUN-02: whoever opened a tool hears why it stopped, as the runtime does", async ({
+// Quarantined (ENG-20): its second openHost, a reload right after the stuck tool was stopped, timed
+// out once in Edge on CI. Fix it, or the runtime, and remove this before M1 closes (#83).
+test.fixme("RUN-02: whoever opened a tool hears why it stopped, as the runtime does", async ({
   page,
 }) => {
   await openHost(page);
