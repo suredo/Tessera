@@ -2,28 +2,48 @@ import diagnostics from "node:diagnostics_channel";
 import fs from "node:fs";
 import http, { type IncomingMessage } from "node:http";
 import type { AddressInfo, Socket } from "node:net";
-import { stripTypeScriptTypes } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
+import { build, type Rolldown } from "vite";
 import type { Artifact } from "../../../contracts/src/index.ts";
 import { startLocalServer } from "../../../server/src/http/index.ts";
 import { runtimeRoutes } from "../../../server/src/runtime/index.ts";
 
 // The sandbox's browser tests share this host (RUN-01, TEST-06): the real local server with its
 // guard and runtime routes, a small page standing in for the host app that mounts tools with the
-// runtime's own mountTool, and a probe server that stands in for the outside world. Every request
-// either server receives is recorded, so a check can show that nothing arrived (SEC-05).
+// runtime's own mountTool and serves the bridge with its serveBridge, and a probe server that
+// stands in for the outside world. Every request either server receives is recorded, so a check
+// can show that nothing arrived (SEC-05).
 
-const runtimeSrc = path.join(
+const runtimeEntry = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
   "..",
   "runtime",
   "src",
+  "index.ts",
 );
+
+// The runtime as one browser module, with the contracts and zod it imports, built once per worker.
+let runtimeBundle: Promise<string> | undefined;
+const bundleRuntime = () =>
+  (runtimeBundle ??= build({
+    configFile: false,
+    logLevel: "silent",
+    build: {
+      lib: { entry: runtimeEntry, formats: ["es"], fileName: "runtime" },
+      write: false,
+      minify: false,
+    },
+  }).then((output) => {
+    const outputs = (Array.isArray(output) ? output : [output]) as Rolldown.RolldownOutput[];
+    const chunk = outputs.flatMap((o) => o.output).find((o) => o.type === "chunk");
+    if (!chunk || chunk.type !== "chunk") throw new Error("The runtime didn't build.");
+    return chunk.code;
+  }));
 
 export type SandboxHost = {
   /** The host app's address, http://127.0.0.1:<port>. */
@@ -60,18 +80,11 @@ export async function startSandboxHost(
   await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
 
   const webRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-sandbox-host-"));
-  const strip = (file: string) =>
-    stripTypeScriptTypes(fs.readFileSync(path.join(runtimeSrc, file), "utf8")).replace(
-      /from "\.\/(\w+)\.ts"/g,
-      'from "./$1.js"',
-    );
-  fs.writeFileSync(path.join(webRoot, "protocol.js"), strip("protocol.ts"));
-  fs.writeFileSync(path.join(webRoot, "host.js"), strip("host.ts"));
-  fs.writeFileSync(path.join(webRoot, "runtime.js"), strip("runtime.ts"));
+  fs.writeFileSync(path.join(webRoot, "runtime.js"), await bundleRuntime());
   // No favicon request, which would arrive at any time and look like a tool's.
   fs.writeFileSync(
     path.join(webRoot, "index.html"),
-    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script type="module">import { mountTool } from "./host.js"; import { createRuntime } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime });</script>`,
+    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script type="module">import { mountTool, createRuntime, serveBridge } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge });</script>`,
   );
   const server = await startLocalServer({
     port: 0,

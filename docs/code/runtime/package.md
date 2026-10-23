@@ -4,10 +4,10 @@ title: "Runtime package"
 description: "@tessera/runtime: the sandbox a tool runs in. The wrapper on the opposite loopback name, the tool's sandboxed frame under a strict CSP, and the one MessageChannel port between them and the host."
 resource: ../../../packages/runtime/
 implements: [RUN-01, RUN-02, RUN-07, GEN-06, SEC-05, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX-06, SBX-07, SBX-08, SBX-09, SBX-10, SBX-11, SBX-12, SBX-13]
-tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/runtime/test/bridge.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts]
+tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/runtime/test/bridge.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/bridge.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T19:28:27Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T20:04:50Z }
 ---
 
 # Purpose
@@ -52,6 +52,7 @@ The [contracts package](../contracts/package.md), for the bridge's manifest and 
 - **The watchdog's timings are the host's to set** (`WATCHDOG_DEFAULTS`: a ping a second, stopped after five seconds without an answer, ten while starting). The tests use shorter ones.
 - **The bridge doesn't check record revisions.** A stale change is the patch engine's to refuse, on the server (`DATA-02`, `BRG-04`); its data handler passes the refusal on as a `stale` `BridgeError`.
 - **The host app keeps the state, not the runtime.** `createRuntime` reports each `RuntimeState` and starts from one it's given; where it is kept (the workspace, from #53) is the app's choice. The tests keep it in `sessionStorage`.
+- **The browser tests load the runtime as one bundle.** `packages/web/e2e/support/sandbox-host.ts` builds `src/index.ts` with Vite, with the contracts and zod it imports, once per test worker, and its test page exposes `mountTool`, `createRuntime` and `serveBridge`. The wrapper and the preamble are still inlined by the server, unbundled. `packages/web/e2e/bridge.spec.ts` serves a hostile tool the real bridge over the real port.
 - **The browser tests share one host and one prober:** `packages/web/e2e/support/prober.ts` is the hostile test tool each boundary spec gives its own checks to, with `probe` and `nothingArrived`. `packages/web/e2e/support/sandbox-host.ts` starts the local server and the probe server, records every request and every connection both receive, and mounts tools on a small test page. A check resets it once the tool is ready, so whatever arrives after came from the tool.
 - **A restarted tool forgets what it held in memory, and misses what was sent while it left.** A message the host sends after the tool leaves its page but before the host hears `restarted` goes to the page that left and is lost, so the host should send what the tool needs again when it hears `restarted`; the lifecycle (#45's next pull request, `RUN-02`) builds on this. Tests wait for `restarted` and the new page's hello before sending to it: a fixed pause raced the wrapper's one-second hello grace on CI's Windows runner.
 - **A slow page may be taken for one that left.** The wrapper waits a second after the frame loads for its hello; a page that takes longer is started again.

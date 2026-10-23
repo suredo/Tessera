@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T23:57:36Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T20:04:50Z }
 ---
 # Threat model and boundary checks
 
@@ -88,7 +88,7 @@ Each check is a hand-written tool that attempts the forbidden thing from inside 
 
 ## Bridge checks
 
-Run against the bridge's message handling, and through a hostile test tool in the sandbox ([#46](https://github.com/suredo/Tessera/issues/46)). Each refused call gets a plain error reply where a reply is due, and leaves host state unchanged. The checks on the message handling run against `checkBridgeCall` in the [contracts package](../code/contracts/package.md); the hostile tool and `BRG-04` follow as the bridge reaches the port and the data. An action counts as declared when the tool declares the capability it needs; every tool may read and change its own data.
+Run against the bridge's message handling, and through a hostile test tool in the sandbox ([#46](https://github.com/suredo/Tessera/issues/46)). Each refused call gets a plain error reply where a reply is due, and leaves host state unchanged. The checks on the message handling run against `checkBridgeCall` in the [contracts package](../code/contracts/package.md), and the host's side against `serveBridge` in the [runtime package](../code/runtime/package.md). A hostile tool in the sandbox tries `BRG-01` to `BRG-03`, `BRG-06` and `BRG-07` over the real port, through the bridge the runtime serves (`packages/web/e2e/bridge.spec.ts`). `BRG-05` is the port's binding to its instance, which `SBX-12` tries in the browser. `BRG-04` follows with the data routes. An action counts as declared when the tool declares the capability it needs; every tool may read and change its own data.
 
 | ID | The tool sends | Expected result |
 | --- | --- | --- |
