@@ -1,0 +1,410 @@
+{
+  "manifestVersion": 1,
+  "requestLimitBytes": 263168,
+  "maxDepthCount": 64,
+  "capabilities": [
+    {
+      "name": "clock",
+      "description": "The current date, time and time zone, from the host's clock (RUN-07)."
+    }
+  ],
+  "actions": [
+    {
+      "name": "data.read",
+      "description": "Reads the tool's data, with the revision count of each record.",
+      "capability": null,
+      "writes": false,
+      "maxArgsBytes": 1024,
+      "args": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "description": "No arguments."
+      },
+      "result": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^(?!__proto__$)"
+            },
+            "additionalProperties": {
+              "$ref": "#/definitions/__schema0"
+            }
+          },
+          "revisions": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                "description": "A record's stable ID, given by the host when it was added."
+              },
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              }
+            },
+            "description": "Each record's revision count, by collection and ID; a change carries the count it was planned against (DATA-02)."
+          }
+        },
+        "required": [
+          "data",
+          "revisions"
+        ],
+        "additionalProperties": false,
+        "definitions": {
+          "__schema0": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/__schema0"
+                }
+              },
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(?!__proto__$)"
+                },
+                "additionalProperties": {
+                  "$ref": "#/definitions/__schema0"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "examples": [
+        {
+          "args": {},
+          "result": {
+            "data": {
+              "tasks": [
+                {
+                  "id": "t-1",
+                  "title": "Buy milk",
+                  "done": false
+                }
+              ]
+            },
+            "revisions": {
+              "tasks": {
+                "t-1": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "data.patch",
+      "description": "Changes the tool's data: adds, replaces fields of, or removes records, all or nothing (DATA-02). Refused until the tool is active.",
+      "capability": null,
+      "writes": true,
+      "maxArgsBytes": 262144,
+      "args": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "description": "Changes applied in order, all or nothing (DATA-02).",
+        "type": "object",
+        "properties": {
+          "operations": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "const": "add"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+                      "description": "The top-level list the record is in, such as `tasks`."
+                    },
+                    "record": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "additionalProperties": {
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/__schema0"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "collection",
+                    "record"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Adds a record; the host gives it its ID. Adds never conflict."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "const": "replace"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+                      "description": "The top-level list the record is in, such as `tasks`."
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                      "description": "A record's stable ID, given by the host when it was added."
+                    },
+                    "revisionCount": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "The record's revision count when this change was planned; the whole batch is refused if it has changed since (DATA-02)."
+                    },
+                    "fields": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$"
+                      },
+                      "additionalProperties": {
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/__schema0"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "collection",
+                    "id",
+                    "revisionCount",
+                    "fields"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Sets the named fields of one record and keeps the rest: never a whole record."
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "op": {
+                      "type": "string",
+                      "const": "remove"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+                      "description": "The top-level list the record is in, such as `tasks`."
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                      "description": "A record's stable ID, given by the host when it was added."
+                    },
+                    "revisionCount": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "The record's revision count when this change was planned; the whole batch is refused if it has changed since (DATA-02)."
+                    }
+                  },
+                  "required": [
+                    "op",
+                    "collection",
+                    "id",
+                    "revisionCount"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Removes one record."
+                }
+              ],
+              "description": "One change to a tool's data (DATA-02)."
+            }
+          }
+        },
+        "required": [
+          "operations"
+        ],
+        "additionalProperties": false,
+        "definitions": {
+          "__schema0": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/__schema0"
+                }
+              },
+              {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "pattern": "^(?!__proto__$)"
+                },
+                "additionalProperties": {
+                  "$ref": "#/definitions/__schema0"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "result": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "addedIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "description": "A record's stable ID, given by the host when it was added."
+            },
+            "description": "The IDs the host gave added records, in order."
+          }
+        },
+        "required": [
+          "addedIds"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "args": {
+            "operations": [
+              {
+                "op": "add",
+                "collection": "tasks",
+                "record": {
+                  "title": "Call the bank",
+                  "done": false
+                }
+              },
+              {
+                "op": "replace",
+                "collection": "tasks",
+                "id": "t-1",
+                "revisionCount": 1,
+                "fields": {
+                  "done": true
+                }
+              }
+            ]
+          },
+          "result": {
+            "addedIds": [
+              "t-2"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "clock.now",
+      "description": "The current date and time from the host's clock. Use it instead of Date.now() or new Date() (RUN-07).",
+      "capability": "clock",
+      "writes": false,
+      "maxArgsBytes": 1024,
+      "args": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "description": "No arguments."
+      },
+      "result": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "epochMs": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "Milliseconds since 1970-01-01 UTC."
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+            "description": "Today's date where the person is, YYYY-MM-DD."
+          },
+          "timeZone": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The person's IANA time zone, such as Europe/Lisbon."
+          },
+          "utcOffsetMinutes": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991,
+            "description": "The time zone's offset from UTC now, in minutes."
+          }
+        },
+        "required": [
+          "epochMs",
+          "date",
+          "timeZone",
+          "utcOffsetMinutes"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "args": {},
+          "result": {
+            "epochMs": 1792659600000,
+            "date": "2026-10-22",
+            "timeZone": "Europe/Lisbon",
+            "utcOffsetMinutes": 60
+          }
+        }
+      ]
+    }
+  ]
+}
