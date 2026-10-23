@@ -3,9 +3,10 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 
 // The bridge's two ends of the port (CON-03, RUN-04, GEN-06), in Chrome and Edge (TEST-06): a
-// tool's calls reach the host in their own envelope, each reply settles the call it names, and the
-// host hears the person's first real interaction, which the tool's code can't fake. What the host
-// answers is checked by whoever serves the bridge (#46); here the test page answers by hand.
+// tool's calls reach the host in their own envelope, each reply settles only the call it names, on
+// the page that made it, and the host hears the person's first real interaction, which the wrapper
+// sees and the tool's code can't fake. What the host answers is checked by whoever serves the
+// bridge (#46); here the test page answers by hand.
 
 const tools: Record<string, Artifact["code"]> = {
   // Calls as it starts, before its port exists, then when asked; says how each call settled.
@@ -22,17 +23,38 @@ tessera.onMessage((m) => {
   if (m === "uncloneable") report("uncloneable", tessera.call("data.read", { f() {} }));
 });`,
   },
-  // Fakes every kind of interaction it can as it starts, then says so.
+  // Fakes every kind of interaction it can as it starts, then says so. It takes the port as it
+  // arrives and sends a fake report on it, and makes every later send carry one too.
   presser: {
     html: '<button id="press">Press</button>',
     css: "button { width: 200px; height: 80px; }",
-    js: `const button = document.getElementById("press");
+    js: `addEventListener("message", (e) => {
+  const port = e.ports[0];
+  if (!port) return;
+  port.postMessage({ interacted: true });
+  port.postMessage({ message: "took the port" });
+}, true);
+const post = MessagePort.prototype.postMessage;
+MessagePort.prototype.postMessage = function (data, ...rest) {
+  post.call(this, { interacted: true });
+  return post.call(this, data, ...rest);
+};
+const button = document.getElementById("press");
 button.click();
 button.focus();
 dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
 button.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
 dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true }));
 tessera.send("faked");`,
+  },
+  // Calls as it starts, and leaves its page when asked, so it starts again and calls again.
+  restarter: {
+    html: "<p>Restarter</p>",
+    css: "",
+    js: `const run = Math.random().toString(36).slice(2);
+tessera.call("data.read").then((result) => tessera.send({ run, result }));
+tessera.send({ run, started: true });
+tessera.onMessage((m) => { if (m === "leave") location.href = "about:blank"; });`,
   },
 };
 
@@ -48,6 +70,7 @@ type Mounted = {
   onCall(listen: (call: unknown) => void): () => void;
   reply(reply: unknown): void;
   onInteraction(listen: () => void): () => void;
+  onEvent(listen: (event: string) => void): () => void;
 };
 type TestWindow = {
   mountTool(container: HTMLElement, mountId: string): Promise<Mounted>;
@@ -55,6 +78,7 @@ type TestWindow = {
   messages: unknown[];
   calls: { requestId: string; action: string; args: unknown }[];
   interactions: number;
+  events: string[];
 };
 
 /** Mounts a tool and records its messages, calls and interactions from the start. */
@@ -66,17 +90,24 @@ async function mountRecording(page: Page, mountId: string) {
     w.messages = [];
     w.calls = [];
     w.interactions = 0;
+    w.events = [];
     w.tool = await w.mountTool(document.body, mountId);
     w.tool.onMessage((message) => w.messages.push(message));
     w.tool.onCall((call) => w.calls.push(call as TestWindow["calls"][number]));
     w.tool.onInteraction(() => (w.interactions += 1));
+    w.tool.onEvent((event) => w.events.push(event));
   }, mountId);
 }
 
 const recorded = (page: Page) =>
   page.evaluate(() => {
     const w = window as unknown as TestWindow;
-    return { messages: [...w.messages], calls: [...w.calls], interactions: w.interactions };
+    return {
+      messages: [...w.messages],
+      calls: [...w.calls],
+      interactions: w.interactions,
+      events: [...w.events],
+    };
   });
 
 test("a call reaches the host in its own envelope, and its reply settles it (CON-03)", async ({
@@ -84,18 +115,22 @@ test("a call reaches the host in its own envelope, and its reply settles it (CON
 }) => {
   await mountRecording(page, "caller");
   // The call made before the port existed waited for it, and arrived whole.
-  await expect
-    .poll(async () => (await recorded(page)).calls)
-    .toEqual([{ requestId: "c1", action: "data.read", args: {} }]);
+  await expect.poll(async () => (await recorded(page)).calls.length).toBe(1);
+  const [first] = (await recorded(page)).calls;
+  expect(first).toEqual({
+    requestId: expect.stringMatching(/^p[0-9a-f]{8}-c1$/),
+    action: "data.read",
+    args: {},
+  });
   expect((await recorded(page)).messages).toEqual([]);
 
-  await page.evaluate(() => {
+  await page.evaluate((id) => {
     const tool = (window as unknown as TestWindow).tool;
     // A reply to a call the tool never made, then the real one: only the real one counts.
-    tool.reply({ requestId: "c99", ok: true, result: { stray: true } });
-    tool.reply({ requestId: "c1", ok: true, result: { data: {}, revisions: {} } });
-    tool.reply({ requestId: "c1", ok: true, result: { again: true } });
-  });
+    tool.reply({ requestId: id.replace(/c1$/, "c99"), ok: true, result: { stray: true } });
+    tool.reply({ requestId: id, ok: true, result: { data: {}, revisions: {} } });
+    tool.reply({ requestId: id, ok: true, result: { again: true } });
+  }, first!.requestId);
   await expect
     .poll(async () => (await recorded(page)).messages)
     .toEqual([{ label: "first", result: { data: {}, revisions: {} } }]);
@@ -104,13 +139,19 @@ test("a call reaches the host in its own envelope, and its reply settles it (CON
   await page.evaluate(() => (window as unknown as TestWindow).tool.send("again"));
   await expect.poll(async () => (await recorded(page)).calls.length).toBe(2);
   const [, again] = (await recorded(page)).calls;
-  expect(again).toEqual({ requestId: "c2", action: "clock.now", args: {} });
-  await page.evaluate(() =>
-    (window as unknown as TestWindow).tool.reply({
-      requestId: "c2",
-      ok: false,
-      error: { code: "undeclared-capability", message: "Declare the clock first." },
-    }),
+  expect(again).toEqual({
+    requestId: first!.requestId.replace(/c1$/, "c2"),
+    action: "clock.now",
+    args: {},
+  });
+  await page.evaluate(
+    (id) =>
+      (window as unknown as TestWindow).tool.reply({
+        requestId: id,
+        ok: false,
+        error: { code: "undeclared-capability", message: "Declare the clock first." },
+      }),
+    again!.requestId,
   );
   await expect
     .poll(async () => (await recorded(page)).messages.at(-1))
@@ -124,12 +165,50 @@ test("a call reaches the host in its own envelope, and its reply settles it (CON
   expect((await recorded(page)).calls).toHaveLength(2);
 });
 
+test("a late reply for a page the tool left settles nothing on the page that replaced it (SBX-07)", async ({
+  page,
+}) => {
+  await mountRecording(page, "restarter");
+  await expect.poll(async () => (await recorded(page)).calls.length).toBe(1);
+  await page.evaluate(() => (window as unknown as TestWindow).tool.send("leave"));
+  await expect
+    .poll(async () => (await recorded(page)).events, { timeout: 15_000 })
+    .toEqual(["restarted"]);
+  await expect.poll(async () => (await recorded(page)).calls.length, { timeout: 15_000 }).toBe(2);
+  const [old, current] = (await recorded(page)).calls;
+  expect(current!.requestId).not.toBe(old!.requestId);
+
+  // The first page's call is answered only now, after the tool started again: nothing settles.
+  const answer = (id: string, result: object) =>
+    page.evaluate(
+      ({ id, result }) =>
+        (window as unknown as TestWindow).tool.reply({ requestId: id, ok: true, result }),
+      { id, result },
+    );
+  const settled = async () =>
+    (await recorded(page)).messages.filter((m) => "result" in (m as object));
+  await answer(old!.requestId, { old: 1 });
+  await page.waitForTimeout(500);
+  expect(await settled()).toEqual([]);
+
+  await answer(current!.requestId, { now: 1 });
+  await expect.poll(settled).toEqual([{ run: expect.any(String), result: { now: 1 } }]);
+  // The reply reached the second page, the one that made the call it answered.
+  const runs = (await recorded(page)).messages.map((m) => (m as { run: string }).run);
+  expect(runs.at(-1)).toBe(runs.at(-2));
+  expect(runs[0]).not.toBe(runs.at(-1));
+});
+
 test("the host hears the person's first interaction, and none the tool fakes (GEN-06)", async ({
   page,
 }) => {
   await mountRecording(page, "presser");
-  await expect.poll(async () => (await recorded(page)).messages).toEqual(["faked"]);
-  // Clicks, focus and events made by the tool's code aren't the person's.
+  await expect
+    .poll(async () => (await recorded(page)).messages.sort())
+    .toEqual(["faked", "took the port"]);
+  // Clicks, focus and events made by the tool's code, and reports it sends on the port it took or
+  // through a changed postMessage, aren't the person's. Nor is a click on the host page.
+  await page.mouse.click(10, 600);
   await page.waitForTimeout(500);
   expect((await recorded(page)).interactions).toBe(0);
 

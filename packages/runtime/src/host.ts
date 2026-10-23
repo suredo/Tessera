@@ -123,8 +123,8 @@ export function mountTool(
     };
     if (data?.instanceId !== instanceId) return;
     // The wrapper's own events, the watchdog's answers, bridge calls and the first interaction sit
-    // beside the tool's messages, which can't pass for them: the preamble wraps each in its own
-    // envelope, and the tool's code has no port.
+    // beside the tool's messages. A pong or a call is only the tool's word: its code can reach its
+    // port. The events and the interaction come from the wrapper alone, out of the tool's reach.
     if ("pong" in data) {
       answered = true;
       unansweredSince = undefined;

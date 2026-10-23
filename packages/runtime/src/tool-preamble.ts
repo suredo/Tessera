@@ -12,6 +12,11 @@
   const listeners = new Set<(message: unknown) => void>();
   type Pending = { resolve(result: unknown): void; reject(error: Error): void };
   const pending = new Map<string, Pending>();
+  // Request IDs start with a mark of this page, so a late reply for a page the tool left can't
+  // settle a call of the page that replaced it (SBX-07).
+  const page = Array.from(crypto.getRandomValues(new Uint8Array(4)), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
   let lastCall = 0;
 
   // A waiting envelope is copied now, as the port would copy it, so what can't be sent fails here,
@@ -30,7 +35,8 @@
     port = given;
     // On the port, the host's messages come as { message }, replies to calls as { reply }, and the
     // watchdog's pings as { ping }, which is answered at once: an answer shows the tool's page
-    // isn't stuck (RUN-02).
+    // isn't stuck (RUN-02). The tool's code shares this window and can reach the port too, so
+    // nothing sent on it proves more than the tool says: the wrapper sees real input itself.
     port.onmessage = (e: MessageEvent) => {
       const data = e.data as { message?: unknown; ping?: unknown; reply?: unknown };
       if (data && "ping" in data) port?.postMessage({ pong: data.ping });
@@ -57,18 +63,6 @@
     call.reject(Object.assign(error, { code: r.error?.code }));
   }
 
-  // The person's first click, tap or key press in the tool, which only the browser can make
-  // (isTrusted), lets the tool write their data (GEN-06). The tool's code can't send this: it
-  // has no port.
-  const interacted = (event: Event) => {
-    if (!event.isTrusted) return;
-    removeEventListener("pointerdown", interacted, true);
-    removeEventListener("keydown", interacted, true);
-    post({ interacted: true });
-  };
-  addEventListener("pointerdown", interacted, true);
-  addEventListener("keydown", interacted, true);
-
   // Registered before the tool's code, so it runs first. A page in this frame that never says hello,
   // such as a blank or a blocked one, isn't the tool's: the wrapper starts the tool again (SBX-07).
   addEventListener("load", () => wrapper.postMessage({ type: HELLO_MESSAGE }, "*"), {
@@ -93,7 +87,7 @@
        */
       call(action: string, args: unknown = {}): Promise<unknown> {
         lastCall += 1;
-        const requestId = `c${lastCall}`;
+        const requestId = `p${page}-c${lastCall}`;
         return new Promise((resolve, reject) => {
           pending.set(requestId, { resolve, reject });
           try {

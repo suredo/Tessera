@@ -16,6 +16,11 @@
   let onHello: (() => void) | undefined;
   // The host's messages that came before the tool's page was ready for them, in order.
   let waiting: unknown[] = [];
+  // The request IDs of the current page's calls still waiting for a reply.
+  let calls = new Set<string>();
+  // Watches for the person's first real input in the tool's page (GEN-06).
+  let watchingInput: ReturnType<typeof setInterval> | undefined;
+  let checkInput: (() => void) | undefined;
 
   const unmountTool = () => {
     toolPort?.close();
@@ -23,6 +28,9 @@
     toolFrame?.remove();
     toolFrame = undefined;
     onHello = undefined;
+    calls = new Set();
+    clearInterval(watchingInput);
+    checkInput = undefined;
   };
   const unmount = () => {
     unmountTool();
@@ -58,11 +66,14 @@
       };
       if (data?.instanceId !== instanceId) return;
       // The host's watchdog pings the tool's page; with no page ready yet, the ping goes nowhere
-      // and the watchdog sends another (RUN-02). A reply goes to the page that called, the one
-      // with the port now; a page started since never made that call, and drops it.
+      // and the watchdog sends another (RUN-02). A reply goes on only to the page that made the
+      // call, once: a reply for a page the tool has left goes nowhere.
       if ("ping" in data) toolPort?.postMessage({ ping: data.ping });
-      else if ("reply" in data) toolPort?.postMessage({ reply: data.reply });
-      else if (toolPort) toolPort.postMessage({ message: data.message });
+      else if ("reply" in data) {
+        const id = (data.reply as { requestId?: unknown } | null)?.requestId;
+        if (typeof id === "string" && calls.delete(id))
+          toolPort?.postMessage({ reply: data.reply });
+      } else if (toolPort) toolPort.postMessage({ message: data.message });
       else waiting.push(data.message);
     };
     let restarts = 0;
@@ -83,6 +94,23 @@
       let loads = 0;
       let hellos = 0;
       let left = false;
+      // Real input (GEN-06). The tool's code shares its page with the preamble and can send
+      // anything on its port, so the page's word proves nothing. The browser marks this wrapper as
+      // activated when the person clicks, taps or types in the tool, a frame inside it, and only
+      // then: not for the tool's own clicks and events, nor for input on the host page. Activation
+      // lasts a few seconds, so input that came before this page started (it was restarted just
+      // after a click) is let pass first: only activation that starts while this page runs counts.
+      let interacted = false;
+      let armed = !navigator.userActivation.isActive;
+      checkInput = () => {
+        if (interacted) return;
+        if (!navigator.userActivation.isActive) armed = true;
+        else if (armed) {
+          interacted = true;
+          hostPort?.postMessage({ instanceId, interacted: true });
+        }
+      };
+      watchingInput = setInterval(() => checkInput?.(), 100);
       const leave = () => {
         if (left || toolFrame !== frame) return;
         left = true;
@@ -101,14 +129,17 @@
         // The tool's page gets one fresh port, bound to this frame and this instance.
         const channel = new MessageChannel();
         toolPort = channel.port1;
-        // The preamble's envelopes: a pong, a call, the first interaction, or a message.
+        // The preamble's envelopes: a pong, a call, or a message. Input is checked first, so a
+        // write the person's click caused reaches the host after the click does.
         toolPort.onmessage = (e: MessageEvent) => {
+          checkInput?.();
           const data = e.data as { message?: unknown; pong?: unknown; call?: unknown };
           if (data && "pong" in data) hostPort?.postMessage({ instanceId, pong: data.pong });
-          else if (data && "call" in data) hostPort?.postMessage({ instanceId, call: data.call });
-          else if (data && "interacted" in data)
-            hostPort?.postMessage({ instanceId, interacted: true });
-          else hostPort?.postMessage({ instanceId, message: data?.message });
+          else if (data && "call" in data) {
+            const id = (data.call as { requestId?: unknown } | null)?.requestId;
+            if (typeof id === "string") calls.add(id);
+            hostPort?.postMessage({ instanceId, call: data.call });
+          } else hostPort?.postMessage({ instanceId, message: data?.message });
         };
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
         frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
