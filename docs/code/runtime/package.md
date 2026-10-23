@@ -7,7 +7,7 @@ implements: [RUN-01, RUN-02, SEC-05, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T09:26:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T06:01:53Z }
 ---
 
 # Purpose
@@ -42,7 +42,7 @@ Nothing at run time. The server's runtime routes serve its documents, and the ho
 
 # Pitfalls
 
-- **A stuck tool's process lasts a few seconds.** Once the watchdog removes its frames, Chrome and Edge end the process of its tool host within about five seconds; until then it keeps one core busy.
+- **A stuck tool's process lasts a few seconds.** Once the watchdog removes its frames, Chrome and Edge end the process of its tool host within about five seconds; until then it keeps one core busy. One lifecycle test, which reloads the host page right after a stuck tool was stopped, is quarantined: its reload timed out once in Edge on CI, and whether a reload that soon can hang is still open ([#83](https://github.com/suredo/Tessera/issues/83), `ENG-20`).
 - **The watchdog's timings are the host's to set** (`WATCHDOG_DEFAULTS`: a ping a second, stopped after five seconds without an answer, ten while starting). The tests use shorter ones.
 - **The host app keeps the state, not the runtime.** `createRuntime` reports each `RuntimeState` and starts from one it's given; where it is kept (the workspace, from #53) is the app's choice. The tests keep it in `sessionStorage`.
 - **The browser tests share one host and one prober:** `packages/web/e2e/support/prober.ts` is the hostile test tool each boundary spec gives its own checks to, with `probe` and `nothingArrived`. `packages/web/e2e/support/sandbox-host.ts` starts the local server and the probe server, records every request and every connection both receive, and mounts tools on a small test page. A check resets it once the tool is ready, so whatever arrives after came from the tool.
