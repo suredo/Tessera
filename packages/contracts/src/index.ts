@@ -27,6 +27,7 @@ export {
   BRIDGE_MAX_DEPTH,
   BRIDGE_PHASES,
   BRIDGE_REQUEST_LIMIT_BYTES,
+  BRIDGE_ROUTE,
   bridgeDataRequestSchema,
   bridgeReplySchema,
   bridgeRequestSchema,

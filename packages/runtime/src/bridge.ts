@@ -61,10 +61,19 @@ export class BridgeError extends Error {
   }
 }
 
-/** What the host does for the tool's data actions; the server's routes, from #46's next part. */
+/**
+ * What a data handler is told beside the arguments: where the mount stood when the call was
+ * checked, and the call exactly as the tool made it, so the server can check it again (RUN-04).
+ */
+export type DataCallContext = { phase: BridgePhase; call: unknown };
+
+/** What the host does for the tool's data actions: `serverData`'s, or a test's. */
 export type DataHandlers = {
-  read(): Promise<BridgeResult<"data.read">>;
-  patch(batch: BridgeArgs<"data.patch">): Promise<BridgeResult<"data.patch">>;
+  read(context: DataCallContext): Promise<BridgeResult<"data.read">>;
+  patch(
+    batch: BridgeArgs<"data.patch">,
+    context: DataCallContext,
+  ): Promise<BridgeResult<"data.patch">>;
 };
 
 export type BridgeOptions = {
@@ -102,9 +111,14 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
   let serving = true;
 
   // One handler per action in the manifest: TypeScript refuses this object if one is missing.
-  const run: { [A in BridgeActionName]: (args: BridgeArgs<A>) => Promise<BridgeResult<A>> } = {
-    "data.read": () => options.data.read(),
-    "data.patch": (batch) => options.data.patch(batch),
+  const run: {
+    [A in BridgeActionName]: (
+      args: BridgeArgs<A>,
+      context: DataCallContext,
+    ) => Promise<BridgeResult<A>>;
+  } = {
+    "data.read": (_args, context) => options.data.read(context),
+    "data.patch": (batch, context) => options.data.patch(batch, context),
     "clock.now": () => Promise.resolve(clockReading(clock.now(), clock.timeZone())),
   };
 
@@ -112,9 +126,11 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
     if (serving) tool.reply(message);
   };
   const answer = async (call: unknown) => {
+    // The phase the call was checked in: the handler passes on that one, not a later one.
+    const checkedIn = phase;
     const checked = checkBridgeCall(tool.instanceId, call, {
       instanceId: tool.instanceId,
-      phase,
+      phase: checkedIn,
       capabilities: options.capabilities,
     });
     if (!checked.ok) {
@@ -123,8 +139,10 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
     }
     const { requestId, action } = checked;
     try {
-      const handler = run[action] as (args: unknown) => Promise<unknown>;
-      const result = BRIDGE_ACTIONS[action].result.safeParse(await handler(checked.args));
+      const handler = run[action] as (args: unknown, context: DataCallContext) => Promise<unknown>;
+      const result = BRIDGE_ACTIONS[action].result.safeParse(
+        await handler(checked.args, { phase: checkedIn, call }),
+      );
       if (!result.success) throw new Error(`The host's answer to "${action}" doesn't fit.`);
       reply({ requestId, ok: true, result: result.data });
     } catch (error) {

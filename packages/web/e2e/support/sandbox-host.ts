@@ -9,7 +9,9 @@ import type { Page } from "@playwright/test";
 import { build, type Rolldown } from "vite";
 import type { Artifact } from "../../../contracts/src/index.ts";
 import { startLocalServer } from "../../../server/src/http/index.ts";
+import { bridgeRoutes } from "../../../server/src/bridge/index.ts";
 import { runtimeRoutes } from "../../../server/src/runtime/index.ts";
+import { openDataFolder, type DataFolder } from "../../../server/src/storage/index.ts";
 
 // The sandbox's browser tests share this host (RUN-01, TEST-06): the real local server with its
 // guard and runtime routes, a small page standing in for the host app that mounts tools with the
@@ -64,11 +66,18 @@ export type SandboxHost = {
   probeConnections: () => number;
   /** Forgets what both servers received so far. */
   reset(): void;
+  /** With `data`, the temporary data folder the bridge route answers from (ENG-19). */
+  folder: DataFolder | undefined;
   close(): Promise<void>;
 };
 
+/**
+ * Starts the host. With `data`, it also opens a temporary data folder, never the real one
+ * (ENG-19), and serves the server's bridge route from it, so tools can read and change saved data.
+ */
 export async function startSandboxHost(
   tools: Record<string, Artifact["code"]>,
+  options: { data?: boolean } = {},
 ): Promise<SandboxHost> {
   let connections = 0;
   const probeRequests: string[] = [];
@@ -84,12 +93,16 @@ export async function startSandboxHost(
   // No favicon request, which would arrive at any time and look like a tool's.
   fs.writeFileSync(
     path.join(webRoot, "index.html"),
-    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script type="module">import { mountTool, createRuntime, serveBridge } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge });</script>`,
+    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script type="module">import { mountTool, createRuntime, serveBridge, serverData } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge, serverData });</script>`,
   );
+  const dataDir = options.data
+    ? fs.mkdtempSync(path.join(os.tmpdir(), "tessera-sandbox-data-"))
+    : undefined;
+  const folder = dataDir ? await openDataFolder(dataDir) : undefined;
   const server = await startLocalServer({
     port: 0,
     webRoot,
-    routes: runtimeRoutes((id) => tools[id]),
+    routes: { ...runtimeRoutes((id) => tools[id]), ...(folder ? bridgeRoutes(folder) : {}) },
   });
 
   // Node announces every request its HTTP servers receive, and every connection its servers
@@ -116,6 +129,7 @@ export async function startSandboxHost(
     hostConnections: () => hostConnections,
     probeRequests,
     probeConnections: () => connections,
+    folder,
     reset: () => {
       hostRequests.length = 0;
       hostConnections = 0;
@@ -129,6 +143,8 @@ export async function startSandboxHost(
       probe.closeAllConnections();
       await new Promise((resolve) => probe.close(resolve));
       fs.rmSync(webRoot, { recursive: true, force: true });
+      folder?.close();
+      if (dataDir) fs.rmSync(dataDir, { recursive: true, force: true });
     },
   };
 }

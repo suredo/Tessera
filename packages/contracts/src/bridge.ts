@@ -173,6 +173,9 @@ export const bridgeReplySchema = z
   .describe("The host's reply to a tool's call (CON-03).");
 export type BridgeReply = z.infer<typeof bridgeReplySchema>;
 
+/** The server's one route for a tool's data calls, on the host app's own origin. */
+export const BRIDGE_ROUTE = "/api/bridge";
+
 /**
  * What the host page sends the server for a tool's data call (CON-03, RUN-04): the workspace the
  * tool runs in, where its mount stands, and the call as the tool made it. The server checks the

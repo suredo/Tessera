@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   BRIDGE_ACTIONS,
   BRIDGE_REQUEST_LIMIT_BYTES,
+  BRIDGE_ROUTE,
   bridgeDataRequestSchema,
   checkBridgeCall,
   type BridgeDataRequest,
@@ -23,9 +24,6 @@ import {
 // capabilities come from the workspace's stored tool version, never from the browser. Only the
 // phase comes from the host page: the person's first interaction is something only the browser
 // sees (the owner's decision on #46). Revisions are checked against the saved ones (BRG-04).
-
-/** The one route a host page sends a tool's data calls to. */
-export const BRIDGE_ROUTE = "/api/bridge";
 
 // Instances are the browser's: the port of each mount is bound to its own (BRG-05).
 const SERVER_INSTANCE = "server";

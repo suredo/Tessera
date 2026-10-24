@@ -8,11 +8,13 @@ export {
   systemClock,
   type BridgeOptions,
   type BridgeTool,
+  type DataCallContext,
   type DataHandlers,
   type HostClock,
   type ServedBridge,
 } from "./bridge.ts";
 export { TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "./csp.ts";
+export { serverData, type Send } from "./server-data.ts";
 export {
   mountTool,
   WATCHDOG_DEFAULTS,
