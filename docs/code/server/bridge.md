@@ -7,7 +7,7 @@ implements: [RUN-04, CAP-01, GEN-06, BRG-04]
 tests: [../../../packages/server/test/bridge-routes.test.ts]
 tags: [code, server, bridge]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T01:30:43Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T05:07:05Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Answers a tool's data calls from the saved data (`RUN-04`, `DATA-02`). The host 
 # Entry points
 
 - `src/bridge/bridge.ts`:
-  - `bridgeRoutes` gives the local server its one bridge route, `BRIDGE_ROUTE` (`/api/bridge`): a POST whose JSON body is the contracts' bridge data request, the workspace, the mount's phase and the tool's call. It answers with the bridge's reply as JSON. The [launcher](launcher.md) mounts it.
+  - `bridgeRoutes` gives the local server its one bridge route, the contracts' `/api/bridge`: a POST whose JSON body is the contracts' bridge data request, the workspace, the mount's phase and the tool's call. It answers with the bridge's reply as JSON. The [launcher](launcher.md) mounts it.
   - `answerDataCall` checks one call and answers it: `data.read` from the workspace's saved data and revisions, `data.patch` through the [workspaces](workspaces.md) module's patch function.
 
 # Invariants
@@ -31,7 +31,7 @@ Answers a tool's data calls from the saved data (`RUN-04`, `DATA-02`). The host 
 
 # Depends on / used by
 
-Depends on the contracts, [workspaces](workspaces.md), [tool versions](versions.md) and the [local server](local-server.md)'s `Handler`. The [launcher](launcher.md) mounts it; the host page's data handlers will call it (#46's next part).
+Depends on the contracts, [workspaces](workspaces.md), [tool versions](versions.md) and the [local server](local-server.md)'s `Handler`. The [launcher](launcher.md) mounts it, and the [runtime](../runtime/package.md)'s `serverData` calls it from the host page. Its path is the contracts' `BRIDGE_ROUTE`.
 
 # Pitfalls
 
@@ -42,5 +42,5 @@ Depends on the contracts, [workspaces](workspaces.md), [tool versions](versions.
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `bridge.ts`: `BRIDGE_ROUTE`, `answerDataCall`, `bridgeRoutes`
-- `index.ts`: `answerDataCall`, `BRIDGE_ROUTE`, `bridgeRoutes`
+- `bridge.ts`: `answerDataCall`, `bridgeRoutes`
+- `index.ts`: `answerDataCall`, `bridgeRoutes`
