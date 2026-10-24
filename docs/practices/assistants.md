@@ -4,7 +4,7 @@ title: "Working with AI assistants"
 description: "How Claude Code and Codex work on the project: rules file, briefs, review, pull request size, tool memory, templates and checklist."
 tags: [practices, assistants]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T06:13:43Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T04:46:39Z }
 stale_after: 2027-04-11T00:00:00Z
 sources:
   - { id: gh-branch-protection, resource: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/managing-a-branch-protection-rule, title: "GitHub Docs: managing a branch protection rule" }
@@ -38,7 +38,7 @@ The reviewing assistant checks, and reports each item as fine or a finding with 
 2. **Spec rules:** the touched requirement IDs are honored, and no other requirement is broken (especially `P1`–`P7`, `GEN-06`, `GEN-08`, `DATA-02`, `SEC-*`).
 3. **Guards intact:** no validation, check, budget or sandbox rule was weakened.
 4. **One definition:** no duplicated schema, prompt text or rule.
-5. **Tests:** they would fail without the change; they are named by requirement ID; nothing is flaky.
+5. **Tests:** they would fail without the change; they are named by requirement ID; nothing is flaky; the checks run for it cover what it can reach (`ENG-31`).
 6. **Plain text:** user-facing messages use no internal terms.
 7. **Docs:** planning and code docs match the change (`ENG-24`), every "No doc change needed" reason holds, frontmatter `generated` is updated and `docs/log.md` has a line. The OKF check passes.
 8. **Size:** within about 400 lines, or split as planned.
@@ -49,7 +49,7 @@ How the reviewing assistant carries out `ENG-15`. Ask for it with `/cross-review
 
 1. **Read the brief:** the pull request's Brief section, or the issue it closes (`gh pr view`, `gh issue view`). Read the docs it lists under "Docs read" only as far as the review needs them, starting from the indexes.
 2. **Review the exact head.** Note the head commit; the review covers that commit only. Check it out in a clean working tree (`gh pr checkout <number>`), never on top of uncommitted work.
-3. **Run the checks** on that head: `node scripts/okf-check.mjs --base origin/<base> --pr-body <file holding the description>`, `node --test scripts/okf-check.test.mjs`, `git diff --check origin/<base>...HEAD`, and every check `AGENTS.md` adds as M0 brings them. Add `--merge-ready` once the pull request is meant to be final. Read CI with `gh pr checks <number>`.
+3. **Run the checks the change can affect** on that head, chosen as [targeted local checks](testing.md#targeted-local-checks) says (`ENG-31`): always `node scripts/okf-check.mjs --base origin/<base> --pr-body <file holding the description>` (with `--merge-ready` once the pull request is meant to be final) and `git diff --check origin/<base>...HEAD`, then the tests of the changed behaviour and its consumers, broadened when the change is shared or its reach unclear. Note why they are enough. Read CI, which runs the full suite, with `gh pr checks <number>`.
 4. **Check every item** of the [AI review checklist](#ai-review-checklist) against the diff (`gh pr diff <number>`) and the code around it. Each item is fine, or a finding with evidence: the file and line, the command and its output, or the rule it breaks. Mark anything that isn't a defect as a note.
 5. **Post one comment** on the pull request (`gh pr comment <number> --body-file <file>`) in this form:
 
@@ -67,12 +67,13 @@ How the reviewing assistant carries out `ENG-15`. Ask for it with `/cross-review
    7. Docs: …
    8. Size: …
 
-   Checks: <each command and its result>. CI: <what `gh pr checks` shows>.
+   Checks run: <each command and its result>; why they are enough (ENG-31).
+   Reused: <earlier results and the head they came from, or none>. CI: <what `gh pr checks` shows>.
    Docs read: <the docs the review relied on>.
    Limits: <what the review could not check, or none>.
    ```
 
-6. **Review again after new commits.** A follow-up names the new head and the review it replaces, and covers what changed since.
+6. **Review again after new commits.** A follow-up names the new head and the review it replaces, and covers what changed since: it tests the changes since the reviewed head and what depends on them, confirms each fix with its regression test, and reuses earlier results only for areas the new commits don't reach (`ENG-31`). It never calls those checks a full-suite pass.
 7. **Change nothing.** A review never edits files, pushes or merges; findings go in the comment, and the author fixes them. A review doesn't authorize merging; the owner merges.
 
 `.claude/settings.json` (Claude Code) and `.codex/rules/tessera.rules` (Codex) let both run the checks, the checker's tests and read-only `gh` and `git` commands without asking. Checking out the branch and posting the comment still ask. The two files allow the same commands, so change them together. Codex loads project rules only when the project is trusted.

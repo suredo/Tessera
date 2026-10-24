@@ -2,6 +2,8 @@
 
 ## 2026-10-24
 
+* **Update**: [Testing](practices/testing.md) adds `ENG-31`, targeted local checks: before saying a change is done and when reviewing it, run the checks the change can affect, chosen by what depends on it, broadened for shared contracts, infrastructure, dependencies, configuration or unclear reach, and say why they are enough; a re-review tests what changed since the reviewed head and may reuse earlier results only where they still apply; reports name the head, the checks, reused evidence and limits, and never call targeted checks a full-suite pass. CI keeps the full suite on every pull request, and a milestone closes on it. `AGENTS.md`'s checks and non-negotiables, the [cross-review procedure and checklist](practices/assistants.md#cross-review) and the pull request template point to it; the [practices index](practices/index.md) lists the ID.
+
 * **Creation**: [Bridge route](code/server/bridge.md) ([issue 46](https://github.com/suredo/Tessera/issues/46), sixth part): the server's side of the bridge, `/api/bridge`, which checks a tool's data call again with the stored version's capabilities and the phase the host page sends (the owner's decision on #46), and answers it from the saved data and revisions. It claims `RUN-04`, `CAP-01`, `GEN-06` and `BRG-04`. The [contracts](code/contracts/package.md) doc names `bridgeDataRequestSchema`, the [launcher](code/server/launcher.md) doc says it mounts the route, and the [threat model](spec/threat-model.md) says `BRG-04` now runs through it.
 
 ## 2026-10-23
