@@ -6,6 +6,8 @@
 ## What and why
 ## Requirements touched (IDs)
 ## Tests added or changed (named by requirement ID)
+## Checks run
+<!-- The head they ran on, each check and its result, why they are enough, any earlier results reused and their head, and what wasn't run (ENG-31). Not a full-suite pass unless every check ran; CI runs the full suite. -->
 ## Prompt parts changed (if any), with replay results
 ## Docs read
 ## Docs changed

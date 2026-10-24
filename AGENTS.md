@@ -27,7 +27,7 @@ Only when the owner asks: pause a task with the `task-checkpoint` skill (Claude 
 
 ## Checks
 
-Run them before saying something is done, and report the results faithfully, including failures.
+Before saying something is done, run the checks the change can affect, chosen by what depends on it, and say why they are enough (`ENG-31`, `docs/practices/testing.md#targeted-local-checks`). Report the exact head, each check and its result, any earlier evidence reused and its head, and the limits; never call targeted checks a full-suite pass. A full local run is allowed when justified, not by default; CI runs everything.
 
 - `node scripts/okf-check.mjs` (after `pnpm install`): docs frontmatter, indexes, links, log, code docs and the symbols they name, and that `CLAUDE.md` only imports this file. `--fix` repairs index entries and rewrites code docs' generated symbol sections. `--merge-ready` also fails while a task handoff is left: run it before merging.
 - `node --test scripts/okf-check.test.mjs`: whenever you change the checker.
@@ -39,7 +39,7 @@ Run them before saying something is done, and report the results faithfully, inc
 
 1. Never weaken a guard (validation, sandbox, check, budget) to make something pass. Fix the cause, or ask.
 2. Never make live model calls, or run scripts marked LIVE, without explicit approval of a budget (`docs/practices/live-evaluation.md`).
-3. Run the checks before saying something is done, and report results faithfully, including failures.
+3. Run the checks the change can affect (`ENG-31`) before saying something is done, and report results faithfully, including failures, and which checks ran.
 4. Keep one definition per contract (`P3`). If a prompt, check and type disagree, fix the source definition.
 5. Keep user-facing text plain (`GEN-12`).
 6. Update the docs touched by the change in the same pull request.
