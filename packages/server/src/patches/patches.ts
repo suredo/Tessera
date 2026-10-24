@@ -33,10 +33,13 @@ export type PatchOptions = {
 
 /** The key a record's revision is kept under: its collection and its ID. */
 export const recordKey = (collection: string, id: string) => `${collection}/${id}`;
-/** The collection and ID a key names; a collection name never holds a "/". */
+/**
+ * The collection and ID a key names. It splits at the last "/": a record ID never holds one, while
+ * a collection's name, any field of the tool's data, may.
+ */
 export const recordOfKey = (key: string): { collection: string; id: string } => ({
-  collection: key.slice(0, key.indexOf("/")),
-  id: key.slice(key.indexOf("/") + 1),
+  collection: key.slice(0, key.lastIndexOf("/")),
+  id: key.slice(key.lastIndexOf("/") + 1),
 });
 
 const isRecord = (value: unknown): value is DataRecord =>

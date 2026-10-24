@@ -7,7 +7,7 @@ implements: [DATA-02, DATA-06]
 tests: [../../../packages/server/test/patches.test.ts, ../../../packages/contracts/test/patch.test.ts]
 tags: [code, server, data, patches]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T23:03:19Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T00:46:43Z }
 ---
 
 # Purpose
@@ -20,7 +20,7 @@ Every change to a tool's data, from the tool itself or later from chat, is a sma
   - `createDataState` starts tracking a tool's data: every record it already holds is at revision 1. It throws if a list holds two records with one ID.
   - `applyPatch` applies a batch, given as untrusted input, and returns `{ ok: true, state, addedIds }` or `{ ok: false, reason, message, operationIndex }`, where the reason is invalid, stale or too large and the message starts with "Nothing was changed:".
   - `revisionOf` gives a record's revision count, which a change planned against that record carries.
-  - `recordKey` and `recordOfKey` turn a collection and ID into the key a revision is kept under, and back. A collection name never holds a "/".
+  - `recordKey` and `recordOfKey` turn a collection and ID into the key a revision is kept under, and back. A key splits at its last "/": a record ID never holds one, while a list of records may be any field of the tool's data, such as `daily/tasks`.
 - The patch contract and the data limit live in the contracts package's `src/patch.ts`.
 
 # Invariants

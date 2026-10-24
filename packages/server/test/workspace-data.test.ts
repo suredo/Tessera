@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
+import { BRIDGE_ACTIONS } from "@tessera/contracts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import {
   createWorkspace,
@@ -240,5 +241,24 @@ describe("a workspace's data and its records' revisions (DATA-02)", () => {
       }),
     ).toMatchObject({ ok: false, reason: "invalid" });
     folder.close();
+  });
+
+  it("reads any list of records back under its own name, as data.read answers, also after a restart", async () => {
+    const root = newFolder();
+    const folder = await openDataFolder(root);
+    const { id } = createWorkspace(folder, "Slashes");
+    const data = {
+      "daily/tasks": [{ id: "t-1", title: "A list whose name holds a slash" }],
+      "a/b/c": [{ id: "x_1", title: "And one with two" }],
+    };
+    saveWorkspaceData(folder, id, data, 0);
+    folder.close();
+
+    const again = await openDataFolder(root);
+    const read = readWorkspaceData(again, id);
+    expect(read).toEqual({ data, revisions: { "daily/tasks": { "t-1": 1 }, "a/b/c": { x_1: 1 } } });
+    // What the bridge will hand the tool fits the manifest's own result for data.read (CON-03).
+    expect(BRIDGE_ACTIONS["data.read"].result.safeParse(read).success).toBe(true);
+    again.close();
   });
 });
