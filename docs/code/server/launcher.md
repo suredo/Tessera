@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T01:31:04Z }
 ---
 
 # Purpose
@@ -36,7 +36,7 @@ Starts Tessera with one double-click (`PLAT-02`): it opens the data folder ([sto
 
 # Depends on / used by
 
-The [local server](local-server.md), [storage](storage.md)'s `openDataFolder` and `tryLockFile`, the [trash](trash.md)'s `removeExpired`, and the [platform helpers](platform.md) (`runProcess`, `findExecutable`). The setup check (`PLAT-03`, M2) will run from here.
+The [local server](local-server.md), [storage](storage.md)'s `openDataFolder` and `tryLockFile`, the [trash](trash.md)'s `removeExpired`, the [bridge route](bridge.md), which it mounts on the server with the open data folder, and the [platform helpers](platform.md) (`runProcess`, `findExecutable`). The setup check (`PLAT-03`, M2) will run from here.
 
 # Pitfalls
 

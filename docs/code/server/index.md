@@ -11,3 +11,4 @@
 * [Workspaces and saved tools](workspaces.md) - Workspaces, their version history and data, and the saved-tools library, each change committed to the data folder's database before the call returns.
 * [Trash](trash.md) - Deleted workspaces and saved tools wait in the trash, restorable for 30 days, then are removed for good; emptying it early names what it removes and is confirmed against that list.
 * [Export and import archives](archives.md) - A workspace or saved tool exported to one archive file and imported back exactly, with the archive checked whole before anything is written and existing work never changed.
+* [Bridge route](bridge.md) - The server's side of the bridge: a tool's data calls, passed on by the host page, checked again with the stored version's capabilities and answered from the saved data and revisions.

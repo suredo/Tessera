@@ -7,6 +7,7 @@ import {
   BRIDGE_MANIFEST_VERSION,
   BRIDGE_MAX_DEPTH,
   BRIDGE_REQUEST_LIMIT_BYTES,
+  bridgeDataRequestSchema,
   bridgeReplySchema,
   bridgeRequestSchema,
 } from "./bridge.ts";
@@ -21,6 +22,7 @@ import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./work
 export const contracts = {
   archiveManifest: archiveManifestSchema,
   artifact: artifactSchema,
+  bridgeDataRequest: bridgeDataRequestSchema,
   bridgeReply: bridgeReplySchema,
   bridgeRequest: bridgeRequestSchema,
   intent: intentSchema,
