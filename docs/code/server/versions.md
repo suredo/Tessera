@@ -7,7 +7,7 @@ implements: [DATA-04, CON-04, CON-01]
 tests: [../../../packages/server/test/versions.test.ts, ../../../packages/contracts/test/artifact.test.ts]
 tags: [code, server, versions, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:47:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T08:48:40Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ Stores every tool version, the artifact, so that restore, undo, Continue and Use
 - **One copy per content.** The hash is of the canonical JSON (keys sorted at every level), so the same content always has the same name, whatever its key order; storing it again keeps the one row.
 - **Never changed after it is stored.** The `tool_versions` table refuses every update (a trigger), so a version can only be added or, later, removed with what owns it.
 - **Never stored unless it fits the contract.** `saveVersion` parses the artifact first; an invalid one throws and nothing is written.
-- **Checked when read.** A stored body that no longer matches its hash, a body that isn't JSON, a version from a newer Tessera and one that no longer fits the contract are each returned as incompatible with a reason (`CON-04`). An older contract version is upgraded through the contract's upgrades (none yet: version 1 is the first).
+- **Checked when read.** A stored body that no longer matches its hash, a body that isn't JSON, a version from a newer Tessera and one that no longer fits the contract are each returned as incompatible with a reason (`CON-04`). An older contract version is upgraded through the contract's upgrades: a version 1 artifact reads as version 2 with no migrations. Its stored body and hash stay as they were.
 
 # Depends on / used by
 

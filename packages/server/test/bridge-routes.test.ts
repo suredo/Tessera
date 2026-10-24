@@ -31,9 +31,9 @@ const newFolder = () => {
 };
 
 const tool = (capabilities: string[]): Artifact => ({
-  contractVersion: 1,
+  contractVersion: 2,
   code: { html: "<p>Errands</p>", css: "", js: "" },
-  data: { schemaVersion: 1, schema: {}, defaults: {} },
+  data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
   capabilities,
   pins: [],
   ui: { standardVersion: 1, mode: "standard" },
