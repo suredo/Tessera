@@ -1,21 +1,89 @@
-import { createRequire } from "node:module";
 import { Ajv, type ValidateFunction } from "ajv";
 import { canonicalJson } from "@tessera/contracts";
 
-// A tool's data checked against the JSON Schema the tool declares (DATA-03). Ajv compiles each
-// schema into a check; a tool's schema will come from a model (M2), so before it is compiled it
-// must be small, use only the keywords Ajv knows (strict mode), and pass Ajv's security
-// meta-schema, which refuses the shapes that make checking slow, such as a pattern on a text with
-// no length limit. Nothing is fetched: a reference that isn't inside the schema fails.
+// A tool's data checked against the JSON Schema the tool declares (DATA-03). A tool's schema will
+// come from a model (M2), and checking runs in the server, so a schema may use only keywords whose
+// checking costs no more than reading the data once: no patterns or formats (a regular expression
+// can take exponential time, even on a short text), no references (one can refer to itself without
+// end), no combinators (nesting them multiplies the work on the same value), and no uniqueness
+// (it compares every pair). Ajv compiles what passes, with own-property semantics, so a name that
+// objects inherit, such as `constructor`, is never taken for a field the data has.
 
 /** The largest tool schema accepted, as canonical JSON. */
 export const TOOL_SCHEMA_LIMIT_BYTES = 64 * 1024;
+/** How deeply a tool schema may nest. */
+export const TOOL_SCHEMA_MAX_DEPTH = 32;
+/** The most values an `enum` may list. */
+export const TOOL_SCHEMA_MAX_ENUM = 1000;
 
-// Each tool schema compiles in an Ajv of its own, so two tools' schemas never meet, even with the
-// same $id. Unknown keywords and odd numbers are refused; the stricter style checks, such as every
-// required property also being listed, would refuse valid schemas, so they stay off.
+/** The keywords a tool's data schema may use; each checks a value in time that grows with its size. */
+export const TOOL_SCHEMA_KEYWORDS: ReadonlySet<string> = new Set([
+  "$schema",
+  "title",
+  "description",
+  "default",
+  "type",
+  "properties",
+  "required",
+  "additionalProperties",
+  "items",
+  "enum",
+  "const",
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "multipleOf",
+  "minLength",
+  "maxLength",
+  "minItems",
+  "maxItems",
+  "minProperties",
+  "maxProperties",
+]);
+const DRAFT_07 = "http://json-schema.org/draft-07/schema#";
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+// Where a schema leaves the accepted subset, as a short sentence, or undefined if it doesn't.
+function outsideSubset(schema: unknown, depth: number, at: string): string | undefined {
+  if (typeof schema === "boolean") return undefined;
+  if (!isPlainObject(schema)) return `${at} isn't a schema.`;
+  if (depth > TOOL_SCHEMA_MAX_DEPTH) {
+    return `${at} is nested more than ${TOOL_SCHEMA_MAX_DEPTH} levels deep.`;
+  }
+  for (const [keyword, value] of Object.entries(schema)) {
+    if (!TOOL_SCHEMA_KEYWORDS.has(keyword)) {
+      return `${at} uses "${keyword}", which a tool's data schema can't use.`;
+    }
+    if (keyword === "$schema" && value !== DRAFT_07)
+      return `${at} names a draft other than draft-07.`;
+    if (keyword === "enum" && (!Array.isArray(value) || value.length > TOOL_SCHEMA_MAX_ENUM)) {
+      return `${at} has an enum that isn't a list of at most ${TOOL_SCHEMA_MAX_ENUM} values.`;
+    }
+    if (keyword === "items" && Array.isArray(value)) return `${at} lists items by position.`;
+    if (keyword === "items" || keyword === "additionalProperties") {
+      const found = outsideSubset(value, depth + 1, `${at}/${keyword}`);
+      if (found) return found;
+    }
+    if (keyword === "properties") {
+      if (!isPlainObject(value)) return `${at}/properties isn't a map of schemas.`;
+      for (const [name, property] of Object.entries(value)) {
+        const found = outsideSubset(property, depth + 1, `${at}/properties/${name}`);
+        if (found) return found;
+      }
+    }
+  }
+  return undefined;
+}
+
+// Each tool schema compiles in an Ajv of its own, so two tools' schemas never meet. Unknown
+// keywords and odd numbers are refused; Ajv's stricter style checks, such as every required
+// property also being listed, would refuse valid schemas, so they stay off.
 const newAjv = () =>
   new Ajv({
+    ownProperties: true,
     strictSchema: true,
     strictNumbers: true,
     strictTypes: false,
@@ -23,10 +91,6 @@ const newAjv = () =>
     strictRequired: false,
     allErrors: false,
   });
-// Ajv's own security meta-schema doesn't pass its strict mode, so it compiles without it.
-const isSecure = new Ajv({ strict: false }).compile(
-  createRequire(import.meta.url)("ajv/lib/refs/json-schema-secure.json") as object,
-);
 
 // Compiled checks, by the schema's canonical JSON: the same schema is compiled once.
 const compiled = new Map<string, ValidateFunction>();
@@ -42,13 +106,8 @@ export function compileToolSchema(schema: object): SchemaCheck {
   if (Buffer.byteLength(text, "utf8") > TOOL_SCHEMA_LIMIT_BYTES) {
     return { ok: false, reason: "The tool's data schema is larger than Tessera accepts." };
   }
-  if (!isSecure(schema)) {
-    const where = isSecure.errors?.[0]?.instancePath || "its top level";
-    return {
-      ok: false,
-      reason: `The tool's data schema could make checking slow (at ${where}): a pattern or format needs a maxLength.`,
-    };
-  }
+  const outside = outsideSubset(schema, 0, "The tool's data schema");
+  if (outside) return { ok: false, reason: outside };
   try {
     const validate = newAjv().compile(schema);
     if (compiled.size >= COMPILED_LIMIT) compiled.clear();

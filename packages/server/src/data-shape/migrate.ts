@@ -43,17 +43,59 @@ function recordsOf(data: ToolData, collection: string): DataRecord[] {
 
 const named = (record: DataRecord) =>
   typeof record.id === "string" ? `the entry ${record.id}` : "an entry";
-const PLAIN_NUMBER = /^-?(0|[1-9]\d{0,14})(\.\d{1,15})?$/;
 
-// One operation, applied in place to a copy that belongs to the run. Field and collection names
-// are the contract's (letters first, never `id`), so no name reaches what objects inherit.
-function applyOperation(data: ToolData, op: MigrationOperation): void {
+// A text that is a plain decimal number, and the number only if it stands for exactly that
+// decimal: "12.50" is 12.5, but "999999999999999.99" would be rounded, and "-0" loses its sign.
+const PLAIN_NUMBER = /^-?(0|[1-9]\d{0,14})(\.\d{1,15})?$/;
+function exactNumber(text: string): number | undefined {
+  if (!PLAIN_NUMBER.test(text)) return undefined;
+  const number = Number(text);
+  const decimal = text.includes(".") ? text.replace(/0+$/, "").replace(/\.$/, "") : text;
+  return String(number) === decimal ? number : undefined;
+}
+
+/** Thrown when a migration's result would grow past the data limit, before it gets there. */
+class MigrationTooLarge extends Error {}
+
+// The result's size as JSON, kept exactly as each change is made, so growth past the limit stops
+// at once instead of after the whole result is built. A field in an object is written as
+// `"name":value`, with a comma before it unless it is the first.
+class SizeBudget {
+  private bytes: number;
+  private readonly limitBytes: number;
+  constructor(bytes: number, limitBytes: number) {
+    this.bytes = bytes;
+    this.limitBytes = limitBytes;
+  }
+  static jsonBytes = (value: unknown) => Buffer.byteLength(JSON.stringify(value), "utf8");
+  private static fieldBytes = (name: string, value: unknown, alone: boolean) =>
+    SizeBudget.jsonBytes(name) + 1 + SizeBudget.jsonBytes(value) + (alone ? 0 : 1);
+  change(delta: number) {
+    this.bytes += delta;
+    if (this.bytes > this.limitBytes) throw new MigrationTooLarge();
+  }
+  added(record: object, name: string, value: unknown) {
+    this.change(SizeBudget.fieldBytes(name, value, Object.keys(record).length === 0));
+  }
+  removed(record: object, name: string, value: unknown) {
+    this.change(-SizeBudget.fieldBytes(name, value, Object.keys(record).length === 1));
+  }
+  replaced(before: unknown, after: unknown) {
+    this.change(SizeBudget.jsonBytes(after) - SizeBudget.jsonBytes(before));
+  }
+}
+
+// One operation, applied in place to a copy that belongs to the run, with each change counted in
+// the budget. Field and collection names are the contract's (letters first, never `id`), so no
+// name reaches what objects inherit.
+function applyOperation(data: ToolData, op: MigrationOperation, budget: SizeBudget): void {
   if (op.op === "renameCollection") {
     if (!Object.hasOwn(data, op.from)) return;
     if (Object.hasOwn(data, op.to)) {
       throw new MigrationFailed(`the data already has a list called "${op.to}".`);
     }
     recordsOf(data, op.from);
+    budget.replaced(op.from, op.to);
     data[op.to] = data[op.from]!;
     delete data[op.from];
     return;
@@ -67,45 +109,63 @@ function applyOperation(data: ToolData, op: MigrationOperation): void {
             `${named(record)} in "${op.collection}" already has "${op.to}".`,
           );
         }
+        budget.replaced(op.from, op.to);
         record[op.to] = record[op.from];
         delete record[op.from];
         break;
       case "addField":
         for (const [field, value] of Object.entries(op.fields)) {
-          if (!Object.hasOwn(record, field)) record[field] = value;
+          if (Object.hasOwn(record, field)) continue;
+          budget.added(record, field, value);
+          record[field] = value;
         }
         break;
       case "removeField":
+        if (!Object.hasOwn(record, op.field)) break;
+        budget.removed(record, op.field, record[op.field]);
         delete record[op.field];
         break;
       case "mapValues": {
         if (!Object.hasOwn(record, op.field)) break;
         const pair = op.map.find(([from]) => from === record[op.field]);
-        if (pair) record[op.field] = pair[1];
+        if (!pair) break;
+        budget.replaced(record[op.field], pair[1]);
+        record[op.field] = pair[1];
         break;
       }
       case "setType": {
         if (!Object.hasOwn(record, op.field)) break;
         const value: unknown = record[op.field];
-        if (op.to === "string" && typeof value === "number") record[op.field] = String(value);
-        else if (op.to === "number" && typeof value === "string" && PLAIN_NUMBER.test(value)) {
-          record[op.field] = Number(value);
-        } else if (typeof value !== op.to) {
+        let converted: unknown = value;
+        if (op.to === "string" && typeof value === "number") converted = String(value);
+        else if (op.to === "number" && typeof value === "string") converted = exactNumber(value);
+        if (typeof converted !== op.to) {
           throw new MigrationFailed(
-            `"${op.field}" of ${named(record)} in "${op.collection}" can't become a ${op.to}.`,
+            `"${op.field}" of ${named(record)} in "${op.collection}" can't become a ${op.to} without changing it.`,
           );
         }
+        budget.replaced(value, converted);
+        record[op.field] = converted;
         break;
       }
     }
   }
 }
 
-/** Runs migrations in order on a copy of `data`; the copy is the result. */
-export function applyMigrations(data: ToolData, migrations: readonly Migration[]): ToolData {
+/**
+ * Runs migrations in order on a copy of `data`; the copy is the result. It stops, throwing, as
+ * soon as the result would grow past `limitBytes`, or past the data's own size if that is larger.
+ */
+export function applyMigrations(
+  data: ToolData,
+  migrations: readonly Migration[],
+  limitBytes = TOOL_DATA_LIMIT_BYTES,
+): ToolData {
   const copy = structuredClone(data);
+  const size = SizeBudget.jsonBytes(copy);
+  const budget = new SizeBudget(size, Math.max(limitBytes, size));
   for (const migration of migrations) {
-    for (const op of migration.operations) applyOperation(copy, op);
+    for (const op of migration.operations) applyOperation(copy, op, budget);
   }
   return copy;
 }
@@ -157,8 +217,15 @@ export function migrateData(
     first = run(data, steps);
     second = run(data, steps);
   } catch (error) {
-    if (error instanceof MigrationFailed)
+    if (error instanceof MigrationFailed) {
       return refuse("failed", `the migration stopped: ${error.message}`);
+    }
+    if (error instanceof MigrationTooLarge) {
+      return refuse(
+        "too-large",
+        `the migrated data would be over the limit of ${TOOL_DATA_LIMIT_BYTES / 1024} KB.`,
+      );
+    }
     throw error;
   }
   if (canonicalJson(first) !== canonicalJson(second)) {

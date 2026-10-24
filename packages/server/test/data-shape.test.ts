@@ -147,7 +147,7 @@ describe("migrating a tool's data (DATA-03)", () => {
     const stopped = migrateData(notANumber, v1, target(2, v2Schema, [toV2]));
     expect(stopped).toMatchObject({ ok: false, reason: "failed" });
     expect(!stopped.ok && stopped.message).toBe(
-      'Nothing was changed: the migration stopped: "size" of the entry t-1 in "tasks" can\'t become a number.',
+      'Nothing was changed: the migration stopped: "size" of the entry t-1 in "tasks" can\'t become a number without changing it.',
     );
     expect(notANumber).toEqual({ todo: [{ id: "t-1", name: "Buy milk", size: "two" }] });
 
@@ -160,6 +160,49 @@ describe("migrating a tool's data (DATA-03)", () => {
       ok: false,
       reason: "invalid",
     });
+  });
+
+  it("converts text to a number only when the number stands for exactly that decimal", () => {
+    const loose = { type: "object" };
+    const sizes = (...values: string[]) => ({
+      todo: values.map((size, i) => ({ id: `t-${i}`, size })),
+    });
+    const toNumber: Migration = {
+      fromVersion: 1,
+      toVersion: 2,
+      operations: [{ op: "setType", collection: "todo", field: "size", to: "number" }],
+    };
+    const convert = (...values: string[]) =>
+      migrateData(sizes(...values), { ...v1, schema: loose }, target(2, loose, [toNumber]));
+    const exact = convert("12.50", "1.0", "0", "-3", "123456789012345");
+    expect(exact.ok && (exact.data.todo as { size: number }[]).map((t) => t.size)).toEqual([
+      12.5, 1, 0, -3, 123456789012345,
+    ]);
+    for (const lossy of ["999999999999999.99", "0.1234567890123456", "-0", "1e3", "01"]) {
+      expect(convert(lossy), lossy).toMatchObject({ ok: false, reason: "failed" });
+    }
+  });
+
+  it("MIG-04: stops growth past the data limit as it happens, without building the whole result", () => {
+    // One addField with 500 values of 1,000 characters, on 5,000 records: about 74 KB of data
+    // that would grow towards 2.5 GB. The budget stops it at the first records.
+    const records = { todo: Array.from({ length: 5000 }, (_, i) => ({ id: `t${i}` })) };
+    const fields = Object.fromEntries(
+      Array.from({ length: 500 }, (_, i) => [`f${i}`, "x".repeat(1000)]),
+    );
+    const grow: Migration = {
+      fromVersion: 1,
+      toVersion: 2,
+      operations: [{ op: "addField", collection: "todo", fields }],
+    };
+    const loose = { type: "object" };
+    const started = performance.now();
+    expect(migrateData(records, { ...v1, schema: loose }, target(2, loose, [grow]))).toMatchObject({
+      ok: false,
+      reason: "too-large",
+    });
+    expect(performance.now() - started).toBeLessThan(5000);
+    expect(records.todo[0]).toEqual({ id: "t0" });
   });
 
   it("MIG-04: refuses a result over the data limit, or one that differs between two runs", () => {
@@ -229,15 +272,36 @@ describe("a tool's declared schema (DATA-03)", () => {
     });
   });
 
-  it("refuses a schema that could make checking slow, or that it can't use, before compiling it", () => {
+  it("accepts only keywords whose checking grows with the data, and refuses the rest before compiling", () => {
     const refused = (schema: object) => {
       const check = compileToolSchema(schema);
       return check.ok ? "compiled" : check.reason;
     };
-    expect(refused({ type: "string", pattern: "^(a+)+$" })).toMatch(/could make checking slow/);
-    expect(refused({ type: "string", format: "email" })).toMatch(/could make checking slow/);
-    expect(refused({ type: "object", madeUpKeyword: true })).toMatch(/isn't a JSON Schema/);
-    expect(refused({ $ref: "https://example.com/schema.json" })).toMatch(/isn't a JSON Schema/);
+    const text = (extra: object) => ({
+      type: "object",
+      properties: { text: { type: "string", ...extra } },
+    });
+    // A pattern can backtrack for ever on a short text, even with a maxLength.
+    expect(refused(text({ maxLength: 64, pattern: "^(a+)+$" }))).toBe(
+      "The tool's data schema/properties/text uses \"pattern\", which a tool's data schema can't use.",
+    );
+    expect(refused(text({ maxLength: 64, format: "email" }))).toMatch(/uses "format"/);
+    // A reference to itself would recurse without end; one outside would need fetching.
+    expect(refused({ $ref: "#" })).toMatch(/uses "\$ref"/);
+    expect(refused({ $ref: "https://example.com/schema.json" })).toMatch(/uses "\$ref"/);
+    expect(refused({ anyOf: [{ type: "string" }, { type: "number" }] })).toMatch(/uses "anyOf"/);
+    expect(refused({ type: "array", uniqueItems: true })).toMatch(/uses "uniqueItems"/);
+    expect(refused({ type: "array", items: [{ type: "string" }] })).toMatch(
+      /lists items by position/,
+    );
+    expect(refused({ type: "object", madeUpKeyword: true })).toMatch(/uses "madeUpKeyword"/);
+    expect(refused({ $schema: "https://json-schema.org/draft/2020-12/schema" })).toMatch(
+      /draft-07/,
+    );
+    expect(refused({ enum: Array.from({ length: 1001 }, (_, i) => i) })).toMatch(/at most 1000/);
+    let deep: object = { type: "string" };
+    for (let i = 0; i < 40; i++) deep = { type: "array", items: deep };
+    expect(refused(deep)).toMatch(/nested more than 32 levels/);
     const huge = {
       type: "object",
       properties: Object.fromEntries(
@@ -245,14 +309,22 @@ describe("a tool's declared schema (DATA-03)", () => {
       ),
     };
     expect(refused(huge)).toMatch(/larger than Tessera accepts/);
-    expect(refused({ type: "string", pattern: "^[a-z]+$", maxLength: 40 })).toBe("compiled");
+    expect(
+      refused({
+        $schema: "http://json-schema.org/draft-07/schema#",
+        type: "object",
+        required: ["state"],
+        properties: { state: { enum: ["open", "done"] }, note: { type: "string", maxLength: 200 } },
+        additionalProperties: false,
+      }),
+    ).toBe("compiled");
   });
 
-  it("keeps two tools' schemas apart, even with the same $id", () => {
-    const a = { $id: "https://tool.example/data", type: "object", required: ["a"] };
-    const b = { $id: "https://tool.example/data", type: "object", required: ["b"] };
-    expect(checkToolData(a, { a: 1 })).toEqual({ ok: true });
-    expect(checkToolData(b, { b: 1 })).toEqual({ ok: true });
-    expect(checkToolData(b, { a: 1 }).ok).toBe(false);
+  it("takes a name objects inherit, such as constructor, as a field only when the data has it", () => {
+    for (const name of ["constructor", "toString", "hasOwnProperty"]) {
+      const schema = { type: "object", required: [name] };
+      expect(checkToolData(schema, {}).ok, name).toBe(false);
+      expect(checkToolData(schema, { [name]: "here" }), name).toEqual({ ok: true });
+    }
   });
 });
