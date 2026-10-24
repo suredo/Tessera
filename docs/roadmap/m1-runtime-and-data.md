@@ -4,13 +4,13 @@ title: "M1: Runtime and data core"
 description: "The sandboxed runtime, data model, storage, assets and host app shell, with no model calls."
 tags: [roadmap, runtime-and-data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T00:25:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T07:16:43Z }
 ---
 # M1: Runtime and data core (size L, no model calls)
 
 **Goal:** a hand-written tool runs safely inside the host app, its data is always saved and versioned, and it survives everything.
 
-This is the largest milestone. Split it into pull requests by area (storage and assets, runtime and bridge, data model and restore, host app) and report pace once storage and the runtime have landed.
+This is the largest milestone. Split it into pull requests by area (storage and assets, runtime and bridge, data model and restore, host app) and report pace once storage and the runtime have landed: the [pace report of 2026-10-24](../../evals/reports/2026-10-24-m1-pace.md) forecasts M1 closing around 2026-10-30.
 
 | Deliverable | Requirements |
 | --- | --- |
