@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T19:28:27Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T00:03:35Z }
 ---
 
 # Purpose
@@ -23,7 +23,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 - `src/archive.ts`: `archiveManifestSchema`, the manifest of an export archive, with `archivedWorkspaceSchema`, a workspace with its whole history; `ARCHIVE_FORMAT` and `ARCHIVE_FORMAT_VERSION` name the format ([archives](../server/archives.md)).
 - `src/bridge.ts`: the bridge (`CON-03`). `BRIDGE_ACTIONS` lists each action a tool may call (`data.read`, `data.patch`, `clock.now`) with its description, the capability it needs, whether it writes, its arguments and result as zod schemas, its size limit and examples; `BRIDGE_CAPABILITIES` lists what a tool may declare (`CAP-01`), the clock first. `bridgeRequestSchema` and `bridgeReplySchema` are the messages; `BRIDGE_PHASES` are where a mount stands (starting, staging, active). `checkBridgeCall` checks one call against all of it (`RUN-04`) and returns the parsed call or the reply to send.
 - `src/json.ts`: `jsonValueSchema` and `jsonObjectSchema`, the JSON Tessera stores (a tool version's data schema and defaults, a workspace's data, a patch's values), `RESERVED_JSON_KEY`, and `refusingReservedKey`, the one rule that refuses the reserved key at any depth, which any contract wraps itself in (the patch batch does).
-- `src/patch.ts`: `patchBatchSchema`, a batch of add, replace and remove operations on records with stable IDs, which the [patch engine](../server/patches.md) applies; `recordIdSchema`; and `TOOL_DATA_LIMIT_BYTES`, the data limit (`DATA-06`). A replace names its fields in a map, `fields: { done: true }`, so the tool's own field names carry any unit (`CON-05`).
+- `src/patch.ts`: `patchBatchSchema`, a batch of add, replace and remove operations on records with stable IDs, which the [patch engine](../server/patches.md) applies; `recordIdSchema`; and `TOOL_DATA_LIMIT_BYTES`, the data limit (`DATA-06`). A record ID is never `RESERVED_JSON_KEY`: revisions are kept by ID, as keys, and that is the one key JSON objects can't keep. A replace names its fields in a map, `fields: { done: true }`, so the tool's own field names carry any unit (`CON-05`).
 - `src/intent.ts`: `intentSchema` and its `Intent` type.
 - `src/provider.ts`: `STAGES`, `EFFORTS`, `PROVIDER_ERROR_KINDS`, `usageSchema`, where unknown is null and never 0, and `providerScriptSchema`, the canned replies of a scripted provider ([provider adapters](../server/providers.md)).
 - `src/ledger.ts`: `ledgerEntrySchema` and `requestLogEntrySchema`, one line each per call of an evaluation run ([evaluation harness](../evals/harness.md)). A ledger entry's outcome is a discriminated union, so an error kind exists only on a failed call (`CON-02`).

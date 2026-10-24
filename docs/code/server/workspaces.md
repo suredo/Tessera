@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-04, DATA-02, CON-01, BRG-04]
 tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-23T23:03:19Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T00:03:35Z }
 ---
 
 # Purpose
@@ -32,7 +32,9 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
 - **Data is kept exactly, or refused whole.** Data the contract can't keep exactly, such as an object with a `__proto__` key, is refused before anything is saved, so a save that succeeds always reads back the same ([contracts package](../contracts/package.md)).
 - **A stale data write is refused.** `saveWorkspaceData` takes the revision the new data was made from; if the data changed since, it saves nothing and says so plainly, so a slower writer never replaces newer work.
 - **Each record's revision is saved with the data** (`DATA-02`). `record_revisions` holds every record's count; a record with no row is at revision 1. `patchWorkspaceData` reads the data and its revisions, applies the batch and saves the data, the workspace's revision and the records' revisions in one transaction, or nothing. So a batch planned against an older revision is refused whole even after a restart, with the engine's plain message, while a batch touching other records still applies (`BRG-04`).
-- **Replacing the data whole moves every record on.** `saveWorkspaceData` gives each record it keeps its next revision and drops the rows of records it removes, so a change planned before the replacement is refused rather than applied to different content.
+- **Replacing the data whole moves every record on.** `saveWorkspaceData` gives each record it keeps its next revision, so a change planned before the replacement is refused rather than applied to different content.
+- **A revision is never reused.** A record's row is never deleted while its workspace lasts: a removed record keeps its last count, so a record that comes back with the same ID, as a restore can bring it, continues from there, and a change planned before it left stays stale. The rows go only with the workspace, removed for good from the trash.
+- **Every collection and record is its own entry.** The revisions `readWorkspaceData` gives are built from entries, so a collection named `constructor` or `toString` is its own, and reading data never touches what objects inherit. A record ID is never `__proto__` (the patch contract refuses it, as JSON refuses that key), since revisions are kept by ID; a list holding such an item is not a list of records.
 - **A new workspace has no tool and no data**: its current version and data are null until a version is added and activation fills the data from the tool's defaults (`DATA-03`, [issue 50](https://github.com/suredo/Tessera/issues/50)).
 - **A saved tool follows its workspace** (A32): it names the workspace that Continue opens, not a version, so later improvements are kept.
 - **What is in the trash is out of reach.** Trashed workspaces and saved tools are not returned or listed, and changing one is refused with "restore it first" ([trash](trash.md)).
@@ -45,6 +47,7 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 # Pitfalls
 
 - **Two ways to change data.** `patchWorkspaceData` is for a tool's or chat's changes, checked per record. `saveWorkspaceData` replaces the data whole, checked only against the workspace's revision, for defaults and restores (#50). Neither checks the data against the tool's schema yet (#50).
+- **Removed records' rows stay.** They are small and go with their workspace; a workspace whose tool adds and removes many records over years keeps one row for each. Pruning them would let a revision be reused.
 - **Revisions don't travel in archives.** An exported workspace keeps its data and its revision; after an import every record starts at revision 1, so a change planned before the export can't be applied after it only by luck of matching counts. Plans don't outlive an import.
 - **Deleting is the trash's job.** Nothing here deletes a workspace or saved tool; the [trash](trash.md) (`DATA-09`) does, so nothing is removed without passing through it.
 - **Errors for a missing ID are plain sentences**, but a title or name that breaks its contract (empty, or over 200 characters) throws zod's error; the API layer turns it into a plain message (#53).

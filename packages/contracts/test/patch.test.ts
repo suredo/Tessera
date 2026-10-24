@@ -30,6 +30,7 @@ describe("patch contract (DATA-02, CON-01)", () => {
       { operations: [{ ...replace, revisionCount: 0 }] },
       { operations: [{ op: "replace", collection: "tasks", id: "t-1", fields: { done: 1 } }] },
       { operations: [{ ...remove, id: "../other" }] },
+      { operations: [{ ...remove, id: "__proto__" }] },
       { operations: [{ ...remove, collection: "1tasks" }] },
       { operations: [{ op: "move", collection: "tasks", id: "t-1", revisionCount: 1 }] },
     ];

@@ -193,7 +193,11 @@ export function saveWorkspaceData(
     if (current.dataRevision !== expectedRevision) {
       throw new Error("The data changed since it was read, so nothing was saved.");
     }
-    const before = savedState(store, id, current.data ?? {});
+    // Every record the workspace has held: those it holds, and those removed, at their last count.
+    const before = new Map([
+      ...savedRows(store, id),
+      ...savedState(store, id, current.data ?? {}).revisions,
+    ]);
     store.db.run(
       "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
       body,
@@ -201,10 +205,8 @@ export function saveWorkspaceData(
       id,
     );
     const after = createDataState(parsed ?? {}).revisions;
-    const revisions = new Map(
-      [...after.keys()].map((key) => [key, (before.revisions.get(key) ?? 0) + 1]),
-    );
-    saveRevisions(store, id, revisions);
+    const revisions = new Map([...after.keys()].map((key) => [key, (before.get(key) ?? 0) + 1]));
+    saveRevisions(store, id, revisions, before);
     return existingWorkspace(store, id);
   });
 }
@@ -215,29 +217,45 @@ const revisionRow = z.object({
   revision_count: z.number(),
 });
 
+// Every saved row: the records the workspace holds, and those it removed, at their last count.
+const savedRows = (store: Store, id: string): Map<string, number> =>
+  new Map(
+    store.db
+      .all(
+        revisionRow,
+        "SELECT collection, record_id, revision_count FROM record_revisions WHERE workspace_id = ?",
+        id,
+      )
+      .map((row) => [recordKey(row.collection, row.record_id), row.revision_count]),
+  );
+
 // The workspace's data with each record's saved revision; a record with no saved row is at 1.
 function savedState(store: Store, id: string, data: ToolData): DataState {
   const state = createDataState(data);
-  const revisions = new Map(state.revisions);
-  const rows = store.db.all(
-    revisionRow,
-    "SELECT collection, record_id, revision_count FROM record_revisions WHERE workspace_id = ?",
-    id,
+  const saved = savedRows(store, id);
+  const revisions = new Map(
+    [...state.revisions].map(([key, count]) => [key, saved.get(key) ?? count]),
   );
-  for (const row of rows) {
-    const key = recordKey(row.collection, row.record_id);
-    if (revisions.has(key)) revisions.set(key, row.revision_count);
-  }
   return { data: state.data, revisions };
 }
 
-// Inside the caller's transaction: the rows become exactly `revisions`.
-function saveRevisions(store: Store, id: string, revisions: ReadonlyMap<string, number>) {
-  store.db.run("DELETE FROM record_revisions WHERE workspace_id = ?", id);
-  for (const [key, count] of revisions) {
+// Inside the caller's transaction. A row is never deleted while its workspace lasts: a record
+// that is removed keeps its last count, so one that comes back with the same ID continues from
+// there, and a change planned before it left stays stale (DATA-02). `held` are the records'
+// counts before the change, removed ones included.
+function saveRevisions(
+  store: Store,
+  id: string,
+  revisions: ReadonlyMap<string, number>,
+  held: ReadonlyMap<string, number>,
+) {
+  const rows = new Map([...held].filter(([key]) => !revisions.has(key)));
+  for (const [key, count] of revisions) rows.set(key, count);
+  for (const [key, count] of rows) {
     const { collection, id: recordId } = recordOfKey(key);
     store.db.run(
-      "INSERT INTO record_revisions (workspace_id, collection, record_id, revision_count) VALUES (?, ?, ?, ?)",
+      `INSERT INTO record_revisions (workspace_id, collection, record_id, revision_count) VALUES (?, ?, ?, ?)
+       ON CONFLICT (workspace_id, collection, record_id) DO UPDATE SET revision_count = excluded.revision_count`,
       id,
       collection,
       recordId,
@@ -252,12 +270,19 @@ export type WorkspaceData = {
   revisions: Record<string, Record<string, number>>;
 };
 
+// Built from entries, so every collection and ID is an own property: a collection named
+// "constructor" is its own entry, and never reaches what objects inherit.
 const asWorkspaceData = (state: DataState): WorkspaceData => {
-  const revisions: WorkspaceData["revisions"] = {};
+  const byCollection = new Map<string, [string, number][]>();
   for (const [key, count] of state.revisions) {
     const { collection, id } = recordOfKey(key);
-    (revisions[collection] ??= {})[id] = count;
+    const records = byCollection.get(collection) ?? [];
+    records.push([id, count]);
+    byCollection.set(collection, records);
   }
+  const revisions = Object.fromEntries(
+    [...byCollection].map(([collection, records]) => [collection, Object.fromEntries(records)]),
+  );
   return { data: state.data, revisions };
 };
 
@@ -285,7 +310,8 @@ export function patchWorkspaceData(
 ): WorkspacePatchResult {
   return store.db.transaction(() => {
     const workspace = existingWorkspace(store, id);
-    const result = applyPatch(savedState(store, id, workspace.data ?? {}), batch, options);
+    const before = savedState(store, id, workspace.data ?? {});
+    const result = applyPatch(before, batch, options);
     if (!result.ok) return { ok: false, reason: result.reason, message: result.message };
     store.db.run(
       "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
@@ -293,7 +319,7 @@ export function patchWorkspaceData(
       stamp(store),
       id,
     );
-    saveRevisions(store, id, result.state.revisions);
+    saveRevisions(store, id, result.state.revisions, before.revisions);
     return { ok: true, addedIds: result.addedIds, workspace: existingWorkspace(store, id) };
   });
 }
