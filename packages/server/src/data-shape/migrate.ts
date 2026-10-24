@@ -50,8 +50,27 @@ const PLAIN_NUMBER = /^-?(0|[1-9]\d{0,14})(\.\d{1,15})?$/;
 function exactNumber(text: string): number | undefined {
   if (!PLAIN_NUMBER.test(text)) return undefined;
   const number = Number(text);
-  const decimal = text.includes(".") ? text.replace(/0+$/, "").replace(/\.$/, "") : text;
-  return String(number) === decimal ? number : undefined;
+  return plainDecimal(String(number)) === plainDecimal(text) ? number : undefined;
+}
+
+// A number's text as a plain decimal, whatever notation it is written in: "1e-7" and
+// "0.00000010" are both "0.0000001", so values are compared, not how JavaScript prints them.
+function plainDecimal(text: string): string {
+  const [, sign = "", whole = "", fraction = "", exponent = "0"] =
+    /^(-?)(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/.exec(text) ?? [];
+  const digits = whole + fraction;
+  const point = whole.length + Number(exponent);
+  const placed =
+    point <= 0
+      ? `0.${"0".repeat(-point)}${digits}`
+      : point >= digits.length
+        ? digits + "0".repeat(point - digits.length)
+        : `${digits.slice(0, point)}.${digits.slice(point)}`;
+  const [integer = "", decimals = ""] = placed.split(".");
+  const trimmed =
+    (integer.replace(/^0+(?=\d)/, "") || "0") +
+    (decimals.replace(/0+$/, "") ? `.${decimals.replace(/0+$/, "")}` : "");
+  return sign + trimmed;
 }
 
 /** Thrown when a migration's result would grow past the data limit, before it gets there. */

@@ -15,6 +15,29 @@ export const TOOL_SCHEMA_LIMIT_BYTES = 64 * 1024;
 export const TOOL_SCHEMA_MAX_DEPTH = 32;
 /** The most values an `enum` may list. */
 export const TOOL_SCHEMA_MAX_ENUM = 1000;
+/** The most parts (objects, lists and values) a tool schema may hold, annotations included. */
+export const TOOL_SCHEMA_MAX_PARTS = 20_000;
+// How deeply the schema's JSON may nest: a schema level takes about two (`properties`, then a name).
+const JSON_MAX_DEPTH = 2 * TOOL_SCHEMA_MAX_DEPTH + 16;
+
+// Counts the schema's parts and depth without recursing, before anything recursive (canonical
+// JSON, the subset check, Ajv) touches it, so a schema nested thousands deep is refused, not a
+// crash. Values inside `const`, `enum` and `default` count too.
+function tooBig(schema: unknown): string | undefined {
+  const stack: [unknown, number][] = [[schema, 0]];
+  let parts = 0;
+  while (stack.length > 0) {
+    const [value, depth] = stack.pop()!;
+    parts += 1;
+    if (parts > TOOL_SCHEMA_MAX_PARTS)
+      return "The tool's data schema is larger than Tessera accepts.";
+    if (depth > JSON_MAX_DEPTH) return "The tool's data schema is nested too deeply.";
+    if (value !== null && typeof value === "object") {
+      for (const child of Object.values(value)) stack.push([child, depth + 1]);
+    }
+  }
+  return undefined;
+}
 
 /** The keywords a tool's data schema may use; each checks a value in time that grows with its size. */
 export const TOOL_SCHEMA_KEYWORDS: ReadonlySet<string> = new Set([
@@ -100,6 +123,8 @@ export type SchemaCheck = { ok: true; validate: ValidateFunction } | { ok: false
 
 /** Checks a tool's declared schema and compiles it, or says plainly why it can't be used. */
 export function compileToolSchema(schema: object): SchemaCheck {
+  const shape = tooBig(schema);
+  if (shape) return { ok: false, reason: shape };
   const text = canonicalJson(schema);
   const known = compiled.get(text);
   if (known) return { ok: true, validate: known };

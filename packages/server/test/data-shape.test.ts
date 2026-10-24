@@ -174,9 +174,18 @@ describe("migrating a tool's data (DATA-03)", () => {
     };
     const convert = (...values: string[]) =>
       migrateData(sizes(...values), { ...v1, schema: loose }, target(2, loose, [toNumber]));
-    const exact = convert("12.50", "1.0", "0", "-3", "123456789012345");
+    // Small decimals too, which JavaScript prints in exponent notation ("1e-7").
+    const exact = convert(
+      "12.50",
+      "1.0",
+      "0",
+      "-3",
+      "123456789012345",
+      "0.0000001",
+      "0.000000000000001",
+    );
     expect(exact.ok && (exact.data.todo as { size: number }[]).map((t) => t.size)).toEqual([
-      12.5, 1, 0, -3, 123456789012345,
+      12.5, 1, 0, -3, 123456789012345, 1e-7, 1e-15,
     ]);
     for (const lossy of ["999999999999999.99", "0.1234567890123456", "-0", "1e3", "01"]) {
       expect(convert(lossy), lossy).toMatchObject({ ok: false, reason: "failed" });
@@ -318,6 +327,18 @@ describe("a tool's declared schema (DATA-03)", () => {
         additionalProperties: false,
       }),
     ).toBe("compiled");
+  });
+
+  it("refuses a schema nested thousands deep before anything recursive reads it", () => {
+    // Valid JSON of 30 KB: 3,000 nested items, then a deep value inside a const.
+    const deepItems = JSON.parse(`${'{"items":'.repeat(3000)}{}${"}".repeat(3000)}`) as object;
+    expect(() => compileToolSchema(deepItems)).not.toThrow();
+    expect(compileToolSchema(deepItems)).toEqual({
+      ok: false,
+      reason: "The tool's data schema is nested too deeply.",
+    });
+    const deepConst = JSON.parse(`{"const":${"[".repeat(3000)}${"]".repeat(3000)}}`) as object;
+    expect(compileToolSchema(deepConst)).toMatchObject({ ok: false, reason: /nested too deeply/ });
   });
 
   it("takes a name objects inherit, such as constructor, as a field only when the data has it", () => {
