@@ -57,9 +57,9 @@ function newWorkspace(): string {
   const folder = host.folder!;
   const { id } = createWorkspace(folder, "Errands");
   const version = saveVersion(folder.db, {
-    contractVersion: 1,
+    contractVersion: 2,
     code: errands,
-    data: { schemaVersion: 1, schema: {}, defaults: {} },
+    data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
     capabilities: [],
     pins: [],
     ui: { standardVersion: 1, mode: "standard" },

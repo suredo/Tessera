@@ -19,9 +19,9 @@ const validateWorkspace = new Ajv({ strict: true, validateFormats: false }).comp
 const validateArtifact = new Ajv({ strict: true }).compile(toJsonSchema("artifact"));
 
 const sampleArtifact: Artifact = {
-  contractVersion: 1,
+  contractVersion: 2,
   code: { html: "<ul></ul>", css: "", js: "" },
-  data: { schemaVersion: 1, schema: { type: "object" }, defaults: {} },
+  data: { schemaVersion: 1, schema: { type: "object" }, defaults: {}, migrations: [] },
   capabilities: [],
   pins: [],
   ui: { standardVersion: 1, mode: "standard" },
