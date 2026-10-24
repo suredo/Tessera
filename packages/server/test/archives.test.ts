@@ -47,11 +47,11 @@ const testClock = (start = "2026-10-19T09:00:00.000Z") => {
   return { now, advance: (ms: number) => (at += ms) };
 };
 
-const artifact = (html: string, contractVersion = 1) =>
+const artifact = (html: string, contractVersion = 2) =>
   ({
     contractVersion,
     code: { html, css: "", js: "" },
-    data: { schemaVersion: 1, schema: { type: "object" }, defaults: { items: [] } },
+    data: { schemaVersion: 1, schema: { type: "object" }, defaults: { items: [] }, migrations: [] },
     capabilities: [],
     pins: [],
     ui: { standardVersion: 1, mode: "standard" },

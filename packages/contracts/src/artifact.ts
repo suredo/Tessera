@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { jsonObjectSchema } from "./json.ts";
+import { migrationSchema } from "./migration.ts";
 
 // A tool version, the artifact (CON-04, DATA-04): everything that has to change together when a
 // tool changes. It is immutable and named by the hash of its canonical JSON. Data, workspaces and
 // the library refer to it; they are not part of it.
 
 /** The artifact contract's current version. Raise it with an upgrade in ARTIFACT_UPGRADES. */
-export const ARTIFACT_CONTRACT_VERSION = 1;
+export const ARTIFACT_CONTRACT_VERSION = 2;
 
 export const UI_MODES = ["standard", "custom"] as const;
 
@@ -23,6 +24,12 @@ export const artifactSchema = z
         defaults: jsonObjectSchema.describe(
           "Reusable defaults, never session entries or examples (DATA-03, DATA-07).",
         ),
+        migrations: z
+          .array(migrationSchema)
+          .max(100)
+          .describe(
+            "How data of each earlier schema version reaches this one, a step at a time (DATA-03).",
+          ),
       })
       .describe("The tool's declared data shape and reusable defaults (DATA-03)."),
     capabilities: z
@@ -57,8 +64,14 @@ type RawArtifact = Record<string, unknown>;
 /** Upgrades an artifact from contract version N (the key) to N + 1. */
 export type ArtifactUpgrades = Readonly<Record<number, (artifact: RawArtifact) => RawArtifact>>;
 
-/** None yet: version 1 is the first. */
-export const ARTIFACT_UPGRADES: ArtifactUpgrades = {};
+/** Version 2 adds the data's migrations: a version 1 tool declared none. */
+export const ARTIFACT_UPGRADES: ArtifactUpgrades = {
+  1: (artifact) => ({
+    ...artifact,
+    contractVersion: 2,
+    data: { ...(artifact["data"] as RawArtifact), migrations: [] },
+  }),
+};
 
 /** A stored artifact, read back: current, upgraded to current, or plainly incompatible. */
 export type ArtifactReading =

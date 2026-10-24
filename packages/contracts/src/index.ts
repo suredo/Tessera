@@ -54,6 +54,13 @@ export {
 } from "./json.ts";
 export { INTENT_KINDS, intentSchema, type Intent } from "./intent.ts";
 export {
+  MIGRATION_MAX_MAPPINGS,
+  MIGRATION_MAX_OPERATIONS,
+  migrationSchema,
+  type Migration,
+  type MigrationOperation,
+} from "./migration.ts";
+export {
   bridgeManifest,
   contracts,
   JSON_SCHEMA_TARGET,
@@ -70,6 +77,8 @@ export {
   type RequestLogEntry,
 } from "./ledger.ts";
 export {
+  collectionName,
+  fieldName,
   patchBatchSchema,
   recordIdSchema,
   TOOL_DATA_LIMIT_BYTES,

@@ -8,12 +8,15 @@ import { jsonValueSchema, refusingReservedKey } from "./json.ts";
 /** The most structured data one tool may hold, as UTF-8 JSON (DATA-06). */
 export const TOOL_DATA_LIMIT_BYTES = 256 * 1024;
 
-const collectionName = z
+export const collectionName = z
   .string()
   .regex(/^[A-Za-z][A-Za-z0-9_]{0,63}$/)
   .describe("The top-level list the record is in, such as `tasks`.");
 // A field name can't be `id`, which only the host sets, and starts with a letter, so never `__proto__`.
-const fieldName = z.string().regex(/^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$/);
+export const fieldName = z
+  .string()
+  .regex(/^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$/)
+  .describe("A field of a record; never `id`, which only the host sets.");
 
 // Revisions are kept by ID, as keys, so an ID can't be the one key JSON objects can't keep (CON-01).
 export const recordIdSchema = z

@@ -151,7 +151,8 @@
                       "type": "object",
                       "propertyNames": {
                         "type": "string",
-                        "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$"
+                        "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$",
+                        "description": "A field of a record; never `id`, which only the host sets."
                       },
                       "additionalProperties": {
                         "allOf": [
@@ -197,7 +198,8 @@
                       "type": "object",
                       "propertyNames": {
                         "type": "string",
-                        "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$"
+                        "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$",
+                        "description": "A field of a record; never `id`, which only the host sets."
                       },
                       "additionalProperties": {
                         "allOf": [
