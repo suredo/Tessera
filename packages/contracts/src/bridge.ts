@@ -173,6 +173,20 @@ export const bridgeReplySchema = z
   .describe("The host's reply to a tool's call (CON-03).");
 export type BridgeReply = z.infer<typeof bridgeReplySchema>;
 
+/**
+ * What the host page sends the server for a tool's data call (CON-03, RUN-04): the workspace the
+ * tool runs in, where its mount stands, and the call as the tool made it. The server checks the
+ * call again, with the capabilities of the workspace's stored tool version.
+ */
+export const bridgeDataRequestSchema = z
+  .strictObject({
+    workspaceId: z.uuid(),
+    phase: z.enum(BRIDGE_PHASES).describe("Only the browser sees the person's first interaction."),
+    call: z.unknown().describe("The tool's call, checked by the server as the host checked it."),
+  })
+  .describe("A tool's data call, passed on by the host page to the server (CON-03).");
+export type BridgeDataRequest = z.infer<typeof bridgeDataRequestSchema>;
+
 /** What the host knows of the mount a call came through. */
 export type BridgeContext = {
   instanceId: string;

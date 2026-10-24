@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-24
+
+* **Creation**: [Bridge route](code/server/bridge.md) ([issue 46](https://github.com/suredo/Tessera/issues/46), sixth part): the server's side of the bridge, `/api/bridge`, which checks a tool's data call again with the stored version's capabilities and the phase the host page sends (the owner's decision on #46), and answers it from the saved data and revisions. It claims `RUN-04`, `CAP-01`, `GEN-06` and `BRG-04`. The [contracts](code/contracts/package.md) doc names `bridgeDataRequestSchema`, the [launcher](code/server/launcher.md) doc says it mounts the route, and the [threat model](spec/threat-model.md) says `BRG-04` now runs through it.
+
 ## 2026-10-23
 
 * **Update**: Saved record revisions ([issue 46](https://github.com/suredo/Tessera/issues/46), fifth part): the [workspaces](code/server/workspaces.md) doc describes `readWorkspaceData` and `patchWorkspaceData`, the `record_revisions` table saved with the data in one transaction, whole replacements moving every record on, and that revisions don't travel in archives, and claims `DATA-02` and `BRG-04`. The [patch engine](code/server/patches.md) doc names `recordKey` and `recordOfKey` and says where its state is now stored. The [threat model](spec/threat-model.md) says where `BRG-04` runs. After Codex's review of [pull request 88](https://github.com/suredo/Tessera/pull/88), the workspaces doc says a removed record keeps its revision row, so a revision is never reused, and that every collection and record is its own entry; the [contracts](code/contracts/package.md) doc says a record ID is never `__proto__`; and the [storage](code/server/storage.md) doc lists `0004-record-revisions.sql`. After Codex's second review, the patch engine doc says a revision's key splits at its last "/", so a list named like `daily/tasks` reads back under its own name.
