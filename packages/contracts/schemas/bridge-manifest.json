@@ -45,7 +45,7 @@
               "type": "object",
               "propertyNames": {
                 "type": "string",
-                "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                "pattern": "^(?!__proto__$)[A-Za-z0-9_-]{1,64}$",
                 "description": "A record's stable ID, given by the host when it was added."
               },
               "additionalProperties": {
@@ -184,7 +184,7 @@
                     },
                     "id": {
                       "type": "string",
-                      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                      "pattern": "^(?!__proto__$)[A-Za-z0-9_-]{1,64}$",
                       "description": "A record's stable ID, given by the host when it was added."
                     },
                     "revisionCount": {
@@ -232,7 +232,7 @@
                     },
                     "id": {
                       "type": "string",
-                      "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                      "pattern": "^(?!__proto__$)[A-Za-z0-9_-]{1,64}$",
                       "description": "A record's stable ID, given by the host when it was added."
                     },
                     "revisionCount": {
@@ -303,7 +303,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "pattern": "^(?!__proto__$)[A-Za-z0-9_-]{1,64}$",
               "description": "A record's stable ID, given by the host when it was added."
             },
             "description": "The IDs the host gave added records, in order."

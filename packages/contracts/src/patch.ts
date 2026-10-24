@@ -15,9 +15,10 @@ const collectionName = z
 // A field name can't be `id`, which only the host sets, and starts with a letter, so never `__proto__`.
 const fieldName = z.string().regex(/^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$/);
 
+// Revisions are kept by ID, as keys, so an ID can't be the one key JSON objects can't keep (CON-01).
 export const recordIdSchema = z
   .string()
-  .regex(/^[A-Za-z0-9_-]{1,64}$/)
+  .regex(/^(?!__proto__$)[A-Za-z0-9_-]{1,64}$/)
   .describe("A record's stable ID, given by the host when it was added.");
 
 const revisionCount = z

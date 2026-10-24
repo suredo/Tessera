@@ -8,6 +8,16 @@ import {
   type WorkspaceVersion,
 } from "@tessera/contracts";
 import { z } from "zod";
+import {
+  applyPatch,
+  createDataState,
+  recordKey,
+  recordOfKey,
+  type DataState,
+  type PatchOptions,
+  type PatchRefusal,
+  type ToolData,
+} from "../patches/index.ts";
 import type { DataFolder } from "../storage/index.ts";
 
 // Workspaces, their version history and the saved-tools library (DATA-08). Every change is one
@@ -167,7 +177,8 @@ export function workspaceVersions(store: Store, id: string): WorkspaceVersion[] 
 
 /**
  * Replaces a workspace's data and raises its revision by one. `expectedRevision` is the revision
- * the new data was made from; if the data changed since, nothing is saved.
+ * the new data was made from; if the data changed since, nothing is saved. Every record it keeps
+ * moves to a new revision, so a change planned before the replacement is refused (DATA-02).
  */
 export function saveWorkspaceData(
   store: Store,
@@ -175,19 +186,141 @@ export function saveWorkspaceData(
   data: unknown,
   expectedRevision: number,
 ): Workspace {
-  const body = JSON.stringify(workspaceSchema.shape.data.parse(data));
+  const parsed = workspaceSchema.shape.data.parse(data);
+  const body = JSON.stringify(parsed);
   return store.db.transaction(() => {
     const current = existingWorkspace(store, id);
     if (current.dataRevision !== expectedRevision) {
       throw new Error("The data changed since it was read, so nothing was saved.");
     }
+    // Every record the workspace has held: those it holds, and those removed, at their last count.
+    const before = new Map([
+      ...savedRows(store, id),
+      ...savedState(store, id, current.data ?? {}).revisions,
+    ]);
     store.db.run(
       "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
       body,
       stamp(store),
       id,
     );
+    const after = createDataState(parsed ?? {}).revisions;
+    const revisions = new Map([...after.keys()].map((key) => [key, (before.get(key) ?? 0) + 1]));
+    saveRevisions(store, id, revisions, before);
     return existingWorkspace(store, id);
+  });
+}
+
+const revisionRow = z.object({
+  collection: z.string(),
+  record_id: z.string(),
+  revision_count: z.number(),
+});
+
+// Every saved row: the records the workspace holds, and those it removed, at their last count.
+const savedRows = (store: Store, id: string): Map<string, number> =>
+  new Map(
+    store.db
+      .all(
+        revisionRow,
+        "SELECT collection, record_id, revision_count FROM record_revisions WHERE workspace_id = ?",
+        id,
+      )
+      .map((row) => [recordKey(row.collection, row.record_id), row.revision_count]),
+  );
+
+// The workspace's data with each record's saved revision; a record with no saved row is at 1.
+function savedState(store: Store, id: string, data: ToolData): DataState {
+  const state = createDataState(data);
+  const saved = savedRows(store, id);
+  const revisions = new Map(
+    [...state.revisions].map(([key, count]) => [key, saved.get(key) ?? count]),
+  );
+  return { data: state.data, revisions };
+}
+
+// Inside the caller's transaction. A row is never deleted while its workspace lasts: a record
+// that is removed keeps its last count, so one that comes back with the same ID continues from
+// there, and a change planned before it left stays stale (DATA-02). `held` are the records'
+// counts before the change, removed ones included.
+function saveRevisions(
+  store: Store,
+  id: string,
+  revisions: ReadonlyMap<string, number>,
+  held: ReadonlyMap<string, number>,
+) {
+  const rows = new Map([...held].filter(([key]) => !revisions.has(key)));
+  for (const [key, count] of revisions) rows.set(key, count);
+  for (const [key, count] of rows) {
+    const { collection, id: recordId } = recordOfKey(key);
+    store.db.run(
+      `INSERT INTO record_revisions (workspace_id, collection, record_id, revision_count) VALUES (?, ?, ?, ?)
+       ON CONFLICT (workspace_id, collection, record_id) DO UPDATE SET revision_count = excluded.revision_count`,
+      id,
+      collection,
+      recordId,
+      count,
+    );
+  }
+}
+
+/** A tool's data as the bridge gives it (CON-03): the data, and each record's revision count. */
+export type WorkspaceData = {
+  data: ToolData;
+  revisions: Record<string, Record<string, number>>;
+};
+
+// Built from entries, so every collection and ID is an own property: a collection named
+// "constructor" is its own entry, and never reaches what objects inherit.
+const asWorkspaceData = (state: DataState): WorkspaceData => {
+  const byCollection = new Map<string, [string, number][]>();
+  for (const [key, count] of state.revisions) {
+    const { collection, id } = recordOfKey(key);
+    const records = byCollection.get(collection) ?? [];
+    records.push([id, count]);
+    byCollection.set(collection, records);
+  }
+  const revisions = Object.fromEntries(
+    [...byCollection].map(([collection, records]) => [collection, Object.fromEntries(records)]),
+  );
+  return { data: state.data, revisions };
+};
+
+/** A workspace's data and its records' revisions. Data the tool hasn't filled yet is empty. */
+export function readWorkspaceData(store: Store, id: string): WorkspaceData {
+  const workspace = existingWorkspace(store, id);
+  return asWorkspaceData(savedState(store, id, workspace.data ?? {}));
+}
+
+export type WorkspacePatchResult =
+  | { ok: true; addedIds: string[]; workspace: Workspace }
+  | { ok: false; reason: PatchRefusal; message: string };
+
+/**
+ * Applies a batch of changes to a workspace's data (DATA-02), against the records' saved
+ * revisions, in one transaction: the data, the workspace's revision and the records' revisions
+ * are saved together, or nothing is. A batch that touches a record changed since it was planned
+ * is refused whole, with a plain message; one that touches other records still applies.
+ */
+export function patchWorkspaceData(
+  store: Store,
+  id: string,
+  batch: unknown,
+  options: PatchOptions = {},
+): WorkspacePatchResult {
+  return store.db.transaction(() => {
+    const workspace = existingWorkspace(store, id);
+    const before = savedState(store, id, workspace.data ?? {});
+    const result = applyPatch(before, batch, options);
+    if (!result.ok) return { ok: false, reason: result.reason, message: result.message };
+    store.db.run(
+      "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
+      JSON.stringify(result.state.data),
+      stamp(store),
+      id,
+    );
+    saveRevisions(store, id, result.state.revisions, before.revisions);
+    return { ok: true, addedIds: result.addedIds, workspace: existingWorkspace(store, id) };
   });
 }
 

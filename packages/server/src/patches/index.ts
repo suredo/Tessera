@@ -3,6 +3,8 @@
 export {
   applyPatch,
   createDataState,
+  recordKey,
+  recordOfKey,
   revisionOf,
   type DataState,
   type PatchOptions,
