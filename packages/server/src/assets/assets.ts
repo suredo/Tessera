@@ -81,6 +81,19 @@ const WORKSPACE_SOURCES = [
   "SELECT data AS text FROM recovery_snapshots WHERE workspace_id = ?",
 ];
 const textRow = z.object({ text: z.string() });
+
+// Storing, cleanup and the sweep each touch rows and files with waits between them, so they run
+// one at a time per database: otherwise cleanup could remove the file of an asset stored again
+// while it waited, leaving a row with no file.
+const queues = new WeakMap<object, Promise<unknown>>();
+function exclusively<T>(store: AssetStore, work: () => Promise<T>): Promise<T> {
+  const run = (queues.get(store.db) ?? Promise.resolve()).then(work, work);
+  queues.set(
+    store.db,
+    run.catch(() => {}),
+  );
+  return run;
+}
 const HASH_TEXT = /[0-9a-f]{64}/g;
 
 // Every 64-hex-digit run in the texts that is a stored asset's ID. A run that happens to match an
@@ -116,10 +129,18 @@ const refuse = (reason: StoreAssetRefusal, message: string): StoreAssetResult =>
  * content and size, and, for a workspace, against what its assets add up to; nothing is written
  * unless every check passes (AST-01, AST-02).
  */
-export async function storeAsset(
+export function storeAsset(
   store: AssetStore,
   bytes: Uint8Array,
   options: { originalName?: string; workspaceId?: string } = {},
+): Promise<StoreAssetResult> {
+  return exclusively(store, () => storeNow(store, bytes, options));
+}
+
+async function storeNow(
+  store: AssetStore,
+  bytes: Uint8Array,
+  options: { originalName?: string; workspaceId?: string },
 ): Promise<StoreAssetResult> {
   if (bytes.byteLength === 0) return refuse("empty", "the file is empty.");
   if (bytes.byteLength > ASSET_LIMIT_BYTES) {
@@ -195,15 +216,27 @@ export async function readAsset(
 /**
  * Removes every asset nothing refers to any more: its row, in one transaction that checks again,
  * then its file. A crash between the two leaves a file without a row, which the next start's sweep
- * removes. Returns the IDs removed.
+ * removes. Returns the IDs removed. `beforeFiles` is for tests: it runs after the rows go and
+ * before the files do.
  */
-export async function collectAssets(store: AssetStore): Promise<string[]> {
+export function collectAssets(
+  store: AssetStore,
+  options: { beforeFiles?: () => Promise<void> } = {},
+): Promise<string[]> {
+  return exclusively(store, () => collectNow(store, options));
+}
+
+async function collectNow(
+  store: AssetStore,
+  options: { beforeFiles?: () => Promise<void> },
+): Promise<string[]> {
   const removed = store.db.transaction(() => {
     const held = referencedAssets(store);
     const unheld = store.db.all(assetFromRow, SELECT_ASSET).filter((asset) => !held.has(asset.id));
     for (const asset of unheld) store.db.run("DELETE FROM assets WHERE hash = ?", asset.id);
     return unheld;
   });
+  await options.beforeFiles?.();
   for (const asset of removed) await fs.promises.rm(fileOf(store, asset), { force: true });
   return removed.map((asset) => asset.id);
 }
@@ -213,7 +246,11 @@ export async function collectAssets(store: AssetStore): Promise<string[]> {
  * temporary file, and every stored file whose name is an asset's but has no row; a file named
  * otherwise isn't the store's, and is left alone (AST-06). Returns the paths removed.
  */
-export async function sweepAssets(store: AssetStore): Promise<string[]> {
+export function sweepAssets(store: AssetStore): Promise<string[]> {
+  return exclusively(store, () => sweepNow(store));
+}
+
+async function sweepNow(store: AssetStore): Promise<string[]> {
   const root = store.paths.assets;
   const removed: string[] = [];
   const temp = path.join(root, TEMP);
