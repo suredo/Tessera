@@ -1,22 +1,27 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
-import { deleteWorkspace } from "../../server/src/trash/index.ts";
-import { saveVersion } from "../../server/src/versions/index.ts";
-import { activateVersion, saveTool } from "../../server/src/workspaces/index.ts";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+import { seedSamples } from "../../../scripts/seed.ts";
+import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
+import { startApp, type AppHost } from "./support/app-host.ts";
 
 // The host app is accessible (APP-11): an automated checker (axe) finds no WCAG 2.2 A or AA
-// violation on any of its screens, and the parts a checker can't judge are checked directly:
-// keyboard use, a visible focus and reduced motion. In Chrome and Edge at 320 and 1280 px
-// (TEST-06), against a real Tessera of its own on a temporary data folder (ENG-19). A tool's own
-// frame is left out: a tool meets the accessibility floor the runtime gives it (RUN-05, VER-06).
+// violation on any of its screens, forms or confirmations, and the parts a checker can't judge are
+// checked directly: keyboard use, a visible focus and reduced motion. In Chrome and Edge at 320 and
+// 1280 px (TEST-06), against a real Tessera of its own on a temporary data folder (ENG-19), which
+// starts empty and is then filled with the sample workspaces. A tool's own frame is left out: a
+// tool meets the accessibility floor the runtime gives it (RUN-05, VER-06).
 
 let app: AppHost;
 test.beforeAll(async () => {
   app = await startApp();
 });
 test.afterAll(() => app.close());
+
+/** Fills this Tessera with the sample workspaces, once, for whichever test needs them first. */
+function seeded() {
+  if (listWorkspaces(app.folder).length === 0) seedSamples(app.folder);
+}
 
 const WCAG = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
@@ -31,14 +36,53 @@ async function violations(page: Page): Promise<string[]> {
   );
 }
 
-const toolText = (page: Page) =>
+/** The longest transition or animation anywhere in the host now, in seconds. */
+const longestMotion = (page: Page) =>
+  page.evaluate(() => {
+    const seconds = (value: string) =>
+      Math.max(
+        ...value
+          .split(",")
+          .map((part) => parseFloat(part) * (part.trim().endsWith("ms") ? 0.001 : 1)),
+      );
+    return Math.max(
+      0,
+      ...[...document.querySelectorAll("body *")].map((element) => {
+        const style = getComputedStyle(element);
+        return Math.max(seconds(style.transitionDuration), seconds(style.animationDuration));
+      }),
+    );
+  });
+
+const toolHeading = (page: Page) =>
   page
     .frameLocator(".tool-frame iframe")
     .frameLocator("iframe")
     .frameLocator("iframe")
-    .locator("#text");
+    .getByRole("heading", { level: 1 });
 const section = (page: Page, name: string) =>
   page.getByRole("button", { name, exact: true }).click();
+const workspaceButton = (page: Page, name: string) =>
+  page.getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) });
+const cancel = (page: Page) =>
+  page.getByRole("button", { name: en["library.cancel"], exact: true }).click();
+
+/**
+ * Presses Tab (or Shift+Tab) until `target` has the focus, as a keyboard user would reach it, and
+ * checks the focus can be seen there: the host's 3 px solid outline.
+ */
+async function tabTo(page: Page, target: Locator, key: "Tab" | "Shift+Tab" = "Tab") {
+  for (let presses = 0; presses < 80; presses += 1) {
+    if (await target.evaluate((element) => element === document.activeElement)) break;
+    await page.keyboard.press(key);
+  }
+  await expect(target).toBeFocused();
+  const outline = await target.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { style: style.outlineStyle, width: style.outlineWidth };
+  });
+  expect(outline).toEqual({ style: "solid", width: "3px" });
+}
 
 test("APP-11, APP-02: the first-run screen has no accessibility violations", async ({ page }) => {
   // This Tessera starts empty, so its first screen shows (the tests run in order).
@@ -47,92 +91,107 @@ test("APP-11, APP-02: the first-run screen has no accessibility violations", asy
   expect(await violations(page)).toEqual([]);
 });
 
-test("APP-11: every screen and confirmation of the main app has no accessibility violations", async ({
+/** Checks the host as it is now, with axe and for motion (reduced motion is asked for). */
+async function check(page: Page) {
+  expect(await violations(page)).toEqual([]);
+  expect(await longestMotion(page)).toBeLessThanOrEqual(0.001);
+}
+/** The app with the samples in it, asking for reduced motion, on `name`'s workspace. */
+async function opened(page: Page, name: string) {
+  seeded();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(app.url);
+  await workspaceButton(page, name).click();
+  await expect(toolHeading(page)).toHaveText(name);
+}
+
+test("APP-11: the main screen, full screen and a restore that loses data have no violations, and nothing moves", async ({
   page,
 }) => {
-  const name = `Errands ${Math.random().toString(36).slice(2, 7)}`;
-  const id = workspaceWith(app.folder, name, testTool("Version one"));
-  expect(
-    activateVersion(app.folder, id, saveVersion(app.folder.db, testTool("Version two")), 1).ok,
-  ).toBe(true);
-  saveTool(app.folder, id, `Weekly ${name}`);
-  deleteWorkspace(app.folder, workspaceWith(app.folder, `Old ${name}`, testTool("Old")));
-
-  // The main screen, with the tool running and its history.
-  await page.goto(app.url);
-  await page.getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) }).click();
-  await expect(toolText(page)).toHaveText("Version two");
-  expect(await violations(page)).toEqual([]);
-
-  // A restore's confirmation.
+  await opened(page, "Shopping list");
+  await check(page);
+  await page.getByRole("button", { name: en["tool.fullScreen"] }).click();
+  await expect(page.locator(".tool-panel.full-screen")).toBeVisible();
+  await check(page);
+  await page.getByRole("button", { name: en["tool.leaveFullScreen"] }).click();
   await page.getByRole("button", { name: "Restore version 1" }).click();
-  await expect(page.getByRole("group", { name: "Restore version 1?" })).toBeVisible();
-  expect(await violations(page)).toEqual([]);
-  await page.getByRole("button", { name: en["history.cancel"] }).click();
+  await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
+    en["history.losesData"],
+  );
+  await check(page);
+});
 
-  // Renaming, with its form open.
-  await page.getByRole("button", { name: `Rename ${name}` }).click();
-  expect(await violations(page)).toEqual([]);
-  await page.getByRole("button", { name: en["library.cancel"], exact: true }).click();
+test("APP-11: a workspace's rename and save forms have no violations, and nothing moves", async ({
+  page,
+}) => {
+  await opened(page, "Shopping list");
+  await page.getByRole("button", { name: "Rename Shopping list" }).click();
+  await check(page);
+  await cancel(page);
+  await page.getByRole("button", { name: "Save Shopping list to my tools" }).click();
+  await expect(page.getByLabel(en["workspaces.saveLabel"])).toBeVisible();
+  await check(page);
+});
 
-  // My tools.
+test("APP-11: my tools and its forms have no violations, and nothing moves", async ({ page }) => {
+  await opened(page, "Garden notes");
   await section(page, en["nav.library"]);
-  await expect(page.getByRole("heading", { name: `Weekly ${name}` })).toBeVisible();
-  expect(await violations(page)).toEqual([]);
+  await expect(page.getByRole("heading", { name: "Garden journal" })).toBeVisible();
+  await check(page);
+  await page.getByRole("button", { name: "Rename Garden journal" }).click();
+  await check(page);
+  await cancel(page);
+  await page.getByRole("button", { name: "Save Garden journal as a new tool" }).click();
+  await expect(page.getByLabel(en["library.newName"])).toBeVisible();
+  await check(page);
+});
 
-  // The trash, and emptying it, asked first.
+test("APP-11: the trash and emptying it have no violations, and nothing moves", async ({
+  page,
+}) => {
+  await opened(page, "Garden notes");
   await section(page, en["nav.trash"]);
+  await expect(page.getByRole("heading", { name: "Old packing list" })).toBeVisible();
+  await check(page);
   await page.getByRole("button", { name: en["trash.emptyNow"] }).click();
   await expect(page.getByRole("group", { name: en["trash.confirmHeading"] })).toBeVisible();
-  expect(await violations(page)).toEqual([]);
+  await check(page);
 });
 
 test("APP-11: the app works by keyboard alone, with the focus always visible", async ({ page }) => {
-  const name = `Keys ${Math.random().toString(36).slice(2, 7)}`;
-  workspaceWith(app.folder, name, testTool("Typed"));
+  seeded();
   await page.goto(app.url);
-  // Tab to the workspace's own button, and open it with Enter.
-  const open = page.getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) });
-  for (let presses = 0; presses < 60; presses += 1) {
-    await page.keyboard.press("Tab");
-    if (await open.evaluate((element) => element === document.activeElement)) break;
-  }
-  await expect(open).toBeFocused();
-  // The focus can be seen: the host's outline, 3 px wide.
-  const outline = await open.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { style: style.outlineStyle, width: style.outlineWidth };
-  });
-  expect(outline).toEqual({ style: "solid", width: "3px" });
-  await page.keyboard.press("Enter");
-  await expect(toolText(page)).toHaveText("Typed");
+  await expect(workspaceButton(page, "Garden notes")).toBeVisible();
 
-  // Minimize and show again, by keyboard.
-  const minimize = page.getByRole("button", { name: en["tool.minimize"] });
-  await minimize.focus();
+  // Open a workspace: Tab to it, Enter.
+  await tabTo(page, workspaceButton(page, "Garden notes"));
   await page.keyboard.press("Enter");
-  await expect(page.getByText(`${name} is minimized.`)).toBeVisible();
-  await page.getByRole("button", { name: en["tool.restore"] }).focus();
+  await expect(toolHeading(page)).toHaveText("Garden notes");
+
+  // Minimize and show the tool again: Tab to each, Enter, then Space.
+  await tabTo(page, page.getByRole("button", { name: en["tool.minimize"] }));
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Garden notes is minimized.")).toBeVisible();
+  await tabTo(page, page.getByRole("button", { name: en["tool.restore"] }), "Shift+Tab");
   await page.keyboard.press("Space");
-  await expect(toolText(page)).toHaveText("Typed");
-});
+  await expect(toolHeading(page)).toHaveText("Garden notes");
 
-test("APP-11: with reduced motion asked for, nothing in the host moves", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto(app.url);
-  const longest = await page.evaluate(() => {
-    const seconds = (value: string) =>
-      Math.max(
-        ...value
-          .split(",")
-          .map((part) => parseFloat(part) * (part.trim().endsWith("ms") ? 0.001 : 1)),
-      );
-    return Math.max(
-      ...[...document.querySelectorAll("body *")].map((element) => {
-        const style = getComputedStyle(element);
-        return Math.max(seconds(style.transitionDuration), seconds(style.animationDuration));
-      }),
-    );
-  });
-  expect(longest).toBeLessThanOrEqual(0.001);
+  // A form: Tab to Rename, Enter; its field has the focus; type and Enter saves.
+  await tabTo(page, page.getByRole("button", { name: "Rename Garden notes" }), "Shift+Tab");
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("New name for Garden notes")).toBeFocused();
+  await page.keyboard.press("ControlOrMeta+A");
+  await page.keyboard.type("Garden plans");
+  await page.keyboard.press("Enter");
+  await expect(workspaceButton(page, "Garden plans")).toBeVisible();
+
+  // A confirmation: Tab to Restore, Enter; Tab on to its Cancel, Enter closes it.
+  await workspaceButton(page, "Shopping list").click();
+  await expect(toolHeading(page)).toHaveText("Shopping list");
+  await tabTo(page, page.getByRole("button", { name: "Restore version 1" }));
+  await page.keyboard.press("Enter");
+  const confirm = page.getByRole("group", { name: "Restore version 1?" });
+  await tabTo(page, confirm.getByRole("button", { name: en["history.cancel"] }));
+  await page.keyboard.press("Enter");
+  await expect(confirm).toHaveCount(0);
 });
