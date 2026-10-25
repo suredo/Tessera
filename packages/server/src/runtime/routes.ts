@@ -5,14 +5,14 @@ import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Artifact } from "@tessera/contracts";
-import { TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "@tessera/runtime/policy";
+import { hostStyles, TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "@tessera/runtime/policy";
 import type { Handler } from "../http/index.ts";
 
 // The runtime's documents (RUN-01), served on the runtime's origin (localhost) by the local server,
 // whose guard has already checked the Host header and that they load only as frames (SEC-03).
 
-/** The tool code a mount shows, or undefined if there is no such mount. */
-export type ToolFor = (mountId: string) => Artifact["code"] | undefined;
+/** The tool a mount shows, its code and its UI mode, or undefined if there is no such mount. */
+export type ToolFor = (mountId: string) => Pick<Artifact, "code" | "ui"> | undefined;
 
 // The browser scripts are TypeScript in @tessera/runtime; their types are stripped once, here.
 const runtimeSource = path.join(
@@ -45,12 +45,21 @@ const html = (res: ServerResponse, body: string) => {
   res.end(body);
 };
 
-/** The tool's own document: the preamble first, then its styles, markup and script. */
-export function toolDocument(code: Artifact["code"], preamble: string): string {
+/**
+ * The tool's own document: the preamble first, then the host's styles (RUN-05: the accessibility
+ * floor always, the UI standard in standard mode), then the tool's styles, markup and script.
+ */
+export function toolDocument(
+  tool: Pick<Artifact, "code" | "ui">,
+  preamble: string,
+  // A new mark for every document, so a tool's styles can't name the host's layers.
+  mark: string = randomBytes(8).toString("hex"),
+): string {
+  const { code } = tool;
   // A closing tag inside the tool's script or styles would end it early; keep it inside.
   const js = code.js.replace(/<\/(script)/gi, "<\\/$1");
   const css = code.css.replace(/<\/(style)/gi, "<\\/$1");
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><script>${preamble}</script><style>${css}</style></head><body>${code.html}<script>${js}</script></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><script>${preamble}</script><style>${hostStyles(tool.ui.mode, mark)}</style><style>${css}</style></head><body>${code.html}<script>${js}</script></body></html>`;
 }
 
 /** The runtime's routes for the local server: the wrapper and the tool's document. */
@@ -66,13 +75,13 @@ export function runtimeRoutes(toolFor: ToolFor): Record<string, Handler> {
     },
     "/runtime/tool": (req, res) => {
       const mountId = new URL(req.url ?? "/", "http://localhost").searchParams.get("mount") ?? "";
-      const code = toolFor(mountId);
-      if (!code) {
+      const tool = toolFor(mountId);
+      if (!tool) {
         res.writeHead(404, { "content-type": "text/plain; charset=utf-8" }).end("No such tool.");
         return;
       }
       addPolicies(res, TOOL_CSP, TOOL_SANDBOX);
-      html(res, toolDocument(code, loadScripts().preamble));
+      html(res, toolDocument(tool, loadScripts().preamble));
     },
   };
 }
