@@ -7,7 +7,7 @@ implements: [DATA-11, AST-01, AST-02, AST-03, AST-06]
 tests: [../../../packages/server/test/assets.test.ts]
 tags: [code, server, data, assets]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T09:46:34Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T09:51:00Z }
 ---
 
 # Purpose
@@ -29,7 +29,7 @@ Keeps the person's images (`DATA-11`, A48): photos and other pictures a tool sho
 - **Limits are checked before anything is written** (`AST-02`): 25 MB for one asset, and 500 MB for the assets a workspace's data, versions and snapshots name, with the new one. A refusal says plainly why, and writes no file and no row.
 - **A row always has its file.** A new asset is written under a temporary name inside the assets folder, then renamed into place, and only then is its row added. The same bytes always make the same asset, so storing them again adds nothing.
 - **An ID is only ever a SHA-256** (`AST-03`). Every lookup checks the ID first, and a file's path is built from the checked ID and the row's type, never from anything a caller passes, so nothing outside the asset store can be read through it.
-- **An asset goes only when nothing refers to it** (`DATA-09`, `DATA-11`). What refers to an asset isn't recorded: `collectAssets` looks through everything stored, as JSON text, for its ID ([ADR 0007](../../decisions/adr/0007-asset-references-by-scanning.md)). That is every workspace's data, trashed ones included, every tool version, and every recovery snapshot. A workspace in the trash keeps its assets until it is removed for good. The row goes in one transaction that checks again, then the file; a crash between them leaves a file without a row, which the next start removes.
+- **An asset goes only when nothing refers to it** (`DATA-09`, `DATA-11`). What refers to an asset isn't recorded: `collectAssets` looks through everything stored, as JSON text, for its ID ([ADR 0007](../../decisions/adr/0007-asset-references-by-scanning.md)). That is every workspace's data, trashed ones included, every tool version, every recovery snapshot and every data undo entry, so an undo can always bring back the images it names. A workspace in the trash keeps its assets until it is removed for good. The row goes in one transaction that checks again, then the file; a crash between them leaves a file without a row, which the next start removes.
 - **Storing, cleanup and the sweep run one at a time** for each database. Each touches rows and files with waits between them; otherwise cleanup could remove the file of an asset stored again while it waited, leaving a row with no file.
 - **The start-up sweep touches only what is the store's** (`AST-06`). It removes every temporary file, and every file named like an asset, in the folder its name belongs in, that has no row. Any other file is left alone, as is everything outside the assets folder. The [launcher](launcher.md) sweeps and then cleans up at start, and cleans up again hourly after the trash's expiry.
 
@@ -39,7 +39,7 @@ Depends on [storage](storage.md) and the contracts. The [launcher](launcher.md) 
 
 # Pitfalls
 
-- **A new table that stores tool data must be added to the scan.** `REFERENCE_SOURCES` in `assets.ts` lists what is looked through; data undo ([#110](https://github.com/suredo/Tessera/issues/110)) must add its entries there, or cleanup can remove an asset an undo would bring back.
+- **A new table that stores tool data must be added to the scan.** `REFERENCE_SOURCES` in `assets.ts` lists what is looked through, data undo's entries included; a table left out could lose an asset something still holds.
 - **A false match only keeps an asset longer.** Any run of 64 hex digits that equals a stored asset's ID keeps it, wherever it sits in the data, including a tool version's code.
 - **Headers aren't the whole image.** `sniffImage` doesn't decode an image, so a file can pass and still fail to show.
 - **The workspace limit counts what is named when an asset is added.** Two assets added before either is saved into the data are each counted without the other.
