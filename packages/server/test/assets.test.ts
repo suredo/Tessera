@@ -81,6 +81,12 @@ function webpHeader(chunk: "VP8 " | "VP8L" | "VP8X", frame: number[], chunkSize 
   return bytes;
 }
 
+// Cleanup looks through everything stored for each asset's ID, after many writes, which takes
+// about 0.3 s alone but measured up to 2.8 s while the whole suite runs, and went past the 5 s
+// default three times in fifteen full runs. None asserts how long it takes, so the limit leaves room for
+// that (ENG-20, as #94 did for archives).
+const SLOW_MACHINE = { timeout: 20_000 };
+
 describe("telling an image by its content (AST-01)", () => {
   it("DATA-11: knows PNG, JPEG and WebP by their bytes, with their dimensions", () => {
     for (const [bytes, type] of [
@@ -241,41 +247,45 @@ describe("the asset store (DATA-11)", () => {
 });
 
 describe("removing assets nothing refers to (DATA-09, DATA-11)", () => {
-  it("DATA-11: keeps an asset while a workspace's data, a version or a snapshot names it, and only then removes it", async () => {
-    const folder = await newFolder();
-    const [inData, inVersion, loose] = [
-      await stored(folder, png),
-      await stored(folder, jpeg),
-      await stored(folder, webp),
-    ];
-    const workspace = workspaceHolding(folder, [inData.id]);
-    // A version whose reusable defaults name an asset keeps it, as Use again starts from them.
-    const version: Artifact = {
-      contractVersion: 2,
-      code: { html: "", css: "", js: "" },
-      data: { schemaVersion: 1, schema: {}, defaults: { cover: inVersion.id }, migrations: [] },
-      capabilities: [],
-      pins: [],
-      ui: { standardVersion: 1, mode: "standard" },
-    };
-    saveVersion(folder.db, version);
-    expect(referencedAssets(folder)).toEqual(new Set([inData.id, inVersion.id]));
+  it(
+    "DATA-11: keeps an asset while a workspace's data, a version or a snapshot names it, and only then removes it",
+    SLOW_MACHINE,
+    async () => {
+      const folder = await newFolder();
+      const [inData, inVersion, loose] = [
+        await stored(folder, png),
+        await stored(folder, jpeg),
+        await stored(folder, webp),
+      ];
+      const workspace = workspaceHolding(folder, [inData.id]);
+      // A version whose reusable defaults name an asset keeps it, as Use again starts from them.
+      const version: Artifact = {
+        contractVersion: 2,
+        code: { html: "", css: "", js: "" },
+        data: { schemaVersion: 1, schema: {}, defaults: { cover: inVersion.id }, migrations: [] },
+        capabilities: [],
+        pins: [],
+        ui: { standardVersion: 1, mode: "standard" },
+      };
+      saveVersion(folder.db, version);
+      expect(referencedAssets(folder)).toEqual(new Set([inData.id, inVersion.id]));
 
-    expect(await collectAssets(folder)).toEqual([loose.id]);
-    expect(getAsset(folder, loose.id)).toBeUndefined();
-    expect(filesIn(folder)).toHaveLength(2);
+      expect(await collectAssets(folder)).toEqual([loose.id]);
+      expect(getAsset(folder, loose.id)).toBeUndefined();
+      expect(filesIn(folder)).toHaveLength(2);
 
-    // The data lets go of its photo, but that change can still be undone, so it stays (DATA-04).
-    saveWorkspaceData(folder, workspace, { photos: [] }, 1);
-    expect(await collectAssets(folder)).toEqual([]);
-    // Once 100 newer changes have discarded that undo entry, nothing holds it, and it goes.
-    for (let revision = 2; revision < 2 + UNDO_LIMIT; revision += 1) {
-      saveWorkspaceData(folder, workspace, { photos: [] }, revision);
-    }
-    expect(await collectAssets(folder)).toEqual([inData.id]);
-    expect(filesIn(folder)).toEqual([`${inVersion.id.slice(0, 2)}/${inVersion.id}.jpg`]);
-    folder.close();
-  });
+      // The data lets go of its photo, but that change can still be undone, so it stays (DATA-04).
+      saveWorkspaceData(folder, workspace, { photos: [] }, 1);
+      expect(await collectAssets(folder)).toEqual([]);
+      // Once 100 newer changes have discarded that undo entry, nothing holds it, and it goes.
+      for (let revision = 2; revision < 2 + UNDO_LIMIT; revision += 1) {
+        saveWorkspaceData(folder, workspace, { photos: [] }, revision);
+      }
+      expect(await collectAssets(folder)).toEqual([inData.id]);
+      expect(filesIn(folder)).toEqual([`${inVersion.id.slice(0, 2)}/${inVersion.id}.jpg`]);
+      folder.close();
+    },
+  );
 
   it("DATA-09: the trash keeps an asset until its workspace is removed for good", async () => {
     const folder = await newFolder();
