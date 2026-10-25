@@ -1,9 +1,14 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { seedSamples } from "../../../scripts/seed.ts";
-import { listWorkspaces } from "../../server/src/workspaces/index.ts";
+import { saveVersion } from "../../server/src/versions/index.ts";
+import {
+  activateVersion,
+  getWorkspace,
+  listWorkspaces,
+} from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
 
 // The host app is accessible (APP-11): an automated checker (axe) finds no WCAG 2.2 A or AA
 // violation on any of its screens, forms or confirmations, and the parts a checker can't judge are
@@ -84,18 +89,21 @@ async function tabTo(page: Page, target: Locator, key: "Tab" | "Shift+Tab" = "Ta
   expect(outline).toEqual({ style: "solid", width: "3px" });
 }
 
-test("APP-11, APP-02: the first-run screen has no accessibility violations", async ({ page }) => {
-  // This Tessera starts empty, so its first screen shows (the tests run in order).
-  await page.goto(app.url);
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
-  expect(await violations(page)).toEqual([]);
-});
-
 /** Checks the host as it is now, with axe and for motion (reduced motion is asked for). */
 async function check(page: Page) {
   expect(await violations(page)).toEqual([]);
   expect(await longestMotion(page)).toBeLessThanOrEqual(0.001);
 }
+test("APP-11, APP-02: the first-run screen has no accessibility violations, and nothing moves", async ({
+  page,
+}) => {
+  // This Tessera starts empty, so its first screen shows (the tests run in order).
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(app.url);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
+  await check(page);
+});
+
 /** The app with the samples in it, asking for reduced motion, on `name`'s workspace. */
 async function opened(page: Page, name: string) {
   seeded();
@@ -117,6 +125,28 @@ test("APP-11: the main screen, full screen and a restore that loses data have no
   await page.getByRole("button", { name: "Restore version 1" }).click();
   await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
     en["history.losesData"],
+  );
+  await check(page);
+});
+
+test("APP-11: a restore that keeps the data has no violations, and nothing moves", async ({
+  page,
+}) => {
+  // Two versions with the same data shape, so restoring the first keeps the data.
+  seeded();
+  if (!listWorkspaces(app.folder).some((w) => w.title === "Two versions")) {
+    const id = workspaceWith(app.folder, "Two versions", testTool("Version one"));
+    const second = saveVersion(app.folder.db, testTool("Version two"));
+    expect(
+      activateVersion(app.folder, id, second, getWorkspace(app.folder, id)!.dataRevision).ok,
+    ).toBe(true);
+  }
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(app.url);
+  await workspaceButton(page, "Two versions").click();
+  await page.getByRole("button", { name: "Restore version 1" }).click();
+  await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
+    en["history.keepsData"],
   );
   await check(page);
 });
