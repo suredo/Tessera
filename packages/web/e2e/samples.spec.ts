@@ -21,7 +21,7 @@ const tool = (page: Page) =>
 const openWorkspace = (page: Page, name: string) =>
   page.getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) }).click();
 
-test("the shopping list saves what the person adds and ticks, and its history can undo it", async ({
+test("ENG-19, APP-05, DATA-04: the sample shopping list saves what the person adds and ticks, and its history can undo it", async ({
   page,
 }) => {
   await page.goto(app.url);
@@ -47,7 +47,7 @@ test("the shopping list saves what the person adds and ticks, and its history ca
   await confirm.getByRole("button", { name: en["history.cancel"] }).click();
 });
 
-test("the library, the trash and a workspace without a tool each have something to show", async ({
+test("ENG-19, APP-04, APP-08: the sample library, trash and workspace without a tool each have something to show", async ({
   page,
 }) => {
   await page.goto(app.url);
