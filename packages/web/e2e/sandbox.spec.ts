@@ -7,6 +7,7 @@ import {
   toolFrameElement,
   type SandboxHost,
 } from "./support/sandbox-host.ts";
+import { ready } from "./support/ready.ts";
 
 // The sandboxed runtime in a real browser (RUN-01, TEST-06): the local server with its guard, the
 // wrapper on the opposite loopback name and the tool in its sandboxed frame, through the shared
@@ -114,7 +115,7 @@ test("mounts a tool behind the wrapper and talks to it only through the bridge (
   page,
 }) => {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "mountTool" in window);
+  await ready(page, "mountTool");
   const exchange = await page.evaluate(async () => {
     type Mount = (
       container: HTMLElement,
@@ -154,7 +155,7 @@ type Outcome = { messages: unknown[]; events: string[]; frameText: string | unde
 // count waits for both; a fixed pause raced the wrapper's 1 s hello grace on slow machines.
 async function leavePage(page: Page, leave: Leave, restarts = false): Promise<Outcome> {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "mountTool" in window);
+  await ready(page, "mountTool");
   const args = { leave, restarts };
   const { messages, events } = await page.evaluate(async ({ leave, restarts }) => {
     type Mount = (
@@ -240,7 +241,7 @@ test("SBX-07: starts a tool again when it leaves for a page it may not load", as
 
 test("SBX-07: stops a tool that keeps leaving its page", async ({ page }) => {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "mountTool" in window);
+  await ready(page, "mountTool");
   const events = await page.evaluate(async () => {
     type Mount = (
       container: HTMLElement,

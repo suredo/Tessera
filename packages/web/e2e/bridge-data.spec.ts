@@ -9,6 +9,7 @@ import {
   saveWorkspaceData,
 } from "../../server/src/workspaces/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
+import { ready } from "./support/ready.ts";
 
 // The bridge to saved data, end to end (RUN-04, BRG-04, DATA-02), in Chrome and Edge (TEST-06): a
 // tool in the sandbox reads its workspace's data through the host page's serveBridge and
@@ -72,7 +73,7 @@ function newWorkspace(): string {
 /** Mounts the tool and serves it the bridge, answered by the server for `workspaceId`. */
 async function open(page: Page, workspaceId: string) {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "serverData" in window);
+  await ready(page, "serverData");
   await page.evaluate(async (workspaceId) => {
     const w = window as unknown as TestWindow;
     w.messages = [];
