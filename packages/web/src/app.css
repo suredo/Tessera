@@ -287,3 +287,17 @@ button.primary {
 .trash > button {
   margin-top: var(--ui-space-4);
 }
+
+/* Importing from a file (APP-06): under the workspaces, and on the first-run screen. */
+.import-file {
+  margin-top: var(--ui-space-4);
+}
+.import-file label {
+  display: block;
+  margin-bottom: var(--ui-space-1);
+}
+.import-file input {
+  max-width: 100%;
+  padding: var(--ui-space-1);
+  box-sizing: border-box;
+}
