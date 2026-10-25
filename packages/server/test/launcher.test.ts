@@ -4,7 +4,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ACTIVATION_ROUTE, BRIDGE_ROUTE } from "@tessera/contracts";
+import { ACTIVATION_ROUTE, BRIDGE_ROUTE, HOST_ROUTE } from "@tessera/contracts";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { launch, type Launched } from "../src/launcher/index.ts";
 import { tryLockFile } from "../src/storage/index.ts";
@@ -83,7 +83,7 @@ describe("the launcher (PLAT-02)", () => {
     expect((await start(dataDir, openBrowser)).status).toBe("started");
   });
 
-  it("serves the bridge's and activation's routes (RUN-04, RUN-03)", async () => {
+  it("serves the bridge's, activation's and host app's routes (RUN-04, RUN-03, APP-03)", async () => {
     const launched = await start(dataFolder(), browser().openBrowser);
     if (launched.status !== "started") throw new Error("not started");
     const port = Number(new URL(launched.url).port);
@@ -96,6 +96,12 @@ describe("the launcher (PLAT-02)", () => {
       status: 400,
       body: "Send a workspace, a tool version and the data revision, as JSON.",
     });
+    const host = await post(
+      port,
+      HOST_ROUTE,
+      JSON.stringify({ action: "workspaces.list", args: {} }),
+    );
+    expect(JSON.parse(host.body)).toEqual({ ok: true, result: { workspaces: [] } });
     await launched.stop();
   });
 

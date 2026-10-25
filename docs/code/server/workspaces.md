@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-07, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06
 tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts, ../../../packages/server/test/activation-route.test.ts, ../../../packages/server/test/undo.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T10:09:48Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:55:32Z }
 ---
 
 # Purpose
@@ -59,7 +59,7 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 - **Two ways to change data.** `patchWorkspaceData` is for a tool's or chat's changes, checked per record. `saveWorkspaceData` replaces the data whole, checked only against the workspace's revision, for defaults and restores (#50). Neither checks the data against the tool's schema yet (#50).
 - **Removed records' rows stay.** They are small and go with their workspace; a workspace whose tool adds and removes many records over years keeps one row for each. Pruning them would let a revision be reused.
 - **Recovery snapshots don't travel in archives,** and nothing removes them while their workspace lasts; a retention limit, and assets kept by snapshots (`DATA-11`), come with the asset store (#49).
-- **Restore's types are the server's for now.** The plan and its losses will cross to the host app with the restore screen (#53); they move to the contracts then (`CON-01`).
+- **Restore's and undo's types are the contracts'.** The plan, its losses, the result, the recovery snapshot, the undo entry and their refusals are defined in the [contracts](../contracts/package.md) (`CON-01`), since the host app reads them through the [host API](host-api.md); a refusal this module can give must be listed there, or it doesn't compile.
 - **Undo history doesn't travel in archives** either: an imported workspace starts with none, as with its revisions and snapshots.
 - **Revisions don't travel in archives.** An exported workspace keeps its data and its revision; after an import every record starts at revision 1, so a change planned before the export can't be applied after it only by luck of matching counts. Plans don't outlive an import.
 - **Two writers are module-internal.** `appendVersion` and `replaceData` write inside the caller's transaction; `addWorkspaceVersion`, `saveWorkspaceData` and `activateVersion` wrap them in one. They aren't exported from the module's index, and nothing outside it should call them. The same holds for `existingSavedTool` and `usableVersion`, the checks activation and Use again share.
@@ -73,7 +73,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `activation.ts`: `ActivationRefusal` (type), `ActivationResult` (type), `ActivationOptions` (type), `defaultsProblem`, `UsableVersion` (type), `usableVersion`, `activateVersion`
 - `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `activationRoutes`, `listUndo`, `undoDataChange`, `UndoEntry` (type), `UndoRefusal` (type), `UndoResult` (type), `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `getWorkspace`, `listSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `renameSavedTool`, `renameWorkspace`, `saveTool`, `saveWorkspaceData`, `UNDO_LIMIT`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type)
-- `restore.ts`: `RestoreRefusal` (type), `RestorePlan` (type), `RestoreResult` (type), `planRestore`, `restoreVersion`, `RecoverySnapshot` (type), `listRecoverySnapshots`, `restoreRecoverySnapshot`
+- `restore.ts`: `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `planRestore`, `restoreVersion`, `RecoverySnapshot` (type), `listRecoverySnapshots`, `restoreRecoverySnapshot`
 - `reuse.ts`: `ContinueTarget` (type), `continueSavedTool`, `UseAgainRefusal` (type), `UseAgainResult` (type), `UseAgainOptions` (type), `useAgain`
 - `routes.ts`: `activationRoutes`
 - `undo-entries.ts`: `undoChangeSchema`, `UndoChange` (type), `changeOfPatch`, `Undone` (type), `undoRecords`

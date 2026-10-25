@@ -1,4 +1,4 @@
-import type { JsonValue } from "@tessera/contracts";
+import type { JsonValue, Loss } from "@tessera/contracts";
 
 // Bringing data back to an older shape (DATA-10): migrations only go forward, so restoring a tool
 // version whose schema is older keeps everything that schema allows and drops the rest, listing
@@ -7,12 +7,8 @@ import type { JsonValue } from "@tessera/contracts";
 // dropped, at any depth reached through properties, additionalProperties and items. Whether the
 // result then fits the schema is the caller's to check: what projection can't fix is refused.
 
-/** One thing a projection drops: where it was, and what it held. */
-export type Loss = {
-  /** The path to it; a record in a list is named by its ID when it has one, else its position. */
-  path: string[];
-  value: JsonValue;
-};
+/** One thing a projection drops, where it was and what it held: the contract's (P3). */
+export type { Loss };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
