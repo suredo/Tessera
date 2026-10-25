@@ -258,6 +258,12 @@ importers:
 
   packages/web:
     dependencies:
+      '@tessera/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@tessera/runtime':
+        specifier: workspace:*
+        version: link:../runtime
       react:
         specifier: 19.3.0
         version: 19.3.0

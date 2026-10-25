@@ -1,12 +1,20 @@
 import { expect, test } from "@playwright/test";
 import { en } from "../src/i18n/en.ts";
+import { startApp, type AppHost } from "./support/app-host.ts";
 
-// The web shell in a real browser (TEST-06): Chrome and Edge, the supported browsers (RUN-06), at
-// each fixed viewport.
-test("the first screen shows its host text and fits the viewport (TEST-06, RUN-06)", async ({
+// The host app's first screen in a real browser (TEST-06): Chrome and Edge, the supported
+// browsers (RUN-06), at each fixed viewport, served by a real Tessera with no workspaces yet.
+
+let app: AppHost;
+test.beforeAll(async () => {
+  app = await startApp();
+});
+test.afterAll(() => app.close());
+
+test("APP-02: the first screen invites the person to describe a tool, and fits the viewport (TEST-06, RUN-06)", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto(app.url);
   await expect(page).toHaveTitle(en["app.title"]);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
   await expect(page.getByRole("status")).toHaveText(en["home.status"]);

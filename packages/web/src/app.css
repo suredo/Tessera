@@ -1,0 +1,177 @@
+/* The host app's look: the UI standard's tokens (VER-06), which main.tsx sets as --ui-* variables
+   from the one definition the tools' stylesheets use, and an accessible host (APP-11): visible
+   focus, reduced motion, no sideways scrolling at 320 px. */
+
+html {
+  font-family: var(--ui-font);
+  font-size: var(--ui-size-body);
+  line-height: var(--ui-line-height);
+  color: var(--ui-text);
+  background: var(--ui-background);
+}
+body {
+  margin: 0;
+}
+h1 {
+  font-size: var(--ui-size-title);
+  font-weight: 600;
+  margin: 0;
+}
+h2 {
+  font-size: var(--ui-size-section);
+  font-weight: 600;
+  margin: 0 0 var(--ui-space-3);
+}
+button,
+input {
+  font: inherit;
+  color: inherit;
+  min-height: var(--ui-target);
+  border: 1px solid var(--ui-control-border);
+  border-radius: var(--ui-radius-control);
+  padding: 0 var(--ui-space-3);
+  background: var(--ui-surface);
+}
+button {
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 3px solid var(--ui-accent);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.empty {
+  max-width: 40rem;
+  padding: var(--ui-space-6) var(--ui-padding);
+}
+
+/* Workspaces beside the tool on a wide screen, above it on a narrow one (APP-01). */
+.app {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) 1fr;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "header header" "nav main" "notice notice";
+  min-height: 100vh;
+}
+.app > header {
+  grid-area: header;
+  padding: var(--ui-space-3) var(--ui-padding);
+  border-bottom: 1px solid var(--ui-divider);
+}
+.app > nav {
+  grid-area: nav;
+  padding: var(--ui-padding);
+  border-right: 1px solid var(--ui-divider);
+}
+.app > main {
+  grid-area: main;
+  padding: var(--ui-padding);
+  min-width: 0;
+}
+.notice {
+  grid-area: notice;
+  margin: 0;
+  padding: 0 var(--ui-padding);
+}
+@media (max-width: 40rem) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-areas: "header" "nav" "main" "notice";
+  }
+  .app > nav {
+    border-right: 0;
+    border-bottom: 1px solid var(--ui-divider);
+  }
+}
+
+.workspaces ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ui-space-2);
+}
+.workspace {
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  padding: var(--ui-space-2);
+  background: var(--ui-surface);
+}
+.workspace.open {
+  border-color: var(--ui-accent);
+}
+.workspace-name {
+  display: grid;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  padding: var(--ui-space-2);
+}
+.workspace-name .detail {
+  font-size: var(--ui-size-secondary);
+  color: var(--ui-text-secondary);
+}
+.badge {
+  justify-self: start;
+  font-size: var(--ui-size-secondary);
+  background: var(--ui-accent-soft);
+  border-radius: var(--ui-radius-control);
+  padding: 0 var(--ui-space-2);
+}
+.workspace .actions,
+.workspace form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+  margin-top: var(--ui-space-2);
+}
+.workspace form label {
+  flex-basis: 100%;
+}
+.workspace form input {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.tool-panel {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: var(--ui-space-2);
+  min-height: 24rem;
+}
+.tool-panel.full-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: var(--ui-background);
+  padding: var(--ui-padding);
+}
+.tool-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.tool-status {
+  margin: 0;
+}
+.tool-frame {
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  overflow: hidden;
+  min-height: 20rem;
+}
+.tool-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 20rem;
+  border: 0;
+}

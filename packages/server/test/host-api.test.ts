@@ -74,6 +74,24 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     folder.close();
   });
 
+  it("CAP-01: opening a workspace gives what its tool declares, and none without a tool", async () => {
+    const folder = await newFolder();
+    const { workspace } = ask(folder, "workspaces.create", { title: "Clock" });
+    expect(ask(folder, "workspaces.open", { id: workspace.id })).toEqual({
+      workspace,
+      capabilities: [],
+    });
+    const clock = saveVersion(folder.db, { ...tool, capabilities: ["clock"] });
+    expect(activateVersion(folder, workspace.id, clock, 0).ok).toBe(true);
+    expect(ask(folder, "workspaces.open", { id: workspace.id }).capabilities).toEqual(["clock"]);
+    ask(folder, "workspaces.delete", { id: workspace.id });
+    expect(refusal(folder, "workspaces.open", { id: workspace.id })).toEqual({
+      ok: false,
+      error: { code: "refused", message: "The workspace is in the trash; restore it first." },
+    });
+    folder.close();
+  });
+
   it("APP-04, DATA-07: saves to the library, and continues or uses again from it", async () => {
     const folder = await newFolder();
     const { workspace } = ask(folder, "workspaces.create", { title: "This week" });
