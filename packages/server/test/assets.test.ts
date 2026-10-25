@@ -17,7 +17,12 @@ import {
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { deleteWorkspace, emptyTrash, listTrash } from "../src/trash/index.ts";
 import { saveVersion } from "../src/versions/index.ts";
-import { activateVersion, createWorkspace, saveWorkspaceData } from "../src/workspaces/index.ts";
+import {
+  activateVersion,
+  createWorkspace,
+  saveWorkspaceData,
+  UNDO_LIMIT,
+} from "../src/workspaces/index.ts";
 
 // The asset store (DATA-11, DATA-09, AST-01 to AST-03, AST-06): images stored once by their
 // SHA-256, checked by content, removed only when nothing refers to them. Every data folder is a
@@ -238,8 +243,13 @@ describe("removing assets nothing refers to (DATA-09, DATA-11)", () => {
     expect(getAsset(folder, loose.id)).toBeUndefined();
     expect(filesIn(folder)).toHaveLength(2);
 
-    // The data lets go of its photo: then it goes too.
+    // The data lets go of its photo, but that change can still be undone, so it stays (DATA-04).
     saveWorkspaceData(folder, workspace, { photos: [] }, 1);
+    expect(await collectAssets(folder)).toEqual([]);
+    // Once 100 newer changes have discarded that undo entry, nothing holds it, and it goes.
+    for (let revision = 2; revision < 2 + UNDO_LIMIT; revision += 1) {
+      saveWorkspaceData(folder, workspace, { photos: [] }, revision);
+    }
     expect(await collectAssets(folder)).toEqual([inData.id]);
     expect(filesIn(folder)).toEqual([`${inVersion.id.slice(0, 2)}/${inVersion.id}.jpg`]);
     folder.close();

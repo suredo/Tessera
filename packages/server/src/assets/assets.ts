@@ -67,18 +67,20 @@ export const getAsset = (store: AssetStore, id: string): Asset | undefined =>
     : undefined;
 
 // Everything stored that may name an asset, as JSON text: every workspace's data, trashed ones
-// included, every tool version, and every recovery snapshot. A new table that stores tool data,
-// such as data undo (#110), must be added here, or cleanup can remove an asset it still holds.
+// included, every tool version, every recovery snapshot and every data undo entry. A new table
+// that stores tool data must be added here, or cleanup can remove an asset it still holds.
 const REFERENCE_SOURCES = [
   "SELECT data AS text FROM workspaces",
   "SELECT body AS text FROM tool_versions",
   "SELECT data AS text FROM recovery_snapshots",
+  "SELECT change AS text FROM data_undo",
 ];
 // The same, for one workspace: its data, the versions in its history and its snapshots.
 const WORKSPACE_SOURCES = [
   "SELECT data AS text FROM workspaces WHERE id = ?",
   "SELECT v.body AS text FROM tool_versions v JOIN workspace_versions w ON w.hash = v.hash WHERE w.workspace_id = ?",
   "SELECT data AS text FROM recovery_snapshots WHERE workspace_id = ?",
+  "SELECT change AS text FROM data_undo WHERE workspace_id = ?",
 ];
 const textRow = z.object({ text: z.string() });
 const HASH_TEXT = /[0-9a-f]{64}/g;
