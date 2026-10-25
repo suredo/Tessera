@@ -189,6 +189,10 @@ test("APP-11: the trash and emptying it have no violations, and nothing moves", 
 });
 
 test("APP-11: the app works by keyboard alone, with the focus always visible", async ({ page }) => {
+  // It presses Tab through the whole page, dozens of times, each a round trip to the browser: about
+  // 12 s alone, and past the 30 s default while the full browser suite runs. Nothing here is
+  // about speed, so it gets room for that.
+  test.setTimeout(90_000);
   seeded();
   await page.goto(app.url);
   await expect(workspaceButton(page, "Garden notes")).toBeVisible();
