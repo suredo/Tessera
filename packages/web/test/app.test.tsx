@@ -15,3 +15,8 @@ it("APP-02: the first-run screen shows exactly the English host text, from the t
 it("UX-05: while it opens, the app says so in the host's words", () => {
   expect(shownText(renderToStaticMarkup(<App />))).toEqual([en["app.loading"]]);
 });
+
+it("APP-03: after the last workspace goes to the trash, the first-run screen still says so", () => {
+  const notice = "Moved to the trash.";
+  expect(shownText(renderToStaticMarkup(<EmptyState notice={notice} />))).toContain(notice);
+});

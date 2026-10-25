@@ -4,6 +4,7 @@ export const en = {
   "app.title": "Tessera",
   "app.loading": "Opening your workspaces…",
   "app.problem": "Something went wrong: {message}",
+  "app.unreadable": "Tessera's answer couldn't be read.",
   "home.heading": "Describe the tool you need",
   "home.intro": "Tessera writes a small tool for you and keeps its data on this computer.",
   "home.status": "Nothing to show yet: making tools comes in a later version.",

@@ -1,0 +1,57 @@
+import type { MountedTool, ToolRuntime } from "@tessera/runtime";
+import { describe, expect, it, vi } from "vitest";
+import { startTool, type StartDeps } from "../src/tool-start.ts";
+
+// A host that answers `workspaces.open` only when the test says so, and a runtime that records
+// what it was asked to do.
+function setup() {
+  let answer!: () => void;
+  const deps = {
+    ask: vi.fn(
+      () =>
+        new Promise((resolve) => {
+          answer = () => resolve({ workspace: {}, capabilities: [] });
+        }),
+    ),
+    serveBridge: vi.fn(),
+    serverData: vi.fn(() => ({})),
+  } as unknown as StartDeps;
+  const open = vi.fn(() => Promise.resolve({} as MountedTool));
+  return { deps, open, answer: () => answer() };
+}
+const runtime = {} as ToolRuntime;
+
+describe("RUN-02: a panel closed while the server answers never starts its tool", () => {
+  it("starts and serves the tool when nothing was cancelled", async () => {
+    const { deps, open, answer } = setup();
+    const started = startTool(runtime, "w1", open, new AbortController().signal, deps);
+    answer();
+    await expect(started).resolves.toBe(true);
+    expect(open).toHaveBeenCalledOnce();
+    expect(deps.serveBridge).toHaveBeenCalledOnce();
+  });
+
+  it("opens nothing once aborted before the answer", async () => {
+    const { deps, open, answer } = setup();
+    const controller = new AbortController();
+    const started = startTool(runtime, "w1", open, controller.signal, deps);
+    controller.abort();
+    answer();
+    await expect(started).resolves.toBe(false);
+    expect(open).not.toHaveBeenCalled();
+    expect(deps.serveBridge).not.toHaveBeenCalled();
+  });
+
+  it("serves no bridge once aborted while the tool was opening", async () => {
+    const { deps, answer } = setup();
+    const controller = new AbortController();
+    const open = vi.fn(() => {
+      controller.abort();
+      return Promise.resolve({} as MountedTool);
+    });
+    const started = startTool(runtime, "w1", open, controller.signal, deps);
+    answer();
+    await expect(started).resolves.toBe(false);
+    expect(deps.serveBridge).not.toHaveBeenCalled();
+  });
+});

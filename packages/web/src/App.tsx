@@ -11,12 +11,14 @@ import { Workspaces } from "./Workspaces.tsx";
 // tools (A12). The chat that makes tools comes with M2.
 
 /** The first-run screen, shown while there are no workspaces (APP-02). */
-export function EmptyState() {
+export function EmptyState({ notice = "" }: { notice?: string }) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
       <p>{t("home.intro")}</p>
       <p role="status">{t("home.status")}</p>
+      {/* Such as the trash notice after the last workspace is deleted. */}
+      <p role="status">{notice}</p>
     </main>
   );
 }
@@ -39,9 +41,21 @@ const remember = (id: string | null) => {
   }
 };
 
+// The most recently used first: opened or changed, whichever is later (APP-03).
+const byUse = (list: readonly Workspace[], used: Record<string, string>) =>
+  [...list].sort((a, b) => (used[b.id] ?? b.updatedAt).localeCompare(used[a.id] ?? a.updatedAt));
+
+// A list from the server, in the order already shown: rows keep their place while the person
+// works, so nothing moves under a click or takes the keyboard focus with it. New ones come first.
+const inPlace = (shown: readonly Workspace[] | null, list: readonly Workspace[]) => {
+  const place = new Map((shown ?? []).map((w, index) => [w.id, index]));
+  return [...list].sort((a, b) => (place.get(a.id) ?? -1) - (place.get(b.id) ?? -1));
+};
+
 export function App() {
   const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
   const [savedTools, setSavedTools] = useState<SavedTool[]>([]);
+  const [lastUsed, setLastUsed] = useState<Record<string, string>>({});
   const [openId, setOpenId] = useState<string | null>(remembered);
   const [notice, setNotice] = useState("");
   const [view, setView] = useState<"workspaces" | "library">("workspaces");
@@ -51,9 +65,11 @@ export function App() {
       ask("workspaces.list", {}),
       ask("library.list", {}),
     ]);
-    setWorkspaces(list.workspaces);
+    const ordered = inPlace(workspaces, list.workspaces);
+    setWorkspaces(ordered);
+    setLastUsed(list.lastUsed);
     setSavedTools(library.savedTools);
-    return list.workspaces;
+    return ordered;
   };
   const report = (error: unknown) =>
     setNotice(
@@ -65,10 +81,12 @@ export function App() {
     Promise.all([ask("workspaces.list", {}), ask("library.list", {})]).then(
       ([list, library]) => {
         if (!current) return;
-        setWorkspaces(list.workspaces);
+        const ordered = byUse(list.workspaces, list.lastUsed);
+        setWorkspaces(ordered);
+        setLastUsed(list.lastUsed);
         setSavedTools(library.savedTools);
-        // Open the remembered workspace if it is still there, or else the most recent one.
-        const start = list.workspaces.find((w) => w.id === remembered()) ?? list.workspaces[0];
+        // Open the remembered workspace if it is still there, or else the most recently used one.
+        const start = ordered.find((w) => w.id === remembered()) ?? ordered[0];
         setOpenId(start?.id ?? null);
       },
       (error: unknown) => {
@@ -79,6 +97,29 @@ export function App() {
       current = false;
     };
   }, []);
+
+  // Opening a workspace is using it (APP-03), whether the person picked it or it opened by
+  // itself, and whether or not its tool starts: the server records it, and the list shows it.
+  const usedId = workspaces?.find((w) => w.id === openId)?.id;
+  useEffect(() => {
+    if (!usedId) return;
+    let current = true;
+    ask("workspaces.open", { id: usedId })
+      .then(() => ask("workspaces.list", {}))
+      .then(
+        (list) => {
+          if (!current) return;
+          setLastUsed(list.lastUsed);
+          setWorkspaces((shown) => inPlace(shown, list.workspaces));
+        },
+        (error: unknown) => {
+          if (current) report(error);
+        },
+      );
+    return () => {
+      current = false;
+    };
+  }, [usedId]);
 
   const open = (id: string | null) => {
     setOpenId(id);
@@ -92,7 +133,7 @@ export function App() {
       </main>
     );
   }
-  if (workspaces.length === 0) return <EmptyState />;
+  if (workspaces.length === 0) return <EmptyState notice={notice} />;
   const current = workspaces.find((w) => w.id === openId) ?? null;
 
   // Runs an action, then reloads the lists; says `done` when it worked, or why it didn't.
@@ -137,6 +178,7 @@ export function App() {
             <Workspaces
               workspaces={workspaces}
               savedTools={savedTools}
+              lastUsed={lastUsed}
               openId={openId}
               onOpen={open}
               onRename={(id, title) => act(() => ask("workspaces.rename", { id, title }))}

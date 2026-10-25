@@ -14,6 +14,8 @@ type Editing = { id: string; kind: "rename" | "save" } | null;
 type Props = {
   workspaces: readonly Workspace[];
   savedTools: readonly SavedTool[];
+  /** When each was last used, by ID: opened or changed, whichever is later. */
+  lastUsed: Readonly<Record<string, string>>;
   openId: string | null;
   onOpen: (id: string) => void;
   onRename: (id: string, title: string) => Promise<void>;
@@ -22,7 +24,7 @@ type Props = {
 };
 
 export function Workspaces(props: Props) {
-  const { workspaces, savedTools, openId } = props;
+  const { workspaces, savedTools, lastUsed, openId } = props;
   const [editing, setEditing] = useState<Editing>(null);
   const saved = new Set(savedTools.map((tool) => tool.workspaceId));
 
@@ -69,7 +71,7 @@ export function Workspaces(props: Props) {
                     <span>{name}</span>
                     <span className="detail">
                       {t("workspaces.lastUsed", {
-                        when: when.format(new Date(workspace.updatedAt)),
+                        when: when.format(new Date(lastUsed[workspace.id] ?? workspace.updatedAt)),
                       })}
                     </span>
                     {saved.has(workspace.id) && (
