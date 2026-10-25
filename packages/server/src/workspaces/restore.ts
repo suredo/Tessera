@@ -14,13 +14,14 @@ import { defaultsProblem, type ActivationOptions } from "./activation.ts";
 import { appendVersion, existingWorkspace, replaceData, type Store } from "./workspaces.ts";
 
 // Restoring a tool version (DATA-10, DATA-04): the restored version becomes the newest entry of
-// the workspace's history, and the data is kept whenever it can be. If the data fits the version,
-// or migrates forward to it, nothing is lost. If the version's shape is older, the data is
-// projected onto it: what the older schema allows stays, the rest is listed in a loss preview,
-// and the restore needs a confirmation of exactly that preview; before it runs, the whole
-// current unit is kept as a recovery snapshot. If even the projected data doesn't fit, the
-// restore is refused with the reason. Nothing is written before every check passes, and the
-// writes are one transaction.
+// the workspace's history, and the data is kept whenever it can be. Data that fits the version as
+// it is stays exactly as it is. Otherwise it is converted: migrated forward to a newer shape, or
+// projected onto an older one, keeping what that schema allows. Every value a conversion removes
+// or replaces is listed in a loss preview, and such a restore needs a confirmation of exactly
+// that preview; before it runs, the whole current unit is kept as a recovery snapshot, which it
+// must be able to bring back. If the conversion can't make the data fit, the restore is refused
+// with the reason. Nothing is written before every check passes, and the writes are one
+// transaction.
 
 export type RestoreRefusal =
   | "stale"
@@ -75,13 +76,31 @@ function plan(store: Store, workspace: Workspace, hash: string): Planned {
   const from = current.artifact.data;
   const data = workspace.data as ToolData;
 
+  // Preserve first (DATA-10): data that fits the version as it is stays exactly as it is.
+  if (checkToolData(shape.schema, data).ok) return { kind: "keeps", data };
+
+  // A restore that drops anything keeps the current unit as a recovery snapshot first, so that
+  // unit must be one a snapshot can bring back: its data must fit its own version.
+  const lossy = (converted: ToolData, losses: Loss[]): Planned => {
+    const own = checkToolData(from.schema, data);
+    if (!own.ok) {
+      return refuse(
+        "incompatible",
+        `the current data doesn't fit its own version, so it couldn't be brought back from a recovery snapshot. ${own.reason}`,
+      );
+    }
+    return { kind: "loses", data: converted, losses };
+  };
+
   if (shape.schemaVersion >= from.schemaVersion) {
+    // A newer or equal shape: migrate forward. A migration that removes or replaces values loses
+    // them, so it needs the same preview and confirmation as an older shape.
     const migrated = migrateData(data, from, shape);
     if (!migrated.ok) return { ok: false, reason: migrated.reason, message: migrated.message };
-    return { kind: "keeps", data: migrated.data };
+    if (migrated.losses.length === 0) return { kind: "keeps", data: migrated.data };
+    return lossy(migrated.data, migrated.losses);
   }
-  // An older shape: keep the data as it is if it fits; otherwise keep what the older shape allows.
-  if (checkToolData(shape.schema, data).ok) return { kind: "keeps", data };
+  // An older shape: keep what the older shape allows.
   const projected = projectData(data, shape.schema);
   const fits = checkToolData(shape.schema, projected.data);
   if (!fits.ok) {
@@ -90,7 +109,7 @@ function plan(store: Store, workspace: Workspace, hash: string): Planned {
       `the data can't be brought back to that version's shape without more than dropping fields. ${fits.reason}`,
     );
   }
-  return { kind: "loses", data: projected.data, losses: projected.losses };
+  return lossy(projected.data, projected.losses);
 }
 
 // Names exactly this restore: the version, the data revision it was planned at, and its losses,

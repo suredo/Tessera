@@ -7,7 +7,7 @@ implements: [DATA-03, MIG-03, MIG-04, MIG-05]
 tests: [../../../packages/server/test/data-shape.test.ts]
 tags: [code, server, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T01:38:23Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T02:36:24Z }
 ---
 
 # Purpose
@@ -18,7 +18,7 @@ Each tool declares a versioned data shape: a JSON Schema and a schema version, w
 
 - `src/data-shape/schema.ts`: `compileToolSchema` checks a tool's schema and compiles it with Ajv, or says why it can't be used; `checkToolData` says whether data fits a schema, and if not where and why. `TOOL_SCHEMA_LIMIT_BYTES` is the largest schema accepted.
 - `src/data-shape/project.ts`: `projectData` keeps what a schema allows of some data and drops the rest, without changing the data, and lists every value dropped (`Loss`: its path, with a record's ID where it has one, and its value). Restoring a version with an older shape uses it (`DATA-10`).
-- `src/data-shape/migrate.ts`: `migrateData` migrates data from the shape it is in (`DataShape`: a schema version and its schema) to a tool version's, and returns the new data or a refusal with a reason (`MigrationRefusal`) and a message that starts with "Nothing was changed:". `applyMigrations` runs migrations on a copy.
+- `src/data-shape/migrate.ts`: `migrateData` migrates data from the shape it is in (`DataShape`: a schema version and its schema) to a tool version's, and returns the new data, with every value the migrations removed or replaced (a removed field, a value a table replaced) as losses, or a refusal with a reason (`MigrationRefusal`) and a message that starts with "Nothing was changed:". `applyMigrations` runs migrations on a copy.
 
 # Invariants
 

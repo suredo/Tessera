@@ -97,6 +97,8 @@ describe("migrating a tool's data (DATA-03)", () => {
           { id: "t-2", title: "Call the bank", done: false, size: 1.5 },
         ],
       },
+      // A value the table replaced is listed; renames, added fields and exact conversions aren't.
+      losses: [{ path: ["tasks", "t-1", "state"], value: "closed" }],
     });
     // The data it was given is untouched.
     expect(before.todo).toHaveLength(2);

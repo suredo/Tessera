@@ -268,6 +268,99 @@ describe("restoring a tool version (DATA-10)", () => {
     folder.close();
   });
 
+  it("DATA-10: a restore forward keeps data that already fits, and previews what a migration would drop", async () => {
+    // Version A allows any field; version B's migration removes "note"; "strict B" allows none.
+    const open = task({}, { additionalProperties: true });
+    const dropNote: Migration = {
+      fromVersion: 1,
+      toVersion: 2,
+      operations: [{ op: "removeField", collection: "tasks", field: "note" }],
+    };
+    const a = version("<p>A</p>", {
+      schemaVersion: 1,
+      schema: listOf(open),
+      defaults: { tasks: [{ id: "t-1", title: "Task" }] },
+    });
+    const b = version("<p>B</p>", {
+      schemaVersion: 2,
+      schema: listOf(open),
+      migrations: [dropNote],
+    });
+    const strictB = version("<p>Strict B</p>", {
+      schemaVersion: 2,
+      schema: listOf(task({})),
+      migrations: [dropNote],
+    });
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Notes");
+    const [hashA, hashB, hashStrictB] = [a, b, strictB].map((v) => saveVersion(folder.db, v));
+    expect(activateVersion(folder, id, hashA!, 0).ok).toBe(true);
+    expect(activateVersion(folder, id, hashB!, 1).ok).toBe(true);
+    expect(restoreVersion(folder, id, hashA!, 2).ok).toBe(true);
+    const note = {
+      op: "replace",
+      collection: "tasks",
+      id: "t-1",
+      revisionCount: 3,
+      fields: { note: "keep this new note" },
+    };
+    expect(patchWorkspaceData(folder, id, { operations: [note] }).ok).toBe(true);
+    const withNote = { tasks: [{ id: "t-1", title: "Task", note: "keep this new note" }] };
+
+    // Strict B doesn't allow the note: its migration would remove it, so that is a loss to confirm.
+    const plan = planRestore(folder, id, hashStrictB!);
+    expect(plan).toMatchObject({
+      ok: true,
+      keepsData: false,
+      losses: [{ path: ["tasks", "t-1", "note"], value: "keep this new note" }],
+    });
+    expect(restoreVersion(folder, id, hashStrictB!, 4)).toMatchObject({
+      reason: "needs-confirmation",
+    });
+    expect(readWorkspaceData(folder, id).data).toEqual(withNote);
+    const restored = restoreVersion(
+      folder,
+      id,
+      hashStrictB!,
+      4,
+      plan.ok && !plan.keepsData ? plan.confirmation : "",
+    );
+    expect(readWorkspaceData(folder, id).data).toEqual({ tasks: [{ id: "t-1", title: "Task" }] });
+    // The snapshot brings back version A with the note.
+    const snapshotId = restored.ok ? restored.snapshotId! : "";
+    expect(restoreRecoverySnapshot(folder, snapshotId, 5).ok).toBe(true);
+    expect(getWorkspace(folder, id)?.currentVersion).toBe(hashA);
+    expect(readWorkspaceData(folder, id).data).toEqual(withNote);
+
+    // B allows the note: the data fits as it is, so it stays exactly as it is, with no migration.
+    expect(planRestore(folder, id, hashB!)).toEqual({ ok: true, keepsData: true });
+    expect(restoreVersion(folder, id, hashB!, 6)).toMatchObject({ ok: true, snapshotId: null });
+    expect(readWorkspaceData(folder, id).data).toEqual(withNote);
+    folder.close();
+  });
+
+  it("DATA-10: refuses a restore that drops data when its recovery snapshot couldn't be brought back", async () => {
+    const { folder, id, hashes } = await onVersion2();
+    // A patch fits the patch contract, not yet the tool's schema: "done" stops being a boolean.
+    const odd = {
+      op: "replace",
+      collection: "tasks",
+      id: "t-1",
+      revisionCount: 3,
+      fields: { done: "not a boolean" },
+    };
+    expect(patchWorkspaceData(folder, id, { operations: [odd] }).ok).toBe(true);
+    const before = unit(folder, id);
+    const plan = planRestore(folder, id, hashes.v1);
+    expect(plan).toMatchObject({ ok: false, reason: "incompatible" });
+    expect(!plan.ok && plan.message).toMatch(/couldn't be brought back from a recovery snapshot/);
+    expect(restoreVersion(folder, id, hashes.v1, 4, "anything")).toMatchObject({
+      reason: "incompatible",
+    });
+    expect(unit(folder, id)).toEqual(before);
+    folder.close();
+  });
+
   it("refuses a restore that dropping fields can't make fit, saying why", async () => {
     const { folder, id, hashes } = await onVersion2();
     const before = unit(folder, id);

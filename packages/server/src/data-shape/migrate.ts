@@ -6,6 +6,7 @@ import {
   type MigrationOperation,
 } from "@tessera/contracts";
 import type { ToolData } from "../patches/index.ts";
+import type { Loss } from "./project.ts";
 import { checkToolData } from "./schema.ts";
 
 // Migrating a tool's data to a newer shape (DATA-03): the declared operations, run on a copy,
@@ -20,7 +21,13 @@ export type MigrationRefusal =
   "invalid-source" | "no-path" | "failed" | "not-repeatable" | "too-large" | "invalid";
 
 export type MigrationResult =
-  | { ok: true; data: ToolData; steps: number }
+  | {
+      ok: true;
+      data: ToolData;
+      steps: number;
+      /** Every value the migrations removed or replaced: a restore must not drop them silently. */
+      losses: Loss[];
+    }
   | { ok: false; reason: MigrationRefusal; message: string };
 
 class MigrationFailed extends Error {}
@@ -104,10 +111,20 @@ class SizeBudget {
   }
 }
 
+// How a record is named in a loss's path: its ID when it has one, else its position.
+const stepFor = (record: DataRecord, index: number) =>
+  typeof record.id === "string" ? record.id : String(index);
+
 // One operation, applied in place to a copy that belongs to the run, with each change counted in
-// the budget. Field and collection names are the contract's (letters first, never `id`), so no
-// name reaches what objects inherit.
-function applyOperation(data: ToolData, op: MigrationOperation, budget: SizeBudget): void {
+// the budget, and each value it removes or replaces listed in `losses`. Renames and added fields
+// lose nothing, and setType only converts exactly. Field and collection names are the contract's
+// (letters first, never `id`), so no name reaches what objects inherit.
+function applyOperation(
+  data: ToolData,
+  op: MigrationOperation,
+  budget: SizeBudget,
+  losses: Loss[],
+): void {
   if (op.op === "renameCollection") {
     if (!Object.hasOwn(data, op.from)) return;
     if (Object.hasOwn(data, op.to)) {
@@ -119,7 +136,8 @@ function applyOperation(data: ToolData, op: MigrationOperation, budget: SizeBudg
     delete data[op.from];
     return;
   }
-  for (const record of recordsOf(data, op.collection)) {
+  for (const [index, record] of recordsOf(data, op.collection).entries()) {
+    const at = (field: string) => [op.collection, stepFor(record, index), field];
     switch (op.op) {
       case "renameField":
         if (!Object.hasOwn(record, op.from)) break;
@@ -142,13 +160,15 @@ function applyOperation(data: ToolData, op: MigrationOperation, budget: SizeBudg
       case "removeField":
         if (!Object.hasOwn(record, op.field)) break;
         budget.removed(record, op.field, record[op.field]);
+        losses.push({ path: at(op.field), value: record[op.field] as Loss["value"] });
         delete record[op.field];
         break;
       case "mapValues": {
         if (!Object.hasOwn(record, op.field)) break;
         const pair = op.map.find(([from]) => from === record[op.field]);
-        if (!pair) break;
+        if (!pair || pair[1] === record[op.field]) break;
         budget.replaced(record[op.field], pair[1]);
+        losses.push({ path: at(op.field), value: record[op.field] as Loss["value"] });
         record[op.field] = pair[1];
         break;
       }
@@ -178,13 +198,14 @@ function applyOperation(data: ToolData, op: MigrationOperation, budget: SizeBudg
 export function applyMigrations(
   data: ToolData,
   migrations: readonly Migration[],
+  losses: Loss[] = [],
   limitBytes = TOOL_DATA_LIMIT_BYTES,
 ): ToolData {
   const copy = structuredClone(data);
   const size = SizeBudget.jsonBytes(copy);
   const budget = new SizeBudget(size, Math.max(limitBytes, size));
   for (const migration of migrations) {
-    for (const op of migration.operations) applyOperation(copy, op, budget);
+    for (const op of migration.operations) applyOperation(copy, op, budget, losses);
   }
   return copy;
 }
@@ -217,7 +238,11 @@ export function migrateData(
   data: ToolData,
   from: DataShape,
   to: Artifact["data"],
-  run: (data: ToolData, migrations: readonly Migration[]) => ToolData = applyMigrations,
+  run: (
+    data: ToolData,
+    migrations: readonly Migration[],
+    losses: Loss[],
+  ) => ToolData = applyMigrations,
 ): MigrationResult {
   const refuse = (reason: MigrationRefusal, detail: string): MigrationResult => ({
     ok: false,
@@ -230,11 +255,12 @@ export function migrateData(
   const steps = pathBetween(from.schemaVersion, to);
   if (typeof steps === "string") return refuse("no-path", steps);
 
+  const losses: Loss[] = [];
   let first: ToolData;
   let second: ToolData;
   try {
-    first = run(data, steps);
-    second = run(data, steps);
+    first = run(data, steps, losses);
+    second = run(data, steps, []);
   } catch (error) {
     if (error instanceof MigrationFailed) {
       return refuse("failed", `the migration stopped: ${error.message}`);
@@ -260,5 +286,5 @@ export function migrateData(
   const target = checkToolData(to.schema, first);
   if (!target.ok)
     return refuse("invalid", `the migrated data wouldn't fit the new shape. ${target.reason}`);
-  return { ok: true, data: first, steps: steps.length };
+  return { ok: true, data: first, steps: steps.length, losses };
 }
