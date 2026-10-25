@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+* **Update**: The threat model at M1's end ([issue 55](https://github.com/suredo/Tessera/issues/55)): the [threat model](spec/threat-model.md) says all 39 numbered checks are verified, that a test keeps them so, and that a check claims only what it tests. The [coverage report](code/scripts/coverage-report.md) doc claims `SEC-05` for that test, and the [contracts](code/contracts/package.md) doc `SEC-01` for migrations that are data, never code.
+
 * **Update**: Host accessibility checked in CI ([issue 53](https://github.com/suredo/Tessera/issues/53), last part): the [web package](code/web/package.md) doc says axe checks every host screen for WCAG 2.2 A and AA violations, beside direct checks of keyboard use, visible focus and reduced motion, and claims `APP-11`. The [CI workflow](code/ci/workflow.md) doc says they run in the Windows job. After Codex's review of [pull request 128](https://github.com/suredo/Tessera/pull/128), the web doc lists every screen, form and confirmation checked, and says the keyboard and reduced-motion checks cover them. After its second review, that includes a restore that keeps the data, and the first-run screen's motion.
 
 * **Update**: The quarantined lifecycle test is back ([issue 83](https://github.com/suredo/Tessera/issues/83)): the [runtime package](code/runtime/package.md) doc says the browser tests wait for a test page's script on a timer, not on animation frames, which a page that isn't painting doesn't get.

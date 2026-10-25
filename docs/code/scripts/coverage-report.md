@@ -3,11 +3,11 @@ type: Code Module
 title: "Coverage report"
 description: "Every requirement and lesson with its milestone, proposed, implemented or verified status, evidence and remaining limits, read from the docs and the tests; run in CI."
 resource: ../../../scripts/coverage-report.ts
-implements: [ENG-17, ENG-24, ENG-28]
+implements: [ENG-17, ENG-24, ENG-28, SEC-05]
 tests: [../../../scripts/test/coverage-report.test.ts]
 tags: [code, scripts, coverage]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T18:24:35Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T21:48:30Z }
 ---
 
 # Purpose
@@ -31,6 +31,7 @@ The status rules:
 - **A lesson** takes the status of its least advanced mitigation, and the latest milestone among its scheduled mitigations; it counts only when all its mitigations do. A lesson without mitigations is "accepted" if the catalogue says A. An R lesson always carries "residual risk: depends on the model".
 - **Only real test declarations are evidence.** Test names are read from the syntax tree: the plain-text first argument of each `it`, `test` or `describe` call, `.skip` and the like included. A call written in a comment or inside a string, as test fixtures often are, is not a test.
 - **Only this checkout is read.** A folder with its own `.git`, such as an assistant's worktree of another branch under `.claude/worktrees/`, is left out, so its tests and IDs never count for this commit.
+- **The threat model's checks stay tested** (`SEC-05`). A test reads this repository with `collect` and fails unless every numbered check in the [threat model](../../spec/threat-model.md), the sandbox, bridge, import, asset and migration checks, is verified: claimed by a code doc and named by one of its tests. A check added without a test fails CI.
 - **Unknown IDs fail it:** an ID in a test name, a code doc's `implements` or a lesson's mitigations that nothing defines. Only known prefixes count as IDs, so a name like SHA-256 isn't one.
 
 # Depends on / used by
