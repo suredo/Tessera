@@ -7,7 +7,7 @@ implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T08:14:31Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T06:01:27Z }
 ---
 
 # Purpose
@@ -30,7 +30,7 @@ Runs every check on every pull request and on every push to `main` (`ENG-02`), s
 
 # Depends on / used by
 
-Depends on GitHub Actions' Ubuntu and Windows runners, with Chrome and Edge preinstalled on Windows; Node from `.nvmrc` and pnpm through Corepack; and the workspace's scripts in `package.json`. Used on every pull request and on `main`. Its coverage report job writes to the job summary, and its Windows job keeps the browser videos for 14 days (`ENG-10`).
+Depends on GitHub Actions' Ubuntu and Windows runners, with Chrome and Edge preinstalled on Windows; Node from `.nvmrc` and pnpm through Corepack; and the workspace's scripts in `package.json`. Used on every pull request and on `main`. Its coverage report job writes to the job summary, and its Windows job keeps the browser videos, and the traces of failed browser tests, for 14 days (`ENG-10`).
 
 # Pitfalls
 
