@@ -1,4 +1,4 @@
-import type { Workspace } from "@tessera/contracts";
+import { TOOL_DATA_LIMIT_BYTES, type Artifact, type Workspace } from "@tessera/contracts";
 import { checkToolData, migrateData, type MigrationRefusal } from "../data-shape/index.ts";
 import type { ToolData } from "../patches/index.ts";
 import { loadVersion } from "../versions/index.ts";
@@ -21,6 +21,19 @@ export type ActivationOptions = {
   /** Called inside the transaction after every write; a test throws here to stand for a crash. */
   afterWrites?: () => void;
 };
+
+// A version is one unit with its reusable defaults (DATA-03): they must fit its own shape and the
+// data limit (DATA-06) on every activation, whether or not they become the data now, since Use
+// again starts a workspace from them. Undefined if they do; otherwise why not.
+function defaultsProblem(shape: Artifact["data"]): string | undefined {
+  const fits = checkToolData(shape.schema, shape.defaults);
+  if (!fits.ok) return `the tool's starting data doesn't fit its own shape. ${fits.reason}`;
+  const bytes = Buffer.byteLength(JSON.stringify(shape.defaults), "utf8");
+  if (bytes > TOOL_DATA_LIMIT_BYTES) {
+    return `the tool's starting data is ${Math.ceil(bytes / 1024)} KB, over the limit of ${TOOL_DATA_LIMIT_BYTES / 1024} KB.`;
+  }
+  return undefined;
+}
 
 const refuse = (reason: ActivationRefusal, detail: string): ActivationResult => ({
   ok: false,
@@ -55,18 +68,20 @@ export function activateVersion(
     }
     if (workspace.currentVersion === hash) return { ok: true, workspace, steps: 0 };
     const shape = target.artifact.data;
+    const defaults = defaultsProblem(shape);
+    if (defaults) return refuse("invalid-defaults", defaults);
 
     let data: ToolData;
     let steps = 0;
     if (workspace.currentVersion === null || workspace.data === null) {
-      // The workspace's first tool: its data starts as the version's reusable defaults (DATA-03).
+      // The workspace's first tool: its data starts as the version's reusable defaults (DATA-03),
+      // checked above.
       data = workspace.data ?? shape.defaults;
-      const fits = checkToolData(shape.schema, data);
-      if (!fits.ok)
-        return refuse(
-          "invalid-defaults",
-          `the tool's starting data doesn't fit its own shape. ${fits.reason}`,
-        );
+      if (workspace.data !== null) {
+        const fits = checkToolData(shape.schema, data);
+        if (!fits.ok)
+          return refuse("invalid", `the data doesn't fit the tool's shape. ${fits.reason}`);
+      }
     } else {
       const current = loadVersion(store.db, workspace.currentVersion);
       if (current?.kind !== "ok") {

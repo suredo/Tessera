@@ -2,7 +2,7 @@
 
 ## 2026-10-25
 
-* **Update**: Atomic activation ([issue 50](https://github.com/suredo/Tessera/issues/50), second part): the [workspaces](code/server/workspaces.md) doc describes `activateVersion`, which checks the planned data revision (`MIG-06`), fills a first version's data from its defaults or migrates the data to the version's shape, and commits the data and the version in one transaction, and claims `MIG-06`; it names the module-internal writers and the test-only `afterWrites`. The [threat model](spec/threat-model.md) says where `MIG-06` runs.
+* **Update**: Atomic activation ([issue 50](https://github.com/suredo/Tessera/issues/50), second part): the [workspaces](code/server/workspaces.md) doc describes `activateVersion`, which checks the planned data revision (`MIG-06`), fills a first version's data from its defaults or migrates the data to the version's shape, and commits the data and the version in one transaction, and claims `MIG-06`; it names the module-internal writers and the test-only `afterWrites`. The [threat model](spec/threat-model.md) says where `MIG-06` runs. After Codex's review of [pull request 96](https://github.com/suredo/Tessera/pull/96), it says a version's reusable defaults are checked against its shape and the data limit on every activation.
 
 ## 2026-10-24
 

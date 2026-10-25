@@ -225,6 +225,46 @@ describe("activating a tool version (DATA-10)", () => {
     folder.close();
   });
 
+  it("refuses starting data over the data limit, in a new workspace, and changes nothing (DATA-06)", async () => {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Big");
+    const loose = { type: "object" } as Artifact["data"]["schema"];
+    const big = saveVersion(
+      folder.db,
+      version("<p>Big</p>", {
+        schemaVersion: 1,
+        schema: loose,
+        defaults: { payload: "x".repeat(300 * 1024), tasks: [] },
+      }),
+    );
+    const before = unit(folder, id);
+    const result = activateVersion(folder, id, big, 0);
+    expect(result).toMatchObject({ ok: false, reason: "invalid-defaults" });
+    expect(!result.ok && result.message).toMatch(/over the limit of 256 KB/);
+    expect(unit(folder, id)).toEqual(before);
+    folder.close();
+  });
+
+  it("checks a version's starting data on every activation, not only the first (DATA-03)", async () => {
+    const { folder, id } = await withFirstActive();
+    // Same shape as the active version, but starting data that doesn't fit it.
+    const misfit = saveVersion(
+      folder.db,
+      version("<p>Misfit</p>", {
+        schemaVersion: 1,
+        schema: listOf(v1Task),
+        defaults: { tasks: "not a list" },
+      }),
+    );
+    const before = unit(folder, id);
+    expect(activateVersion(folder, id, misfit, 1)).toMatchObject({
+      ok: false,
+      reason: "invalid-defaults",
+    });
+    expect(unit(folder, id)).toEqual(before);
+    folder.close();
+  });
+
   it("does nothing when the version is already the current one", async () => {
     const { folder, id, firstHash } = await withFirstActive();
     const before = unit(folder, id);
