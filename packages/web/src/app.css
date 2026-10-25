@@ -235,3 +235,40 @@ button.primary {
   min-height: 20rem;
   border: 0;
 }
+
+/* The open workspace's history, under its tool (APP-05). */
+.history {
+  margin-top: var(--ui-space-6);
+}
+.history h3 {
+  font-size: var(--ui-size-body);
+  font-weight: 600;
+  margin: var(--ui-space-4) 0 var(--ui-space-2);
+}
+.history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ui-space-2);
+}
+.history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+.history .detail {
+  font-size: var(--ui-size-secondary);
+  color: var(--ui-text-secondary);
+}
+.history .confirm {
+  margin-top: var(--ui-space-4);
+  padding: var(--ui-space-3);
+  border: 1px solid var(--ui-accent);
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+}
+.history .confirm li {
+  overflow-wrap: anywhere;
+}
