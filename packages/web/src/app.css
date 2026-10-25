@@ -35,6 +35,12 @@ input {
 button {
   cursor: pointer;
 }
+/* The main action of its group: the accent, with white text (about 6:1). */
+button.primary {
+  background: var(--ui-accent);
+  border-color: var(--ui-accent);
+  color: #ffffff;
+}
 :focus-visible {
   outline: 3px solid var(--ui-accent);
   outline-offset: 2px;
@@ -58,16 +64,34 @@ button {
   display: grid;
   grid-template-columns: minmax(14rem, 20rem) 1fr;
   grid-template-rows: auto 1fr auto;
-  grid-template-areas: "header header" "nav main" "notice notice";
+  grid-template-areas: "header header" "aside main" "notice notice";
   min-height: 100vh;
 }
 .app > header {
   grid-area: header;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-4);
   padding: var(--ui-space-3) var(--ui-padding);
   border-bottom: 1px solid var(--ui-divider);
 }
-.app > nav {
-  grid-area: nav;
+.sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.sections [aria-current="page"] {
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent);
+}
+/* The library takes the whole width. */
+.app.library-view {
+  grid-template-columns: 1fr;
+  grid-template-areas: "header" "main" "notice";
+}
+.app > aside {
+  grid-area: aside;
   padding: var(--ui-padding);
   border-right: 1px solid var(--ui-divider);
 }
@@ -84,9 +108,9 @@ button {
 @media (max-width: 40rem) {
   .app {
     grid-template-columns: 1fr;
-    grid-template-areas: "header" "nav" "main" "notice";
+    grid-template-areas: "header" "aside" "main" "notice";
   }
-  .app > nav {
+  .app > aside {
     border-right: 0;
     border-bottom: 1px solid var(--ui-divider);
   }
@@ -126,19 +150,55 @@ button {
   border-radius: var(--ui-radius-control);
   padding: 0 var(--ui-space-2);
 }
-.workspace .actions,
-.workspace form {
+.actions,
+.name-form {
   display: flex;
   flex-wrap: wrap;
   gap: var(--ui-space-2);
   margin-top: var(--ui-space-2);
 }
-.workspace form label {
+.name-form label {
   flex-basis: 100%;
 }
-.workspace form input {
+.name-form input {
   flex: 1 1 10rem;
   min-width: 0;
+}
+
+.library {
+  max-width: 48rem;
+}
+.library > label {
+  display: block;
+  margin-bottom: var(--ui-space-1);
+}
+.library > input {
+  width: 100%;
+  max-width: 24rem;
+  box-sizing: border-box;
+}
+.library ul {
+  list-style: none;
+  margin: var(--ui-space-4) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.saved-tool {
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  padding: var(--ui-space-3);
+  background: var(--ui-surface);
+}
+.saved-tool h3 {
+  font-size: var(--ui-size-section);
+  font-weight: 600;
+  margin: 0;
+}
+.saved-tool .detail {
+  margin: var(--ui-space-1) 0 0;
+  font-size: var(--ui-size-secondary);
+  color: var(--ui-text-secondary);
 }
 
 .tool-panel {

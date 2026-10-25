@@ -1,11 +1,15 @@
 import type { SavedTool, Workspace } from "@tessera/contracts";
 import { useState } from "react";
 import { t } from "./i18n/translate.ts";
+import { NameForm } from "./NameForm.tsx";
 
 // The workspaces list (APP-03): each workspace with its name, when it was last used and whether
-// it is saved to the library, with switching, renaming and deleting to the trash.
+// it is saved to the library, with switching, renaming, saving to my tools (DATA-08) and deleting
+// to the trash.
 
 const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
+
+type Editing = { id: string; kind: "rename" | "save" } | null;
 
 type Props = {
   workspaces: readonly Workspace[];
@@ -13,12 +17,13 @@ type Props = {
   openId: string | null;
   onOpen: (id: string) => void;
   onRename: (id: string, title: string) => Promise<void>;
+  onSave: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 };
 
-export function Workspaces({ workspaces, savedTools, openId, onOpen, onRename, onDelete }: Props) {
-  const [renaming, setRenaming] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
+export function Workspaces(props: Props) {
+  const { workspaces, savedTools, openId } = props;
+  const [editing, setEditing] = useState<Editing>(null);
   const saved = new Set(savedTools.map((tool) => tool.workspaceId));
 
   return (
@@ -28,31 +33,28 @@ export function Workspaces({ workspaces, savedTools, openId, onOpen, onRename, o
         {workspaces.map((workspace) => {
           const name = workspace.title;
           const isOpen = workspace.id === openId;
+          const done = () => setEditing(null);
           return (
             <li key={workspace.id} className={isOpen ? "workspace open" : "workspace"}>
-              {renaming === workspace.id ? (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void onRename(workspace.id, draft).then(() => setRenaming(null));
-                  }}
-                >
-                  <label htmlFor={`rename-${workspace.id}`}>
-                    {t("workspaces.renameLabel", { name })}
-                  </label>
-                  <input
-                    id={`rename-${workspace.id}`}
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                    maxLength={200}
-                    required
-                    autoFocus
-                  />
-                  <button type="submit">{t("workspaces.renameSave")}</button>
-                  <button type="button" onClick={() => setRenaming(null)}>
-                    {t("workspaces.renameCancel")}
-                  </button>
-                </form>
+              {editing?.id === workspace.id ? (
+                <NameForm
+                  label={
+                    editing.kind === "rename"
+                      ? t("workspaces.renameLabel", { name })
+                      : t("workspaces.saveLabel")
+                  }
+                  initial={name}
+                  confirm={
+                    editing.kind === "rename" ? "workspaces.renameSave" : "workspaces.saveConfirm"
+                  }
+                  onSubmit={(next) =>
+                    (editing.kind === "rename"
+                      ? props.onRename(workspace.id, next)
+                      : props.onSave(workspace.id, next)
+                    ).then(done)
+                  }
+                  onCancel={done}
+                />
               ) : (
                 <>
                   <button
@@ -62,7 +64,7 @@ export function Workspaces({ workspaces, savedTools, openId, onOpen, onRename, o
                     aria-label={
                       isOpen ? t("workspaces.opened", { name }) : t("workspaces.open", { name })
                     }
-                    onClick={() => onOpen(workspace.id)}
+                    onClick={() => props.onOpen(workspace.id)}
                   >
                     <span>{name}</span>
                     <span className="detail">
@@ -75,20 +77,26 @@ export function Workspaces({ workspaces, savedTools, openId, onOpen, onRename, o
                     )}
                   </button>
                   <div className="actions">
+                    {workspace.currentVersion !== null && (
+                      <button
+                        type="button"
+                        aria-label={t("workspaces.save", { name })}
+                        onClick={() => setEditing({ id: workspace.id, kind: "save" })}
+                      >
+                        {t("workspaces.saveShort")}
+                      </button>
+                    )}
                     <button
                       type="button"
                       aria-label={t("workspaces.rename", { name })}
-                      onClick={() => {
-                        setDraft(name);
-                        setRenaming(workspace.id);
-                      }}
+                      onClick={() => setEditing({ id: workspace.id, kind: "rename" })}
                     >
                       {t("workspaces.renameShort")}
                     </button>
                     <button
                       type="button"
                       aria-label={t("workspaces.delete", { name })}
-                      onClick={() => void onDelete(workspace.id)}
+                      onClick={() => void props.onDelete(workspace.id)}
                     >
                       {t("workspaces.deleteShort")}
                     </button>
