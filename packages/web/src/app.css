@@ -94,6 +94,8 @@ button.primary {
   grid-area: aside;
   padding: var(--ui-padding);
   border-right: 1px solid var(--ui-divider);
+  /* Never wider than its column: a file input is wide by itself (RUN-06). */
+  min-width: 0;
 }
 .app > main {
   grid-area: main;
@@ -286,4 +288,19 @@ button.primary {
 }
 .trash > button {
   margin-top: var(--ui-space-4);
+}
+
+/* Importing from a file (APP-06): under the workspaces, and on the first-run screen. */
+.import-file {
+  margin-top: var(--ui-space-4);
+}
+.import-file label {
+  display: block;
+  margin-bottom: var(--ui-space-1);
+}
+.import-file input {
+  width: 100%;
+  max-width: 24rem;
+  padding: var(--ui-space-1);
+  box-sizing: border-box;
 }

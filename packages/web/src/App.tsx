@@ -1,8 +1,10 @@
 import type { SavedTool, Trash as TrashList, Workspace } from "@tessera/contracts";
 import { useEffect, useState } from "react";
+import { exportArchive, importArchive, saveFile } from "./archives.ts";
 import { ask, HostError } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import { History } from "./History.tsx";
+import { ImportFile } from "./ImportFile.tsx";
 import { Library } from "./Library.tsx";
 import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
@@ -13,7 +15,14 @@ import { Workspaces } from "./Workspaces.tsx";
 // tools (A12). The chat that makes tools comes with M2.
 
 /** The first-run screen, shown while there are no workspaces (APP-02). */
-export function EmptyState({ notice = "", onTrash }: { notice?: string; onTrash?: () => void }) {
+type EmptyProps = {
+  notice?: string;
+  onTrash?: () => void;
+  /** Imports a file, such as work brought from another computer (APP-06). */
+  onImport?: (file: File) => Promise<void>;
+};
+
+export function EmptyState({ notice = "", onTrash, onImport }: EmptyProps) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
@@ -27,6 +36,7 @@ export function EmptyState({ notice = "", onTrash }: { notice?: string; onTrash?
           {t("home.trash")}
         </button>
       )}
+      {onImport && <ImportFile onImport={onImport} />}
     </main>
   );
 }
@@ -142,6 +152,40 @@ export function App() {
     remember(id);
   };
 
+  // A refusal is the server's plain words; anything else says something went wrong.
+  const say = (error: unknown) =>
+    error instanceof HostError ? setNotice(error.message) : report(error);
+  const exportFile = async (
+    request: { exported: "workspace" | "savedTool"; id: string },
+    name: string,
+  ) => {
+    try {
+      const { name: file, file: bytes } = await exportArchive(request);
+      saveFile(file, bytes);
+      setNotice(t("archive.exported", { name, file }));
+    } catch (error) {
+      say(error);
+    }
+  };
+  const importFile = async (file: File) => {
+    try {
+      const reply = await importArchive(file);
+      if (!reply.ok) return setNotice(reply.message);
+      await refresh();
+      const workspace = reply.workspaces.map((w) => w.title).join(", ");
+      const tools = reply.savedTools.map((s) => s.name).join(", ");
+      const said = tools
+        ? t("archive.importedWithTools", { workspace, tools })
+        : t("archive.imported", { workspace });
+      setNotice(reply.asCopy ? `${said} ${t("archive.asCopy")}` : said);
+      // What came in opens, so the person sees it.
+      open(reply.workspaces[0]!.id);
+      setView("workspaces");
+    } catch (error) {
+      say(error);
+    }
+  };
+
   if (workspaces === null) {
     return (
       <main>
@@ -151,7 +195,13 @@ export function App() {
   }
   if (workspaces.length === 0 && view !== "trash") {
     const inTrash = (trash?.entries.length ?? 0) > 0;
-    return <EmptyState notice={notice} onTrash={inTrash ? () => setView("trash") : undefined} />;
+    return (
+      <EmptyState
+        notice={notice}
+        onTrash={inTrash ? () => setView("trash") : undefined}
+        onImport={importFile}
+      />
+    );
   }
   const current = workspaces.find((w) => w.id === openId) ?? null;
 
@@ -225,7 +275,14 @@ export function App() {
                   report(error);
                 }
               }}
+              onExport={(id) =>
+                exportFile(
+                  { exported: "workspace", id },
+                  workspaces.find((w) => w.id === id)?.title ?? "",
+                )
+              }
             />
+            <ImportFile onImport={importFile} />
           </aside>
           <main>
             {current && (
@@ -329,6 +386,7 @@ export function App() {
                 t("library.deleted", { name: tool.name }),
               )
             }
+            onExport={(tool) => exportFile({ exported: "savedTool", id: tool.id }, tool.name)}
           />
         </main>
       )}
