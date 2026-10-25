@@ -151,7 +151,7 @@ const refuse = (reason: StoreAssetRefusal, message: string): StoreAssetResult =>
 export function storeAsset(
   store: AssetStore,
   bytes: Uint8Array,
-  options: { originalName?: string; workspaceId?: string } = {},
+  options: { originalName?: string; workspaceId?: string; createdAt?: string } = {},
 ): Promise<StoreAssetResult> {
   return exclusively(store, () => storeNow(store, bytes, options));
 }
@@ -159,7 +159,7 @@ export function storeAsset(
 async function storeNow(
   store: AssetStore,
   bytes: Uint8Array,
-  options: { originalName?: string; workspaceId?: string },
+  options: { originalName?: string; workspaceId?: string; createdAt?: string },
 ): Promise<StoreAssetResult> {
   if (bytes.byteLength === 0) return refuse("empty", "the file is empty.");
   if (bytes.byteLength > ASSET_LIMIT_BYTES) {
@@ -195,7 +195,8 @@ async function storeNow(
     widthPx: sniffed.widthPx,
     heightPx: sniffed.heightPx,
     originalName: options.originalName?.slice(0, 255) ?? null,
-    createdAt: store.now().toISOString(),
+    // An archive's image keeps the date it was first stored (DATA-05).
+    createdAt: options.createdAt ?? store.now().toISOString(),
   });
   const file = fileOf(store, asset);
   const temp = path.join(store.paths.assets, TEMP, randomUUID());
