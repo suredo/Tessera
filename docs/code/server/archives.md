@@ -7,7 +7,7 @@ implements: [DATA-05, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07]
 tests: [../../../packages/server/test/archives.test.ts]
 tags: [code, server, data, archives, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:38:15Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:46:10Z }
 ---
 
 # Purpose
@@ -31,13 +31,13 @@ Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), wit
 - **An export always imports.** The writer stores an entry as it is, instead of deflating it, when deflating would pack it tighter than the reader's ratio limit, so ordinary data that compresses very well (such as long repeated text) still round-trips; then the export is read back with the import's own limits, and one that would be refused is refused when exporting, saying why. Codex's review of [pull request 67](https://github.com/suredo/Tessera/pull/67) found an export of 100 KB of repeated text that its own import refused.
 - **Checked whole before anything is written.** The archive is read in memory, never unpacked to disk, and checked in this order: the container (IMP-01, IMP-02), the manifest against its contract and format version (IMP-03), the manifest against the files beside it (IMP-05), each tool version against its name and the artifact contract (IMP-04, `CON-04`), and each image against its name, its listed type, size and dimensions by its content, something in the archive that names it, and a workspace's limit (`AST-01`, `AST-02`). Only then are the images stored, through the asset store, which checks them again, and one transaction writes the rest, so a refused import leaves nothing behind. All of that runs while holding the asset store, so cleanup can't remove an image before the workspace that names it is written. If that transaction fails after the images are stored, nothing names them, and cleanup removes them.
 - **The container is a strict subset of ZIP** (IMP-01, IMP-02), read here rather than by a general-purpose library: every entry is listed and checked before any is unpacked, so limits, names and ratios are refused without unpacking. Names that could escape (`..`, empty parts, absolute paths, drive letters, backslashes, NUL) are refused, as are repeated names, links, encryption, ZIP64 and any compression but none or deflate. Each entry is unpacked by `node:zlib` with a hard cap at the size it declares, and its size and CRC must match.
-- **Only tool code, stored as data** (IMP-05, `SEC-01`): the manifest and tool versions are the only files, and every shape is strict, so a migration, script or engine is refused. Tool code is stored and only ever runs in the sandbox.
+- **Only tool code and images, stored as data** (IMP-05, `SEC-01`): the manifest, tool versions and, from format 2, images as `assets/<id>` are the only files, and every shape is strict, so a migration, script or engine is refused. Tool code is stored and only ever runs in the sandbox; an image is only ever bytes a tool shows through a `blob:` URL.
 - **Existing work is never changed** (IMP-06). If any workspace or saved tool ID in the archive is already here, in use or in the trash, everything comes in as a copy with new IDs. Tool versions are named by their content, so one already here is the same version and is kept as it is.
-- **No network, no process, no file** (IMP-07): an import only reads the bytes it is given and writes to the database; a test runs it with the tripwires on and no folder allowed.
+- **No network, no process, and files only in the asset store** (IMP-07): an import reads only the bytes it is given, writes the database, and writes an image's file only through the [asset store](assets.md), inside its folder. One test runs an archive without images with the tripwires on and no folder allowed; another runs one with an image with only the asset store's folder allowed.
 
 # Depends on / used by
 
-Depends on [workspaces and saved tools](workspaces.md), [storage](storage.md), the artifact and archive contracts and Node's `zlib` and `crypto`. The export and import screens (#53) and the P2 scenario ("move to another data folder") will use it; assets (#49) add `assets/<hash>` entries and their checks.
+Depends on [workspaces and saved tools](workspaces.md), [storage](storage.md), the artifact and archive contracts and Node's `zlib` and `crypto`. It also depends on the [asset store](assets.md) for the images it carries. The export and import screens (#53) and the P2 scenario ("move to another data folder") will use it.
 
 # Pitfalls
 

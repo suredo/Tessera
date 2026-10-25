@@ -544,6 +544,23 @@ describe("images in archives (DATA-05, DATA-11)", SLOW_MACHINE, () => {
     into.close();
   });
 
+  it("IMP-07: an import with images writes files only inside the asset store", async () => {
+    const { bytes, asset } = await exportedWithPhoto();
+    const into = await openDataFolder(newFolder());
+    const canary = createCanary();
+    const wires = armTripwires({ allowFolders: [into.paths.assets] });
+    try {
+      await importArchive(into, bytes);
+    } finally {
+      wires.disarm();
+    }
+    expect(wires.trips).toEqual([]);
+    expect(canary.changes()).toEqual([]);
+    canary.remove();
+    expect(getAsset(into, asset.id)).toBeDefined();
+    into.close();
+  });
+
   it("CON-04: an archive from before images, format 1, still imports", async () => {
     const { files, manifest } = await exportedFiles();
     const older: Record<string, unknown> = { ...manifest };

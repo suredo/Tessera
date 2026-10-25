@@ -36,7 +36,8 @@ import { ArchiveError, readZip, writeZip, type ZipLimits } from "./zip.ts";
 // Export and import (DATA-05): a workspace or saved tool, with its version history, data and
 // saved tools, goes into one archive file and comes back exactly. Importing is a trust boundary
 // (threat model, IMP-01 to IMP-07): the archive is checked whole, in memory, before anything is
-// written, nothing is ever written outside the database, and existing work is never changed.
+// written, nothing is written outside the database and, for images, the asset store, and existing
+// work is never changed.
 
 /**
  * The most an archive may hold (DATA-06, DATA-11): room for a workspace's images at their limit,
