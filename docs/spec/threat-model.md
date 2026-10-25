@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T08:48:40Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T00:02:10Z }
 ---
 # Threat model and boundary checks
 
@@ -129,7 +129,7 @@ Run against the asset store and its bridge delivery ([#49](https://github.com/su
 
 ## Migration checks
 
-Run against migration validation and activation ([#50](https://github.com/suredo/Tessera/issues/50)), with network and process tripwires on. `MIG-01` and `MIG-02` run against the migration contract in the [contracts package](../code/contracts/package.md), and `MIG-03` to `MIG-05` against the [data shape](../code/server/data-shape.md) module; `MIG-06` follows with activation.
+Run against migration validation and activation ([#50](https://github.com/suredo/Tessera/issues/50)), with network and process tripwires on. `MIG-01` and `MIG-02` run against the migration contract in the [contracts package](../code/contracts/package.md), and `MIG-03` to `MIG-05` against the [data shape](../code/server/data-shape.md) module; `MIG-06` runs against activation in the [workspaces](../code/server/workspaces.md) module.
 
 | ID | Attempt | Expected result |
 | --- | --- | --- |
