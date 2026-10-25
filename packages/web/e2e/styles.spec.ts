@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
+import { ready } from "./support/ready.ts";
 
 // The host stylesheets in the sandbox (RUN-05, VER-06), in Chrome and Edge (TEST-06): the
 // accessibility floor holds against a tool's own styles in every mode, and the UI standard's look
@@ -49,7 +50,7 @@ type TestWindow = { mountTool(container: HTMLElement, mountId: string): Promise<
 
 async function open(page: Page, mountId: string) {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "mountTool" in window);
+  await ready(page, "mountTool");
   await page.evaluate(
     (id) => (window as unknown as TestWindow).mountTool(document.body, id),
     mountId,

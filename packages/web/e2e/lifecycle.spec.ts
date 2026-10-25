@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
+import { ready } from "./support/ready.ts";
 
 // One active runtime and its watchdog (RUN-02), and the tool's place across a reload (UX-07), in
 // Chrome and Edge (TEST-06), through the runtime's own createRuntime on the shared test page.
@@ -80,7 +81,7 @@ type TestWindow = {
  */
 async function openHost(page: Page) {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "createRuntime" in window);
+  await ready(page, "createRuntime");
   await page.evaluate((watchdog) => {
     const w = window as unknown as TestWindow;
     const kept = sessionStorage.getItem("runtime");
@@ -283,9 +284,9 @@ test("UX-07: a stopped tool is still stopped after a reload", async ({ page }) =
   expect(runningTools(page)).toEqual([]);
 });
 
-// Quarantined (ENG-20): its second openHost, a reload right after the stuck tool was stopped, timed
-// out once in Edge on CI. Fix it, or the runtime, and remove this before M1 closes (#83).
-test.fixme("RUN-02: whoever opened a tool hears why it stopped, as the runtime does", async ({
+// Back from quarantine (#83): its second openHost, a reload right after the stuck tool was stopped,
+// once timed out in Edge on CI waiting for the page, which openHost now polls on a timer.
+test("RUN-02: whoever opened a tool hears why it stopped, as the runtime does", async ({
   page,
 }) => {
   await openHost(page);
