@@ -21,9 +21,10 @@ const tools: Record<string, Artifact["code"]> = {
     html: "<p>Errands, improved</p>",
     css: "",
     // Its first real width: in another process, a frame learns its size from its parent a little
-    // after its script starts, and reads 0 until then (#106).
-    js: `const width = () => tessera.send({ width: innerWidth });
-if (innerWidth > 0) width(); else addEventListener("resize", width, { once: true });
+    // after its script starts, and reads 0 until then, with no resize event promised when the size
+    // arrives, so it asks again until it knows (#106).
+    js: `const width = () => innerWidth > 0 ? tessera.send({ width: innerWidth }) : setTimeout(width, 50);
+width();
 tessera.call("data.read").then((read) => tessera.send({ read }));
 tessera.call("data.patch", { operations: [{ op: "add", collection: "tasks", record: { title: "x" } }] })
   .then(() => tessera.send({ wrote: true }), (e) => tessera.send({ wrote: false, code: e.code }));`,
