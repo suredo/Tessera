@@ -25,7 +25,7 @@ export type ActivationOptions = {
 // A version is one unit with its reusable defaults (DATA-03): they must fit its own shape and the
 // data limit (DATA-06) on every activation, whether or not they become the data now, since Use
 // again starts a workspace from them. Undefined if they do; otherwise why not.
-function defaultsProblem(shape: Artifact["data"]): string | undefined {
+export function defaultsProblem(shape: Artifact["data"]): string | undefined {
   const fits = checkToolData(shape.schema, shape.defaults);
   if (!fits.ok) return `the tool's starting data doesn't fit its own shape. ${fits.reason}`;
   const bytes = Buffer.byteLength(JSON.stringify(shape.defaults), "utf8");
