@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+* **Update**: The [web package](code/web/package.md) doc claims `UX-07`, which its browser tests check, and says the open workspace and how its tool was left are kept per tab, while the data is always saved. `APP-01`'s remaining parts, the chat beside the tool, a resizable divider and an expanded mode, went to [issue 132](https://github.com/suredo/Tessera/issues/132).
+
 * **Update**: The threat model at M1's end ([issue 55](https://github.com/suredo/Tessera/issues/55)): the [threat model](spec/threat-model.md) says all 39 numbered checks are verified, that a test keeps them so, and that a check claims only what it tests. The [coverage report](code/scripts/coverage-report.md) doc claims `SEC-05` for that test, and the [contracts](code/contracts/package.md) doc `SEC-01` for migrations that are data, never code.
 
 * **Update**: Host accessibility checked in CI ([issue 53](https://github.com/suredo/Tessera/issues/53), last part): the [web package](code/web/package.md) doc says axe checks every host screen for WCAG 2.2 A and AA violations, beside direct checks of keyboard use, visible focus and reduced motion, and claims `APP-11`. The [CI workflow](code/ci/workflow.md) doc says they run in the Windows job. After Codex's review of [pull request 128](https://github.com/suredo/Tessera/pull/128), the web doc lists every screen, form and confirmation checked, and says the keyboard and reduced-motion checks cover them. After its second review, that includes a restore that keeps the data, and the first-run screen's motion.

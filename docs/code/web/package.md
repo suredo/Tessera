@@ -3,11 +3,11 @@ type: Code Package
 title: "Web package"
 description: "@tessera/web: the host app in the browser, built with Vite and React 19 with the React Compiler, with all host text going through the translation layer."
 resource: ../../../packages/web/
-implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06, APP-11]
+implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06, APP-11, UX-07]
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T21:44:49Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T22:46:39Z }
 ---
 
 # Purpose
@@ -41,7 +41,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **A missing key is visible, never silent.** The translator falls back to English for a key another language lacks; a key no language has shows as the key itself. Either way it reports the gap through its `onMissing` handler, which warns in the console by default.
 - **Exactly one tool runs** (`RUN-02`): the tool panel makes a runtime for the open workspace and closes it when another opens, and its frames go with it.
 - **The open workspace survives a reload** (`UX-07`): which one is open is kept in the tab's session storage, and the app opens it again, or the most recently used one if it is gone.
-- **A minimized or stopped tool stays so** (`UX-07`): the tool panel keeps each workspace's runtime state in the tab's session storage, so after a reload, or switching away and back, it shows the tool as it was left instead of starting it.
+- **A minimized or stopped tool stays so** (`UX-07`): the tool panel keeps each workspace's runtime state in the tab's session storage, so after a reload, or switching away and back, it shows the tool as it was left instead of starting it. Both are kept per tab: a new tab opens the most recently used workspace and starts its tool. The data itself is always saved on the server, whichever way the tool was left.
 - **A closed panel never starts its tool** (`RUN-02`). Starting waits for the server's answer before opening the tool; if the panel closed meanwhile, as React's development mode does once to every new panel, `startTool` stops at whichever step it is, so no tool runs in a runtime nobody can close.
 - **"Last used" means opened or changed** (`APP-03`): the app tells the server each time a workspace opens, picked or opened by default, whether or not its tool starts, and shows the server's answer at once: whichever is later. The list is sorted by it when the app opens; after that, rows keep their places, so none moves under a click or takes the keyboard focus with it.
 - **One start at a time** (`RUN-02`). "Show again" goes while its start runs, and the panel ignores a second one, so two starts never race for one runtime and leave a tool running without its bridge.
