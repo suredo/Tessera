@@ -50,6 +50,12 @@ export {
   ARCHIVE_FORMAT_VERSION,
   archivedWorkspaceSchema,
   archiveManifestSchema,
+  EXPORT_ROUTE,
+  exportRequestSchema,
+  IMPORT_ROUTE,
+  importReplySchema,
+  type ExportRequest,
+  type ImportReply,
   type ArchivedWorkspace,
   type ArchiveManifest,
 } from "./archive.ts";

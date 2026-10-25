@@ -38,3 +38,33 @@ export const archiveManifestSchema = z
   })
   .describe("The manifest of an export archive (DATA-05).");
 export type ArchiveManifest = z.infer<typeof archiveManifestSchema>;
+
+// The host app's two archive routes (APP-06). Export takes what to export and answers with the
+// archive's bytes, as a file to save; import takes a file's bytes and answers what came in, or why
+// nothing did. They move files, so they aren't host actions, which carry JSON both ways.
+
+export const EXPORT_ROUTE = "/api/export";
+export const IMPORT_ROUTE = "/api/import";
+
+export const exportRequestSchema = z
+  .strictObject({ exported: archiveManifestSchema.shape.exported, id: z.uuid() })
+  .describe("What the host app asks to export: a workspace with its saved tools, or a saved tool.");
+export type ExportRequest = z.infer<typeof exportRequestSchema>;
+
+export const importReplySchema = z
+  .discriminatedUnion("ok", [
+    z.strictObject({
+      ok: z.literal(true),
+      exported: archiveManifestSchema.shape.exported,
+      workspaces: z.array(workspaceSchema.pick({ id: true, title: true })).min(1),
+      savedTools: z.array(savedToolSchema.pick({ id: true, name: true })),
+      asCopy: z
+        .boolean()
+        .describe(
+          "True when something with the same IDs was already here, so it came in as a copy.",
+        ),
+    }),
+    z.strictObject({ ok: z.literal(false), message: z.string().min(1) }),
+  ])
+  .describe("What an import brought in, for the plain report, or why it brought in nothing.");
+export type ImportReply = z.infer<typeof importReplySchema>;

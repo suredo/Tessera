@@ -3,10 +3,12 @@
 export {
   ARCHIVE_EXTENSION,
   ARCHIVE_LIMITS,
+  exportName,
   exportSavedTool,
   exportWorkspace,
   importArchive,
   writeExport,
   type Imported,
 } from "./archive.ts";
+export { archiveRoutes } from "./routes.ts";
 export { ArchiveError, readZip, writeZip, type ZipEntry, type ZipLimits } from "./zip.ts";
