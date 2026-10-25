@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T09:33:55Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T10:15:16Z }
 ---
 # Threat model and boundary checks
 
@@ -116,7 +116,7 @@ Run against the archive import ([#48](https://github.com/suredo/Tessera/issues/4
 
 ## Asset checks
 
-Run against the asset store and its bridge delivery ([#49](https://github.com/suredo/Tessera/issues/49)). `AST-01` to `AST-03` and `AST-06` run against the [asset store](../code/server/assets.md) itself; `AST-04` and `AST-05` come with its delivery over the bridge.
+Run against the asset store and its bridge delivery ([#49](https://github.com/suredo/Tessera/issues/49)). `AST-01` to `AST-03` and `AST-06` run against the [asset store](../code/server/assets.md) itself; `AST-04` and `AST-05` run against its delivery over the bridge, in the [bridge route](../code/server/bridge.md) and in the browser.
 
 | ID | Attempt | Expected result |
 | --- | --- | --- |

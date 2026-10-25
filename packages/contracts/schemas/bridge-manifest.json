@@ -348,6 +348,66 @@
       ]
     },
     {
+      "name": "asset.read",
+      "description": "Reads an image the tool's data names, by its ID: its type and its bytes, as base64. Show it through a blob: URL, as tessera.assetUrl(id) does; a tool never sees a file path (DATA-11).",
+      "capability": null,
+      "writes": false,
+      "maxArgsBytes": 1024,
+      "args": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "An asset's ID: the SHA-256 of its bytes (DATA-11)."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/webp"
+            ]
+          },
+          "bytesBase64": {
+            "type": "string",
+            "maxLength": 34952536,
+            "format": "base64",
+            "contentEncoding": "base64",
+            "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+            "description": "The image's bytes, as base64."
+          }
+        },
+        "required": [
+          "type",
+          "bytesBase64"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "args": {
+            "id": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+          },
+          "result": {
+            "type": "image/png",
+            "bytesBase64": "iVBORw0KGgo="
+          }
+        }
+      ]
+    },
+    {
       "name": "clock.now",
       "description": "The current date and time from the host's clock. Use it instead of Date.now() or new Date() (RUN-07).",
       "capability": "clock",

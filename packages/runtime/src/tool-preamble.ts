@@ -84,25 +84,41 @@
         listeners.add(listen);
         return () => listeners.delete(listen);
       },
+      call,
       /**
-       * Asks the host to do `action` (CON-03); resolves with its result, or rejects with an error
-       * whose `code` says why it was refused.
+       * A blob: URL showing the image `id` names, from the host's asset.read (DATA-11): the tool
+       * gets bytes and a type, never a file path. Rejects as call does.
        */
-      call(action: string, args: unknown = {}): Promise<unknown> {
-        lastCall += 1;
-        const requestId = `p${page}-c${lastCall}`;
-        return new Promise((resolve, reject) => {
-          pending.set(requestId, { resolve, reject });
-          try {
-            post({ call: { requestId, action, args } });
-          } catch (error) {
-            // Something the port can't carry, such as a function.
-            pending.delete(requestId);
-            reject(error instanceof Error ? error : new Error("The call couldn't be sent."));
-          }
-        });
+      async assetUrl(id: string): Promise<string> {
+        const { type, bytesBase64 } = (await call("asset.read", { id })) as {
+          type: string;
+          bytesBase64: string;
+        };
+        const text = atob(bytesBase64);
+        const bytes = new Uint8Array(text.length);
+        for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i);
+        return URL.createObjectURL(new Blob([bytes], { type }));
       },
     }),
     enumerable: true,
   });
+
+  /**
+   * Asks the host to do `action` (CON-03); resolves with its result, or rejects with an error
+   * whose `code` says why it was refused.
+   */
+  function call(action: string, args: unknown = {}): Promise<unknown> {
+    lastCall += 1;
+    const requestId = `p${page}-c${lastCall}`;
+    return new Promise((resolve, reject) => {
+      pending.set(requestId, { resolve, reject });
+      try {
+        post({ call: { requestId, action, args } });
+      } catch (error) {
+        // Something the port can't carry, such as a function.
+        pending.delete(requestId);
+        reject(error instanceof Error ? error : new Error("The call couldn't be sent."));
+      }
+    });
+  }
 })();

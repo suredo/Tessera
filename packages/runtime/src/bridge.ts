@@ -74,6 +74,11 @@ export type DataHandlers = {
     batch: BridgeArgs<"data.patch">,
     context: DataCallContext,
   ): Promise<BridgeResult<"data.patch">>;
+  /** An image the tool's data names (DATA-11); without it, the host shows no images. */
+  asset?(
+    args: BridgeArgs<"asset.read">,
+    context: DataCallContext,
+  ): Promise<BridgeResult<"asset.read">>;
 };
 
 export type BridgeOptions = {
@@ -119,6 +124,10 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
   } = {
     "data.read": (_args, context) => options.data.read(context),
     "data.patch": (batch, context) => options.data.patch(batch, context),
+    "asset.read": (args, context) =>
+      options.data.asset
+        ? options.data.asset(args, context)
+        : Promise.reject(new BridgeError("failed", "The host can't show images here.")),
     "clock.now": () => Promise.resolve(clockReading(clock.now(), clock.timeZone())),
   };
 

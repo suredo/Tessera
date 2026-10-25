@@ -8,6 +8,7 @@ import {
   type BridgeErrorCode,
   type BridgeReply,
 } from "@tessera/contracts";
+import { readAssetNow, workspaceAssets, type AssetStore } from "../assets/index.ts";
 import { json, readJson, text, type Handler } from "../http/index.ts";
 import type { PatchRefusal } from "../patches/index.ts";
 import { loadVersion } from "../versions/index.ts";
@@ -54,7 +55,10 @@ function declaredCapabilities(store: Store, hash: string | null): string[] {
  * against the saved data and revisions (DATA-02, BRG-04). Nothing is changed by a refused call.
  * Returns the reply to send, or null when the call carries no usable request ID to answer.
  */
-export function answerDataCall(store: Store, request: BridgeDataRequest): BridgeReply | null {
+export function answerDataCall(
+  store: Store & AssetStore,
+  request: BridgeDataRequest,
+): BridgeReply | null {
   const workspace = getWorkspace(store, request.workspaceId);
   const checked = checkBridgeCall(SERVER_INSTANCE, request.call, {
     instanceId: SERVER_INSTANCE,
@@ -83,6 +87,23 @@ export function answerDataCall(store: Store, request: BridgeDataRequest): Bridge
       if (!result.ok) return refusal(requestId, PATCH_CODES[result.reason], result.message);
       return { requestId, ok: true, result: { addedIds: result.addedIds } };
     }
+    if (action === "asset.read") {
+      // Only an image this workspace's data, versions or snapshots name: never another's, even
+      // by its ID (AST-04). The tool gets its type and bytes, never where it is kept (AST-05).
+      const { id } = args as { id: string };
+      const found = workspaceAssets(store, workspace.id).has(id)
+        ? readAssetNow(store, id)
+        : undefined;
+      if (!found) {
+        return refusal(requestId, "invalid-args", "That image isn't one this tool's data names.");
+      }
+      const result = BRIDGE_ACTIONS["asset.read"].result.safeParse({
+        type: found.asset.type,
+        bytesBase64: Buffer.from(found.bytes).toString("base64"),
+      });
+      if (!result.success) return refusal(requestId, "failed", FAILED);
+      return { requestId, ok: true, result: result.data };
+    }
     return refusal(requestId, "failed", `The server doesn't answer "${action}"; the host does.`);
   } catch {
     // Such as a busy database: nothing of the server, such as a path, reaches the tool.
@@ -91,7 +112,7 @@ export function answerDataCall(store: Store, request: BridgeDataRequest): Bridge
 }
 
 /** The bridge's route for the local server, answering from `store`. */
-export function bridgeRoutes(store: Store): Record<string, Handler> {
+export function bridgeRoutes(store: Store & AssetStore): Record<string, Handler> {
   // A call within the bridge's own limit, with room for the workspace and the phase.
   const limitBytes = BRIDGE_REQUEST_LIMIT_BYTES + 1024;
   return {
