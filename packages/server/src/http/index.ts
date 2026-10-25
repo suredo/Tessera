@@ -1,5 +1,6 @@
 // Docs: docs/code/server/local-server.md
 // The local server on 127.0.0.1 and the checks every request passes (SEC-03).
+export { json, readJson, text } from "./body.ts";
 export {
   APP_HOST,
   RUNTIME_HOST,

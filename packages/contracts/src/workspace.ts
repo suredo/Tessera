@@ -6,7 +6,7 @@ import { jsonObjectSchema } from "./json.ts";
 
 const id = z.uuid();
 const timestamp = z.iso.datetime();
-const versionHash = z
+export const versionHashSchema = z
   .string()
   .regex(/^[0-9a-f]{64}$/)
   .describe("A tool version's name: the SHA-256 of its canonical JSON (DATA-04).");
@@ -15,7 +15,7 @@ export const workspaceSchema = z
   .strictObject({
     id,
     title: z.string().min(1).max(200),
-    currentVersion: versionHash
+    currentVersion: versionHashSchema
       .nullable()
       .describe("The tool version in use; null until the workspace has a tool."),
     data: jsonObjectSchema
@@ -34,7 +34,7 @@ export type Workspace = z.infer<typeof workspaceSchema>;
 export const workspaceVersionSchema = z
   .strictObject({
     index: z.int().min(1).describe("1 for the first version, then one more for each."),
-    hash: versionHash,
+    hash: versionHashSchema,
     createdAt: timestamp,
   })
   .describe(

@@ -107,7 +107,7 @@ describe("activating a tool version (DATA-10)", () => {
   it("migrates the data to the new version's shape, and commits code, shape and data together", async () => {
     const { folder, id, firstHash, secondHash } = await withFirstActive();
     const result = activateVersion(folder, id, secondHash, 1);
-    expect(result).toMatchObject({ ok: true, steps: 1 });
+    expect(result).toMatchObject({ ok: true, migrationCount: 1 });
     expect(unit(folder, id)).toMatchObject({
       workspace: { currentVersion: secondHash, dataRevision: 2 },
       history: [firstHash, secondHash],
@@ -269,7 +269,10 @@ describe("activating a tool version (DATA-10)", () => {
   it("does nothing when the version is already the current one", async () => {
     const { folder, id, firstHash } = await withFirstActive();
     const before = unit(folder, id);
-    expect(activateVersion(folder, id, firstHash, 1)).toMatchObject({ ok: true, steps: 0 });
+    expect(activateVersion(folder, id, firstHash, 1)).toMatchObject({
+      ok: true,
+      migrationCount: 0,
+    });
     expect(unit(folder, id)).toEqual(before);
     folder.close();
   });

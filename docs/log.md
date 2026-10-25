@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+* **Update**: The activation route ([issue 51](https://github.com/suredo/Tessera/issues/51), first part): the [contracts](code/contracts/package.md) doc describes `activationRequestSchema` and `activationReplySchema`, the one definition of what the host page sends to activate a candidate that passed its checks and what the server answers. The [workspaces](code/server/workspaces.md) doc describes `activationRoutes`, the [launcher](code/server/launcher.md) doc says it mounts it, and the [local server](code/server/local-server.md) doc describes the JSON body helpers the [bridge route](code/server/bridge.md) now shares with it.
+
 * **Update**: The bridge's clock test is back from quarantine ([issue 98](https://github.com/suredo/Tessera/issues/98)). The [runtime package](code/runtime/package.md) doc says why it waits 15 s, and that the test host page logs long tasks; the [web package](code/web/package.md) doc says a failed browser test keeps a light trace with its actions and console (after Codex's review, it says the trace has no network: Playwright records it only with page snapshots, and snapshots would let a tool write before any click), to tell a stalled page from a slow browser, which the [CI workflow](code/ci/workflow.md) doc says its artifact keeps.
 
 * **Update**: Continue and Use again ([issue 50](https://github.com/suredo/Tessera/issues/50), last part): the [workspaces](code/server/workspaces.md) doc describes `continueSavedTool` and `useAgain`, which never move a saved tool's link, and claims `DATA-07`. Use again starts a new workspace from the tool's current version and its reusable defaults only, checked as activation checks a version, in one transaction.

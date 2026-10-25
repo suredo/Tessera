@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { activationReplySchema, activationRequestSchema } from "./activation.ts";
 import { archiveManifestSchema } from "./archive.ts";
 import { artifactSchema } from "./artifact.ts";
 import {
@@ -20,6 +21,8 @@ import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./work
 // Every contract whose JSON Schema leaves the process: the CLI's --json-schema, evaluations,
 // stored records. Add a contract here and run `pnpm contracts:schemas` (CON-01).
 export const contracts = {
+  activationReply: activationReplySchema,
+  activationRequest: activationRequestSchema,
   archiveManifest: archiveManifestSchema,
   artifact: artifactSchema,
   bridgeDataRequest: bridgeDataRequestSchema,

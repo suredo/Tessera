@@ -1,4 +1,3 @@
-import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   BRIDGE_ACTIONS,
   BRIDGE_REQUEST_LIMIT_BYTES,
@@ -9,7 +8,7 @@ import {
   type BridgeErrorCode,
   type BridgeReply,
 } from "@tessera/contracts";
-import type { Handler } from "../http/index.ts";
+import { json, readJson, text, type Handler } from "../http/index.ts";
 import type { PatchRefusal } from "../patches/index.ts";
 import { loadVersion } from "../versions/index.ts";
 import {
@@ -91,26 +90,6 @@ export function answerDataCall(store: Store, request: BridgeDataRequest): Bridge
   }
 }
 
-// The request's body as JSON, read up to a limit: "too-large" past it, "invalid" if not JSON.
-async function readJson(req: IncomingMessage, limitBytes: number) {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of req as AsyncIterable<Buffer>) {
-    size += chunk.byteLength;
-    if (size > limitBytes) return "too-large" as const;
-    chunks.push(chunk);
-  }
-  try {
-    return { json: JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown };
-  } catch {
-    return "invalid" as const;
-  }
-}
-
-const text = (res: ServerResponse, status: number, message: string): void => {
-  res.writeHead(status, { "content-type": "text/plain; charset=utf-8" }).end(message);
-};
-
 /** The bridge's route for the local server, answering from `store`. */
 export function bridgeRoutes(store: Store): Record<string, Handler> {
   // A call within the bridge's own limit, with room for the workspace and the phase.
@@ -128,7 +107,7 @@ export function bridgeRoutes(store: Store): Record<string, Handler> {
       }
       const reply = answerDataCall(store, request.data);
       if (reply === null) return text(res, 400, "The call has no request ID to answer.");
-      res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(reply));
+      json(res, reply);
     },
   };
 }

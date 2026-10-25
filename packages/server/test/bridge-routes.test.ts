@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import type { Artifact, BridgeDataRequest, BridgeReply } from "@tessera/contracts";
@@ -17,6 +16,7 @@ import {
   readWorkspaceData,
   saveWorkspaceData,
 } from "../src/workspaces/index.ts";
+import { post as postTo } from "./support/http.ts";
 
 // The server's side of the bridge (RUN-04, GEN-06, BRG-04): a tool's data call, passed on by the
 // host page, is checked again with the stored version's capabilities and answered from saved data.
@@ -171,31 +171,8 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
   });
 });
 
-type Reply = { status: number; body: string };
-function post(port: number, body: string, headers: Record<string, string> = {}): Promise<Reply> {
-  return new Promise((resolve, reject) => {
-    const req = http.request(
-      {
-        host: "127.0.0.1",
-        port,
-        path: BRIDGE_ROUTE,
-        method: headers["x-method"] ?? "POST",
-        headers: {
-          origin: `http://127.0.0.1:${port}`,
-          "content-type": "application/json",
-          ...headers,
-        },
-      },
-      (res) => {
-        let text = "";
-        res.setEncoding("utf8").on("data", (chunk: string) => (text += chunk));
-        res.on("end", () => resolve({ status: res.statusCode ?? 0, body: text }));
-      },
-    );
-    req.on("error", reject);
-    req.end(body);
-  });
-}
+const post = (port: number, body: string, headers: Record<string, string> = {}) =>
+  postTo(port, BRIDGE_ROUTE, body, headers);
 
 describe("the bridge's route (SEC-03)", () => {
   it("answers a same-origin POST with the reply, and refuses anything else plainly", async () => {
