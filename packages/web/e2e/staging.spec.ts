@@ -9,6 +9,7 @@ import {
   workspaceVersions,
 } from "../../server/src/workspaces/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
+import { ready } from "./support/ready.ts";
 
 // Staging before activation (RUN-03), end to end in Chrome and Edge (TEST-06): a candidate runs in
 // a hidden panel against synthetic data, its checks judge it, and only then does the server
@@ -122,7 +123,7 @@ async function stage(
   stub: { ok: true } | { ok: false; reason: string },
 ) {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "stageCandidate" in window);
+  await ready(page, "stageCandidate");
   host.reset();
   return page.evaluate(
     async ({ workspaceId, hash, expectedDataRevision, stub, synthetic }) => {
@@ -229,7 +230,7 @@ async function stageBroken(
   kind: "throws" | "cancelled-before" | "cancelled-during",
 ) {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "stageCandidate" in window);
+  await ready(page, "stageCandidate");
   host.reset();
   return page.evaluate(
     async ({ workspaceId, hash, kind, synthetic }) => {
