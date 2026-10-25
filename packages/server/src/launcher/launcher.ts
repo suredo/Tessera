@@ -6,6 +6,7 @@ import { bridgeRoutes } from "../bridge/index.ts";
 import { startLocalServer, type LocalServer } from "../http/index.ts";
 import { findExecutable, runProcess } from "../platform/index.ts";
 import { openDataFolder, tryLockFile, type Clock, type DataFolder } from "../storage/index.ts";
+import { collectAssets, sweepAssets } from "../assets/index.ts";
 import { removeExpired } from "../trash/index.ts";
 import { activationRoutes } from "../workspaces/index.ts";
 
@@ -138,8 +139,12 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
     fs.rmSync(addressPath, { force: true });
     // Only the lock's holder opens the database, so a second copy never migrates it.
     dataFolder = await openDataFolder(options.dataDir, { now: options.now });
-    // What has been in the trash for 30 days goes at every start, and hourly while running.
+    // What has been in the trash for 30 days goes at every start, and hourly while running; then
+    // the assets nothing refers to any more go too (DATA-09, DATA-11). Before that, the files an
+    // interrupted write left are swept (AST-06).
     removeExpired(dataFolder);
+    await sweepAssets(dataFolder);
+    await collectAssets(dataFolder);
     server = await startLocalServer({
       port: options.port,
       webRoot: options.webRoot,
@@ -169,6 +174,9 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
   const sweep = setInterval(() => {
     try {
       removeExpired(folder);
+      // Its database work is done before it first waits, so stopping can't close the database
+      // under it; only removing files goes on after.
+      collectAssets(folder).catch(() => {});
     } catch {
       // Such as a busy database: the next sweep, or the next start, tries again.
     }
