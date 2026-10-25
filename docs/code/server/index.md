@@ -14,3 +14,4 @@
 * [Bridge route](bridge.md) - The server's side of the bridge: a tool's data calls, passed on by the host page, checked again with the stored version's capabilities and answered from the saved data and revisions.
 * [Data shape](data-shape.md) - A tool's data shape: its declared JSON Schema checked for safety before it is compiled, and declarative migrations run on a copy, checked against both schemas.
 * [Asset store](assets.md) - Images stored once by the SHA-256 of their bytes, checked by content and size, swept of interrupted writes at start, and removed only when nothing stored refers to them any more.
+* [Host API](host-api.md) - The host app's one route to the server: every action its screens ask for (workspaces, the library, versions and restore, undo and the trash), checked against the contracts at both ends, and the tools its mounts show.

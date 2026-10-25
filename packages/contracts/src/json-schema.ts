@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { activationReplySchema, activationRequestSchema } from "./activation.ts";
 import { assetSchema } from "./asset.ts";
+import { hostReplySchema, hostRequestSchema } from "./host-api.ts";
 import { archiveManifestSchema } from "./archive.ts";
 import { artifactSchema } from "./artifact.ts";
 import {
@@ -30,6 +31,8 @@ export const contracts = {
   bridgeDataRequest: bridgeDataRequestSchema,
   bridgeReply: bridgeReplySchema,
   bridgeRequest: bridgeRequestSchema,
+  hostReply: hostReplySchema,
+  hostRequest: hostRequestSchema,
   intent: intentSchema,
   ledgerEntry: ledgerEntrySchema,
   patchBatch: patchBatchSchema,

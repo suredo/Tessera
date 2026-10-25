@@ -1,4 +1,9 @@
-import { TOOL_DATA_LIMIT_BYTES, type Workspace } from "@tessera/contracts";
+import {
+  TOOL_DATA_LIMIT_BYTES,
+  type UndoEntry,
+  type UndoRefusal,
+  type Workspace,
+} from "@tessera/contracts";
 import { z } from "zod";
 import { checkToolData } from "../data-shape/index.ts";
 import type { ToolData } from "../patches/index.ts";
@@ -18,17 +23,9 @@ import {
 // overwritten: the undo is refused instead. Undoing data never changes the tool's code; restoring
 // a version is DATA-10's.
 
-/** One change the person can undo, newest first. */
-export type UndoEntry = {
-  number: number;
-  createdAt: string;
-  /** A patch's records, or the data replaced whole. */
-  kind: "records" | "whole";
-  /** How many records a patch touched; 0 for data replaced whole. */
-  recordCount: number;
-};
+// The entry and refusals are the contract's (one definition, P3), as the host app reads them.
+export type { UndoEntry, UndoRefusal };
 
-export type UndoRefusal = "no-entry" | "stale" | "invalid" | "too-large";
 export type UndoResult =
   { ok: true; workspace: Workspace } | { ok: false; reason: UndoRefusal; message: string };
 

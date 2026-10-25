@@ -1,13 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
-import { canonicalJson, type Workspace } from "@tessera/contracts";
-import { z } from "zod";
 import {
-  checkToolData,
-  migrateData,
-  projectData,
-  type Loss,
-  type MigrationRefusal,
-} from "../data-shape/index.ts";
+  canonicalJson,
+  type RecoverySnapshot,
+  type RestorePlan,
+  type RestoreRefusal,
+  type RestoreResult,
+  type Workspace,
+} from "@tessera/contracts";
+import { z } from "zod";
+import { checkToolData, migrateData, projectData, type Loss } from "../data-shape/index.ts";
 import type { ToolData } from "../patches/index.ts";
 import { loadVersion } from "../versions/index.ts";
 import { defaultsProblem, type ActivationOptions } from "./activation.ts";
@@ -23,25 +24,9 @@ import { appendVersion, existingWorkspace, replaceData, type Store } from "./wor
 // with the reason. Nothing is written before every check passes, and the writes are one
 // transaction.
 
-export type RestoreRefusal =
-  | "stale"
-  | "no-version"
-  | "incompatible"
-  | "invalid-defaults"
-  | "no-tool"
-  | "needs-confirmation"
-  | "no-snapshot"
-  | MigrationRefusal;
-
-/** What a restore would do, before it does it. */
-export type RestorePlan =
-  | { ok: true; keepsData: true }
-  | { ok: true; keepsData: false; losses: Loss[]; confirmation: string }
-  | { ok: false; reason: RestoreRefusal; message: string };
-
-export type RestoreResult =
-  | { ok: true; workspace: Workspace; snapshotId: string | null }
-  | { ok: false; reason: RestoreRefusal; message: string };
+// The refusals, plan and result are the contract's (one definition, P3), so the host app reads
+// exactly what this module answers; a migration's reasons must be among them to compile.
+export type { RestorePlan, RestoreRefusal, RestoreResult };
 
 const refuse = (reason: RestoreRefusal, detail: string) => ({
   ok: false as const,
@@ -208,7 +193,7 @@ const snapshotRow = z.object({
   created_at: z.string(),
 });
 
-export type RecoverySnapshot = { id: string; versionHash: string; createdAt: string };
+export type { RecoverySnapshot };
 
 /** A workspace's recovery snapshots, the newest first. */
 export function listRecoverySnapshots(store: Store, workspaceId: string): RecoverySnapshot[] {
