@@ -3,11 +3,18 @@ import vm from "node:vm";
 import type { Artifact } from "@tessera/contracts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startLocalServer, type LocalServer } from "../src/http/index.ts";
+import { accessibilityCss, standardCss, UI_TOKENS } from "@tessera/runtime/policy";
 import { runtimeRoutes, toolDocument } from "../src/runtime/index.ts";
 
 // The runtime's documents through the real local server and its guard (RUN-01, SEC-03).
-const tools: Record<string, Artifact["code"]> = {
-  "mount-1": { html: "<p id='hi'>Hi</p>", css: "p{color:red}", js: "console.log('</script>')" },
+type Tool = Pick<Artifact, "code" | "ui">;
+const standard = { standardVersion: 1, mode: "standard" } as const;
+const custom = { standardVersion: 1, mode: "custom" } as const;
+const tools: Record<string, Tool> = {
+  "mount-1": {
+    code: { html: "<p id='hi'>Hi</p>", css: "p{color:red}", js: "console.log('</script>')" },
+    ui: standard,
+  },
 };
 let server: LocalServer;
 beforeAll(async () => {
@@ -103,8 +110,50 @@ describe("the runtime's routes (RUN-01)", () => {
   });
 
   it("keeps a closing tag inside the tool's script or styles from ending it early", () => {
-    const doc = toolDocument({ html: "", css: "a{}</style>x", js: "'</script>'" }, "");
+    const doc = toolDocument(
+      { code: { html: "", css: "a{}</style>x", js: "'</script>'" }, ui: custom },
+      "",
+    );
     expect(doc).toContain("'<\\/script>'");
     expect(doc).toContain("a{}<\\/style>x");
+  });
+});
+
+describe("the host stylesheets in a tool's document (RUN-05, VER-06)", () => {
+  const code = { html: "<button>Go</button>", css: "button{outline:none!important}", js: "" };
+  const styles = (doc: string) =>
+    [...doc.matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => m[1] ?? "");
+  const markOf = (css: string) => /^@layer tessera-accessibility-([0-9a-f]+),/.exec(css)?.[1];
+
+  it("RUN-05: puts the accessibility floor first in every tool, standard or custom", () => {
+    for (const ui of [standard, custom]) {
+      const found = styles(toolDocument({ code, ui }, "preamble();", "m1"));
+      expect(found[0]!.startsWith(accessibilityCss("m1"))).toBe(true);
+      // The layers are declared before any of the tool's own styles.
+      expect(found[0]!.startsWith("@layer tessera-accessibility-m1, tessera-standard-m1;")).toBe(
+        true,
+      );
+      expect(found.at(-1)).toBe(code.css);
+    }
+  });
+
+  it("VER-06: adds the UI standard's tokens in standard mode, and not in custom mode", () => {
+    const inStandard = styles(toolDocument({ code, ui: standard }, "", "m1"))[0]!;
+    expect(inStandard).toContain(standardCss("m1"));
+    expect(inStandard).toContain(`--ui-accent: ${UI_TOKENS.accent};`);
+    const inCustom = styles(toolDocument({ code, ui: custom }, "", "m1"))[0]!;
+    expect(inCustom).not.toContain("--ui-");
+    expect(inCustom).not.toContain("@layer tessera-standard-m1 {");
+  });
+
+  it("RUN-05: names the layers with a new random mark for every document it serves", async () => {
+    const marks = await Promise.all(
+      [1, 2, 3].map(async () => {
+        const answer = await get("/runtime/tool?mount=mount-1", asFrame());
+        return markOf(styles(answer.body)[0]!);
+      }),
+    );
+    for (const mark of marks) expect(mark).toMatch(/^[0-9a-f]{16}$/);
+    expect(new Set(marks).size).toBe(3);
   });
 });
