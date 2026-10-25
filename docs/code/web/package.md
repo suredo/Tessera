@@ -3,22 +3,23 @@ type: Code Package
 title: "Web package"
 description: "@tessera/web: the host app in the browser, built with Vite and React 19 with the React Compiler, with all host text going through the translation layer."
 resource: ../../../packages/web/
-implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07]
-tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts]
+implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05]
+tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T13:32:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T13:37:09Z }
 ---
 
 # Purpose
 
-The host app that runs in the browser. Vite builds it, and React 19 renders it with the React Compiler on (A15). The local server serves its build, with the [host API](../server/host-api.md) it talks to. Its main screen has the workspaces beside the open workspace's tool (`APP-01`, `APP-03`), and a first-run screen while there are none (`APP-02`). My tools, the saved-tools library, is the second section (`APP-04`). The chat that makes tools comes with M2, and the versions, undo, trash, export and import screens with the rest of #53. Its text, like all host text, goes through the translation layer from the first component (`UX-05`), so adding a language needs a message file and no code changes. Only English ships at first (A10).
+The host app that runs in the browser. Vite builds it, and React 19 renders it with the React Compiler on (A15). The local server serves its build, with the [host API](../server/host-api.md) it talks to. Its main screen has the workspaces beside the open workspace's tool (`APP-01`, `APP-03`), and a first-run screen while there are none (`APP-02`). My tools, the saved-tools library, is the second section (`APP-04`), and the open workspace's history, with its versions and undo, sits under its tool (`APP-05`). The chat that makes tools comes with M2, and the trash, export and import screens with the rest of #53. Its text, like all host text, goes through the translation layer from the first component (`UX-05`), so adding a language needs a message file and no code changes. Only English ships at first (A10).
 
 # Entry points
 
 - `src/App.tsx`: `App`, the main screen: it loads the workspaces and the library through the host API, keeps which workspace is open for the tab, and shows `EmptyState`, the first-run screen, while there are none, with the trash notice when the last one was just deleted. The workspaces come most recently used first when the app opens, and keep their places after that.
 - `src/Workspaces.tsx`: the workspaces list, each with its name, when it was last used and whether it is saved, with opening, renaming, saving to my tools under a name, and moving to the trash (`APP-03`).
 - `src/Library.tsx`: my tools, the saved-tools library (`APP-04`): each saved tool with its name, when it was last updated (the entry or the workspace it follows, whichever changed later, A32) and the workspace Continue opens, searchable by name, with Continue, Use again (`DATA-07`), Save as a new tool, renaming and moving to the trash.
+- `src/History.tsx`: the open workspace's history (`APP-05`): its tool versions, newest first, with restore; undo of its last data change (`DATA-04`); and the copies kept before a restore that lost data, which can be brought back (`DATA-10`). After a restore or an undo, the app starts the tool again with the changed data.
 - `src/NameForm.tsx`: the small form that names something, for renaming, saving and Save as a new tool.
 - `src/ToolPanel.tsx`: the open workspace's tool, run through the [runtime](../runtime/package.md) with the bridge to its saved data, with minimize, show again and full screen (`APP-01`).
 - `src/tool-start.ts`: `startTool` opens the workspace through the host API, then starts its tool and serves it the bridge; `rememberedState` and `rememberState` keep, for the tab, how each workspace's tool was left.
@@ -42,6 +43,8 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **"Last used" means opened or changed** (`APP-03`): the app tells the server each time a workspace opens, picked or opened by default, whether or not its tool starts, and shows the server's answer at once: whichever is later. The list is sorted by it when the app opens; after that, rows keep their places, so none moves under a click or takes the keyboard focus with it.
 - **One start at a time** (`RUN-02`). "Show again" goes while its start runs, and the panel ignores a second one, so two starts never race for one runtime and leave a tool running without its bridge.
 - **Continue opens exactly the linked workspace** (`DATA-07`), and says which before: its accessible name names the workspace. Use again opens a new workspace from the tool's starting data, and the entry still continues the first. Save as a new tool does the same under a new name and saves it as its own entry, so the variant changes apart from the original (`DATA-08`).
+- **A restore is planned, then confirmed** (`DATA-10`). Restore asks the server for its plan first and shows it: the data stays, or exactly these values would be lost, each with where it was, and a copy is kept. Only the confirmation runs it, against the data revision the plan was made with, so data that changed meanwhile makes the server refuse it rather than lose something unseen. Cancel changes nothing.
+- **Undo undoes the change the person sees** (`DATA-04`). A running tool may change the data after the history loaded; Undo checks that the change it shows is still the newest, and if not, shows the newer one and undoes nothing. An interface change is undone by restoring the version before it.
 - **Buttons say which workspace they act on.** Their visible labels are short ("Rename", "Move to trash"); their accessible names include the workspace's name.
 - **The React Compiler does the memoizing** (A15). No hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case, with a comment saying so. ESLint runs the hooks rules and the compiler's rules (`eslint-plugin-react-hooks`, `recommended-latest`) on every component.
 
@@ -51,6 +54,7 @@ Depends on React 19, the [contracts](../contracts/package.md) and the [runtime](
 
 # Pitfalls
 
+- **Versions have no change summary or check results yet.** `APP-05` asks for both, but a version records neither until generation and the checks exist ([issue 121](https://github.com/suredo/Tessera/issues/121)).
 - **A saved tool has no description yet.** `APP-04` asks for a short one, but nothing stores one until generation can write it ([issue 119](https://github.com/suredo/Tessera/issues/119)); search matches names only.
 - **Keys are typed.** `t` accepts only keys that exist in `en.ts`, so a new string starts there. Another language's file may leave keys out; they fall back to English.
 - **The title in `index.html` is empty on purpose.** `src/main.tsx` sets it from the translation layer.
@@ -61,6 +65,7 @@ Depends on React 19, the [contracts](../contracts/package.md) and the [runtime](
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `src/App.tsx`: `EmptyState`, `App`
+- `src/History.tsx`: `History`
 - `src/Library.tsx`: `Library`
 - `src/NameForm.tsx`: `NameForm`
 - `src/ToolPanel.tsx`: `ToolPanel`

@@ -58,6 +58,11 @@ function workspaceThrough(...tools: Artifact[]) {
   });
   return { name, id };
 }
+/** Adds records as the tool would, and checks they went in. */
+function added(id: string, batch: unknown) {
+  const result = patchWorkspaceData(app.folder, id, batch);
+  if (!result.ok) throw new Error(result.message);
+}
 const tasksOf = (id: string) => readWorkspaceData(app.folder, id).data["tasks"];
 
 const toolText = (page: Page) =>
@@ -71,9 +76,13 @@ const versionRows = (page: Page) =>
   history(page)
     .getByRole("listitem")
     .filter({ hasText: /^Version \d/ });
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** Opens a workspace, whether or not it is the one that opens by default. */
 async function openWorkspace(page: Page, name: string) {
   await page.goto(app.url);
-  await page.getByRole("button", { name: `Open ${name}`, exact: true }).click();
+  await page
+    .getByRole("button", { name: new RegExp(`^(Open ${escape(name)}|${escape(name)}, open)$`) })
+    .click();
 }
 
 test("APP-05: restoring a version that keeps the data asks first, and Cancel changes nothing", async ({
@@ -150,8 +159,8 @@ test("DATA-04: Undo the last change brings the data back, one change at a time",
   page,
 }) => {
   const { name, id } = workspaceThrough(tool("Tool A"));
-  patchWorkspaceData(app.folder, id, {
-    operations: [{ op: "add", collection: "tasks", record: { id: "t-2", title: "Post a letter" } }],
+  added(id, {
+    operations: [{ op: "add", collection: "tasks", record: { title: "Post a letter" } }],
   });
   await openWorkspace(page, name);
   const undo = history(page).getByRole("button", { name: en["history.undo"] });
@@ -164,16 +173,16 @@ test("DATA-04: Undo the last change brings the data back, one change at a time",
 
 test("DATA-04: Undo never undoes a change the person hasn't seen", async ({ page }) => {
   const { name, id } = workspaceThrough(tool("Tool A"));
-  patchWorkspaceData(app.folder, id, {
-    operations: [{ op: "add", collection: "tasks", record: { id: "t-2", title: "Post a letter" } }],
+  added(id, {
+    operations: [{ op: "add", collection: "tasks", record: { title: "Post a letter" } }],
   });
   await openWorkspace(page, name);
   await expect(history(page)).toContainText("One record changed");
   // The tool changes more while the history shows the earlier change.
-  patchWorkspaceData(app.folder, id, {
+  added(id, {
     operations: [
-      { op: "add", collection: "tasks", record: { id: "t-3", title: "Water the plants" } },
-      { op: "add", collection: "tasks", record: { id: "t-4", title: "Call the bank" } },
+      { op: "add", collection: "tasks", record: { title: "Water the plants" } },
+      { op: "add", collection: "tasks", record: { title: "Call the bank" } },
     ],
   });
   await history(page).getByRole("button", { name: en["history.undo"] }).click();
