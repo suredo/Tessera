@@ -345,6 +345,13 @@ export function patchWorkspaceData(
 export const getSavedTool = (store: Store, id: string): SavedTool | undefined =>
   store.db.get(savedToolFromRow, `${SELECT_SAVED_TOOL} AND id = ?`, id);
 
+/** The saved tool, or a plain error if it is missing or in the trash. Module-internal. */
+export const existingSavedTool = (store: Store, id: string): SavedTool => {
+  const found = getSavedTool(store, id);
+  if (!found) throw noSavedTool(store, id);
+  return found;
+};
+
 /** The saved-tools library, by name. */
 export const listSavedTools = (store: Store): SavedTool[] =>
   store.db.all(savedToolFromRow, `${SELECT_SAVED_TOOL} ORDER BY name COLLATE NOCASE, id`);

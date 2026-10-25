@@ -35,11 +35,30 @@ export function defaultsProblem(shape: Artifact["data"]): string | undefined {
   return undefined;
 }
 
-const refuse = (reason: ActivationRefusal, detail: string): ActivationResult => ({
-  ok: false,
+const refuse = <R extends ActivationRefusal>(reason: R, detail: string) => ({
+  ok: false as const,
   reason,
   message: `Nothing was changed: ${detail}`,
 });
+
+export type UsableVersion =
+  | { ok: true; artifact: Artifact }
+  | { ok: false; reason: "no-version" | "incompatible" | "invalid-defaults"; message: string };
+
+/**
+ * The stored version `hash`, if it can be read and its defaults are a valid start (DATA-03), or
+ * why not. Module-internal: activation and Use again (`reuse.ts`) check a version with it.
+ */
+export function usableVersion(store: Store, hash: string): UsableVersion {
+  const target = loadVersion(store.db, hash);
+  if (!target) return refuse("no-version", "there is no saved tool version with that name.");
+  if (target.kind === "incompatible") {
+    return refuse("incompatible", `the tool version can't be used. ${target.reason}`);
+  }
+  const defaults = defaultsProblem(target.artifact.data);
+  if (defaults) return refuse("invalid-defaults", defaults);
+  return { ok: true, artifact: target.artifact };
+}
 
 /**
  * Makes the stored version `hash` the workspace's current one, with its data brought to the
@@ -61,15 +80,10 @@ export function activateVersion(
         "the data changed after this change was planned, and that newer data is kept.",
       );
     }
-    const target = loadVersion(store.db, hash);
-    if (!target) return refuse("no-version", "there is no saved tool version with that name.");
-    if (target.kind === "incompatible") {
-      return refuse("incompatible", `the tool version can't be used. ${target.reason}`);
-    }
+    const target = usableVersion(store, hash);
+    if (!target.ok) return target;
     if (workspace.currentVersion === hash) return { ok: true, workspace, steps: 0 };
     const shape = target.artifact.data;
-    const defaults = defaultsProblem(shape);
-    if (defaults) return refuse("invalid-defaults", defaults);
 
     let data: ToolData;
     let steps = 0;

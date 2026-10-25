@@ -7,6 +7,14 @@ export {
   type ActivationResult,
 } from "./activation.ts";
 export {
+  continueSavedTool,
+  useAgain,
+  type ContinueTarget,
+  type UseAgainOptions,
+  type UseAgainRefusal,
+  type UseAgainResult,
+} from "./reuse.ts";
+export {
   listRecoverySnapshots,
   planRestore,
   restoreRecoverySnapshot,
