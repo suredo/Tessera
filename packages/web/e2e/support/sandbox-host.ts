@@ -12,6 +12,7 @@ import { startLocalServer } from "../../../server/src/http/index.ts";
 import { bridgeRoutes } from "../../../server/src/bridge/index.ts";
 import { runtimeRoutes } from "../../../server/src/runtime/index.ts";
 import { openDataFolder, type DataFolder } from "../../../server/src/storage/index.ts";
+import { activationRoutes } from "../../../server/src/workspaces/index.ts";
 
 // The sandbox's browser tests share this host (RUN-01, TEST-06): the real local server with its
 // guard and runtime routes, a small page standing in for the host app that mounts tools with the
@@ -95,7 +96,7 @@ export async function startSandboxHost(
   // stalled (#83, #98).
   fs.writeFileSync(
     path.join(webRoot, "index.html"),
-    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script>new PerformanceObserver((list) => { for (const task of list.getEntries()) if (task.duration >= 1000) console.warn(\`Host page blocked for \${Math.round(task.duration)} ms\`); }).observe({ type: "longtask", buffered: true });</script><script type="module">import { mountTool, createRuntime, serveBridge, serverData } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge, serverData });</script>`,
+    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script>new PerformanceObserver((list) => { for (const task of list.getEntries()) if (task.duration >= 1000) console.warn(\`Host page blocked for \${Math.round(task.duration)} ms\`); }).observe({ type: "longtask", buffered: true });</script><script type="module">import { mountTool, createRuntime, serveBridge, serverData, stageCandidate, stubCheck } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge, serverData, stageCandidate, stubCheck });</script>`,
   );
   const dataDir = options.data
     ? fs.mkdtempSync(path.join(os.tmpdir(), "tessera-sandbox-data-"))
@@ -104,7 +105,10 @@ export async function startSandboxHost(
   const server = await startLocalServer({
     port: 0,
     webRoot,
-    routes: { ...runtimeRoutes((id) => tools[id]), ...(folder ? bridgeRoutes(folder) : {}) },
+    routes: {
+      ...runtimeRoutes((id) => tools[id]),
+      ...(folder ? { ...bridgeRoutes(folder), ...activationRoutes(folder) } : {}),
+    },
   });
 
   // Node announces every request its HTTP servers receive, and every connection its servers

@@ -13,8 +13,21 @@ export {
   type HostClock,
   type ServedBridge,
 } from "./bridge.ts";
+export {
+  stubCheck,
+  type CheckContext,
+  type CheckOutcome,
+  type VerificationCheck,
+} from "./checks.ts";
 export { TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "./csp.ts";
 export { serverData, type Send } from "./server-data.ts";
+export { serverActivation, type Activate } from "./server-activation.ts";
+export {
+  stageCandidate,
+  type Candidate,
+  type StagingOptions,
+  type StagingResult,
+} from "./staging.ts";
 export {
   mountTool,
   WATCHDOG_DEFAULTS,
