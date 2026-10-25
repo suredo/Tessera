@@ -7,7 +7,7 @@ implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T06:01:27Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T20:35:02Z }
 ---
 
 # Purpose
@@ -37,6 +37,7 @@ Depends on GitHub Actions' Ubuntu and Windows runners, with Chrome and Edge prei
 - **The ruleset on `main` requires the jobs by name** (`ENG-15`, [ADR 0005](../../decisions/adr/0005-public-repository.md)): `OKF check`, `merge-ready`, the seven checks of the Linux matrix and `Windows (platform, Chrome and Edge)`. Renaming, splitting or removing one leaves the ruleset waiting for a check that never reports, and no pull request can merge. Change the ruleset in the same pull request (`gh api repos/suredo/Tessera/rulesets`), which is the owner's setting.
 - **Every required job must run on every pull request.** The two ways to skip one fail differently. A job skipped by its own `if:` counts as passed, so the pull request could merge without that check ever running. A workflow that doesn't start at all, because of path or branch filters or a skip instruction in the commit message, leaves its checks pending, and the merge is blocked. Add neither to these jobs; if a check truly shouldn't run on some changes, change the ruleset with it ([GitHub: troubleshooting required status checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks)).
 - **The tests read the workflow, not a run.** They show what CI is told to run; a green run on the pull request shows it passed.
-- **`ENG-02` lists checks that later milestones bring:** CLI contract tests, scripted end-to-end tests, host accessibility checks (`APP-11`) and prompt-size budgets (`GEN-03`). Each joins this workflow, and its test, when its code lands.
+- **The host accessibility checks (`APP-11`) run in the Windows job** with the browser tests: `packages/web/e2e/a11y.spec.ts` runs axe on every host screen, in both browsers and both widths, and fails on any WCAG 2.2 A or AA violation.
+- **`ENG-02` lists checks that later milestones bring:** CLI contract tests, scripted end-to-end tests and prompt-size budgets (`GEN-03`). Each joins this workflow, and its test, when its code lands.
 - **The checker's tests ran only on Linux until M1,** so a failure that only Windows paths or line endings cause reached review in [pull request 41](https://github.com/suredo/Tessera/pull/41).
 - **The drift check needs the full history** (fetch depth 0) to diff against the pull request's base.

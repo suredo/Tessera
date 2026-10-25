@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+* **Update**: Host accessibility checked in CI ([issue 53](https://github.com/suredo/Tessera/issues/53), last part): the [web package](code/web/package.md) doc says axe checks every host screen for WCAG 2.2 A and AA violations, beside direct checks of keyboard use, visible focus and reduced motion, and claims `APP-11`. The [CI workflow](code/ci/workflow.md) doc says they run in the Windows job.
+
 * **Update**: The export and import screens ([issue 53](https://github.com/suredo/Tessera/issues/53), sixth part): the [web package](code/web/package.md) doc describes exporting each workspace and saved tool to a file, importing one from beside the workspaces or from the first-run screen, and the plain report of what came in; it claims `APP-06`.
 
 * **Update**: The archive routes ([issue 53](https://github.com/suredo/Tessera/issues/53), the routes the export and import screens need): the [export and import](code/server/archives.md) doc describes `archiveRoutes`, an export answered as a file to save and an import answered with what came in, and that a file over the limit is refused before it is read. The [contracts](code/contracts/package.md) doc names the two routes and their shapes, the [local server](code/server/local-server.md) doc `readBytes`, and the [launcher](code/server/launcher.md) and [host API](code/server/host-api.md) docs that the launcher mounts them. After Codex's review of [pull request 123](https://github.com/suredo/Tessera/pull/123), the archives doc says an export's name is cut between whole characters.

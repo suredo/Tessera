@@ -3,11 +3,11 @@ type: Code Package
 title: "Web package"
 description: "@tessera/web: the host app in the browser, built with Vite and React 19 with the React Compiler, with all host text going through the translation layer."
 resource: ../../../packages/web/
-implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06]
-tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/test/archives.test.ts]
+implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06, APP-11]
+tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T20:14:17Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T20:35:02Z }
 ---
 
 # Purpose
@@ -52,6 +52,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **Emptying the trash removes only what the person was shown** (`DATA-09`). The confirmation lists every entry, and the server empties the trash only if it still holds exactly those; if something was deleted meanwhile, it refuses, nothing goes, and the trash shows what it holds now.
 - **The trash is never out of reach.** After the last workspace is deleted, the first-run screen offers the trash while it holds something, so that workspace can come back.
 - **An import says what came in, then opens it** (`APP-06`): the workspace by name, with its saved tools, and when something with the same IDs was already here, that it came in as a copy and nothing here changed. A refused file shows the server's plain reason, and nothing comes in.
+- **The host is accessible** (`APP-11`). `e2e/a11y.spec.ts` runs axe (`@axe-core/playwright`) on every host screen and confirmation and fails on any WCAG 2.2 A or AA violation, leaving out a tool's own frame, which has its own floor (`RUN-05`). It also checks directly what a checker can't judge: the app works by keyboard alone, the focus shows a 3 px outline, and nothing moves when reduced motion is asked for.
 - **Buttons say which workspace they act on.** Their visible labels are short ("Rename", "Move to trash"); their accessible names include the workspace's name.
 - **The React Compiler does the memoizing** (A15). No hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case, with a comment saying so. ESLint runs the hooks rules and the compiler's rules (`eslint-plugin-react-hooks`, `recommended-latest`) on every component.
 
