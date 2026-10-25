@@ -53,9 +53,11 @@ function jpeg(bytes: Uint8Array, view: DataView): Sniffed {
       continue;
     }
     const length = view.getUint16(at + 2);
-    if (length < 2) return NO;
+    // A segment's length counts itself and must stay inside the file.
+    if (length < 2 || at + 2 + length > bytes.length) return NO;
     if (START_OF_FRAME.has(marker)) {
-      if (at + 9 > bytes.length) return NO;
+      // Its length, precision, height, width and component count: at least 8 bytes.
+      if (length < 8) return NO;
       return sized("image/jpeg", view.getUint16(at + 7), view.getUint16(at + 5));
     }
     at += 2 + length;
@@ -64,10 +66,19 @@ function jpeg(bytes: Uint8Array, view: DataView): Sniffed {
 }
 
 // A RIFF container of type WEBP, whose first chunk is lossy (VP8), lossless (VP8L) or extended
-// (VP8X); each keeps the dimensions in its own way.
+// (VP8X); each keeps the dimensions in its own way. The container's size, and the first chunk's,
+// must stay inside the file and hold the fields read.
+const MIN_CHUNK: Record<string, number> = { "VP8 ": 10, VP8L: 5, VP8X: 10 };
+
 function webp(bytes: Uint8Array, view: DataView): Sniffed {
   if (!ascii(bytes, 0, "RIFF") || !ascii(bytes, 8, "WEBP") || bytes.length < 30) return NO;
-  if (view.getUint32(4, true) + 8 > bytes.length) return NO;
+  const riffSize = view.getUint32(4, true);
+  const chunkSize = view.getUint32(16, true);
+  const chunk = String.fromCharCode(...bytes.subarray(12, 16));
+  const needed = MIN_CHUNK[chunk];
+  if (needed === undefined || chunkSize < needed) return NO;
+  if (riffSize + 8 > bytes.length || 20 + chunkSize > bytes.length) return NO;
+  if (riffSize < 4 + 8 + chunkSize) return NO;
   if (ascii(bytes, 12, "VP8 ")) {
     if (!has(bytes, 23, [0x9d, 0x01, 0x2a])) return NO;
     return sized(

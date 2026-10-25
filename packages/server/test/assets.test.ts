@@ -69,12 +69,14 @@ function workspaceHolding(folder: DataFolder, ids: string[]) {
 }
 
 // Minimal WebP headers in the two layouts Chrome doesn't write: lossy (VP8) and lossless (VP8L).
-function webpHeader(chunk: "VP8 " | "VP8L", frame: number[]) {
-  const bytes = new Uint8Array(40);
+function webpHeader(chunk: "VP8 " | "VP8L" | "VP8X", frame: number[], chunkSize = 20) {
+  const bytes = new Uint8Array(20 + Math.max(chunkSize, frame.length));
+  const view = new DataView(bytes.buffer);
   bytes.set(bytesOf("RIFF"), 0);
-  new DataView(bytes.buffer).setUint32(4, 32, true);
+  view.setUint32(4, bytes.length - 8, true);
   bytes.set(bytesOf("WEBP"), 8);
   bytes.set(bytesOf(chunk), 12);
+  view.setUint32(16, chunkSize, true);
   bytes.set(frame, 20);
   return bytes;
 }
@@ -111,6 +113,26 @@ describe("telling an image by its content (AST-01)", () => {
       new Uint8Array([0xff, 0xd8, 0xff, 0xd9, ...bytesOf("text".repeat(10))]),
       // A WebP container whose size runs past its end.
       new Uint8Array([...webp.subarray(0, 4), 0xff, 0xff, 0xff, 0x7f, ...webp.subarray(8)]),
+      // A JPEG start of frame whose declared length is too short to hold its dimensions.
+      new Uint8Array([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x02, 0x08, 0x00, 0x03, 0x00, 0x04]),
+      // One whose length runs past the end of the file.
+      new Uint8Array([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x40, 0x08, 0x00, 0x03, 0x00, 0x04, 0x03]),
+      // WebP chunks declared empty, or longer than the file.
+      new Uint8Array([
+        ...bytesOf("RIFF"),
+        22,
+        0,
+        0,
+        0,
+        ...bytesOf("WEBPVP8X"),
+        ...new Uint8Array(18),
+      ]),
+      webpHeader("VP8 ", [0, 0, 0, 0x9d, 0x01, 0x2a, 4, 0, 3, 0], 4),
+      (() => {
+        const long = webpHeader("VP8L", [0x2f, 0x03, 0x80, 0x00, 0x00]);
+        new DataView(long.buffer).setUint32(16, 4096, true);
+        return long;
+      })(),
       // A PNG claiming no width.
       (() => {
         const zero = png.slice();
@@ -320,6 +342,31 @@ describe("the start-up sweep (AST-06)", () => {
       [`${kept.id.slice(0, 2)}/${kept.id}.png`, `dd/${"e".repeat(64)}.png`, "notes.txt"].sort(),
     );
     expect(fs.existsSync(path.join(folder.paths.root, `${"f".repeat(64)}.png`))).toBe(true);
+    folder.close();
+  });
+});
+
+describe("cleanup and storing at the same time (DATA-11)", () => {
+  it("DATA-11: storing an image while cleanup removes it keeps its row and its file", async () => {
+    const folder = await newFolder();
+    const first = await stored(folder, png);
+    const second = await stored(folder, jpeg);
+    let storing: Promise<unknown> | undefined;
+    const collecting = collectAssets(folder, {
+      // Both rows are gone and their files about to go: the second is stored again now, and
+      // given time to finish if nothing makes it wait.
+      beforeFiles: async () => {
+        storing = storeAsset(folder, jpeg);
+        await new Promise((done) => setTimeout(done, 100));
+      },
+    });
+    expect((await collecting).sort()).toEqual([first.id, second.id].sort());
+    expect(await storing).toMatchObject({ ok: true, asset: { id: second.id } });
+    // Stored again after cleanup: its row and its file are both there, and it reads back.
+    expect(getAsset(folder, second.id)).toBeDefined();
+    expect(Buffer.from((await readAsset(folder, second.id))!.bytes).equals(Buffer.from(jpeg))).toBe(
+      true,
+    );
     folder.close();
   });
 });
