@@ -3,24 +3,26 @@ type: Code Package
 title: "Web package"
 description: "@tessera/web: the host app in the browser, built with Vite and React 19 with the React Compiler, with all host text going through the translation layer."
 resource: ../../../packages/web/
-implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08]
-tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts]
+implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06]
+tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/test/archives.test.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T13:57:02Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T20:14:17Z }
 ---
 
 # Purpose
 
-The host app that runs in the browser. Vite builds it, and React 19 renders it with the React Compiler on (A15). The local server serves its build, with the [host API](../server/host-api.md) it talks to. Its main screen has the workspaces beside the open workspace's tool (`APP-01`, `APP-03`), and a first-run screen while there are none (`APP-02`). My tools, the saved-tools library, is the second section (`APP-04`), and the open workspace's history, with its versions and undo, sits under its tool (`APP-05`). The trash is the third section (`APP-08`). The chat that makes tools comes with M2, and the export and import screens with the rest of #53. Its text, like all host text, goes through the translation layer from the first component (`UX-05`), so adding a language needs a message file and no code changes. Only English ships at first (A10).
+The host app that runs in the browser. Vite builds it, and React 19 renders it with the React Compiler on (A15). The local server serves its build, with the [host API](../server/host-api.md) it talks to. Its main screen has the workspaces beside the open workspace's tool (`APP-01`, `APP-03`), and a first-run screen while there are none (`APP-02`). My tools, the saved-tools library, is the second section (`APP-04`), and the open workspace's history, with its versions and undo, sits under its tool (`APP-05`). The trash is the third section (`APP-08`). Each workspace and saved tool exports to a file, and a file imports from beside the workspaces or from the first-run screen (`APP-06`). The chat that makes tools comes with M2. Its text, like all host text, goes through the translation layer from the first component (`UX-05`), so adding a language needs a message file and no code changes. Only English ships at first (A10).
 
 # Entry points
 
-- `src/App.tsx`: `App`, the main screen: it loads the workspaces and the library through the host API, keeps which workspace is open for the tab, and shows `EmptyState`, the first-run screen, while there are none, with the trash notice when the last one was just deleted, and a way to the trash while it holds something. The workspaces come most recently used first when the app opens, and keep their places after that.
+- `src/App.tsx`: `App`, the main screen: it loads the workspaces and the library through the host API, keeps which workspace is open for the tab, and shows `EmptyState`, the first-run screen, while there are none, with the trash notice when the last one was just deleted, a way to the trash while it holds something, and importing from a file. The workspaces come most recently used first when the app opens, and keep their places after that.
 - `src/Workspaces.tsx`: the workspaces list, each with its name, when it was last used and whether it is saved, with opening, renaming, saving to my tools under a name, and moving to the trash (`APP-03`).
 - `src/Library.tsx`: my tools, the saved-tools library (`APP-04`): each saved tool with its name, when it was last updated (the entry or the workspace it follows, whichever changed later, A32) and the workspace Continue opens, searchable by name, with Continue, Use again (`DATA-07`), Save as a new tool, renaming and moving to the trash.
 - `src/History.tsx`: the open workspace's history (`APP-05`): its tool versions, newest first, with restore; undo of its last data change (`DATA-04`); and the copies kept before a restore that lost data, which can be brought back (`DATA-10`). After a restore or an undo, the app starts the tool again with the changed data.
 - `src/Trash.tsx`: the trash (`APP-08`, `DATA-09`): each deleted workspace and saved tool, with the saved tools that went with a workspace, when it was deleted and when it goes for good, and restore. Emptying it early first lists everything that goes.
+- `src/archives.ts`: the app's side of the archive routes ([export and import](../server/archives.md)): `exportArchive` asks for a workspace's or saved tool's file and gives its name and bytes, `saveFile` has the browser save it as a download, and `importArchive` sends a file and gives back the report of what came in, checked against the contracts.
+- `src/ImportFile.tsx`: `ImportFile`, the control that picks a `.tessera` file to import.
 - `src/NameForm.tsx`: the small form that names something, for renaming, saving and Save as a new tool.
 - `src/ToolPanel.tsx`: the open workspace's tool, run through the [runtime](../runtime/package.md) with the bridge to its saved data, with minimize, show again and full screen (`APP-01`).
 - `src/tool-start.ts`: `startTool` opens the workspace through the host API, then starts its tool and serves it the bridge, and says after each change the tool saved (`StartOptions`); `rememberedState` and `rememberState` keep, for the tab, how each workspace's tool was left.
@@ -49,6 +51,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **Undo undoes the change the person sees** (`DATA-04`). A running tool may change the data after the history loaded; Undo checks that the change it shows is still the newest, and if not, shows the newer one and undoes nothing. An interface change is undone by restoring the version before it.
 - **Emptying the trash removes only what the person was shown** (`DATA-09`). The confirmation lists every entry, and the server empties the trash only if it still holds exactly those; if something was deleted meanwhile, it refuses, nothing goes, and the trash shows what it holds now.
 - **The trash is never out of reach.** After the last workspace is deleted, the first-run screen offers the trash while it holds something, so that workspace can come back.
+- **An import says what came in, then opens it** (`APP-06`): the workspace by name, with its saved tools, and when something with the same IDs was already here, that it came in as a copy and nothing here changed. A refused file shows the server's plain reason, and nothing comes in.
 - **Buttons say which workspace they act on.** Their visible labels are short ("Rename", "Move to trash"); their accessible names include the workspace's name.
 - **The React Compiler does the memoizing** (A15). No hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case, with a comment saying so. ESLint runs the hooks rules and the compiler's rules (`eslint-plugin-react-hooks`, `recommended-latest`) on every component.
 
@@ -70,11 +73,13 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `src/App.tsx`: `EmptyState`, `App`
 - `src/History.tsx`: `History`
+- `src/ImportFile.tsx`: `ImportFile`
 - `src/Library.tsx`: `Library`
 - `src/NameForm.tsx`: `NameForm`
 - `src/ToolPanel.tsx`: `ToolPanel`
 - `src/Trash.tsx`: `Trash`
 - `src/Workspaces.tsx`: `Workspaces`
+- `src/archives.ts`: `exportArchive`, `importArchive`, `saveFile`
 - `src/host-api.ts`: `HostError`, `Send` (type), `ask`
 - `src/i18n/en.ts`: `en`, `MessageKey` (type)
 - `src/i18n/translate.ts`: `Messages` (type), `Params` (type), `Translate` (type), `MissingHandler` (type), `createTranslator`, `t`

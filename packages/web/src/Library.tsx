@@ -21,6 +21,8 @@ type Props = {
   onSaveAsNew: (tool: SavedTool, name: string) => Promise<void>;
   onRename: (tool: SavedTool, name: string) => Promise<void>;
   onDelete: (tool: SavedTool) => Promise<void>;
+  /** Exports the saved tool, with the workspace it follows, to a file (APP-06). */
+  onExport: (tool: SavedTool) => Promise<void>;
 };
 
 export function Library(props: Props) {
@@ -106,6 +108,13 @@ export function Library(props: Props) {
                     onClick={() => setEditing({ id: tool.id, kind: "rename" })}
                   >
                     {t("library.renameShort")}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("library.export", { name })}
+                    onClick={() => void props.onExport(tool)}
+                  >
+                    {t("library.exportShort")}
                   </button>
                   <button
                     type="button"

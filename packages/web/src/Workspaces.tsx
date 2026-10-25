@@ -4,8 +4,8 @@ import { t } from "./i18n/translate.ts";
 import { NameForm } from "./NameForm.tsx";
 
 // The workspaces list (APP-03): each workspace with its name, when it was last used and whether
-// it is saved to the library, with switching, renaming, saving to my tools (DATA-08) and deleting
-// to the trash.
+// it is saved to the library, with switching, renaming, saving to my tools (DATA-08), exporting
+// to a file (APP-06) and deleting to the trash.
 
 const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
@@ -21,6 +21,8 @@ type Props = {
   onRename: (id: string, title: string) => Promise<void>;
   onSave: (id: string, name: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  /** Exports the workspace, with its saved tools, to a file (APP-06). */
+  onExport: (id: string) => Promise<void>;
 };
 
 export function Workspaces(props: Props) {
@@ -94,6 +96,13 @@ export function Workspaces(props: Props) {
                       onClick={() => setEditing({ id: workspace.id, kind: "rename" })}
                     >
                       {t("workspaces.renameShort")}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={t("workspaces.export", { name })}
+                      onClick={() => void props.onExport(workspace.id)}
+                    >
+                      {t("workspaces.exportShort")}
                     </button>
                     <button
                       type="button"
