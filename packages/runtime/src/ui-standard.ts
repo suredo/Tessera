@@ -61,6 +61,9 @@ export function accessibilityCss(mark: string): string {
   :focus-visible {
     outline: 3px solid ${UI_TOKENS.accent} !important;
     outline-offset: 2px !important;
+    /* A transition outranks every important rule, and could keep the outline unseen for as long
+       as it lasts; with none, the outline shows at once. */
+    transition: none !important;
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {

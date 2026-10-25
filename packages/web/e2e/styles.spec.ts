@@ -14,13 +14,24 @@ const hostileCss = `
 @layer mine { :focus-visible { outline: 0 none !important; } }
 button { transition: opacity 5s linear !important; animation: spin 3s linear infinite !important; }
 @keyframes spin { to { transform: rotate(360deg); } }`;
+// And one more: an outline made transparent, with a day-long transition to keep it so. A
+// transition outranks every important rule, so only stopping it on focus keeps the outline seen.
+const slowFocusCss = `
+#slow { outline: 3px solid transparent !important; transition: outline-color 86400s step-end !important; }`;
 const hostileHtml = `<button id="plain">Plain</button>
-<button id="inline" style="outline: none !important">Inline</button>`;
+<button id="inline" style="outline: none !important">Inline</button>
+<button id="slow">Slow</button>`;
 
 const ui = (mode: "standard" | "custom") => ({ standardVersion: 1, mode }) as const;
 const tools: Record<string, Pick<Artifact, "code" | "ui">> = {
-  "hostile-standard": { code: { html: hostileHtml, css: hostileCss, js: "" }, ui: ui("standard") },
-  "hostile-custom": { code: { html: hostileHtml, css: hostileCss, js: "" }, ui: ui("custom") },
+  "hostile-standard": {
+    code: { html: hostileHtml, css: hostileCss + slowFocusCss, js: "" },
+    ui: ui("standard"),
+  },
+  "hostile-custom": {
+    code: { html: hostileHtml, css: hostileCss + slowFocusCss, js: "" },
+    ui: ui("custom"),
+  },
   "plain-standard": { code: { html: "<button>Go</button>", css: "", js: "" }, ui: ui("standard") },
   "plain-custom": { code: { html: "<button>Go</button>", css: "", js: "" }, ui: ui("custom") },
 };
@@ -30,6 +41,9 @@ test.beforeAll(async () => {
   host = await startSandboxHost(tools);
 });
 test.afterAll(() => host.close());
+
+// The floor's outline colour, the UI standard's accent.
+const ACCENT = "rgb(82, 105, 71)";
 
 type TestWindow = { mountTool(container: HTMLElement, mountId: string): Promise<unknown> };
 
@@ -43,7 +57,7 @@ async function open(page: Page, mountId: string) {
   await expect(toolFrame(page).locator("button").first()).toBeVisible();
 }
 
-/** The computed styles that show focus and motion, for a button focused from the keyboard. */
+/** The computed styles that show focus, for a button focused from the keyboard. */
 async function focused(page: Page, id: string) {
   const button = toolFrame(page).locator(`#${id}`);
   await button.focus();
@@ -53,11 +67,23 @@ async function focused(page: Page, id: string) {
       focusVisible: el.matches(":focus-visible"),
       outlineStyle: style.outlineStyle,
       outlineWidth: style.outlineWidth,
-      transitionDuration: style.transitionDuration,
-      animationDuration: style.animationDuration,
+      outlineColor: style.outlineColor,
     };
   });
 }
+
+/**
+ * The computed motion of a button without focus. A focused one has no transitions at all, so its
+ * outline shows at once.
+ */
+const motion = (page: Page, id: string) =>
+  toolFrame(page)
+    .locator(`#${id}`)
+    .evaluate((el) => ({
+      focused: el.matches(":focus"),
+      transitionDuration: getComputedStyle(el).transitionDuration,
+      animationDuration: getComputedStyle(el).animationDuration,
+    }));
 
 test.describe("with reduced motion asked for", () => {
   test.use({ reducedMotion: "reduce" });
@@ -71,6 +97,10 @@ test.describe("with reduced motion asked for", () => {
         focusVisible: true,
         outlineStyle: "solid",
         outlineWidth: "3px",
+        outlineColor: ACCENT,
+      });
+      expect(await motion(page, "inline")).toEqual({
+        focused: false,
         transitionDuration: "1e-05s",
         animationDuration: "1e-05s",
       });
@@ -78,18 +108,36 @@ test.describe("with reduced motion asked for", () => {
   }
 });
 
+for (const mode of ["standard", "custom"] as const) {
+  test(`RUN-05: a transition can't keep the focus outline from showing (${mode} mode)`, async ({
+    page,
+  }) => {
+    await open(page, `hostile-${mode}`);
+    // No reduced-motion preference, so the tool's transitions run, except on the outline.
+    expect(await focused(page, "slow")).toMatchObject({
+      focusVisible: true,
+      outlineStyle: "solid",
+      outlineWidth: "3px",
+      outlineColor: ACCENT,
+    });
+  });
+}
+
 test("RUN-05: without the reduced-motion preference, a tool keeps its own motion", async ({
   page,
 }) => {
   await open(page, "hostile-custom");
-  expect(await focused(page, "plain")).toMatchObject({
-    outlineStyle: "solid",
+  expect(await motion(page, "plain")).toEqual({
+    focused: false,
     transitionDuration: "5s",
     animationDuration: "3s",
   });
+  // Focused, it has no transitions, so its outline shows at once.
+  await toolFrame(page).locator("#plain").focus();
+  expect(await motion(page, "plain")).toMatchObject({ focused: true, transitionDuration: "0s" });
 });
 
-test("RUN-05: an important inline style is the one way past the floor, which no stylesheet can win (VER-01 flags it in M2)", async ({
+test("RUN-05: an important inline style beats the floor, as no stylesheet can win against it (VER-01 flags it in M2)", async ({
   page,
 }) => {
   await open(page, "hostile-custom");
