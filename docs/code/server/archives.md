@@ -7,19 +7,20 @@ implements: [DATA-05, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07]
 tests: [../../../packages/server/test/archives.test.ts]
 tags: [code, server, data, archives, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:46:10Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:12:19Z }
 ---
 
 # Purpose
 
-Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), with its version history, data and saved tools, or one saved tool with the workspace it follows, exports to an archive and imports back exactly, into the same data folder or another. Importing is a trust boundary in the [threat model](../../spec/threat-model.md), whose import checks IMP-01 to IMP-07 are this module's tests. Assets inside archives come with [issue 49](https://github.com/suredo/Tessera/issues/49); the screens with #53.
+Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), with its version history, data and saved tools, or one saved tool with the workspace it follows, exports to an archive and imports back exactly, into the same data folder or another. Importing is a trust boundary in the [threat model](../../spec/threat-model.md), whose import checks IMP-01 to IMP-07 are this module's tests. The host app reaches it through two routes of its own, export and import, which move files; the screens come with #53.
 
 # Entry points
 
 - `src/archives/archive.ts`:
-  - `exportWorkspace` and `exportSavedTool` return an archive's bytes; `writeExport` saves them in the data folder's `exports/`, named after what they hold and the day, as `.tessera` (`ARCHIVE_EXTENSION`).
+  - `exportWorkspace` and `exportSavedTool` return an archive's bytes; `writeExport` saves them in the data folder's `exports/`, named after what they hold and the day, as `.tessera` (`ARCHIVE_EXTENSION`). `exportName` is that name, without the extension, also given to a download.
   - `importArchive` checks an archive and imports it in one transaction, returning what it imported as `Imported`, which says whether it came in as a copy.
   - `ARCHIVE_LIMITS`: 564 MB per archive, 10,000 files, 25 MB per file and 756 MB in all, unpacked, and at most 100 to 1 compression for files over 64 KB (`DATA-06`). They leave room for a workspace's images at their limit (500 MB), one image per file at the most one may be (`DATA-11`).
+- `src/archives/routes.ts`: `archiveRoutes`, the host app's two routes (`APP-06`), which the [launcher](launcher.md) mounts behind the local server's guard (`SEC-03`). The export route takes the contracts' export request, a workspace or saved tool by ID, and answers with the archive as a file to save, named by `exportName`; what it can't export gets the module's plain sentence (404), and a request that isn't one gets 400. The import route takes a file's bytes, up to the archive limit, and answers the contracts' import reply: what came in, by ID and name, and whether as a copy, or the plain reason nothing did ([contracts](../contracts/package.md)).
 - `src/archives/zip.ts`: `writeZip` and `readZip`, the container; `ArchiveError` is every refusal, with a plain sentence (`GEN-12`). `ZipEntry` and `ZipLimits` are their shapes.
 - The manifest is the archive manifest contract in `@tessera/contracts` ([contracts package](../contracts/package.md)).
 
@@ -33,11 +34,12 @@ Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), wit
 - **The container is a strict subset of ZIP** (IMP-01, IMP-02), read here rather than by a general-purpose library: every entry is listed and checked before any is unpacked, so limits, names and ratios are refused without unpacking. Names that could escape (`..`, empty parts, absolute paths, drive letters, backslashes, NUL) are refused, as are repeated names, links, encryption, ZIP64 and any compression but none or deflate. Each entry is unpacked by `node:zlib` with a hard cap at the size it declares, and its size and CRC must match.
 - **Only tool code and images, stored as data** (IMP-05, `SEC-01`): the manifest, tool versions and, from format 2, images as `assets/<id>` are the only files, and every shape is strict, so a migration, script or engine is refused. Tool code is stored and only ever runs in the sandbox; an image is only ever bytes a tool shows through a `blob:` URL.
 - **Existing work is never changed** (IMP-06). If any workspace or saved tool ID in the archive is already here, in use or in the trash, everything comes in as a copy with new IDs. Tool versions are named by their content, so one already here is the same version and is kept as it is.
+- **A file over the limit is refused before it is read.** The import route refuses a body whose declared length is over the archive limit without reading it, and stops reading one that grows past it (IMP-02, `DATA-06`).
 - **No network, no process, and files only in the asset store** (IMP-07): an import reads only the bytes it is given, writes the database, and writes an image's file only through the [asset store](assets.md), inside its folder. One test runs an archive without images with the tripwires on and no folder allowed; another runs one with an image with only the asset store's folder allowed.
 
 # Depends on / used by
 
-Depends on [workspaces and saved tools](workspaces.md), [storage](storage.md), the artifact and archive contracts and Node's `zlib` and `crypto`. It also depends on the [asset store](assets.md) for the images it carries. The export and import screens (#53) and the P2 scenario ("move to another data folder") will use it.
+Depends on [workspaces and saved tools](workspaces.md), [storage](storage.md), the artifact and archive contracts and Node's `zlib` and `crypto`. It also depends on the [asset store](assets.md) for the images it carries. The archive routes, through them the export and import screens (#53), and the P2 scenario ("move to another data folder") will use it.
 
 # Pitfalls
 
@@ -52,6 +54,7 @@ Depends on [workspaces and saved tools](workspaces.md), [storage](storage.md), t
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `archive.ts`: `ARCHIVE_LIMITS`, `ARCHIVE_EXTENSION`, `exportWorkspace`, `exportSavedTool`, `writeExport`, `Imported` (type), `importArchive`
-- `index.ts`: `ARCHIVE_EXTENSION`, `ARCHIVE_LIMITS`, `exportSavedTool`, `exportWorkspace`, `importArchive`, `writeExport`, `Imported` (type), `ArchiveError`, `readZip`, `writeZip`, `ZipEntry` (type), `ZipLimits` (type)
+- `archive.ts`: `ARCHIVE_LIMITS`, `ARCHIVE_EXTENSION`, `exportWorkspace`, `exportSavedTool`, `exportName`, `writeExport`, `Imported` (type), `importArchive`
+- `index.ts`: `ARCHIVE_EXTENSION`, `ARCHIVE_LIMITS`, `exportName`, `exportSavedTool`, `exportWorkspace`, `importArchive`, `writeExport`, `Imported` (type), `archiveRoutes`, `ArchiveError`, `readZip`, `writeZip`, `ZipEntry` (type), `ZipLimits` (type)
+- `routes.ts`: `archiveRoutes`
 - `zip.ts`: `ArchiveError`, `ZipLimits` (type), `ZipEntry` (type), `writeZip`, `readZip`

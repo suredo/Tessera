@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { archiveRoutes } from "../archives/index.ts";
 import { bridgeRoutes } from "../bridge/index.ts";
 import { startLocalServer, type LocalServer } from "../http/index.ts";
 import { findExecutable, runProcess } from "../platform/index.ts";
@@ -154,6 +155,7 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
         ...bridgeRoutes(dataFolder),
         ...activationRoutes(dataFolder),
         ...hostRoutes(dataFolder),
+        ...archiveRoutes(dataFolder),
         ...runtimeRoutes(workspaceTools(dataFolder)),
         [INSTANCE_ROUTE]: (_req, res) => {
           res.writeHead(200, { "content-type": "application/json" });

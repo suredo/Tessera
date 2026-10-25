@@ -7,7 +7,7 @@ implements: [CON-01]
 tests: [../../../packages/server/test/host-api.test.ts]
 tags: [code, server, api, host]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T12:48:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:12:19Z }
 ---
 
 # Purpose
@@ -32,7 +32,7 @@ Connects the host app's screens (#53) to the server's modules. Everything the ap
 
 # Depends on / used by
 
-Depends on the [workspaces](workspaces.md), [trash](trash.md), [tool versions](versions.md), [local server](local-server.md) and [runtime routes](runtime-routes.md) modules and the contracts. The host app's screens (#53) use it. Export and import, which move files, get routes of their own.
+Depends on the [workspaces](workspaces.md), [trash](trash.md), [tool versions](versions.md), [local server](local-server.md) and [runtime routes](runtime-routes.md) modules and the contracts. The host app's screens (#53) use it. Export and import, which move files, have routes of their own ([export and import](archives.md)).
 
 # Pitfalls
 

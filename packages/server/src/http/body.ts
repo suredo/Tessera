@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-// What every JSON route needs: its request body read within a limit, and plain-text refusals.
+// What every route needs: its request body read within a limit, as JSON or bytes, and plain-text
+// refusals.
 
 /** The request's body as JSON, read up to a limit: "too-large" past it, "invalid" if not JSON. */
 export async function readJson(req: IncomingMessage, limitBytes: number) {
@@ -16,6 +17,18 @@ export async function readJson(req: IncomingMessage, limitBytes: number) {
   } catch {
     return "invalid" as const;
   }
+}
+
+/** The request's body as bytes, read up to a limit: "too-large" past it. */
+export async function readBytes(req: IncomingMessage, limitBytes: number) {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req as AsyncIterable<Buffer>) {
+    size += chunk.byteLength;
+    if (size > limitBytes) return "too-large" as const;
+    chunks.push(chunk);
+  }
+  return new Uint8Array(Buffer.concat(chunks));
 }
 
 /** A plain-text answer, for a request the route refuses before it does anything. */

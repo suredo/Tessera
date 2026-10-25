@@ -2,7 +2,7 @@ import { z } from "zod";
 import { activationReplySchema, activationRequestSchema } from "./activation.ts";
 import { assetSchema } from "./asset.ts";
 import { hostReplySchema, hostRequestSchema } from "./host-api.ts";
-import { archiveManifestSchema } from "./archive.ts";
+import { archiveManifestSchema, exportRequestSchema, importReplySchema } from "./archive.ts";
 import { artifactSchema } from "./artifact.ts";
 import {
   BRIDGE_ACTIONS,
@@ -27,6 +27,8 @@ export const contracts = {
   activationRequest: activationRequestSchema,
   asset: assetSchema,
   archiveManifest: archiveManifestSchema,
+  exportRequest: exportRequestSchema,
+  importReply: importReplySchema,
   artifact: artifactSchema,
   bridgeDataRequest: bridgeDataRequestSchema,
   bridgeReply: bridgeReplySchema,
