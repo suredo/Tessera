@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:12:43Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T20:50:52Z }
 ---
 
 # Purpose
@@ -18,7 +18,7 @@ Starts Tessera with one double-click (`PLAT-02`): it opens the data folder ([sto
 
 - `Tessera.cmd`, at the repository's root: the double-click on Windows. It runs `main.ts` with Node, and pauses on an error so the window stays open to read it.
 - `src/launcher/main.ts`: the entry point. It chooses the data folder through [storage](storage.md) (`PLAT-04`), warns if a cloud service syncs it, launches, prints where Tessera runs, and stops it on Ctrl+C, Ctrl+Break, a stop signal or a closed window (which Windows reports as SIGHUP).
-- `src/launcher/launcher.ts`: `launch` starts a copy, or opens the one already running; a copy it starts comes with its open data folder. `openInBrowser` opens an address in the default browser.
+- `src/launcher/launcher.ts`: `launch` starts a copy, or opens the one already running; a copy it starts comes with its open data folder. `openInBrowser` opens an address in the default browser. `LOCK_FILE` is the lock's name, which the [development seed](../scripts/dev-data.md) takes too.
 
 # Invariants
 
@@ -49,5 +49,5 @@ The [local server](local-server.md), [storage](storage.md)'s `openDataFolder` an
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `launch`, `openInBrowser`, `LaunchOptions` (type), `Launched` (type)
-- `launcher.ts`: `LaunchOptions` (type), `Launched` (type), `openInBrowser`, `launch`
+- `index.ts`: `launch`, `LOCK_FILE`, `openInBrowser`, `LaunchOptions` (type), `Launched` (type)
+- `launcher.ts`: `LOCK_FILE`, `LaunchOptions` (type), `Launched` (type), `openInBrowser`, `launch`

@@ -19,7 +19,7 @@ import { activationRoutes } from "../workspaces/index.ts";
 // instance ID, which its own API confirms, beside it.
 
 /** Held by the copy that runs; the system releases it if that copy is killed. */
-const LOCK_FILE = "tessera.lock";
+export const LOCK_FILE = "tessera.lock";
 /** The running copy's address and instance ID; only the lock's holder writes it. */
 const ADDRESS_FILE = "tessera.address";
 const INSTANCE_ROUTE = "/api/instance";

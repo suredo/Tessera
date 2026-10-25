@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+* **Creation**: [Development data](code/scripts/dev-data.md): `pnpm seed` fills a development data folder with hand-written sample tools for every screen, and `pnpm dev` starts Tessera on it, never on the real data folder (`ENG-19`). The [runtime package](code/runtime/package.md) doc says a tool's frame can't submit a form, and the [launcher](code/server/launcher.md) doc that the seed takes its lock. After Codex's review of [pull request 127](https://github.com/suredo/Tessera/pull/127), it says the folder check follows junctions and symbolic links, and that the guards are tested as commands.
+
 * **Update**: The export and import screens ([issue 53](https://github.com/suredo/Tessera/issues/53), sixth part): the [web package](code/web/package.md) doc describes exporting each workspace and saved tool to a file, importing one from beside the workspaces or from the first-run screen, and the plain report of what came in; it claims `APP-06`.
 
 * **Update**: The archive routes ([issue 53](https://github.com/suredo/Tessera/issues/53), the routes the export and import screens need): the [export and import](code/server/archives.md) doc describes `archiveRoutes`, an export answered as a file to save and an import answered with what came in, and that a file over the limit is refused before it is read. The [contracts](code/contracts/package.md) doc names the two routes and their shapes, the [local server](code/server/local-server.md) doc `readBytes`, and the [launcher](code/server/launcher.md) and [host API](code/server/host-api.md) docs that the launcher mounts them. After Codex's review of [pull request 123](https://github.com/suredo/Tessera/pull/123), the archives doc says an export's name is cut between whole characters.
