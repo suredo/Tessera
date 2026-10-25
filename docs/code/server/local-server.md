@@ -7,7 +7,7 @@ implements: [SEC-03]
 tests: [../../../packages/server/test/local-server.test.ts, ../../../packages/server/test/bridge-routes.test.ts, ../../../packages/server/test/activation-route.test.ts]
 tags: [code, server, security, http]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T07:36:01Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:12:19Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Serves the host app, its API and the runtime's documents to the browser on this 
 
 # Entry points
 
-- `src/http/body.ts`: what every JSON route needs. `readJson` reads a request's body as JSON up to a limit, `text` sends a plain-text refusal and `json` a JSON answer. The [bridge route](bridge.md) and the activation route ([workspaces](workspaces.md)) use them.
+- `src/http/body.ts`: what every route needs. `readJson` reads a request's body as JSON up to a limit, `readBytes` as bytes, `text` sends a plain-text refusal and `json` a JSON answer. The [bridge route](bridge.md), the activation route ([workspaces](workspaces.md)), the [host API](host-api.md) and the archive routes ([export and import](archives.md)) use them.
 - `src/http/server.ts`: `startLocalServer` listens on 127.0.0.1, on port 4317 (`DEFAULT_PORT`) or, if that's taken, a port the system picks. It serves the built host app (`packages/web/dist`) at every path outside `/api` and `/runtime`, and the routes it's given at `/api/…` and `/runtime/…`. Closing it ends open connections too, so the port is free when it resolves.
 - `src/http/guard.ts`: `checkRequest` decides whether a request may reach a route, and which headers its answer gets; `routeKind`, `appOrigin` and `runtimeOrigin` name the three kinds of route and the two origins.
 
@@ -46,7 +46,7 @@ Node's `http` and `fs`, `isInsideFolder` from the [platform helpers](platform.md
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `body.ts`: `readJson`, `text`, `json`
+- `body.ts`: `readJson`, `readBytes`, `text`, `json`
 - `guard.ts`: `APP_HOST`, `RUNTIME_HOST`, `RouteKind` (type), `GuardResult` (type), `routeKind`, `appOrigin`, `runtimeOrigin`, `checkRequest`
 - `index.ts`: `json`, `readJson`, `text`, `APP_HOST`, `RUNTIME_HOST`, `appOrigin`, `checkRequest`, `routeKind`, `runtimeOrigin`, `GuardResult` (type), `RouteKind` (type), `DEFAULT_PORT`, `startLocalServer`, `Handler` (type), `LocalServer` (type), `ServerOptions` (type)
 - `server.ts`: `DEFAULT_PORT`, `Handler` (type), `ServerOptions` (type), `LocalServer` (type), `startLocalServer`
