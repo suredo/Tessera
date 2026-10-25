@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+* **Update**: The [asset store](code/server/assets.md) doc names the test of M1's exit criterion for assets ([issue 49](https://github.com/suredo/Tessera/issues/49), last part): a cropped photo's undo brings the original back across a restart, and the original goes once that undo entry is discarded.
+
 * **Update**: Images in tools ([issue 49](https://github.com/suredo/Tessera/issues/49), second part): the [contracts](code/contracts/package.md) doc lists the `asset.read` action, the [bridge route](code/server/bridge.md) doc says it hands a tool only the images its workspace names, as type and bytes, never a path, and claims `AST-04` and `AST-05`. The [runtime package](code/runtime/package.md) doc describes the preamble's `assetUrl`, the [asset store](code/server/assets.md) doc `workspaceAssets` and `readAssetNow`, and the [threat model](spec/threat-model.md) says where `AST-04` and `AST-05` run.
 
 * **Update**: Data undo ([issue 110](https://github.com/suredo/Tessera/issues/110)): the [workspaces](code/server/workspaces.md) doc describes `listUndo` and `undoDataChange`, which undo one data change with a revision check that refuses rather than overwrites newer work, the newest 100 kept per workspace (`DATA-04`). [Storage](code/server/storage.md) lists `0007-data-undo.sql`, and the [asset store](code/server/assets.md) doc says cleanup looks through undo entries too. After Codex's review of [pull request 113](https://github.com/suredo/Tessera/pull/113), it says an undo entry's number is never reused, and that undoing a removal checks the record's revision then, not only that it's gone.
