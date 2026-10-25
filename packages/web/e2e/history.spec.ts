@@ -144,6 +144,9 @@ test("APP-05, DATA-10: a restore that loses data names each value, and its copy 
     'tasks › t-1 › note: "oat"',
   ]);
   await confirm.getByRole("button", { name: en["history.confirmLoss"] }).click();
+  // The notice comes with the tool's restart: only then are the frames read, never the old ones
+  // while they are taken down.
+  await expect(page.getByText("Version 1 is back, as the newest version.")).toBeVisible();
   await expect(toolText(page)).toHaveText("Version one");
   expect(tasksOf(id)).toEqual([{ id: "t-1", title: "Buy milk" }]);
 
@@ -151,6 +154,7 @@ test("APP-05, DATA-10: a restore that loses data names each value, and its copy 
   await history(page)
     .getByRole("button", { name: /^Bring back the copy kept / })
     .click();
+  await expect(page.getByText(/^The copy kept .+ is back\.$/)).toBeVisible();
   await expect(toolText(page)).toHaveText("Version two");
   expect(tasksOf(id)).toEqual([{ id: "t-1", title: "Buy milk", done: false, note: "oat" }]);
 });
