@@ -2,9 +2,11 @@ import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { canonicalJson, type Artifact } from "@tessera/contracts";
+import { fileURLToPath } from "node:url";
+import { ARCHIVE_FORMAT_VERSION, canonicalJson, type Artifact } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
+import { collectAssets, getAsset, readAsset, storeAsset } from "../src/assets/index.ts";
 import {
   ARCHIVE_LIMITS,
   ArchiveError,
@@ -86,9 +88,16 @@ function snapshot(store: Store, id: string) {
 
 const count = z.object({ n: z.number() });
 const total = (store: Store) =>
-  ["workspaces", "workspace_versions", "saved_tools", "tool_versions"].map(
+  ["workspaces", "workspace_versions", "saved_tools", "tool_versions", "assets"].map(
     (table) => store.db.get(count, `SELECT COUNT(*) AS n FROM ${table}`)?.n,
   );
+/** Every file in a data folder's assets folder. */
+const assetFiles = (folder: DataFolder) =>
+  fs.existsSync(folder.paths.assets)
+    ? (fs.readdirSync(folder.paths.assets, { recursive: true }) as string[]).filter((f) =>
+        fs.statSync(path.join(folder.paths.assets, f)).isFile(),
+      )
+    : [];
 
 async function exported() {
   const clock = testClock();
@@ -125,9 +134,10 @@ function pack(manifest: unknown, files: Map<string, Uint8Array>, extra: ZipEntry
 /** Imports into a new data folder, expecting a refusal, and checks that nothing was written. */
 async function refused(bytes: Uint8Array, message: string | RegExp) {
   const folder = await openDataFolder(newFolder());
-  expect(() => importArchive(folder, bytes)).toThrow(message);
-  expect(() => importArchive(folder, bytes)).toThrow(ArchiveError);
-  expect(total(folder)).toEqual([0, 0, 0, 0]);
+  await expect(importArchive(folder, bytes)).rejects.toThrow(message);
+  await expect(importArchive(folder, bytes)).rejects.toThrow(ArchiveError);
+  expect(total(folder)).toEqual([0, 0, 0, 0, 0]);
+  expect(assetFiles(folder)).toEqual([]);
   folder.close();
 }
 
@@ -151,7 +161,7 @@ describe("export and import (DATA-05)", SLOW_MACHINE, () => {
     fs.rmSync(root, { recursive: true, force: true });
     const wiped = await openDataFolder(root, { now: clock.now });
     expect(listWorkspaces(wiped)).toEqual([]);
-    const imported = importArchive(wiped, archive);
+    const imported = await importArchive(wiped, archive);
     expect(imported).toMatchObject({ exported: "workspace", asCopy: false });
     expect(snapshot(wiped, id)).toEqual(before);
     expect(before.versions).toHaveLength(3);
@@ -173,7 +183,7 @@ describe("export and import (DATA-05)", SLOW_MACHINE, () => {
 
       fs.rmSync(root, { recursive: true, force: true });
       const wiped = await openDataFolder(root);
-      importArchive(wiped, bytes);
+      await importArchive(wiped, bytes);
       expect(snapshot(wiped, id)).toEqual(before);
       wiped.close();
     }
@@ -182,11 +192,11 @@ describe("export and import (DATA-05)", SLOW_MACHINE, () => {
   it("DATA-05: an export Tessera couldn't import is refused when exporting, plainly", async () => {
     const folder = await openDataFolder(newFolder());
     const { id } = createWorkspace(folder, "Huge");
-    // Random text doesn't pack, so the manifest stays over the 8 MB a file may unpack to.
-    const text = randomBytes(4_500_000).toString("hex");
+    // Random text doesn't pack, so the manifest stays over the 25 MB a file may unpack to.
+    const text = randomBytes(ARCHIVE_LIMITS.entryBytes / 2 + 100_000).toString("hex");
     saveWorkspaceData(folder, id, { text }, 0);
     expect(() => exportWorkspace(folder, id)).toThrow(
-      /^"Huge" is too large to export as one archive\. "manifest\.json" in this archive is larger than 8 MB/,
+      /^"Huge" is too large to export as one archive\. "manifest\.json" in this archive is larger than 25 MB/,
     );
     folder.close();
   }, 60_000);
@@ -201,7 +211,7 @@ describe("export and import (DATA-05)", SLOW_MACHINE, () => {
     from.close();
 
     const to = await openDataFolder(newFolder());
-    const imported = importArchive(to, bytes);
+    const imported = await importArchive(to, bytes);
     expect(imported.exported).toBe("savedTool");
     expect(imported.savedTools).toEqual([tool]);
     expect(snapshot(to, id)).toEqual({ ...before, savedTools: [tool] });
@@ -267,7 +277,14 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", SLOW_MACHINE
   });
 
   it("IMP-02: refuses too much before unpacking it", async () => {
-    await refused(new Uint8Array(ARCHIVE_LIMITS.archiveBytes + 1), /larger than 64 MB/);
+    // The archive's own size is checked before anything is unpacked. At the real limit (564 MB, room
+    // for a workspace's images) a test archive would cost that much memory, so a small limit
+    // stands in; the message is the reader's, from the limit it is given.
+    const tooBig = new Uint8Array(2 * 1024 * 1024 + 1);
+    expect(() => readZip(tooBig, { ...ARCHIVE_LIMITS, archiveBytes: 2 * 1024 * 1024 })).toThrow(
+      "This archive is larger than 2 MB, the most Tessera imports.",
+    );
+    expect(ARCHIVE_LIMITS.archiveBytes).toBe(564 * 1024 * 1024);
     // A megabyte of zeros packs to about a kilobyte: too tight a ratio to trust.
     const { files, manifest } = await exportedFiles();
     await refused(
@@ -306,7 +323,10 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", SLOW_MACHINE
       pack({ ...manifest, format: "zip" }, files),
       "This file isn't a Tessera archive.",
     );
-    await refused(pack({ ...manifest, formatVersion: 2 }, files), /newer version of Tessera/);
+    await refused(
+      pack({ ...manifest, formatVersion: ARCHIVE_FORMAT_VERSION + 1 }, files),
+      /newer version of Tessera/,
+    );
     const untitled = { ...manifest, workspaces: [{ ...manifest.workspaces[0], title: "" }] };
     await refused(pack(untitled, files), /don't fit Tessera's format/);
     await refused(
@@ -357,8 +377,8 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", SLOW_MACHINE
     saveWorkspaceData(folder, id, { items: [] }, 2);
     const before = snapshot(folder, id);
 
-    const copy = importArchive(folder, bytes);
-    const again = importArchive(folder, bytes);
+    const copy = await importArchive(folder, bytes);
+    const again = await importArchive(folder, bytes);
     expect(copy.asCopy).toBe(true);
     expect(snapshot(folder, id)).toEqual(before);
     const ids = [id, copy.workspaces[0]?.id, again.workspaces[0]?.id];
@@ -379,7 +399,7 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", SLOW_MACHINE
     const canary = createCanary();
     const wires = armTripwires({ allowFolders: [] });
     try {
-      importArchive(folder, bytes);
+      await importArchive(folder, bytes);
     } finally {
       wires.disarm();
     }
@@ -388,5 +408,166 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", SLOW_MACHINE
     canary.remove();
     expect(listWorkspaces(folder)).toHaveLength(1);
     folder.close();
+  });
+});
+
+describe("images in archives (DATA-05, DATA-11)", SLOW_MACHINE, () => {
+  const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "assets");
+  const png = new Uint8Array(fs.readFileSync(path.join(fixtures, "photo.png")));
+  const jpeg = new Uint8Array(fs.readFileSync(path.join(fixtures, "photo.jpg")));
+
+  /** An export of a workspace whose data names a photo, and the photo's ID. */
+  async function exportedWithPhoto() {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Photos");
+    const stored = await storeAsset(folder, png, { originalName: "beach.png" });
+    if (!stored.ok) throw new Error(stored.message);
+    saveWorkspaceData(folder, id, { photos: [{ id: "p-1", asset: stored.asset.id }] }, 0);
+    const bytes = exportWorkspace(folder, id);
+    folder.close();
+    return { bytes, id, asset: stored.asset };
+  }
+  const filesOf = (bytes: Uint8Array) => {
+    const files = readZip(bytes, ARCHIVE_LIMITS);
+    const manifest = JSON.parse(new TextDecoder().decode(files.get("manifest.json"))) as {
+      [key: string]: unknown;
+      assets: { [key: string]: unknown; id: string }[];
+    };
+    return { files, manifest };
+  };
+
+  it("DATA-05: an export carries the images its workspace names, and an import brings them back exactly", async () => {
+    const { bytes, id, asset } = await exportedWithPhoto();
+    const { files, manifest } = filesOf(bytes);
+    expect(manifest.assets).toEqual([asset]);
+    expect(Buffer.from(files.get(`assets/${asset.id}`)!).equals(Buffer.from(png))).toBe(true);
+
+    const into = await openDataFolder(newFolder());
+    await importArchive(into, bytes);
+    expect(getAsset(into, asset.id)).toEqual(asset);
+    expect(Buffer.from((await readAsset(into, asset.id))!.bytes).equals(Buffer.from(png))).toBe(
+      true,
+    );
+    expect(getWorkspace(into, id)?.data).toEqual({ photos: [{ id: "p-1", asset: asset.id }] });
+    // Named by the imported data, it stays when cleanup runs.
+    expect(await collectAssets(into)).toEqual([]);
+    into.close();
+  });
+
+  it("IMP-03, IMP-05, AST-01: refuses an image that isn't what the archive says, importing nothing", async () => {
+    const { bytes, asset } = await exportedWithPhoto();
+    const { files, manifest } = filesOf(bytes);
+    const name = `assets/${asset.id}`;
+    const without = new Map([...files].filter(([file]) => file !== name));
+    const replaced = (data: Uint8Array) => new Map([...without, [name, data]]);
+    // Bytes that aren't the ones named.
+    await refused(pack(manifest, replaced(jpeg)), /doesn't match its name/);
+    // A page whose name is right but whose content isn't an image.
+    const page = new TextEncoder().encode("<html><script>steal()</script></html>");
+    const pageId = createHash("sha256").update(page).digest("hex");
+    const lying = {
+      ...manifest,
+      workspaces: JSON.parse(
+        JSON.stringify(manifest.workspaces).replaceAll(asset.id, pageId),
+      ) as unknown,
+      assets: [{ ...manifest.assets[0], id: pageId }],
+    };
+    await refused(
+      pack(lying, new Map([...without, [`assets/${pageId}`, page]])),
+      /isn't the image it says it is/,
+    );
+    // The manifest says JPEG; the bytes are a PNG.
+    await refused(
+      pack({ ...manifest, assets: [{ ...manifest.assets[0], type: "image/jpeg" }] }, files),
+      /isn't the image it says it is/,
+    );
+    // Listed but missing, present but not listed, and listed but named by nothing.
+    await refused(pack(manifest, without), /An image is missing/);
+    await refused(pack({ ...manifest, assets: [] }, files), /an image it doesn't list/);
+    const unnamed = {
+      ...manifest,
+      workspaces: JSON.parse(
+        JSON.stringify(manifest.workspaces).replaceAll(asset.id, "none"),
+      ) as unknown,
+    };
+    await refused(pack(unnamed, files), /an image nothing uses/);
+  });
+
+  it("DATA-05: an image only undo or a recovery snapshot names stays behind, and the archive still imports", async () => {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Photos");
+    const stored = await storeAsset(folder, png);
+    if (!stored.ok) throw new Error(stored.message);
+    // Named once, then let go of: only the undo entry still names it.
+    saveWorkspaceData(folder, id, { photos: [{ id: "p-1", asset: stored.asset.id }] }, 0);
+    saveWorkspaceData(folder, id, { photos: [] }, 1);
+    // And a recovery snapshot naming another, which archives don't carry either.
+    const other = await storeAsset(folder, jpeg);
+    if (!other.ok) throw new Error(other.message);
+    const hash = saveVersion(folder.db, artifact("<p></p>"));
+    addWorkspaceVersion(folder, id, hash);
+    folder.db.run(
+      "INSERT INTO recovery_snapshots (id, workspace_id, version_hash, data, created_at) VALUES ('s-1', ?, ?, ?, ?)",
+      id,
+      hash,
+      JSON.stringify({ photos: [{ id: "p-2", asset: other.asset.id }] }),
+      new Date().toISOString(),
+    );
+    const bytes = exportWorkspace(folder, id);
+    folder.close();
+    // Undo history and snapshots don't travel, so neither do the images only they name.
+    expect(filesOf(bytes).manifest.assets).toEqual([]);
+    const into = await openDataFolder(newFolder());
+    await expect(importArchive(into, bytes)).resolves.toMatchObject({ exported: "workspace" });
+    into.close();
+  });
+
+  it("DATA-11: cleanup running during an import never removes the images it brings", async () => {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Photos");
+    const ids: string[] = [];
+    for (const image of [png, jpeg]) {
+      const stored = await storeAsset(folder, image);
+      if (!stored.ok) throw new Error(stored.message);
+      ids.push(stored.asset.id);
+    }
+    saveWorkspaceData(folder, id, { photos: ids.map((asset, i) => ({ id: `p-${i}`, asset })) }, 0);
+    const bytes = exportWorkspace(folder, id);
+    folder.close();
+
+    const into = await openDataFolder(newFolder());
+    const importing = importArchive(into, bytes);
+    const cleaning = collectAssets(into);
+    await importing;
+    expect(await cleaning).toEqual([]);
+    for (const image of ids) expect(getAsset(into, image)).toBeDefined();
+    into.close();
+  });
+
+  it("IMP-07: an import with images writes files only inside the asset store", async () => {
+    const { bytes, asset } = await exportedWithPhoto();
+    const into = await openDataFolder(newFolder());
+    const canary = createCanary();
+    const wires = armTripwires({ allowFolders: [into.paths.assets] });
+    try {
+      await importArchive(into, bytes);
+    } finally {
+      wires.disarm();
+    }
+    expect(wires.trips).toEqual([]);
+    expect(canary.changes()).toEqual([]);
+    canary.remove();
+    expect(getAsset(into, asset.id)).toBeDefined();
+    into.close();
+  });
+
+  it("CON-04: an archive from before images, format 1, still imports", async () => {
+    const { files, manifest } = await exportedFiles();
+    const older: Record<string, unknown> = { ...manifest };
+    delete older["assets"];
+    const into = await openDataFolder(newFolder());
+    const imported = await importArchive(into, pack({ ...older, formatVersion: 1 }, files));
+    expect(imported.workspaces).toHaveLength(1);
+    into.close();
   });
 });
