@@ -105,6 +105,46 @@ test("APP-01: the tool can be minimized, shown again and put full screen", async
   await expect(page.locator(".tool-panel.full-screen")).toHaveCount(0);
 });
 
+test("UX-07: a minimized tool stays minimized after a reload, and after switching away and back", async ({
+  page,
+}) => {
+  const { shopping, garden, suffix } = twoWorkspaces();
+  await page.goto(app.url);
+  await workspaceButton(page, shopping).click();
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await page.getByRole("button", { name: en["tool.minimize"] }).click();
+  await expect(page.getByText(`${shopping} is minimized.`)).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText(`${shopping} is minimized.`)).toBeVisible();
+  await expect(toolFrames(page)).toHaveCount(0);
+
+  await workspaceButton(page, garden).click();
+  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`);
+  await workspaceButton(page, shopping).click();
+  await expect(page.getByText(`${shopping} is minimized.`)).toBeVisible();
+  await expect(toolFrames(page)).toHaveCount(0);
+  await page.getByRole("button", { name: en["tool.restore"] }).click();
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+});
+
+test("APP-03: the workspace opened last comes first, and opens by default", async ({ page }) => {
+  const { shopping, garden, suffix } = twoWorkspaces();
+  await page.goto(app.url);
+  // Garden was made last, so it is the most recent until shopping is opened.
+  await workspaceButton(page, shopping).click();
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  // A new tab remembers nothing, so it opens the most recently used workspace.
+  const fresh = await page.context().newPage();
+  await fresh.goto(app.url);
+  await expect(toolText(fresh)).toHaveText(`The shopping tool ${suffix}`);
+  const names = await workspaceList(fresh)
+    .locator(".workspace-name > span:first-child")
+    .allTextContents();
+  expect(names.indexOf(shopping)).toBeLessThan(names.indexOf(garden));
+  await fresh.close();
+});
+
 test("RUN-06: the main screen doesn't scroll sideways", async ({ page }) => {
   twoWorkspaces();
   await page.goto(app.url);

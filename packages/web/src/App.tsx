@@ -10,12 +10,14 @@ import { Workspaces } from "./Workspaces.tsx";
 // tools (A12). The chat that makes tools comes with M2.
 
 /** The first-run screen, shown while there are no workspaces (APP-02). */
-export function EmptyState() {
+export function EmptyState({ notice = "" }: { notice?: string }) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
       <p>{t("home.intro")}</p>
       <p role="status">{t("home.status")}</p>
+      {/* Such as the trash notice after the last workspace is deleted. */}
+      <p role="status">{notice}</p>
     </main>
   );
 }
@@ -38,9 +40,14 @@ const remember = (id: string | null) => {
   }
 };
 
+// The most recently used first: opened or changed, whichever is later (APP-03).
+const byUse = (list: readonly Workspace[], used: Record<string, string>) =>
+  [...list].sort((a, b) => (used[b.id] ?? b.updatedAt).localeCompare(used[a.id] ?? a.updatedAt));
+
 export function App() {
   const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
   const [savedTools, setSavedTools] = useState<SavedTool[]>([]);
+  const [lastUsed, setLastUsed] = useState<Record<string, string>>({});
   const [openId, setOpenId] = useState<string | null>(remembered);
   const [notice, setNotice] = useState("");
 
@@ -49,9 +56,11 @@ export function App() {
       ask("workspaces.list", {}),
       ask("library.list", {}),
     ]);
-    setWorkspaces(list.workspaces);
+    const ordered = byUse(list.workspaces, list.lastUsed);
+    setWorkspaces(ordered);
+    setLastUsed(list.lastUsed);
     setSavedTools(library.savedTools);
-    return list.workspaces;
+    return ordered;
   };
   const report = (error: unknown) =>
     setNotice(
@@ -63,10 +72,12 @@ export function App() {
     Promise.all([ask("workspaces.list", {}), ask("library.list", {})]).then(
       ([list, library]) => {
         if (!current) return;
-        setWorkspaces(list.workspaces);
+        const ordered = byUse(list.workspaces, list.lastUsed);
+        setWorkspaces(ordered);
+        setLastUsed(list.lastUsed);
         setSavedTools(library.savedTools);
-        // Open the remembered workspace if it is still there, or else the most recent one.
-        const start = list.workspaces.find((w) => w.id === remembered()) ?? list.workspaces[0];
+        // Open the remembered workspace if it is still there, or else the most recently used one.
+        const start = ordered.find((w) => w.id === remembered()) ?? ordered[0];
         setOpenId(start?.id ?? null);
       },
       (error: unknown) => {
@@ -90,7 +101,7 @@ export function App() {
       </main>
     );
   }
-  if (workspaces.length === 0) return <EmptyState />;
+  if (workspaces.length === 0) return <EmptyState notice={notice} />;
   const current = workspaces.find((w) => w.id === openId) ?? null;
 
   return (
@@ -102,6 +113,7 @@ export function App() {
         <Workspaces
           workspaces={workspaces}
           savedTools={savedTools}
+          lastUsed={lastUsed}
           openId={openId}
           onOpen={open}
           onRename={async (id, title) => {

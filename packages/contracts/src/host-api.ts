@@ -98,7 +98,12 @@ const workspaceResult = z.strictObject({ workspace: workspaceSchema });
 export const HOST_ACTIONS = {
   "workspaces.list": {
     args: z.strictObject({}),
-    result: z.strictObject({ workspaces: z.array(workspaceSchema) }),
+    result: z.strictObject({
+      workspaces: z.array(workspaceSchema),
+      lastUsed: z
+        .record(z.uuid(), z.iso.datetime())
+        .describe("When each was last used: opened or changed, whichever is later (APP-03)."),
+    }),
   },
   "workspaces.open": {
     args: z.strictObject({ id }),

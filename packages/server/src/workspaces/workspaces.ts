@@ -109,6 +109,34 @@ export const existingWorkspace = (store: Store, id: string): Workspace => {
   return found;
 };
 
+/** Records that the workspace was opened now (APP-03). */
+export function recordUse(store: Store, id: string): void {
+  existingWorkspace(store, id);
+  store.db.run(
+    "INSERT INTO workspace_use (workspace_id, used_at) VALUES (?, ?) ON CONFLICT (workspace_id) DO UPDATE SET used_at = excluded.used_at",
+    id,
+    stamp(store),
+  );
+}
+
+const useRow = z.object({ id: z.string(), last_used: z.string() });
+
+/**
+ * When each workspace was last used, by ID: the later of when it was last opened and when it last
+ * changed, since changing a tool's data is using it too (APP-03).
+ */
+export const lastUsed = (store: Store): Record<string, string> =>
+  Object.fromEntries(
+    store.db
+      .all(
+        useRow,
+        `SELECT w.id, MAX(w.updated_at, COALESCE(u.used_at, w.updated_at)) AS last_used
+           FROM workspaces w LEFT JOIN workspace_use u ON u.workspace_id = w.id
+          WHERE w.deleted_at IS NULL`,
+      )
+      .map((row) => [row.id, row.last_used]),
+  );
+
 /** Every workspace, the most recently changed first. */
 export const listWorkspaces = (store: Store): Workspace[] =>
   store.db.all(workspaceFromRow, `${SELECT_WORKSPACE} ORDER BY w.updated_at DESC, w.id`);

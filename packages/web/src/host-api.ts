@@ -6,6 +6,7 @@ import {
   type HostArgs,
   type HostResult,
 } from "@tessera/contracts";
+import { t } from "./i18n/translate.ts";
 
 // The host app's side of the host API (APP-03 to APP-08): each action goes to the server's one
 // route, and its answer is checked against the same contract the server checks it with (CON-01).
@@ -28,9 +29,9 @@ export async function ask<A extends HostActionName>(
     body: JSON.stringify({ action, args }),
   });
   const reply = hostReplySchema.safeParse(await response.json().catch(() => undefined));
-  if (!reply.success) throw new HostError("Tessera's answer couldn't be read.");
+  if (!reply.success) throw new HostError(t("app.unreadable"));
   if (!reply.data.ok) throw new HostError(reply.data.error.message);
   const result = HOST_ACTIONS[action].result.safeParse(reply.data.result);
-  if (!result.success) throw new HostError("Tessera's answer couldn't be read.");
+  if (!result.success) throw new HostError(t("app.unreadable"));
   return result.data as HostResult<A>;
 }

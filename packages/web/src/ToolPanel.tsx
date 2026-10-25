@@ -1,63 +1,70 @@
 import type { Workspace } from "@tessera/contracts";
-import { createRuntime, serveBridge, serverData, type ToolRuntime } from "@tessera/runtime";
-import { useEffect, useRef, useState } from "react";
-import { ask } from "./host-api.ts";
+import { createRuntime, type ToolRuntime } from "@tessera/runtime";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { t } from "./i18n/translate.ts";
+import { rememberedState, rememberState, startTool } from "./tool-start.ts";
 
 // The tool panel (APP-01): the open workspace's tool, running in the sandbox through the runtime,
 // with its data served by the server's bridge route (RUN-04). Exactly one tool runs: opening
-// another workspace closes this one first (RUN-02). It can be minimized and shown full screen.
+// another workspace closes this one first (RUN-02). It can be minimized and shown full screen,
+// and a minimized or stopped tool stays so after a reload (UX-07).
 
 type Mode = "starting" | "running" | "minimized" | "stopped";
-
-// Starts the tool, through `open` (a first start or a restore), and serves it the bridge with what
-// its version declares.
-async function startTool(
-  runtime: ToolRuntime,
-  workspaceId: string,
-  open: (runtime: ToolRuntime) => ReturnType<ToolRuntime["open"]>,
-) {
-  const { capabilities } = await ask("workspaces.open", { id: workspaceId });
-  const tool = await open(runtime);
-  serveBridge(tool, { capabilities, data: serverData(workspaceId) });
-}
 
 export function ToolPanel({ workspace }: { workspace: Workspace }) {
   const container = useRef<HTMLDivElement>(null);
   const runtime = useRef<ToolRuntime | null>(null);
-  const [mode, setMode] = useState<Mode>("starting");
-  const [fullScreen, setFullScreen] = useState(false);
+  const starting = useRef<AbortController | null>(null);
   const name = workspace.title;
   const id = workspace.id;
   const hasTool = workspace.currentVersion !== null;
+  // How the person left this tool, read once for this workspace.
+  const [left] = useState(() => rememberedState(id));
+  const [mode, setMode] = useState<Mode>(
+    left?.mode === "minimized" ? "minimized" : left?.mode === "stopped" ? "stopped" : "starting",
+  );
+  const [fullScreen, setFullScreen] = useState(false);
+
+  // Starts the tool through `open`, until the panel goes or another start replaces this one.
+  const start = (current: ToolRuntime, open: Parameters<typeof startTool>[2]) => {
+    starting.current?.abort();
+    const controller = new AbortController();
+    starting.current = controller;
+    startTool(current, id, open, controller.signal).then(
+      (running) => {
+        if (running) setMode("running");
+      },
+      () => {
+        if (!controller.signal.aborted) setMode("stopped");
+      },
+    );
+  };
+  // The first start, from the effect that makes the runtime.
+  const startFirst = useEffectEvent((current: ToolRuntime) => start(current, (r) => r.open(id)));
 
   useEffect(() => {
     const element = container.current;
     if (!element || !hasTool) return;
-    const created = createRuntime(element);
+    // A minimized or stopped tool starts as it was left, and isn't opened (UX-07).
+    const kept = left?.mode === "minimized" || left?.mode === "stopped" ? left : undefined;
+    const created = createRuntime(element, kept);
     runtime.current = created;
     const stop = created.onState((state) => {
+      rememberState(id, state);
       if (state.mode === "stopped") setMode("stopped");
     });
-    startTool(created, id, (r) => r.open(id)).then(
-      () => setMode("running"),
-      () => setMode("stopped"),
-    );
+    if (!kept) startFirst(created);
     return () => {
+      starting.current?.abort();
       stop();
       created.close();
       runtime.current = null;
     };
     // A new workspace, or a new tool version, starts a new runtime.
-  }, [id, hasTool, workspace.currentVersion]);
+  }, [id, hasTool, left, workspace.currentVersion]);
 
   const restore = () => {
-    const current = runtime.current;
-    if (!current) return;
-    startTool(current, id, (r) => r.restore()).then(
-      () => setMode("running"),
-      () => setMode("stopped"),
-    );
+    if (runtime.current) start(runtime.current, (r) => r.restore());
   };
 
   return (
