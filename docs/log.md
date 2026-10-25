@@ -2,7 +2,7 @@
 
 ## 2026-10-25
 
-* **Update**: The main screen and workspaces ([issue 53](https://github.com/suredo/Tessera/issues/53), second part): the [web package](code/web/package.md) doc describes the main screen with the workspaces list and the tool panel, the first-run screen, the host API client and the host's styles from the UI tokens, and the browser tests against a real Tessera; it claims `APP-02` and `APP-03`. The [host API](code/server/host-api.md) doc describes `workspaces.open`.
+* **Update**: The main screen and workspaces ([issue 53](https://github.com/suredo/Tessera/issues/53), second part): the [web package](code/web/package.md) doc describes the main screen with the workspaces list and the tool panel, the first-run screen, the host API client and the host's styles from the UI tokens, and the browser tests against a real Tessera; it claims `APP-02` and `APP-03`. The [host API](code/server/host-api.md) and [contracts](code/contracts/package.md) docs describe `workspaces.open`.
 
 * **Creation**: [Host API](code/server/host-api.md) ([issue 53](https://github.com/suredo/Tessera/issues/53), first part): the host app's one route to the server, answering every action its screens ask for, checked against the contracts at both ends, and serving each workspace's current tool to its mount. The [contracts](code/contracts/package.md) doc describes the host API contract, which now also defines restore's and undo's answers; the [workspaces](code/server/workspaces.md) doc says those types are the contracts', the [data shape](code/server/data-shape.md) doc that `Loss` is the contracts' type, and the [launcher](code/server/launcher.md) doc that it mounts the host and runtime routes.
 
