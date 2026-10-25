@@ -394,6 +394,61 @@ describe("restoring a tool version (DATA-10)", () => {
     folder.close();
   });
 
+  it("DATA-10: a restore whose migration reuses a field name still previews the value it lost", async () => {
+    // Codex's case through the restore: the original b = "B" must be previewed, confirmed and kept.
+    const open = task({}, { additionalProperties: true });
+    const reuse: Migration = {
+      fromVersion: 1,
+      toVersion: 2,
+      operations: [
+        { op: "removeField", collection: "tasks", field: "a" },
+        { op: "renameField", collection: "tasks", from: "b", to: "a" },
+        { op: "removeField", collection: "tasks", field: "a" },
+        { op: "addField", collection: "tasks", fields: { a: "A" } },
+      ],
+    };
+    const onlyA = task({ a: { type: "string" } });
+    const one = version("<p>1</p>", {
+      schemaVersion: 1,
+      schema: listOf(open),
+      defaults: { tasks: [{ id: "t1", title: "T", a: "A", b: "B" }] },
+    });
+    const two = version("<p>2</p>", {
+      schemaVersion: 2,
+      schema: listOf(onlyA),
+      migrations: [reuse],
+    });
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Reuse");
+    const [hashOne, hashTwo] = [one, two].map((v) => saveVersion(folder.db, v));
+    expect(activateVersion(folder, id, hashOne!, 0).ok).toBe(true);
+    const plan = planRestore(folder, id, hashTwo!);
+    expect(plan).toMatchObject({
+      ok: true,
+      keepsData: false,
+      losses: [
+        { path: ["tasks", "t1", "a"], value: "A" },
+        { path: ["tasks", "t1", "b"], value: "B" },
+      ],
+    });
+    expect(restoreVersion(folder, id, hashTwo!, 1)).toMatchObject({ reason: "needs-confirmation" });
+    const restored = restoreVersion(
+      folder,
+      id,
+      hashTwo!,
+      1,
+      plan.ok && !plan.keepsData ? plan.confirmation : "",
+    );
+    expect(restored).toMatchObject({ ok: true });
+    // The unit before it, b = "B" included, can be brought back.
+    const back = restoreRecoverySnapshot(folder, restored.ok ? restored.snapshotId! : "", 2);
+    expect(back.ok).toBe(true);
+    expect(readWorkspaceData(folder, id).data).toEqual({
+      tasks: [{ id: "t1", title: "T", a: "A", b: "B" }],
+    });
+    folder.close();
+  });
+
   it("refuses a restore that dropping fields can't make fit, saying why", async () => {
     const { folder, id, hashes } = await onVersion2();
     const before = unit(folder, id);

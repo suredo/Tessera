@@ -82,44 +82,97 @@ function plainDecimal(text: string): string {
 
 /** Thrown when a migration's result would grow past the data limit, before it gets there. */
 class MigrationTooLarge extends Error {}
-/** Thrown when what a migration drops is more than a preview of it may hold. */
-class TooManyLosses extends Error {}
-
 /** The most a loss preview may hold, as UTF-8 JSON: as much as the data itself may. */
 export const LOSS_PREVIEW_LIMIT_BYTES = TOOL_DATA_LIMIT_BYTES;
 
+// One field a record held before the run: where it was, what it held, and where it is now.
+type Origin = {
+  /** Its path before the run: collection, the record's ID (or position), field. */
+  path: string[];
+  /** What it held before the run. */
+  original: Loss["value"];
+  /** What it should hold now if nothing was lost: the original, or its exact conversion. */
+  expected: Loss["value"];
+  record: DataRecord;
+  field: string;
+  removed: boolean;
+};
+
 /**
- * What a run removes or replaces, for a restore's preview. Each place is listed once, with the
- * value it held before the run: a value replaced again and again is one loss, not many. It counts
- * its own size and stops the run once that passes `LOSS_PREVIEW_LIMIT_BYTES`, so it never holds
- * more than a preview can show; a restore that would lose more is refused, never cut short.
+ * What a run loses, for a restore's preview, followed by where each original value came from
+ * rather than by paths: a field a later step reuses is a different field. Each field a record
+ * holds before the run gets an origin. A rename moves the origin with its value; removing the
+ * field loses it for good, whatever a later step adds there; an exact conversion keeps it. At the
+ * end, an origin is lost if it was removed, or if its value now differs from what it should hold:
+ * a value replaced and then replaced back is no loss. There is at most one origin per field of
+ * the data, so the log is as bounded as the data, and a preview larger than
+ * `LOSS_PREVIEW_LIMIT_BYTES` is a refusal, never cut short.
  */
 export class LossLog {
-  private readonly byPlace = new Map<string, Loss>();
-  private bytes = 0;
-  add(path: string[], value: Loss["value"]) {
-    const place = JSON.stringify(path);
-    if (this.byPlace.has(place)) return;
-    this.bytes +=
-      Buffer.byteLength(place, "utf8") + Buffer.byteLength(JSON.stringify(value), "utf8");
-    if (this.bytes > LOSS_PREVIEW_LIMIT_BYTES) throw new TooManyLosses();
-    this.byPlace.set(place, { path, value });
-  }
-  /** The losses, without those whose place holds the same value again in `result`. */
-  settle(result: ToolData): Loss[] {
-    return [...this.byPlace.values()].filter(
-      (loss) => canonicalJson(valueAt(result, loss.path)) !== canonicalJson(loss.value),
-    );
-  }
-}
+  private readonly origins: Origin[] = [];
+  private readonly byRecord = new WeakMap<object, Map<string, Origin>>();
 
-// The value at a loss's path in some data: a collection, a record named by ID or position, a field.
-function valueAt(data: ToolData, [collection = "", step = "", field = ""]: string[]): unknown {
-  const list = Object.hasOwn(data, collection) ? data[collection] : undefined;
-  if (!Array.isArray(list)) return undefined;
-  const byId = list.find((r) => isPlainObject(r) && r["id"] === step);
-  const record = byId ?? list[Number(step)];
-  return isPlainObject(record) && Object.hasOwn(record, field) ? record[field] : undefined;
+  /** Gives every field of every record in `data`, the run's copy, an origin. */
+  begin(data: ToolData) {
+    for (const [collection, list] of Object.entries(data)) {
+      if (!Array.isArray(list) || !list.every(isPlainObject)) continue;
+      for (const [index, record] of (list as DataRecord[]).entries()) {
+        const fields = new Map<string, Origin>();
+        for (const [field, value] of Object.entries(record)) {
+          if (field === "id") continue;
+          const origin: Origin = {
+            path: [collection, stepFor(record, index), field],
+            original: value as Loss["value"],
+            expected: value as Loss["value"],
+            record,
+            field,
+            removed: false,
+          };
+          fields.set(field, origin);
+          this.origins.push(origin);
+        }
+        this.byRecord.set(record, fields);
+      }
+    }
+  }
+  moved(record: DataRecord, from: string, to: string) {
+    const fields = this.byRecord.get(record);
+    const origin = fields?.get(from);
+    if (!fields || !origin) return;
+    fields.delete(from);
+    origin.field = to;
+    fields.set(to, origin);
+  }
+  removed(record: DataRecord, field: string) {
+    const fields = this.byRecord.get(record);
+    const origin = fields?.get(field);
+    if (!fields || !origin) return;
+    origin.removed = true;
+    fields.delete(field);
+  }
+  converted(record: DataRecord, field: string, value: unknown) {
+    const origin = this.byRecord.get(record)?.get(field);
+    if (origin && canonicalJson(record[field]) === canonicalJson(origin.expected)) {
+      origin.expected = value as Loss["value"];
+    }
+  }
+  /** Every original value the run lost, or null if they are more than a preview may hold. */
+  settle(): Loss[] | null {
+    const losses: Loss[] = [];
+    let bytes = 0;
+    for (const origin of this.origins) {
+      const kept =
+        !origin.removed &&
+        canonicalJson(origin.record[origin.field]) === canonicalJson(origin.expected);
+      if (kept) continue;
+      bytes +=
+        Buffer.byteLength(JSON.stringify(origin.path), "utf8") +
+        Buffer.byteLength(JSON.stringify(origin.original), "utf8");
+      if (bytes > LOSS_PREVIEW_LIMIT_BYTES) return null;
+      losses.push({ path: origin.path, value: origin.original });
+    }
+    return losses;
+  }
 }
 
 // The result's size as JSON, kept exactly as each change is made, so growth past the limit stops
@@ -175,8 +228,7 @@ function applyOperation(
     delete data[op.from];
     return;
   }
-  for (const [index, record] of recordsOf(data, op.collection).entries()) {
-    const at = (field: string) => [op.collection, stepFor(record, index), field];
+  for (const record of recordsOf(data, op.collection)) {
     switch (op.op) {
       case "renameField":
         if (!Object.hasOwn(record, op.from)) break;
@@ -186,6 +238,7 @@ function applyOperation(
           );
         }
         budget.replaced(op.from, op.to);
+        losses?.moved(record, op.from, op.to);
         record[op.to] = record[op.from];
         delete record[op.from];
         break;
@@ -199,7 +252,7 @@ function applyOperation(
       case "removeField":
         if (!Object.hasOwn(record, op.field)) break;
         budget.removed(record, op.field, record[op.field]);
-        losses?.add(at(op.field), record[op.field] as Loss["value"]);
+        losses?.removed(record, op.field);
         delete record[op.field];
         break;
       case "mapValues": {
@@ -207,7 +260,6 @@ function applyOperation(
         const pair = op.map.find(([from]) => from === record[op.field]);
         if (!pair || pair[1] === record[op.field]) break;
         budget.replaced(record[op.field], pair[1]);
-        losses?.add(at(op.field), record[op.field] as Loss["value"]);
         record[op.field] = pair[1];
         break;
       }
@@ -223,6 +275,7 @@ function applyOperation(
           );
         }
         budget.replaced(value, converted);
+        losses?.converted(record, op.field, converted);
         record[op.field] = converted;
         break;
       }
@@ -241,6 +294,7 @@ export function applyMigrations(
   limitBytes = TOOL_DATA_LIMIT_BYTES,
 ): ToolData {
   const copy = structuredClone(data);
+  losses?.begin(copy);
   const size = SizeBudget.jsonBytes(copy);
   const budget = new SizeBudget(size, Math.max(limitBytes, size));
   for (const migration of migrations) {
@@ -311,12 +365,6 @@ export function migrateData(
         `the migrated data would be over the limit of ${TOOL_DATA_LIMIT_BYTES / 1024} KB.`,
       );
     }
-    if (error instanceof TooManyLosses) {
-      return refuse(
-        "too-large",
-        `the migration would remove or replace more than a preview of it can list (${LOSS_PREVIEW_LIMIT_BYTES / 1024} KB).`,
-      );
-    }
     throw error;
   }
   if (canonicalJson(first) !== canonicalJson(second)) {
@@ -332,5 +380,12 @@ export function migrateData(
   const target = checkToolData(to.schema, first);
   if (!target.ok)
     return refuse("invalid", `the migrated data wouldn't fit the new shape. ${target.reason}`);
-  return { ok: true, data: first, steps: steps.length, losses: log ? log.settle(first) : [] };
+  const losses = log ? log.settle() : [];
+  if (losses === null) {
+    return refuse(
+      "too-large",
+      `the migration would remove or replace more than a preview of it can list (${LOSS_PREVIEW_LIMIT_BYTES / 1024} KB).`,
+    );
+  }
+  return { ok: true, data: first, steps: steps.length, losses };
 }
