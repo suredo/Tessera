@@ -3,11 +3,11 @@ type: Code Package
 title: "Contracts package"
 description: "@tessera/contracts: every shape that crosses a boundary, defined once with zod, with its generated JSON Schema, the bridge manifest and its checks, and the unit rule for numbers."
 resource: ../../../packages/contracts/
-implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS-01, DATA-08, DATA-09, DATA-05, DATA-02, BRG-01, BRG-02, BRG-03, BRG-05, BRG-06, BRG-07, MIG-01, MIG-02]
+implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS-01, DATA-08, DATA-09, DATA-05, DATA-02, BRG-01, BRG-02, BRG-03, BRG-05, BRG-06, BRG-07, MIG-01, MIG-02, SEC-01]
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:12:54Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T21:48:30Z }
 ---
 
 # Purpose

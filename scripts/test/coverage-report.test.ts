@@ -168,3 +168,19 @@ describe("coverage report (ENG-17)", () => {
     expect(collect(root, "M0").unknownIds).toEqual([]);
   });
 });
+
+describe("SEC-05: the threat model's checks stay tested", () => {
+  const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+  it("SEC-05: every numbered boundary check in the threat model is verified by a test named with its ID", () => {
+    const checks = collect(repository, "M1").requirements.filter((requirement) =>
+      requirement.source.endsWith("threat-model.md"),
+    );
+    // The sandbox, bridge, import, asset and migration checks: 39 in M1.
+    expect(checks.length).toBeGreaterThanOrEqual(39);
+    const untested = checks
+      .filter((check) => check.status !== "verified")
+      .map((check) => `${check.id} (${check.status})`);
+    expect(untested).toEqual([]);
+  });
+});
