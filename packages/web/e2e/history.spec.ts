@@ -190,3 +190,38 @@ test("DATA-04: Undo never undoes a change the person hasn't seen", async ({ page
   await expect(history(page)).toContainText("2 records changed");
   expect(tasksOf(id)).toHaveLength(4);
 });
+
+test("DATA-04: a change the running tool saves can be undone at once, without leaving it", async ({
+  page,
+}) => {
+  // A tool that adds a task when its button is clicked, through the bridge.
+  const writer: Artifact = {
+    ...tool("Writer"),
+    code: {
+      html: '<p id="text">Writer</p><button id="add">Add a task</button>',
+      css: "button { width: 150px; height: 60px; }",
+      js: `document.getElementById("add").addEventListener("click", () =>
+  tessera.call("data.patch", { operations: [{ op: "add", collection: "tasks", record: { title: "Post a letter" } }] }));`,
+    },
+  };
+  const { name, id } = workspaceThrough(writer);
+  await openWorkspace(page, name);
+  await expect(toolText(page)).toHaveText("Writer");
+  await expect(history(page)).toContainText(en["history.nothingToUndo"]);
+  const add = page
+    .frameLocator(".tool-frame iframe")
+    .frameLocator("iframe")
+    .frameLocator("iframe")
+    .getByRole("button", { name: "Add a task" });
+
+  await add.click();
+  await expect(history(page)).toContainText("One record changed");
+  expect(tasksOf(id)).toHaveLength(2);
+  await history(page).getByRole("button", { name: en["history.undo"] }).click();
+  await expect(history(page)).toContainText(en["history.nothingToUndo"]);
+  expect(tasksOf(id)).toEqual([{ id: "t-1", title: "Buy milk" }]);
+
+  // And again after that undo: the tool started afresh, and its next change shows too.
+  await add.click();
+  await expect(history(page)).toContainText("One record changed");
+});

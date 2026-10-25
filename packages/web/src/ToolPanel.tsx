@@ -11,10 +11,21 @@ import { rememberedState, rememberState, startTool } from "./tool-start.ts";
 
 type Mode = "starting" | "running" | "minimized" | "stopped";
 
-export function ToolPanel({ workspace }: { workspace: Workspace }) {
+type Props = {
+  workspace: Workspace;
+  /** Called after each change the tool saved to its data. */
+  onDataChanged?: () => void;
+};
+
+export function ToolPanel({ workspace, onDataChanged }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const runtime = useRef<ToolRuntime | null>(null);
   const starting = useRef<AbortController | null>(null);
+  // The latest callback, for a tool started earlier to reach.
+  const dataChanged = useRef(onDataChanged);
+  useEffect(() => {
+    dataChanged.current = onDataChanged;
+  });
   const name = workspace.title;
   const id = workspace.id;
   const hasTool = workspace.currentVersion !== null;
@@ -30,7 +41,9 @@ export function ToolPanel({ workspace }: { workspace: Workspace }) {
     starting.current?.abort();
     const controller = new AbortController();
     starting.current = controller;
-    startTool(current, id, open, controller.signal).then(
+    startTool(current, id, open, controller.signal, {
+      onWrite: () => dataChanged.current?.(),
+    }).then(
       (running) => {
         if (running) setMode("running");
       },

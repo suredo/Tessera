@@ -28,6 +28,8 @@ type Pending = {
 
 type Props = {
   workspace: Workspace;
+  /** Moves on each time the running tool saves a change, so the history loads it. */
+  changes: number;
   /** Called after a restore or an undo changed the workspace, so the app reloads it. */
   onChanged: (message: string) => Promise<void>;
 };
@@ -36,7 +38,7 @@ type Props = {
 const lossText = (loss: Loss) =>
   t("history.loss", { where: loss.path.join(" › "), value: JSON.stringify(loss.value) });
 
-export function History({ workspace, onChanged }: Props) {
+export function History({ workspace, changes, onChanged }: Props) {
   const id = workspace.id;
   const [versions, setVersions] = useState<WorkspaceVersion[]>([]);
   const [entries, setEntries] = useState<UndoEntry[]>([]);
@@ -44,7 +46,7 @@ export function History({ workspace, onChanged }: Props) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [message, setMessage] = useState("");
 
-  // Loaded again whenever the tool or its data changes.
+  // Loaded again whenever the tool or its data changes, including each change the tool saves.
   useEffect(() => {
     let current = true;
     Promise.all([
@@ -65,7 +67,7 @@ export function History({ workspace, onChanged }: Props) {
     return () => {
       current = false;
     };
-  }, [id, workspace.currentVersion, workspace.dataRevision]);
+  }, [id, workspace.currentVersion, workspace.dataRevision, changes]);
 
   const problem = (error: unknown) =>
     setMessage(

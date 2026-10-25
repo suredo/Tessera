@@ -11,6 +11,12 @@ export type StartDeps = {
 };
 const defaults: StartDeps = { ask, serveBridge, serverData };
 
+/** What the panel hears about the running tool. */
+export type StartOptions = {
+  /** Called after each change the tool saved to its data, so the history can show it (APP-05). */
+  onWrite?: () => void;
+};
+
 /**
  * Starts the tool through `open` (a first start or a restore) and serves it the bridge with what
  * its version declares. Nothing more happens once `signal` is aborted, at whichever step it is:
@@ -22,13 +28,25 @@ export async function startTool(
   workspaceId: string,
   open: (runtime: ToolRuntime) => ReturnType<ToolRuntime["open"]>,
   signal: AbortSignal,
+  { onWrite }: StartOptions = {},
   deps: StartDeps = defaults,
 ): Promise<boolean> {
   const { capabilities } = await deps.ask("workspaces.open", { id: workspaceId });
   if (signal.aborted) return false;
   const tool = await open(runtime);
   if (signal.aborted) return false;
-  deps.serveBridge(tool, { capabilities, data: deps.serverData(workspaceId) });
+  const data = deps.serverData(workspaceId);
+  deps.serveBridge(tool, {
+    capabilities,
+    data: {
+      ...data,
+      patch: async (batch, context) => {
+        const result = await data.patch(batch, context);
+        onWrite?.();
+        return result;
+      },
+    },
+  });
   return true;
 }
 

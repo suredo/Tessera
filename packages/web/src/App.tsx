@@ -62,6 +62,8 @@ export function App() {
   const [view, setView] = useState<"workspaces" | "library">("workspaces");
   // Moved on after a restore or an undo, so the tool starts again with the changed data.
   const [reloads, setReloads] = useState(0);
+  // Moved on by each change the running tool saves, so the history shows it at once (APP-05).
+  const [toolChanges, setToolChanges] = useState(0);
 
   const refresh = async () => {
     const [list, library] = await Promise.all([
@@ -205,11 +207,18 @@ export function App() {
             />
           </aside>
           <main>
-            {current && <ToolPanel key={`${current.id}:${reloads}`} workspace={current} />}
+            {current && (
+              <ToolPanel
+                key={`${current.id}:${reloads}`}
+                workspace={current}
+                onDataChanged={() => setToolChanges((n) => n + 1)}
+              />
+            )}
             {current?.currentVersion && (
               <History
                 key={current.id}
                 workspace={current}
+                changes={toolChanges}
                 onChanged={async (done) => {
                   await refresh().catch(report);
                   setReloads((n) => n + 1);
