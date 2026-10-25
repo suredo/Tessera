@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { activationReplySchema, activationRequestSchema } from "./activation.ts";
+import { assetSchema } from "./asset.ts";
 import { archiveManifestSchema } from "./archive.ts";
 import { artifactSchema } from "./artifact.ts";
 import {
@@ -23,6 +24,7 @@ import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./work
 export const contracts = {
   activationReply: activationReplySchema,
   activationRequest: activationRequestSchema,
+  asset: assetSchema,
   archiveManifest: archiveManifestSchema,
   artifact: artifactSchema,
   bridgeDataRequest: bridgeDataRequestSchema,

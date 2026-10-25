@@ -10,6 +10,15 @@ export {
   type ActivationRequest,
 } from "./activation.ts";
 export {
+  ASSET_LIMIT_BYTES,
+  ASSET_TYPES,
+  assetIdSchema,
+  assetSchema,
+  WORKSPACE_ASSETS_LIMIT_BYTES,
+  type Asset,
+  type AssetType,
+} from "./asset.ts";
+export {
   ARCHIVE_FORMAT,
   ARCHIVE_FORMAT_VERSION,
   archivedWorkspaceSchema,
