@@ -361,6 +361,39 @@ describe("restoring a tool version (DATA-10)", () => {
     folder.close();
   });
 
+  it("DATA-10: refuses to bring back a snapshot when the work it would replace couldn't be brought back in turn", async () => {
+    const { folder, id, hashes } = await onVersion2();
+    const plan = planRestore(folder, id, hashes.v1);
+    const restored = restoreVersion(
+      folder,
+      id,
+      hashes.v1,
+      3,
+      plan.ok && !plan.keepsData ? plan.confirmation : "",
+    );
+    const snapshotId = restored.ok ? restored.snapshotId! : "";
+    // In version 1, a patch that fits the patch contract but not the tool's schema.
+    const revision = readWorkspaceData(folder, id).revisions["tasks"]!["t-1"]!;
+    const odd = {
+      op: "replace",
+      collection: "tasks",
+      id: "t-1",
+      revisionCount: revision,
+      fields: { title: 123 },
+    };
+    expect(patchWorkspaceData(folder, id, { operations: [odd] }).ok).toBe(true);
+    const before = unit(folder, id);
+    const back = restoreRecoverySnapshot(
+      folder,
+      snapshotId,
+      getWorkspace(folder, id)!.dataRevision,
+    );
+    expect(back).toMatchObject({ ok: false, reason: "incompatible" });
+    expect(!back.ok && back.message).toMatch(/couldn't be brought back from a recovery snapshot/);
+    expect(unit(folder, id)).toEqual(before);
+    folder.close();
+  });
+
   it("refuses a restore that dropping fields can't make fit, saying why", async () => {
     const { folder, id, hashes } = await onVersion2();
     const before = unit(folder, id);

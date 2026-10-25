@@ -82,6 +82,45 @@ function plainDecimal(text: string): string {
 
 /** Thrown when a migration's result would grow past the data limit, before it gets there. */
 class MigrationTooLarge extends Error {}
+/** Thrown when what a migration drops is more than a preview of it may hold. */
+class TooManyLosses extends Error {}
+
+/** The most a loss preview may hold, as UTF-8 JSON: as much as the data itself may. */
+export const LOSS_PREVIEW_LIMIT_BYTES = TOOL_DATA_LIMIT_BYTES;
+
+/**
+ * What a run removes or replaces, for a restore's preview. Each place is listed once, with the
+ * value it held before the run: a value replaced again and again is one loss, not many. It counts
+ * its own size and stops the run once that passes `LOSS_PREVIEW_LIMIT_BYTES`, so it never holds
+ * more than a preview can show; a restore that would lose more is refused, never cut short.
+ */
+export class LossLog {
+  private readonly byPlace = new Map<string, Loss>();
+  private bytes = 0;
+  add(path: string[], value: Loss["value"]) {
+    const place = JSON.stringify(path);
+    if (this.byPlace.has(place)) return;
+    this.bytes +=
+      Buffer.byteLength(place, "utf8") + Buffer.byteLength(JSON.stringify(value), "utf8");
+    if (this.bytes > LOSS_PREVIEW_LIMIT_BYTES) throw new TooManyLosses();
+    this.byPlace.set(place, { path, value });
+  }
+  /** The losses, without those whose place holds the same value again in `result`. */
+  settle(result: ToolData): Loss[] {
+    return [...this.byPlace.values()].filter(
+      (loss) => canonicalJson(valueAt(result, loss.path)) !== canonicalJson(loss.value),
+    );
+  }
+}
+
+// The value at a loss's path in some data: a collection, a record named by ID or position, a field.
+function valueAt(data: ToolData, [collection = "", step = "", field = ""]: string[]): unknown {
+  const list = Object.hasOwn(data, collection) ? data[collection] : undefined;
+  if (!Array.isArray(list)) return undefined;
+  const byId = list.find((r) => isPlainObject(r) && r["id"] === step);
+  const record = byId ?? list[Number(step)];
+  return isPlainObject(record) && Object.hasOwn(record, field) ? record[field] : undefined;
+}
 
 // The result's size as JSON, kept exactly as each change is made, so growth past the limit stops
 // at once instead of after the whole result is built. A field in an object is written as
@@ -123,7 +162,7 @@ function applyOperation(
   data: ToolData,
   op: MigrationOperation,
   budget: SizeBudget,
-  losses: Loss[],
+  losses: LossLog | undefined,
 ): void {
   if (op.op === "renameCollection") {
     if (!Object.hasOwn(data, op.from)) return;
@@ -160,7 +199,7 @@ function applyOperation(
       case "removeField":
         if (!Object.hasOwn(record, op.field)) break;
         budget.removed(record, op.field, record[op.field]);
-        losses.push({ path: at(op.field), value: record[op.field] as Loss["value"] });
+        losses?.add(at(op.field), record[op.field] as Loss["value"]);
         delete record[op.field];
         break;
       case "mapValues": {
@@ -168,7 +207,7 @@ function applyOperation(
         const pair = op.map.find(([from]) => from === record[op.field]);
         if (!pair || pair[1] === record[op.field]) break;
         budget.replaced(record[op.field], pair[1]);
-        losses.push({ path: at(op.field), value: record[op.field] as Loss["value"] });
+        losses?.add(at(op.field), record[op.field] as Loss["value"]);
         record[op.field] = pair[1];
         break;
       }
@@ -198,7 +237,7 @@ function applyOperation(
 export function applyMigrations(
   data: ToolData,
   migrations: readonly Migration[],
-  losses: Loss[] = [],
+  losses?: LossLog,
   limitBytes = TOOL_DATA_LIMIT_BYTES,
 ): ToolData {
   const copy = structuredClone(data);
@@ -231,19 +270,20 @@ const sizeBytes = (data: ToolData) => Buffer.byteLength(JSON.stringify(data), "u
 /**
  * Migrates a tool's data from the shape it is in to the tool version's (DATA-03). It checks the
  * data against its own schema first, runs the migrations twice on separate copies and compares
- * them, then checks the size and the target schema. `run` is the migration step itself; tests
- * replace it to show what is refused.
+ * them, then checks the size and the target schema. With `trackLosses`, a restore's choice, it also
+ * lists what the migrations remove or replace, within a bounded preview; activation doesn't need
+ * it. `run` is the migration step itself; tests replace it to show what is refused.
  */
 export function migrateData(
   data: ToolData,
   from: DataShape,
   to: Artifact["data"],
-  run: (
-    data: ToolData,
-    migrations: readonly Migration[],
-    losses: Loss[],
-  ) => ToolData = applyMigrations,
+  options: {
+    trackLosses?: boolean;
+    run?: (data: ToolData, migrations: readonly Migration[], losses?: LossLog) => ToolData;
+  } = {},
 ): MigrationResult {
+  const run = options.run ?? applyMigrations;
   const refuse = (reason: MigrationRefusal, detail: string): MigrationResult => ({
     ok: false,
     reason,
@@ -255,12 +295,12 @@ export function migrateData(
   const steps = pathBetween(from.schemaVersion, to);
   if (typeof steps === "string") return refuse("no-path", steps);
 
-  const losses: Loss[] = [];
+  const log = options.trackLosses ? new LossLog() : undefined;
   let first: ToolData;
   let second: ToolData;
   try {
-    first = run(data, steps, losses);
-    second = run(data, steps, []);
+    first = run(data, steps, log);
+    second = run(data, steps);
   } catch (error) {
     if (error instanceof MigrationFailed) {
       return refuse("failed", `the migration stopped: ${error.message}`);
@@ -269,6 +309,12 @@ export function migrateData(
       return refuse(
         "too-large",
         `the migrated data would be over the limit of ${TOOL_DATA_LIMIT_BYTES / 1024} KB.`,
+      );
+    }
+    if (error instanceof TooManyLosses) {
+      return refuse(
+        "too-large",
+        `the migration would remove or replace more than a preview of it can list (${LOSS_PREVIEW_LIMIT_BYTES / 1024} KB).`,
       );
     }
     throw error;
@@ -286,5 +332,5 @@ export function migrateData(
   const target = checkToolData(to.schema, first);
   if (!target.ok)
     return refuse("invalid", `the migrated data wouldn't fit the new shape. ${target.reason}`);
-  return { ok: true, data: first, steps: steps.length, losses };
+  return { ok: true, data: first, steps: steps.length, losses: log ? log.settle(first) : [] };
 }

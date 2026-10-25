@@ -79,23 +79,17 @@ function plan(store: Store, workspace: Workspace, hash: string): Planned {
   // Preserve first (DATA-10): data that fits the version as it is stays exactly as it is.
   if (checkToolData(shape.schema, data).ok) return { kind: "keeps", data };
 
-  // A restore that drops anything keeps the current unit as a recovery snapshot first, so that
-  // unit must be one a snapshot can bring back: its data must fit its own version.
+  // A restore that drops anything keeps the current unit as a recovery snapshot first.
   const lossy = (converted: ToolData, losses: Loss[]): Planned => {
-    const own = checkToolData(from.schema, data);
-    if (!own.ok) {
-      return refuse(
-        "incompatible",
-        `the current data doesn't fit its own version, so it couldn't be brought back from a recovery snapshot. ${own.reason}`,
-      );
-    }
+    const unrecoverable = cantSnapshot(store, workspace);
+    if (unrecoverable) return refuse("incompatible", unrecoverable);
     return { kind: "loses", data: converted, losses };
   };
 
   if (shape.schemaVersion >= from.schemaVersion) {
     // A newer or equal shape: migrate forward. A migration that removes or replaces values loses
     // them, so it needs the same preview and confirmation as an older shape.
-    const migrated = migrateData(data, from, shape);
+    const migrated = migrateData(data, from, shape, { trackLosses: true });
     if (!migrated.ok) return { ok: false, reason: migrated.reason, message: migrated.message };
     if (migrated.losses.length === 0) return { kind: "keeps", data: migrated.data };
     return lossy(migrated.data, migrated.losses);
@@ -110,6 +104,25 @@ function plan(store: Store, workspace: Workspace, hash: string): Planned {
     );
   }
   return lossy(projected.data, projected.losses);
+}
+
+/**
+ * Why a recovery snapshot of the workspace's current unit couldn't bring it back, or undefined if
+ * it could: its version must be readable and its data must fit that version, as restoring the
+ * snapshot will check. Every path that replaces the unit after keeping a snapshot asks this first.
+ */
+function cantSnapshot(store: Store, workspace: Workspace): string | undefined {
+  const version = workspace.currentVersion
+    ? loadVersion(store.db, workspace.currentVersion)
+    : undefined;
+  if (version?.kind !== "ok" || workspace.data === null) {
+    return "the workspace's current tool version can't be read, so it couldn't be brought back from a recovery snapshot.";
+  }
+  const fits = checkToolData(version.artifact.data.schema, workspace.data);
+  if (!fits.ok) {
+    return `the current data doesn't fit its own version, so it couldn't be brought back from a recovery snapshot. ${fits.reason}`;
+  }
+  return undefined;
 }
 
 // Names exactly this restore: the version, the data revision it was planned at, and its losses,
@@ -242,6 +255,8 @@ export function restoreRecoverySnapshot(
     const fits = checkToolData(version.artifact.data.schema, data);
     if (!fits.ok)
       return refuse("incompatible", `the snapshot's data doesn't fit its version. ${fits.reason}`);
+    const unrecoverable = cantSnapshot(store, workspace);
+    if (unrecoverable) return refuse("incompatible", unrecoverable);
     const kept = keepSnapshot(store, workspace);
     replaceData(store, workspace, data);
     if (workspace.currentVersion !== row.version_hash)
