@@ -7,3 +7,6 @@ coverage/
 .claude/settings.local.json
 # Build output (vite build).
 dist/
+
+# The development data folder that pnpm seed fills and pnpm dev opens (ENG-19).
+dev-data/
