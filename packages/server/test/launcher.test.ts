@@ -4,7 +4,13 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ACTIVATION_ROUTE, BRIDGE_ROUTE, HOST_ROUTE } from "@tessera/contracts";
+import {
+  ACTIVATION_ROUTE,
+  BRIDGE_ROUTE,
+  EXPORT_ROUTE,
+  HOST_ROUTE,
+  IMPORT_ROUTE,
+} from "@tessera/contracts";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { launch, type Launched } from "../src/launcher/index.ts";
 import { tryLockFile } from "../src/storage/index.ts";
@@ -83,7 +89,7 @@ describe("the launcher (PLAT-02)", () => {
     expect((await start(dataDir, openBrowser)).status).toBe("started");
   });
 
-  it("serves the bridge's, activation's and host app's routes (RUN-04, RUN-03, APP-03)", async () => {
+  it("serves the bridge's, activation's, host app's and archive routes (RUN-04, RUN-03, APP-03, APP-06)", async () => {
     const launched = await start(dataFolder(), browser().openBrowser);
     if (launched.status !== "started") throw new Error("not started");
     const port = Number(new URL(launched.url).port);
@@ -102,6 +108,13 @@ describe("the launcher (PLAT-02)", () => {
       JSON.stringify({ action: "workspaces.list", args: {} }),
     );
     expect(JSON.parse(host.body)).toEqual({ ok: true, result: { workspaces: [], lastUsed: {} } });
+    expect(await post(port, EXPORT_ROUTE, "{}")).toEqual({
+      status: 400,
+      body: "Say which workspace or saved tool to export.",
+    });
+    expect(JSON.parse((await post(port, IMPORT_ROUTE, "not an archive")).body)).toMatchObject({
+      ok: false,
+    });
     await launched.stop();
   });
 

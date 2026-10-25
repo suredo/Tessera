@@ -138,6 +138,20 @@ export function exportSavedTool(store: Store & AssetStore, id: string): Uint8Arr
   return archive(store, "savedTool", [workspace], [tool]);
 }
 
+/** An archive's file name, without its extension: what it holds and the day, safe on any system. */
+export function exportName(name: string, now: Date): string {
+  const safe =
+    name
+      .normalize("NFKC")
+      .replace(/[^\p{L}\p{N} _-]+/gu, "-")
+      .replace(/\s+/g, " ")
+      .trim()
+      // Cut by whole characters, never inside one: half a character can't be named or sent.
+      .match(/^.{0,60}/su)![0]
+      .trimEnd() || "export";
+  return `${safe} ${now.toISOString().slice(0, 10)}`;
+}
+
 /**
  * Writes an archive into the data folder's exports, named after what it holds and the day, never
  * over an existing file, and returns its path.
@@ -147,18 +161,11 @@ export function writeExport(
   name: string,
   bytes: Uint8Array,
 ): string {
-  const safe =
-    name
-      .normalize("NFKC")
-      .replace(/[^\p{L}\p{N} _-]+/gu, "-")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 60) || "export";
-  const day = folder.now().toISOString().slice(0, 10);
+  const base = exportName(name, folder.now());
   for (let n = 1; ; n++) {
     const file = path.join(
       folder.paths.exports,
-      `${safe} ${day}${n === 1 ? "" : ` (${n})`}${ARCHIVE_EXTENSION}`,
+      `${base}${n === 1 ? "" : ` (${n})`}${ARCHIVE_EXTENSION}`,
     );
     try {
       fs.writeFileSync(file, bytes, { flag: "wx" });
