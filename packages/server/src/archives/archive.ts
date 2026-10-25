@@ -4,6 +4,9 @@ import path from "node:path";
 import {
   ARCHIVE_FORMAT,
   ARCHIVE_FORMAT_VERSION,
+  ASSET_LIMIT_BYTES,
+  WORKSPACE_ASSETS_LIMIT_BYTES,
+  type Asset,
   archiveManifestSchema,
   canonicalJson,
   readArtifact,
@@ -13,6 +16,13 @@ import {
   type Workspace,
 } from "@tessera/contracts";
 import { z } from "zod";
+import {
+  assetsNamedIn,
+  holdingAssets,
+  readAssetNow,
+  sniffImage,
+  type AssetStore,
+} from "../assets/index.ts";
 import type { DataFolder } from "../storage/index.ts";
 import {
   getSavedTool,
@@ -26,26 +36,31 @@ import { ArchiveError, readZip, writeZip, type ZipLimits } from "./zip.ts";
 // Export and import (DATA-05): a workspace or saved tool, with its version history, data and
 // saved tools, goes into one archive file and comes back exactly. Importing is a trust boundary
 // (threat model, IMP-01 to IMP-07): the archive is checked whole, in memory, before anything is
-// written, nothing is ever written outside the database, and existing work is never changed.
+// written, nothing is written outside the database and, for images, the asset store, and existing
+// work is never changed.
 
-/** The most an archive may hold (DATA-06); assets (DATA-11) will revisit them. */
+/**
+ * The most an archive may hold (DATA-06, DATA-11): room for a workspace's images at their limit,
+ * one image per entry at the most one may be, and the rest as before.
+ */
 export const ARCHIVE_LIMITS: ZipLimits = {
-  archiveBytes: 64 * 1024 * 1024,
+  archiveBytes: WORKSPACE_ASSETS_LIMIT_BYTES + 64 * 1024 * 1024,
   entryCount: 10_000,
-  entryBytes: 8 * 1024 * 1024,
-  totalBytes: 256 * 1024 * 1024,
+  entryBytes: ASSET_LIMIT_BYTES,
+  totalBytes: WORKSPACE_ASSETS_LIMIT_BYTES + 256 * 1024 * 1024,
   compressionRatio: 100,
 };
 
 export const ARCHIVE_EXTENSION = ".tessera";
 const MANIFEST = "manifest.json";
 const VERSION_FILE = /^versions\/([0-9a-f]{64})\.json$/;
+const ASSET_FILE = /^assets\/([0-9a-f]{64})$/;
 
 const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
 const bodyRow = z.object({ body: z.string() });
 
 function archive(
-  store: Store,
+  store: Store & AssetStore,
   exported: ArchiveManifest["exported"],
   workspaces: readonly Workspace[],
   savedTools: readonly SavedTool[],
@@ -66,6 +81,14 @@ function archive(
     const { id, title, data, dataRevision, createdAt, updatedAt } = workspace;
     return { id, title, data, dataRevision, createdAt, updatedAt, versions };
   });
+  // The images named by what the archive carries, its workspaces' data and their tool versions,
+  // exactly what import checks against. Undo history and recovery snapshots stay behind, and so
+  // do the images only they name (DATA-11).
+  const images = new Map<string, { asset: Asset; bytes: Uint8Array }>();
+  for (const id of assetsNamedIn(store, [JSON.stringify(archived), ...bodies.values()])) {
+    const found = readAssetNow(store, id);
+    if (found) images.set(id, found);
+  }
   const exportedAt = store.now();
   const manifest = archiveManifestSchema.parse({
     format: ARCHIVE_FORMAT,
@@ -74,12 +97,14 @@ function archive(
     exportedAt: exportedAt.toISOString(),
     workspaces: archived,
     savedTools,
+    assets: [...images.values()].map((image) => image.asset),
   });
   const text = (value: string) => new TextEncoder().encode(value);
   const bytes = writeZip(
     [
       { name: MANIFEST, data: text(`${JSON.stringify(manifest, null, 2)}\n`) },
       ...[...bodies].map(([hash, body]) => ({ name: `versions/${hash}.json`, data: text(body) })),
+      ...[...images].map(([id, image]) => ({ name: `assets/${id}`, data: image.bytes })),
     ],
     exportedAt,
     { maxCompressionRatio: ARCHIVE_LIMITS.compressionRatio },
@@ -96,7 +121,7 @@ function archive(
 }
 
 /** A workspace, with its version history, data and the saved tools that open it, as an archive. */
-export function exportWorkspace(store: Store, id: string): Uint8Array {
+export function exportWorkspace(store: Store & AssetStore, id: string): Uint8Array {
   const workspace = getWorkspace(store, id);
   if (!workspace) throw new ArchiveError(`There is no workspace with the ID ${id} to export.`);
   const savedTools = listSavedTools(store).filter((tool) => tool.workspaceId === id);
@@ -104,7 +129,7 @@ export function exportWorkspace(store: Store, id: string): Uint8Array {
 }
 
 /** A saved tool with the workspace it follows, as an archive. */
-export function exportSavedTool(store: Store, id: string): Uint8Array {
+export function exportSavedTool(store: Store & AssetStore, id: string): Uint8Array {
   const tool = getSavedTool(store, id);
   const workspace = tool && getWorkspace(store, tool.workspaceId);
   if (!tool || !workspace) {
@@ -221,10 +246,20 @@ function checkConsistent(manifest: ArchiveManifest, files: Map<string, Uint8Arra
       hashes.add(version.hash);
     });
   }
+  const assetIds = new Set(manifest.assets.map((asset) => asset.id));
+  if (assetIds.size !== manifest.assets.length) throw refuse("This archive repeats an image");
+  for (const id of assetIds) {
+    if (!files.has(`assets/${id}`)) throw refuse("An image is missing from this archive");
+  }
   for (const name of files.keys()) {
     if (name === MANIFEST) continue;
+    const image = ASSET_FILE.exec(name)?.[1];
+    if (image !== undefined) {
+      if (!assetIds.has(image)) throw refuse("This archive has an image it doesn't list");
+      continue;
+    }
     const hash = VERSION_FILE.exec(name)?.[1];
-    // Only the manifest and tool versions: no scripts, migrations or other files (IMP-05).
+    // Only the manifest, tool versions and images: no scripts, migrations or other files (IMP-05).
     if (hash === undefined)
       throw refuse(`This archive has a file Tessera doesn't import, "${name}"`);
     if (!hashes.has(hash)) throw refuse("This archive has a tool version nothing uses");
@@ -267,6 +302,41 @@ function checkedVersions(hashes: Set<string>, files: Map<string, Uint8Array>) {
   });
 }
 
+// Each image must be exactly what the manifest says: bytes whose SHA-256 is its ID, an image of its
+// type and size by its content (AST-01), named by something the archive holds, and within the
+// limits for one image and for a workspace's (AST-02, DATA-11).
+function checkedAssets(
+  manifest: ArchiveManifest,
+  versions: readonly { body: string }[],
+  files: Map<string, Uint8Array>,
+) {
+  const refuse = (why: string) => new ArchiveError(`${why}, so nothing was imported.`);
+  const named = JSON.stringify(manifest.workspaces) + versions.map((v) => v.body).join("");
+  let total = 0;
+  return manifest.assets.map((asset) => {
+    const bytes = files.get(`assets/${asset.id}`) as Uint8Array;
+    if (createHash("sha256").update(bytes).digest("hex") !== asset.id) {
+      throw refuse("An image in this archive doesn't match its name");
+    }
+    const sniffed = sniffImage(bytes);
+    if (
+      !sniffed.ok ||
+      sniffed.type !== asset.type ||
+      sniffed.widthPx !== asset.widthPx ||
+      sniffed.heightPx !== asset.heightPx ||
+      bytes.byteLength !== asset.sizeBytes
+    ) {
+      throw refuse("An image in this archive isn't the image it says it is");
+    }
+    if (!named.includes(asset.id)) throw refuse("This archive has an image nothing uses");
+    total += bytes.byteLength;
+    if (total > WORKSPACE_ASSETS_LIMIT_BYTES) {
+      throw refuse("This archive's images are over the limit for one workspace");
+    }
+    return { asset, bytes };
+  });
+}
+
 const taken = z.object({ n: z.number() });
 
 /**
@@ -274,11 +344,38 @@ const taken = z.object({ n: z.number() });
  * already here is never changed: if any of its IDs are taken, everything comes in as a copy with
  * new IDs (IMP-06).
  */
-export function importArchive(store: Store, bytes: Uint8Array): Imported {
+export async function importArchive(
+  store: Store & AssetStore,
+  bytes: Uint8Array,
+): Promise<Imported> {
   const files = readZip(bytes, ARCHIVE_LIMITS);
   const manifest = readManifest(files);
   const versions = checkedVersions(checkConsistent(manifest, files), files);
+  const images = checkedAssets(manifest, versions, files);
 
+  // Images first, each stored once and checked again by the store, then the rows that name them,
+  // all while holding the asset store, so cleanup can't remove an image before its workspace is
+  // written. If the rows fail, nothing names the images, and cleanup removes them later (DATA-11).
+  return holdingAssets(store, async (keep) => {
+    for (const image of images) {
+      const stored = await keep(image.bytes, {
+        originalName: image.asset.originalName ?? undefined,
+        createdAt: image.asset.createdAt,
+      });
+      if (!stored.ok) {
+        throw new ArchiveError(`An image in this archive can't be kept. ${stored.message}`);
+      }
+    }
+    return writeImport(store, manifest, versions);
+  });
+}
+
+// Inside the hold: the workspaces, their histories and saved tools, in one transaction.
+function writeImport(
+  store: Store,
+  manifest: ArchiveManifest,
+  versions: readonly { hash: string; body: string; contractVersion: number }[],
+): Imported {
   return store.db.transaction(() => {
     const exists = (table: "workspaces" | "saved_tools", id: string) =>
       (store.db.get(taken, `SELECT COUNT(*) AS n FROM ${table} WHERE id = ?`, id)?.n ?? 0) > 0;
