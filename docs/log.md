@@ -2,6 +2,8 @@
 
 ## 2026-10-25
 
+* **Update**: The quarantined lifecycle test is back ([issue 83](https://github.com/suredo/Tessera/issues/83)): the [runtime package](code/runtime/package.md) doc says the browser tests wait for a test page's script on a timer, not on animation frames, which a page that isn't painting doesn't get.
+
 * **Update**: The export and import screens ([issue 53](https://github.com/suredo/Tessera/issues/53), sixth part): the [web package](code/web/package.md) doc describes exporting each workspace and saved tool to a file, importing one from beside the workspaces or from the first-run screen, and the plain report of what came in; it claims `APP-06`.
 
 * **Update**: The archive routes ([issue 53](https://github.com/suredo/Tessera/issues/53), the routes the export and import screens need): the [export and import](code/server/archives.md) doc describes `archiveRoutes`, an export answered as a file to save and an import answered with what came in, and that a file over the limit is refused before it is read. The [contracts](code/contracts/package.md) doc names the two routes and their shapes, the [local server](code/server/local-server.md) doc `readBytes`, and the [launcher](code/server/launcher.md) and [host API](code/server/host-api.md) docs that the launcher mounts them. After Codex's review of [pull request 123](https://github.com/suredo/Tessera/pull/123), the archives doc says an export's name is cut between whole characters.
