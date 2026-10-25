@@ -7,7 +7,7 @@ implements: [RUN-01, RUN-02, RUN-07, GEN-06, SEC-05, SBX-01, SBX-02, SBX-03, SBX
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/runtime/test/bridge.test.ts, ../../../packages/runtime/test/server-data.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/bridge.spec.ts, ../../../packages/web/e2e/bridge-data.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T05:07:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T05:15:47Z }
 ---
 
 # Purpose
@@ -50,7 +50,7 @@ The [contracts package](../contracts/package.md), for the bridge's manifest and 
 
 # Pitfalls
 
-- **A stuck tool's process lasts a few seconds.** Once the watchdog removes its frames, Chrome and Edge end the process of its tool host within about five seconds; until then it keeps one core busy. One lifecycle test, which reloads the host page right after a stuck tool was stopped, is quarantined: its reload timed out once in Edge on CI, and whether a reload that soon can hang is still open ([#83](https://github.com/suredo/Tessera/issues/83), `ENG-20`).
+- **A stuck tool's process lasts a few seconds.** Once the watchdog removes its frames, Chrome and Edge end the process of its tool host within about five seconds; until then it keeps one core busy. One lifecycle test, which reloads the host page right after a stuck tool was stopped, is quarantined: its reload timed out once in Edge on CI, and whether a reload that soon can hang is still open ([#83](https://github.com/suredo/Tessera/issues/83), `ENG-20`). The bridge's clock test is quarantined too: its host page stopped answering for 5 s, once in Chrome on CI, possibly for the same reason ([#98](https://github.com/suredo/Tessera/issues/98)); the bridge's unit tests still check the clock (`RUN-07`).
 - **The watchdog's timings are the host's to set** (`WATCHDOG_DEFAULTS`: a ping a second, stopped after five seconds without an answer, ten while starting). The tests use shorter ones.
 - **The bridge doesn't check record revisions.** A stale change is the patch engine's to refuse, on the server (`DATA-02`, `BRG-04`); its data handler passes the refusal on as a `stale` `BridgeError`.
 - **The host app keeps the state, not the runtime.** `createRuntime` reports each `RuntimeState` and starts from one it's given; where it is kept (the workspace, from #53) is the app's choice. The tests keep it in `sessionStorage`.

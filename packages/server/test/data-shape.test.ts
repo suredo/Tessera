@@ -87,7 +87,7 @@ const before: ToolData = {
 
 describe("migrating a tool's data (DATA-03)", () => {
   it("runs every operation on a copy, and the result fits the new shape", () => {
-    const result = migrateData(before, v1, target(2, v2Schema, [toV2]));
+    const result = migrateData(before, v1, target(2, v2Schema, [toV2]), { trackLosses: true });
     expect(result).toEqual({
       ok: true,
       steps: 1,
@@ -97,6 +97,9 @@ describe("migrating a tool's data (DATA-03)", () => {
           { id: "t-2", title: "Call the bank", done: false, size: 1.5 },
         ],
       },
+      // A value the table replaced is listed, where it was before the run; renames, added fields
+      // and exact conversions aren't losses.
+      losses: [{ path: ["todo", "t-1", "state"], value: "closed" }],
     });
     // The data it was given is untouched.
     expect(before.todo).toHaveLength(2);
@@ -214,6 +217,80 @@ describe("migrating a tool's data (DATA-03)", () => {
     expect(records.todo[0]).toEqual({ id: "t0" });
   });
 
+  it("MIG-04: follows each original value, so losses are listed once, within a bounded preview, and only when asked", () => {
+    // Two migrations of 50 operations each flip v between 0 and 1, so it ends where it started.
+    const flips = (fromVersion: number): Migration => ({
+      fromVersion,
+      toVersion: fromVersion + 1,
+      operations: Array.from({ length: 50 }, () => ({
+        op: "mapValues" as const,
+        collection: "tasks",
+        field: "v",
+        map: [
+          [0, 1],
+          [1, 0],
+        ] as [number, number][],
+      })),
+    });
+    const loose = { type: "object" };
+    const records = (count: number) => ({
+      tasks: Array.from({ length: count }, (_, i) => ({ id: String(i), v: 0 })),
+    });
+    const to = target(3, loose, [flips(1), flips(2)]);
+    const from = { ...v1, schema: loose };
+
+    // Activation doesn't ask for losses, and keeps none.
+    expect(migrateData(records(10_000), from, to)).toMatchObject({ ok: true, losses: [] });
+    // A restore asks: each place is one loss, and a value that came back is no loss at all.
+    expect(migrateData(records(10_000), from, to, { trackLosses: true })).toMatchObject({
+      ok: true,
+      losses: [],
+    });
+    // So is the same on 14,000 records: flips cost nothing to follow.
+    expect(migrateData(records(14_000), from, to, { trackLosses: true })).toMatchObject({
+      ok: true,
+      losses: [],
+    });
+    // More real losses than a preview can hold is a plain refusal, never a shortened preview.
+    const dropAll: Migration = {
+      fromVersion: 1,
+      toVersion: 2,
+      operations: [{ op: "removeField", collection: "tasks", field: "v" }],
+    };
+    const many = migrateData(records(14_000), from, target(2, loose, [dropAll]), {
+      trackLosses: true,
+    });
+    expect(many).toMatchObject({ ok: false, reason: "too-large" });
+    expect(!many.ok && many.message).toMatch(/more than a preview of it can list/);
+  });
+
+  it("follows a value through renames, so a field a later step reuses never hides what was lost", () => {
+    // Codex's case: a is removed, b takes its name, that is removed too, and a returns as "A".
+    const loose = { type: "object" };
+    const reuse: Migration = {
+      fromVersion: 1,
+      toVersion: 2,
+      operations: [
+        { op: "removeField", collection: "tasks", field: "a" },
+        { op: "renameField", collection: "tasks", from: "b", to: "a" },
+        { op: "removeField", collection: "tasks", field: "a" },
+        { op: "addField", collection: "tasks", fields: { a: "A" } },
+      ],
+    };
+    const data = { tasks: [{ id: "t1", a: "A", b: "B" }] };
+    const result = migrateData(data, { ...v1, schema: loose }, target(2, loose, [reuse]), {
+      trackLosses: true,
+    });
+    expect(result).toMatchObject({
+      ok: true,
+      data: { tasks: [{ id: "t1", a: "A" }] },
+      losses: [
+        { path: ["tasks", "t1", "a"], value: "A" },
+        { path: ["tasks", "t1", "b"], value: "B" },
+      ],
+    });
+  });
+
   it("MIG-04: refuses a result over the data limit, or one that differs between two runs", () => {
     const grow: Migration = {
       fromVersion: 1,
@@ -228,7 +305,7 @@ describe("migrating a tool's data (DATA-03)", () => {
     });
     let runs = 0;
     const unsteady = (data: ToolData) => ({ ...applyMigrations(data, [toV2]), run: (runs += 1) });
-    expect(migrateData(before, v1, target(2, loose, [toV2]), unsteady)).toMatchObject({
+    expect(migrateData(before, v1, target(2, loose, [toV2]), { run: unsteady })).toMatchObject({
       ok: false,
       reason: "not-repeatable",
     });

@@ -7,6 +7,16 @@ export {
   type ActivationResult,
 } from "./activation.ts";
 export {
+  listRecoverySnapshots,
+  planRestore,
+  restoreRecoverySnapshot,
+  restoreVersion,
+  type RecoverySnapshot,
+  type RestorePlan,
+  type RestoreRefusal,
+  type RestoreResult,
+} from "./restore.ts";
+export {
   addWorkspaceVersion,
   createWorkspace,
   getSavedTool,

@@ -7,6 +7,7 @@ export {
   type MigrationRefusal,
   type MigrationResult,
 } from "./migrate.ts";
+export { projectData, type Loss } from "./project.ts";
 export {
   checkToolData,
   compileToolSchema,

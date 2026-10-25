@@ -7,7 +7,7 @@ implements: [DATA-03, MIG-03, MIG-04, MIG-05]
 tests: [../../../packages/server/test/data-shape.test.ts]
 tags: [code, server, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T23:24:16Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T04:58:33Z }
 ---
 
 # Purpose
@@ -17,7 +17,8 @@ Each tool declares a versioned data shape: a JSON Schema and a schema version, w
 # Entry points
 
 - `src/data-shape/schema.ts`: `compileToolSchema` checks a tool's schema and compiles it with Ajv, or says why it can't be used; `checkToolData` says whether data fits a schema, and if not where and why. `TOOL_SCHEMA_LIMIT_BYTES` is the largest schema accepted.
-- `src/data-shape/migrate.ts`: `migrateData` migrates data from the shape it is in (`DataShape`: a schema version and its schema) to a tool version's, and returns the new data or a refusal with a reason (`MigrationRefusal`) and a message that starts with "Nothing was changed:". `applyMigrations` runs migrations on a copy.
+- `src/data-shape/project.ts`: `projectData` keeps what a schema allows of some data and drops the rest, without changing the data, and lists every value dropped (`Loss`: its path, with a record's ID where it has one, and its value). Restoring a version with an older shape uses it (`DATA-10`).
+- `src/data-shape/migrate.ts`: `migrateData` migrates data from the shape it is in (`DataShape`: a schema version and its schema) to a tool version's, and returns the new data, or a refusal with a reason (`MigrationRefusal`); when asked to track losses, as a restore does, it also lists every value the migrations removed or replaced (a removed field, a value a table replaced) as losses, within `LOSS_PREVIEW_LIMIT_BYTES` and a message that starts with "Nothing was changed:". `applyMigrations` runs migrations on a copy.
 
 # Invariants
 
@@ -25,6 +26,7 @@ Each tool declares a versioned data shape: a JSON Schema and a schema version, w
 - **Checked against both schemas, on a copy** (`DATA-03`, `MIG-03`). The data must fit its own schema before it is migrated, and the result must fit the target's. The migrations run on a copy, so data that fails half way, or a result that doesn't fit, leaves what it was given untouched.
 - **Bounded and repeatable** (`MIG-04`). Each step goes from one schema version to the next, and a missing step is refused. The result's size as JSON is kept exactly as each change is made, and the run stops as soon as it would pass the data limit (`DATA-06`), or the data's own size if that is larger, so a single operation that would grow the data without end is refused after a few records, never built whole. The migrations run twice, on two copies, and two different results are refused.
 - **A conversion never changes a value.** `setType` turns text into a number only when the number stands for exactly the same decimal, compared as decimals whatever notation JavaScript prints ("12.50" becomes 12.5 and "0.0000001" becomes 1e-7; "999999999999999.99", "-0" and "1e3" are refused), and a number into its shortest text.
+- **A loss preview follows each original value, is bounded, and is never cut short.** Activation doesn't ask for losses, so it keeps none. A restore does, through a `LossLog` that follows where each value came from, not paths: every field a record held before the run gets an origin; a rename moves the origin with its value, removing the field loses it for good whatever a later step adds under that name, and an exact conversion keeps it. At the end an origin is lost if it was removed or its value differs from what it should hold, so a value replaced and replaced back is no loss, and each loss is listed where it was before the run. There is at most one origin per field of the data, nothing is allocated per replacement, and a preview larger than `LOSS_PREVIEW_LIMIT_BYTES` (as much as the data may hold) is a plain refusal, never a shortened preview (`MIG-04`).
 - **Nothing outside** (`MIG-05`). A migration, compiling its schemas included, opens no connection, starts no process and touches no file; a test runs one under the tripwires.
 - **A schema may only ask for checks that grow with the data.** Checking runs in the server and a tool's schema will come from a model (M2), so a schema may use only `TOOL_SCHEMA_KEYWORDS`: types, properties and required fields, items, enums and constants, and numeric, length, item and property bounds. No patterns or formats (a regular expression can take exponential time, even on a text of 64 characters), no references (`{ "$ref": "#" }` recurses without end), no combinators and no `uniqueItems`. Before anything recursive reads it (its canonical JSON, the subset check, Ajv), a first pass without recursion counts its parts and depth, values in `const`, `enum` and `default` included, and refuses one with more than `TOOL_SCHEMA_MAX_PARTS` parts or nested too deeply, so a schema thousands of levels deep is a refusal, not a crash. It must also be at most `TOOL_SCHEMA_LIMIT_BYTES`, nest at most `TOOL_SCHEMA_MAX_DEPTH` levels, list at most `TOOL_SCHEMA_MAX_ENUM` enum values, and name draft-07 if it names a draft. Anything else is refused with where and why, before Ajv compiles it. Each schema compiles in an Ajv of its own; compiled checks are kept by the schema's canonical JSON.
 - **Only the data's own fields count.** Ajv runs with own-property semantics, so a required field named like something objects inherit, such as `constructor`, is present only when the data has it.
@@ -39,12 +41,13 @@ Depends on the contracts and Ajv (draft-07, the owner's choice on #50). Activati
 - **The keyword list is deliberately short.** Richer keywords (patterns, combinators, references) can be added later only with a bound on their cost and a test that tries to break it. Ajv's stricter style checks, such as requiring every required property to be listed, would refuse valid schemas, so they are off.
 - **An enum or constant is compared by value.** Its cost is bounded by the schema's size limit and the data's.
 - **The migration runner is replaceable in tests.** `migrateData`'s last argument is the step that runs the migrations; tests pass one that differs between runs to show that is refused. Production code never passes it.
-- **Converting back is not a migration.** Migrations only go forward. Restoring a version with an older shape projects the data onto the older schema, with a loss preview (#50, a later part).
+- **Converting back is not a migration.** Migrations only go forward. Restoring a version with an older shape projects the data onto the older schema: a field the schema closes off (`additionalProperties: false`, or a property of `false`) is dropped, at any depth reached through properties, additionalProperties and items. Projection fixes nothing else; whether the result fits is checked afterwards, and a restore it can't make fit is refused ([workspaces](workspaces.md)).
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `applyMigrations`, `migrateData`, `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `checkToolData`, `compileToolSchema`, `TOOL_SCHEMA_LIMIT_BYTES`, `SchemaCheck` (type)
-- `migrate.ts`: `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `applyMigrations`, `migrateData`
+- `index.ts`: `applyMigrations`, `migrateData`, `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `projectData`, `Loss` (type), `checkToolData`, `compileToolSchema`, `TOOL_SCHEMA_LIMIT_BYTES`, `SchemaCheck` (type)
+- `migrate.ts`: `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `LOSS_PREVIEW_LIMIT_BYTES`, `LossLog`, `applyMigrations`, `migrateData`
+- `project.ts`: `Loss` (type), `projectData`
 - `schema.ts`: `TOOL_SCHEMA_LIMIT_BYTES`, `TOOL_SCHEMA_MAX_DEPTH`, `TOOL_SCHEMA_MAX_ENUM`, `TOOL_SCHEMA_MAX_PARTS`, `TOOL_SCHEMA_KEYWORDS`, `SchemaCheck` (type), `compileToolSchema`, `checkToolData`
