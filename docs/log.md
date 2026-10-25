@@ -2,7 +2,7 @@
 
 ## 2026-10-25
 
-* **Update**: Staging before activation ([issue 51](https://github.com/suredo/Tessera/issues/51), second part): the [runtime package](code/runtime/package.md) doc describes `stageCandidate`, the hidden panel where a candidate runs against synthetic data, the check interface the M2 checks will implement, the `stubCheck` stub and `serverActivation`, and claims `RUN-03`.
+* **Update**: Staging before activation ([issue 51](https://github.com/suredo/Tessera/issues/51), second part): the [runtime package](code/runtime/package.md) doc describes `stageCandidate`, the hidden panel where a candidate runs against synthetic data, the check interface the M2 checks will implement, the `stubCheck` stub and `serverActivation`, and claims `RUN-03`. After Codex's review of [pull request 105](https://github.com/suredo/Tessera/pull/105), it says a check that throws at once fails, cancelling always ends staging, and the candidate's frame fills the 320 px panel.
 
 * **Update**: The activation route ([issue 51](https://github.com/suredo/Tessera/issues/51), first part): the [contracts](code/contracts/package.md) doc describes `activationRequestSchema` and `activationReplySchema`, the one definition of what the host page sends to activate a candidate that passed its checks and what the server answers. The [workspaces](code/server/workspaces.md) doc describes `activationRoutes`, the [launcher](code/server/launcher.md) doc says it mounts it, and the [local server](code/server/local-server.md) doc describes the JSON body helpers the [bridge route](code/server/bridge.md) now shares with it.
 

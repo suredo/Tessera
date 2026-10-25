@@ -1,6 +1,6 @@
 import type { ActivationRefusal, BridgeResult, JsonValue, Workspace } from "@tessera/contracts";
 import { BridgeError, serveBridge, type DataHandlers } from "./bridge.ts";
-import type { CheckOutcome, VerificationCheck } from "./checks.ts";
+import type { CheckContext, CheckOutcome, VerificationCheck } from "./checks.ts";
 import { mountTool, type WatchdogOptions } from "./host.ts";
 import { serverActivation, type Activate } from "./server-activation.ts";
 
@@ -65,7 +65,10 @@ const syntheticData = (data: Record<string, JsonValue>): DataHandlers => ({
   patch: () => Promise.reject(new BridgeError("not-active", "A tool being checked can't save.")),
 });
 
-// Hidden from sight, assistive technology and input, but laid out, so a check can measure it.
+// Hidden from sight, assistive technology and input, but laid out at the UI standard's narrow
+// width, so a check can measure it.
+const PANEL = { width: "320px", height: "640px" };
+
 function hiddenPanel(doc: Document): HTMLElement {
   const panel = doc.createElement("div");
   panel.dataset["tessera"] = "staging";
@@ -75,13 +78,44 @@ function hiddenPanel(doc: Document): HTMLElement {
     position: "fixed",
     left: "-10000px",
     top: "0",
-    width: "320px",
-    height: "640px",
+    ...PANEL,
     overflow: "hidden",
     pointerEvents: "none",
   });
   doc.body.append(panel);
   return panel;
+}
+
+// The candidate's frame fills the panel from the moment it's inserted, before the wrapper loads,
+// so the candidate starts at the panel's width rather than a frame's default of 300 by 150. Set
+// through the frame's own style, which a host page's CSP can't block as it could a <style> element.
+function fillPanel(panel: HTMLElement): MutationObserver {
+  const fill = (node: Node) => {
+    if (node instanceof HTMLIFrameElement) {
+      Object.assign(node.style, { border: "0", display: "block", ...PANEL });
+    }
+  };
+  const observer = new MutationObserver((changes) =>
+    changes.forEach((change) => change.addedNodes.forEach(fill)),
+  );
+  observer.observe(panel, { childList: true });
+  return observer;
+}
+
+const CANCELLED = { ok: false, reason: "Staging was cancelled." } as const satisfies CheckOutcome;
+
+// Runs one check. One that throws, at once or later, didn't pass; and cancelling stops the wait
+// even for a check that never looks at its signal.
+async function runCheck(check: VerificationCheck, context: CheckContext): Promise<CheckOutcome> {
+  const cancelled = new Promise<CheckOutcome>((resolve) => {
+    if (context.signal.aborted) resolve(CANCELLED);
+    context.signal.addEventListener("abort", () => resolve(CANCELLED), { once: true });
+  });
+  try {
+    return await Promise.race([check.run(context), cancelled]);
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : "The check broke." };
+  }
 }
 
 /**
@@ -91,10 +125,15 @@ function hiddenPanel(doc: Document): HTMLElement {
  */
 export async function stageCandidate(options: StagingOptions): Promise<StagingResult> {
   const { candidate } = options;
+  // Cancelled before it began: nothing is mounted, and nothing activated.
+  if (options.signal?.aborted) {
+    return { outcome: "check-failed", check: "cancelled", reason: CANCELLED.reason };
+  }
   const panel = hiddenPanel(options.document ?? document);
+  const sizing = fillPanel(panel);
   const controller = new AbortController();
   const stop = () => controller.abort();
-  options.signal?.addEventListener("abort", stop);
+  options.signal?.addEventListener("abort", stop, { once: true });
   let verdict: { check: string; outcome: CheckOutcome } | undefined;
   try {
     let tool;
@@ -117,15 +156,9 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       });
       try {
         for (const check of options.checks) {
-          // A check that breaks is a check that didn't pass: the candidate isn't activated.
-          const outcome = await check
-            .run({ tool, panel, signal: controller.signal })
-            .catch((error: unknown): CheckOutcome => ({
-              ok: false,
-              reason: error instanceof Error ? error.message : "The check broke.",
-            }));
+          const outcome = await runCheck(check, { tool, panel, signal: controller.signal });
           if (!outcome.ok) {
-            verdict = { check: check.name, outcome };
+            verdict = { check: outcome === CANCELLED ? "cancelled" : check.name, outcome };
             break;
           }
         }
@@ -137,13 +170,14 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
   } finally {
     controller.abort();
     options.signal?.removeEventListener("abort", stop);
+    sizing.disconnect();
     panel.remove();
+  }
+  if (options.signal?.aborted) {
+    return { outcome: "check-failed", check: "cancelled", reason: CANCELLED.reason };
   }
   if (verdict && !verdict.outcome.ok) {
     return { outcome: "check-failed", check: verdict.check, reason: verdict.outcome.reason };
-  }
-  if (options.signal?.aborted) {
-    return { outcome: "check-failed", check: "cancelled", reason: "Staging was cancelled." };
   }
   const activate = options.activate ?? serverActivation();
   const reply = await activate({

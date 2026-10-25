@@ -20,7 +20,8 @@ const tools: Record<string, Artifact["code"]> = {
   candidate: {
     html: "<p>Errands, improved</p>",
     css: "",
-    js: `tessera.call("data.read").then((read) => tessera.send({ read }));
+    js: `tessera.send({ width: innerWidth });
+tessera.call("data.read").then((read) => tessera.send({ read }));
 tessera.call("data.patch", { operations: [{ op: "add", collection: "tasks", record: { title: "x" } }] })
   .then(() => tessera.send({ wrote: true }), (e) => tessera.send({ wrote: false, code: e.code }));`,
   },
@@ -99,7 +100,7 @@ const unit = (id: string) => ({
   data: readWorkspaceData(host.folder!, id),
 });
 
-type Seen = { read?: unknown; wrote?: boolean; code?: string };
+type Seen = { width?: number; read?: unknown; wrote?: boolean; code?: string };
 type TestWindow = {
   stageCandidate(options: unknown): Promise<unknown>;
   stubCheck(outcome?: unknown): unknown;
@@ -129,7 +130,7 @@ async function stage(
           new Promise((resolve) => {
             tool.onMessage((m) => {
               Object.assign(seen, m);
-              if ("read" in seen && "wrote" in seen) resolve({ ok: true });
+              if ("width" in seen && "read" in seen && "wrote" in seen) resolve({ ok: true });
             });
           }),
       };
@@ -177,6 +178,8 @@ test("RUN-03: in the panel, the candidate sees only synthetic data and can't sav
   const { id, candidate } = newWorkspace();
   const staged = await stage(page, id, candidate, 1, { ok: true });
   expect(staged.seen).toEqual({
+    // It runs at the panel's width, the UI standard's narrow one, not a frame's default 300 px.
+    width: 320,
     read: { data: synthetic, revisions: { tasks: { "d-1": 1 } } },
     wrote: false,
     code: "not-active",
@@ -208,5 +211,115 @@ test("MIG-06: a candidate checked against data that changed since is refused, an
   // Planned at revision 0; the data is at revision 1.
   const staged = await stage(page, id, candidate, 0, { ok: true });
   expect(staged.result).toMatchObject({ outcome: "refused", reason: "stale" });
+  expect(unit(id)).toEqual(before);
+});
+
+/**
+ * Stages the candidate with one check made for the case: one that throws at once, one that never
+ * answers while staging is cancelled, or any check with staging cancelled before it starts.
+ */
+async function stageBroken(
+  page: Page,
+  workspaceId: string,
+  hash: string,
+  kind: "throws" | "cancelled-before" | "cancelled-during",
+) {
+  await page.goto(`${host.url}/`);
+  await page.waitForFunction(() => "stageCandidate" in window);
+  host.reset();
+  return page.evaluate(
+    async ({ workspaceId, hash, kind, synthetic }) => {
+      const w = window as unknown as TestWindow;
+      const controller = new AbortController();
+      let ran = false;
+      const check =
+        kind === "throws"
+          ? {
+              name: "throws at once",
+              // Not async: it throws before it returns a promise.
+              run: () => {
+                ran = true;
+                throw new Error("The check broke at once.");
+              },
+            }
+          : {
+              name: "never answers",
+              run: () => {
+                ran = true;
+                // It ignores its signal; cancelling must still end staging.
+                setTimeout(() => controller.abort(), 200);
+                return new Promise(() => {});
+              },
+            };
+      if (kind === "cancelled-before") controller.abort();
+      const result = await w.stageCandidate({
+        candidate: { mountId: "candidate", hash, capabilities: [], syntheticData: synthetic },
+        workspaceId,
+        expectedDataRevision: 1,
+        checks: [check],
+        signal: controller.signal,
+      });
+      return {
+        result,
+        ran,
+        panelGone: document.querySelector("[data-tessera=staging]") === null,
+        frames: document.querySelectorAll("iframe").length,
+      };
+    },
+    { workspaceId, hash, kind, synthetic },
+  );
+}
+
+test("RUN-03: a check that throws at once is a failed check, and activates nothing", async ({
+  page,
+}) => {
+  const { id, candidate } = newWorkspace();
+  const before = unit(id);
+  const staged = await stageBroken(page, id, candidate, "throws");
+  expect(staged).toEqual({
+    result: {
+      outcome: "check-failed",
+      check: "throws at once",
+      reason: "The check broke at once.",
+    },
+    ran: true,
+    panelGone: true,
+    frames: 0,
+  });
+  expect(activations()).toEqual([]);
+  expect(unit(id)).toEqual(before);
+});
+
+test("RUN-03: staging cancelled before it starts mounts nothing and activates nothing", async ({
+  page,
+}) => {
+  const { id, candidate } = newWorkspace();
+  const before = unit(id);
+  const staged = await stageBroken(page, id, candidate, "cancelled-before");
+  expect(staged).toEqual({
+    result: { outcome: "check-failed", check: "cancelled", reason: "Staging was cancelled." },
+    ran: false,
+    panelGone: true,
+    frames: 0,
+  });
+  // Not even the wrapper was asked for.
+  expect(host.hostRequests.filter((r) => r.includes("/runtime/"))).toEqual([]);
+  expect(activations()).toEqual([]);
+  expect(unit(id)).toEqual(before);
+});
+
+test("RUN-03: cancelling ends staging even while a check ignores it, and activates nothing", async ({
+  page,
+}) => {
+  const { id, candidate } = newWorkspace();
+  const before = unit(id);
+  const staged = await stageBroken(page, id, candidate, "cancelled-during");
+  expect(staged).toEqual({
+    result: { outcome: "check-failed", check: "cancelled", reason: "Staging was cancelled." },
+    ran: true,
+    panelGone: true,
+    frames: 0,
+  });
+  expect(activations()).toEqual([]);
   expect(unit(id)).toEqual(before);
 });
