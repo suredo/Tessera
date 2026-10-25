@@ -90,10 +90,12 @@ export async function startSandboxHost(
 
   const webRoot = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-sandbox-host-"));
   fs.writeFileSync(path.join(webRoot, "runtime.js"), await bundleRuntime());
-  // No favicon request, which would arrive at any time and look like a tool's.
+  // No favicon request, which would arrive at any time and look like a tool's. A task that blocks
+  // the page for a second or more is logged, so a failed test's trace shows whether the page itself
+  // stalled (#83, #98).
   fs.writeFileSync(
     path.join(webRoot, "index.html"),
-    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script type="module">import { mountTool, createRuntime, serveBridge, serverData } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge, serverData });</script>`,
+    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script>new PerformanceObserver((list) => { for (const task of list.getEntries()) if (task.duration >= 1000) console.warn(\`Host page blocked for \${Math.round(task.duration)} ms\`); }).observe({ type: "longtask", buffered: true });</script><script type="module">import { mountTool, createRuntime, serveBridge, serverData } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge, serverData });</script>`,
   );
   const dataDir = options.data
     ? fs.mkdtempSync(path.join(os.tmpdir(), "tessera-sandbox-data-"))

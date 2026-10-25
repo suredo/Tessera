@@ -194,16 +194,16 @@ test("BRG-06: a tool in the staging panel never writes, even after the person's 
   expect(await writes(page)).toEqual([]);
 });
 
-// Quarantined (ENG-20): the host page stopped answering its first poll for 5 s, once in Chrome on
-// CI. Find why, fix it or the test, and remove this before M1 closes (#98).
-test.fixme("RUN-07: a tool that declares the clock gets the host's, which the test sets", async ({
+test("RUN-07: a tool that declares the clock gets the host's, which the test sets", async ({
   page,
 }) => {
   const epochMs = Date.parse("2026-10-22T23:30:00Z");
   await serve(page, { capabilities: ["clock"], epochMs, timeZone: "Asia/Kolkata" });
   await tell(page, "clock");
+  // RUN-07 is about which clock the tool gets, not how fast a busy runner answers: once in 116 CI
+  // runs, the host page didn't answer the first poll for over 5 s (#98). Its long tasks are logged.
   await expect
-    .poll(() => labelled(page, "clock"))
+    .poll(() => labelled(page, "clock"), { timeout: 15_000 })
     .toEqual({
       label: "clock",
       ok: true,
