@@ -4,10 +4,10 @@ title: "Workspaces and saved tools"
 description: "Workspaces, their version history and data, and the saved-tools library, each change committed to the data folder's database before the call returns."
 resource: ../../../packages/server/src/workspaces/
 implements: [DATA-08, DATA-07, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06]
-tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts]
+tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts, ../../../packages/server/test/activation-route.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T05:17:59Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T07:36:01Z }
 ---
 
 # Purpose
@@ -22,6 +22,7 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
   - `saveWorkspaceData` replaces the workspace's data and raises its revision.
 - `src/workspaces/restore.ts`: `planRestore` says what restoring a version would do without doing it (`RestorePlan`: it keeps the data, or it loses exactly these values, with a confirmation), and `restoreVersion` does it; `listRecoverySnapshots` and `restoreRecoverySnapshot` bring back the unit a lossy restore replaced (`DATA-10`).
 - `src/workspaces/reuse.ts`: opening a saved tool (`DATA-07`). `continueSavedTool` gives the entry and its linked workspace with its current data (`ContinueTarget`); `useAgain` makes a new workspace from the tool's current version and its reusable defaults, or returns why not (`UseAgainResult`).
+- `src/workspaces/routes.ts`: `activationRoutes`, the route at `POST /api/activate` (the activation route of the [contracts](../contracts/package.md)) through which the host page activates a candidate that passed its checks (`RUN-03`). It answers with `activateVersion`'s result, which is the contract's activation reply; a malformed request gets a plain 400, a missing or trashed workspace a plain 404, and a server error a plain 500, none of them changing anything. The [launcher](launcher.md) mounts it.
 - `src/workspaces/activation.ts`: `activateVersion` makes a stored tool version the workspace's current one, with its data brought to the version's shape, in one transaction (`DATA-10`), or returns why not (`ActivationResult`).
   - `readWorkspaceData` gives the data as the bridge does (`WorkspaceData`): the data, and each record's revision count by collection and ID. Data the tool hasn't filled yet reads as empty.
   - `patchWorkspaceData` applies a batch of changes through the [patch engine](patches.md), against the records' saved revisions, and returns `{ ok: true, addedIds, workspace }` or the engine's refusal (`WorkspacePatchResult`).
@@ -68,7 +69,8 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `activation.ts`: `ActivationRefusal` (type), `ActivationResult` (type), `ActivationOptions` (type), `defaultsProblem`, `UsableVersion` (type), `usableVersion`, `activateVersion`
-- `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `getWorkspace`, `listSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `renameSavedTool`, `renameWorkspace`, `saveTool`, `saveWorkspaceData`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type)
+- `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `activationRoutes`, `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `getWorkspace`, `listSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `renameSavedTool`, `renameWorkspace`, `saveTool`, `saveWorkspaceData`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type)
 - `restore.ts`: `RestoreRefusal` (type), `RestorePlan` (type), `RestoreResult` (type), `planRestore`, `restoreVersion`, `RecoverySnapshot` (type), `listRecoverySnapshots`, `restoreRecoverySnapshot`
 - `reuse.ts`: `ContinueTarget` (type), `continueSavedTool`, `UseAgainRefusal` (type), `UseAgainResult` (type), `UseAgainOptions` (type), `useAgain`
+- `routes.ts`: `activationRoutes`
 - `workspaces.ts`: `Store` (type), `getWorkspace`, `existingWorkspace`, `listWorkspaces`, `createWorkspace`, `renameWorkspace`, `addWorkspaceVersion`, `appendVersion`, `workspaceVersions`, `saveWorkspaceData`, `replaceData`, `WorkspaceData` (type), `readWorkspaceData`, `WorkspacePatchResult` (type), `patchWorkspaceData`, `getSavedTool`, `existingSavedTool`, `listSavedTools`, `saveTool`, `renameSavedTool`

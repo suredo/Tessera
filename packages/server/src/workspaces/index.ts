@@ -6,6 +6,7 @@ export {
   type ActivationRefusal,
   type ActivationResult,
 } from "./activation.ts";
+export { activationRoutes } from "./routes.ts";
 export {
   continueSavedTool,
   useAgain,

@@ -7,7 +7,7 @@ implements: [RUN-04, CAP-01, GEN-06, BRG-04]
 tests: [../../../packages/server/test/bridge-routes.test.ts]
 tags: [code, server, bridge]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T05:07:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T07:36:01Z }
 ---
 
 # Purpose

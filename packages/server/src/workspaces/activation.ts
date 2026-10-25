@@ -1,5 +1,10 @@
-import { TOOL_DATA_LIMIT_BYTES, type Artifact, type Workspace } from "@tessera/contracts";
-import { checkToolData, migrateData, type MigrationRefusal } from "../data-shape/index.ts";
+import {
+  TOOL_DATA_LIMIT_BYTES,
+  type ActivationRefusal,
+  type ActivationReply,
+  type Artifact,
+} from "@tessera/contracts";
+import { checkToolData, migrateData } from "../data-shape/index.ts";
 import type { ToolData } from "../patches/index.ts";
 import { loadVersion } from "../versions/index.ts";
 import { appendVersion, existingWorkspace, replaceData, type Store } from "./workspaces.ts";
@@ -10,12 +15,11 @@ import { appendVersion, existingWorkspace, replaceData, type Store } from "./wor
 // later one migrates the data on a copy, checked against both shapes (DATA-03). A failed check,
 // a stale revision or a crash during the commit keeps the committed unit.
 
-export type ActivationRefusal =
-  "stale" | "no-version" | "incompatible" | "older-shape" | "invalid-defaults" | MigrationRefusal;
+// The result is the contract's reply (one definition, P3), so a migration's reasons must be
+// among the contract's refusals for this to compile.
+export type { ActivationRefusal };
 
-export type ActivationResult =
-  | { ok: true; workspace: Workspace; steps: number }
-  | { ok: false; reason: ActivationRefusal; message: string };
+export type ActivationResult = ActivationReply;
 
 export type ActivationOptions = {
   /** Called inside the transaction after every write; a test throws here to stand for a crash. */
@@ -82,11 +86,11 @@ export function activateVersion(
     }
     const target = usableVersion(store, hash);
     if (!target.ok) return target;
-    if (workspace.currentVersion === hash) return { ok: true, workspace, steps: 0 };
+    if (workspace.currentVersion === hash) return { ok: true, workspace, migrationCount: 0 };
     const shape = target.artifact.data;
 
     let data: ToolData;
-    let steps = 0;
+    let migrationCount = 0;
     if (workspace.currentVersion === null || workspace.data === null) {
       // The workspace's first tool: its data starts as the version's reusable defaults (DATA-03),
       // checked above.
@@ -111,12 +115,12 @@ export function activateVersion(
       const migrated = migrateData(workspace.data, from, shape);
       if (!migrated.ok) return { ok: false, reason: migrated.reason, message: migrated.message };
       data = migrated.data;
-      steps = migrated.steps;
+      migrationCount = migrated.steps;
     }
 
     replaceData(store, workspace, data);
     appendVersion(store, id, hash);
     options.afterWrites?.();
-    return { ok: true, workspace: existingWorkspace(store, id), steps };
+    return { ok: true, workspace: existingWorkspace(store, id), migrationCount };
   });
 }

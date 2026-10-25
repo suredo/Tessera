@@ -1,6 +1,15 @@
 // Docs: docs/code/contracts/package.md
 // @tessera/contracts: every shape that crosses a boundary, defined once with zod (CON-01).
 export {
+  ACTIVATION_REFUSALS,
+  ACTIVATION_ROUTE,
+  activationReplySchema,
+  activationRequestSchema,
+  type ActivationRefusal,
+  type ActivationReply,
+  type ActivationRequest,
+} from "./activation.ts";
+export {
   ARCHIVE_FORMAT,
   ARCHIVE_FORMAT_VERSION,
   archivedWorkspaceSchema,
@@ -117,6 +126,7 @@ export {
 } from "./trash.ts";
 export {
   savedToolSchema,
+  versionHashSchema,
   workspaceSchema,
   workspaceVersionSchema,
   type SavedTool,

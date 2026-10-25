@@ -4,9 +4,11 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ACTIVATION_ROUTE, BRIDGE_ROUTE } from "@tessera/contracts";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { launch, type Launched } from "../src/launcher/index.ts";
 import { tryLockFile } from "../src/storage/index.ts";
+import { post } from "./support/http.ts";
 
 // Runs on Linux and on Windows in CI. Every launch gets its own data folder under the system's
 // temporary folder, never the real one (ENG-19), and a browser that only records what it opened.
@@ -79,6 +81,22 @@ describe("the launcher (PLAT-02)", () => {
     expect(lockFree(dataDir)).toBe(true);
     expect(await portFree(first.url)).toBe(true);
     expect((await start(dataDir, openBrowser)).status).toBe("started");
+  });
+
+  it("serves the bridge's and activation's routes (RUN-04, RUN-03)", async () => {
+    const launched = await start(dataFolder(), browser().openBrowser);
+    if (launched.status !== "started") throw new Error("not started");
+    const port = Number(new URL(launched.url).port);
+    // Each route answers a request it can't use with its own plain refusal, not "not found".
+    expect(await post(port, BRIDGE_ROUTE, "{}")).toEqual({
+      status: 400,
+      body: "Send a workspace, a phase and the tool's call, as JSON.",
+    });
+    expect(await post(port, ACTIVATION_ROUTE, "{}")).toEqual({
+      status: 400,
+      body: "Send a workspace, a tool version and the data revision, as JSON.",
+    });
+    await launched.stop();
   });
 
   it("starts only one copy when two launches race", async () => {
