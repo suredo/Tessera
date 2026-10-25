@@ -17,10 +17,10 @@ import {
 } from "@tessera/contracts";
 import { z } from "zod";
 import {
+  assetsNamedIn,
+  holdingAssets,
   readAssetNow,
   sniffImage,
-  storeAsset,
-  workspaceAssets,
   type AssetStore,
 } from "../assets/index.ts";
 import type { DataFolder } from "../storage/index.ts";
@@ -80,13 +80,13 @@ function archive(
     const { id, title, data, dataRevision, createdAt, updatedAt } = workspace;
     return { id, title, data, dataRevision, createdAt, updatedAt, versions };
   });
-  // The images the workspaces name, in their data, versions, snapshots or undo (DATA-11).
+  // The images named by what the archive carries, its workspaces' data and their tool versions,
+  // exactly what import checks against. Undo history and recovery snapshots stay behind, and so
+  // do the images only they name (DATA-11).
   const images = new Map<string, { asset: Asset; bytes: Uint8Array }>();
-  for (const workspace of workspaces) {
-    for (const id of workspaceAssets(store, workspace.id)) {
-      const found = readAssetNow(store, id);
-      if (found) images.set(id, found);
-    }
+  for (const id of assetsNamedIn(store, [JSON.stringify(archived), ...bodies.values()])) {
+    const found = readAssetNow(store, id);
+    if (found) images.set(id, found);
   }
   const exportedAt = store.now();
   const manifest = archiveManifestSchema.parse({
@@ -352,17 +352,29 @@ export async function importArchive(
   const versions = checkedVersions(checkConsistent(manifest, files), files);
   const images = checkedAssets(manifest, versions, files);
 
-  // Images first: each is stored once, by its content, and checked again by the store. If the
-  // workspace's rows then fail, nothing names them, and cleanup removes them (DATA-11).
-  for (const image of images) {
-    const stored = await storeAsset(store, image.bytes, {
-      originalName: image.asset.originalName ?? undefined,
-      createdAt: image.asset.createdAt,
-    });
-    if (!stored.ok)
-      throw new ArchiveError(`An image in this archive can't be kept. ${stored.message}`);
-  }
+  // Images first, each stored once and checked again by the store, then the rows that name them,
+  // all while holding the asset store, so cleanup can't remove an image before its workspace is
+  // written. If the rows fail, nothing names the images, and cleanup removes them later (DATA-11).
+  return holdingAssets(store, async (keep) => {
+    for (const image of images) {
+      const stored = await keep(image.bytes, {
+        originalName: image.asset.originalName ?? undefined,
+        createdAt: image.asset.createdAt,
+      });
+      if (!stored.ok) {
+        throw new ArchiveError(`An image in this archive can't be kept. ${stored.message}`);
+      }
+    }
+    return writeImport(store, manifest, versions);
+  });
+}
 
+// Inside the hold: the workspaces, their histories and saved tools, in one transaction.
+function writeImport(
+  store: Store,
+  manifest: ArchiveManifest,
+  versions: readonly { hash: string; body: string; contractVersion: number }[],
+): Imported {
   return store.db.transaction(() => {
     const exists = (table: "workspaces" | "saved_tools", id: string) =>
       (store.db.get(taken, `SELECT COUNT(*) AS n FROM ${table} WHERE id = ?`, id)?.n ?? 0) > 0;

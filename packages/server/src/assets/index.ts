@@ -2,8 +2,10 @@
 // The asset store: images stored once by their SHA-256, removed only when nothing refers to them
 // (DATA-11).
 export {
+  assetsNamedIn,
   collectAssets,
   getAsset,
+  holdingAssets,
   readAsset,
   readAssetNow,
   referencedAssets,

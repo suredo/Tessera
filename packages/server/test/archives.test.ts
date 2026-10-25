@@ -493,6 +493,57 @@ describe("images in archives (DATA-05, DATA-11)", SLOW_MACHINE, () => {
     await refused(pack(unnamed, files), /an image nothing uses/);
   });
 
+  it("DATA-05: an image only undo or a recovery snapshot names stays behind, and the archive still imports", async () => {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Photos");
+    const stored = await storeAsset(folder, png);
+    if (!stored.ok) throw new Error(stored.message);
+    // Named once, then let go of: only the undo entry still names it.
+    saveWorkspaceData(folder, id, { photos: [{ id: "p-1", asset: stored.asset.id }] }, 0);
+    saveWorkspaceData(folder, id, { photos: [] }, 1);
+    // And a recovery snapshot naming another, which archives don't carry either.
+    const other = await storeAsset(folder, jpeg);
+    if (!other.ok) throw new Error(other.message);
+    const hash = saveVersion(folder.db, artifact("<p></p>"));
+    addWorkspaceVersion(folder, id, hash);
+    folder.db.run(
+      "INSERT INTO recovery_snapshots (id, workspace_id, version_hash, data, created_at) VALUES ('s-1', ?, ?, ?, ?)",
+      id,
+      hash,
+      JSON.stringify({ photos: [{ id: "p-2", asset: other.asset.id }] }),
+      new Date().toISOString(),
+    );
+    const bytes = exportWorkspace(folder, id);
+    folder.close();
+    // Undo history and snapshots don't travel, so neither do the images only they name.
+    expect(filesOf(bytes).manifest.assets).toEqual([]);
+    const into = await openDataFolder(newFolder());
+    await expect(importArchive(into, bytes)).resolves.toMatchObject({ exported: "workspace" });
+    into.close();
+  });
+
+  it("DATA-11: cleanup running during an import never removes the images it brings", async () => {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Photos");
+    const ids: string[] = [];
+    for (const image of [png, jpeg]) {
+      const stored = await storeAsset(folder, image);
+      if (!stored.ok) throw new Error(stored.message);
+      ids.push(stored.asset.id);
+    }
+    saveWorkspaceData(folder, id, { photos: ids.map((asset, i) => ({ id: `p-${i}`, asset })) }, 0);
+    const bytes = exportWorkspace(folder, id);
+    folder.close();
+
+    const into = await openDataFolder(newFolder());
+    const importing = importArchive(into, bytes);
+    const cleaning = collectAssets(into);
+    await importing;
+    expect(await cleaning).toEqual([]);
+    for (const image of ids) expect(getAsset(into, image)).toBeDefined();
+    into.close();
+  });
+
   it("CON-04: an archive from before images, format 1, still imports", async () => {
     const { files, manifest } = await exportedFiles();
     const older: Record<string, unknown> = { ...manifest };

@@ -7,7 +7,7 @@ implements: [DATA-11, AST-01, AST-02, AST-03, AST-06]
 tests: [../../../packages/server/test/assets.test.ts]
 tags: [code, server, data, assets]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:28:42Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:38:15Z }
 ---
 
 # Purpose
@@ -20,6 +20,7 @@ Keeps the person's images (`DATA-11`, A48): photos and other pictures a tool sho
   - `storeAsset` stores bytes as an asset, once (an imported image keeps the date it came with), or returns why not (`StoreAssetResult`): empty, too large, not an image, or over the workspace's limit.
   - `getAsset` gives an asset's row, and `readAsset` its row and bytes, for an ID that is a stored asset's.
   - `workspaceAssets` gives the IDs one workspace's data, versions and snapshots name, which the [bridge route](bridge.md) checks before it hands a tool an image (`AST-04`), and `readAssetNow` reads one at once, for that answer.
+  - `assetsNamedIn` gives the stored assets named in given texts, as an export's are; `holdingAssets` runs work that stores images and then writes what names them, such as an import, with no cleanup or sweep in between.
   - `referencedAssets` gives the IDs something stored still names; `collectAssets` removes every asset nothing names.
   - `sweepAssets` removes what an interrupted write left, at start.
 - `src/assets/sniff.ts`: `sniffImage` tells PNG, JPEG and WebP by their bytes, with their dimensions (`Sniffed`).
@@ -49,6 +50,6 @@ Depends on [storage](storage.md) and the contracts. The [launcher](launcher.md) 
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `assets.ts`: `AssetStore` (type), `getAsset`, `workspaceAssets`, `readAssetNow`, `referencedAssets`, `StoreAssetRefusal` (type), `StoreAssetResult` (type), `storeAsset`, `readAsset`, `collectAssets`, `sweepAssets`
-- `index.ts`: `collectAssets`, `getAsset`, `readAsset`, `readAssetNow`, `referencedAssets`, `storeAsset`, `sweepAssets`, `workspaceAssets`, `AssetStore` (type), `StoreAssetRefusal` (type), `StoreAssetResult` (type), `sniffImage`, `Sniffed` (type)
+- `assets.ts`: `AssetStore` (type), `getAsset`, `assetsNamedIn`, `holdingAssets`, `workspaceAssets`, `readAssetNow`, `referencedAssets`, `StoreAssetRefusal` (type), `StoreAssetResult` (type), `storeAsset`, `readAsset`, `collectAssets`, `sweepAssets`
+- `index.ts`: `assetsNamedIn`, `collectAssets`, `getAsset`, `holdingAssets`, `readAsset`, `readAssetNow`, `referencedAssets`, `storeAsset`, `sweepAssets`, `workspaceAssets`, `AssetStore` (type), `StoreAssetRefusal` (type), `StoreAssetResult` (type), `sniffImage`, `Sniffed` (type)
 - `sniff.ts`: `Sniffed` (type), `sniffImage`

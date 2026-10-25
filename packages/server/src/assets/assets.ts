@@ -101,16 +101,39 @@ const HASH_TEXT = /[0-9a-f]{64}/g;
 // Every 64-hex-digit run in the texts that is a stored asset's ID. A run that happens to match an
 // asset only keeps it longer; one is never missed, wherever in the data it sits.
 function idsIn(store: AssetStore, queries: readonly string[], ...params: string[]): Set<string> {
+  const texts = queries.flatMap((query) =>
+    store.db.all(textRow, query, ...params).map((row) => row.text),
+  );
+  return assetsNamedIn(store, texts);
+}
+
+/** The stored assets whose IDs appear in `texts`, such as what an archive carries (DATA-05). */
+export function assetsNamedIn(store: AssetStore, texts: readonly string[]): Set<string> {
   const known = new Set(
     store.db.all(z.object({ hash: z.string() }), "SELECT hash FROM assets").map((r) => r.hash),
   );
   const found = new Set<string>();
-  for (const query of queries) {
-    for (const { text } of store.db.all(textRow, query, ...params)) {
-      for (const [run] of text.matchAll(HASH_TEXT)) if (known.has(run)) found.add(run);
-    }
+  for (const text of texts) {
+    for (const [run] of text.matchAll(HASH_TEXT)) if (known.has(run)) found.add(run);
   }
   return found;
+}
+
+/**
+ * Runs `work` holding the asset store, so no cleanup or sweep runs until it ends: for work that
+ * stores images and then writes what names them, such as an import. It stores through the
+ * function it is given, never through storeAsset, which would wait for itself.
+ */
+export function holdingAssets<T>(
+  store: AssetStore,
+  work: (
+    keep: (
+      bytes: Uint8Array,
+      options?: { originalName?: string; workspaceId?: string; createdAt?: string },
+    ) => Promise<StoreAssetResult>,
+  ) => Promise<T>,
+): Promise<T> {
+  return exclusively(store, () => work((bytes, options = {}) => storeNow(store, bytes, options)));
 }
 
 /** The IDs of the assets one workspace's data, versions and snapshots name (AST-04). */
