@@ -146,7 +146,9 @@ export function exportName(name: string, now: Date): string {
       .replace(/[^\p{L}\p{N} _-]+/gu, "-")
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 60) || "export";
+      // Cut by whole characters, never inside one: half a character can't be named or sent.
+      .match(/^.{0,60}/su)![0]
+      .trimEnd() || "export";
   return `${safe} ${now.toISOString().slice(0, 10)}`;
 }
 

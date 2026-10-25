@@ -7,7 +7,7 @@ implements: [DATA-05, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07]
 tests: [../../../packages/server/test/archives.test.ts]
 tags: [code, server, data, archives, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:12:19Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:24:21Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), wit
 # Entry points
 
 - `src/archives/archive.ts`:
-  - `exportWorkspace` and `exportSavedTool` return an archive's bytes; `writeExport` saves them in the data folder's `exports/`, named after what they hold and the day, as `.tessera` (`ARCHIVE_EXTENSION`). `exportName` is that name, without the extension, also given to a download.
+  - `exportWorkspace` and `exportSavedTool` return an archive's bytes; `writeExport` saves them in the data folder's `exports/`, named after what they hold and the day, as `.tessera` (`ARCHIVE_EXTENSION`). `exportName` is that name, without the extension, also given to a download; it keeps at most 60 characters of the name, cut between whole characters, so any valid name gives a file name that can be sent.
   - `importArchive` checks an archive and imports it in one transaction, returning what it imported as `Imported`, which says whether it came in as a copy.
   - `ARCHIVE_LIMITS`: 564 MB per archive, 10,000 files, 25 MB per file and 756 MB in all, unpacked, and at most 100 to 1 compression for files over 64 KB (`DATA-06`). They leave room for a workspace's images at their limit (500 MB), one image per file at the most one may be (`DATA-11`).
 - `src/archives/routes.ts`: `archiveRoutes`, the host app's two routes (`APP-06`), which the [launcher](launcher.md) mounts behind the local server's guard (`SEC-03`). The export route takes the contracts' export request, a workspace or saved tool by ID, and answers with the archive as a file to save, named by `exportName`; what it can't export gets the module's plain sentence (404), and a request that isn't one gets 400. The import route takes a file's bytes, up to the archive limit, and answers the contracts' import reply: what came in, by ID and name, and whether as a copy, or the plain reason nothing did ([contracts](../contracts/package.md)).

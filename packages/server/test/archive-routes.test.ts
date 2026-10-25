@@ -124,6 +124,20 @@ describe("export (APP-06, DATA-05)", () => {
     folder.close();
   });
 
+  it("cuts a long name between whole characters, so any valid name exports", async () => {
+    const folder = await newFolder();
+    // 59 letters, then one outside the Basic Multilingual Plane: two UTF-16 units, at 60 and 61.
+    const title = `${"a".repeat(59)}\u{20000}`;
+    const { id } = createWorkspace(folder, title);
+    const server = await startLocalServer({ port: 0, routes: archiveRoutes(folder) });
+    const answer = await exportOf(server.port, { exported: "workspace", id });
+    expect(answer.status).toBe(200);
+    const day = folder.now().toISOString().slice(0, 10);
+    expect(exportName(title, folder.now())).toBe(`${title} ${day}`);
+    await server.close();
+    folder.close();
+  });
+
   it("refuses plainly what it can't export, and anything but a request for one", async () => {
     const { folder, server } = await serving();
     const missing = await exportOf(server.port, {
