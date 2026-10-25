@@ -24,7 +24,7 @@ const runtime = {} as ToolRuntime;
 describe("RUN-02: a panel closed while the server answers never starts its tool", () => {
   it("starts and serves the tool when nothing was cancelled", async () => {
     const { deps, open, answer } = setup();
-    const started = startTool(runtime, "w1", open, new AbortController().signal, deps);
+    const started = startTool(runtime, "w1", open, new AbortController().signal, {}, deps);
     answer();
     await expect(started).resolves.toBe(true);
     expect(open).toHaveBeenCalledOnce();
@@ -34,7 +34,7 @@ describe("RUN-02: a panel closed while the server answers never starts its tool"
   it("opens nothing once aborted before the answer", async () => {
     const { deps, open, answer } = setup();
     const controller = new AbortController();
-    const started = startTool(runtime, "w1", open, controller.signal, deps);
+    const started = startTool(runtime, "w1", open, controller.signal, {}, deps);
     controller.abort();
     answer();
     await expect(started).resolves.toBe(false);
@@ -49,9 +49,38 @@ describe("RUN-02: a panel closed while the server answers never starts its tool"
       controller.abort();
       return Promise.resolve({} as MountedTool);
     });
-    const started = startTool(runtime, "w1", open, controller.signal, deps);
+    const started = startTool(runtime, "w1", open, controller.signal, {}, deps);
     answer();
     await expect(started).resolves.toBe(false);
     expect(deps.serveBridge).not.toHaveBeenCalled();
+  });
+});
+
+describe("APP-05: the panel hears about each change the tool saves", () => {
+  // Starts a tool whose saved-data handlers succeed or refuse as `patch` says.
+  async function started(patch: () => Promise<unknown>) {
+    const { deps, open, answer } = setup();
+    (deps.serverData as ReturnType<typeof vi.fn>).mockReturnValue({ read: vi.fn(), patch });
+    const onWrite = vi.fn();
+    const running = startTool(runtime, "w1", open, new AbortController().signal, { onWrite }, deps);
+    answer();
+    await running;
+    const served = (deps.serveBridge as ReturnType<typeof vi.fn>).mock.calls[0]![1] as {
+      data: { patch: (batch: unknown, context: unknown) => Promise<unknown> };
+    };
+    return { onWrite, patch: () => served.data.patch({}, {}) };
+  }
+
+  it("after a change is saved", async () => {
+    const { onWrite, patch } = await started(() => Promise.resolve({ ok: true }));
+    expect(onWrite).not.toHaveBeenCalled();
+    await expect(patch()).resolves.toEqual({ ok: true });
+    expect(onWrite).toHaveBeenCalledOnce();
+  });
+
+  it("never for a change the server refused", async () => {
+    const { onWrite, patch } = await started(() => Promise.reject(new Error("stale")));
+    await expect(patch()).rejects.toThrow("stale");
+    expect(onWrite).not.toHaveBeenCalled();
   });
 });

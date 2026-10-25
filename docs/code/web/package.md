@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T13:37:09Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T13:51:14Z }
 ---
 
 # Purpose
@@ -22,7 +22,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - `src/History.tsx`: the open workspace's history (`APP-05`): its tool versions, newest first, with restore; undo of its last data change (`DATA-04`); and the copies kept before a restore that lost data, which can be brought back (`DATA-10`). After a restore or an undo, the app starts the tool again with the changed data.
 - `src/NameForm.tsx`: the small form that names something, for renaming, saving and Save as a new tool.
 - `src/ToolPanel.tsx`: the open workspace's tool, run through the [runtime](../runtime/package.md) with the bridge to its saved data, with minimize, show again and full screen (`APP-01`).
-- `src/tool-start.ts`: `startTool` opens the workspace through the host API, then starts its tool and serves it the bridge; `rememberedState` and `rememberState` keep, for the tab, how each workspace's tool was left.
+- `src/tool-start.ts`: `startTool` opens the workspace through the host API, then starts its tool and serves it the bridge, and says after each change the tool saved (`StartOptions`); `rememberedState` and `rememberState` keep, for the tab, how each workspace's tool was left.
 - `src/host-api.ts`: `ask`, the app's side of the host API: it sends an action and checks the answer against the contracts (`CON-01`); a refusal is a `HostError` with the server's plain words, and an answer it can't read is one with the host's own, from the translation layer.
 - `src/app.css`: the host's look, from the UI standard's tokens, which `main.tsx` sets as `--ui-*` variables from the same tokens the tools use (the runtime's UI standard).
 - `src/main.tsx`: starts the app in `index.html`, sets the page title and the UI tokens, and loads the styles.
@@ -44,6 +44,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **One start at a time** (`RUN-02`). "Show again" goes while its start runs, and the panel ignores a second one, so two starts never race for one runtime and leave a tool running without its bridge.
 - **Continue opens exactly the linked workspace** (`DATA-07`), and says which before: its accessible name names the workspace. Use again opens a new workspace from the tool's starting data, and the entry still continues the first. Save as a new tool does the same under a new name and saves it as its own entry, so the variant changes apart from the original (`DATA-08`).
 - **A restore is planned, then confirmed** (`DATA-10`). Restore asks the server for its plan first and shows it: the data stays, or exactly these values would be lost, each with where it was, and a copy is kept. Only the confirmation runs it, against the data revision the plan was made with, so data that changed meanwhile makes the server refuse it rather than lose something unseen. Cancel changes nothing.
+- **The history shows the tool's changes at once** (`APP-05`). A change the running tool saves goes straight to the server; the tool panel hears each one that was saved, never one refused, and the history loads again, so it can be undone without leaving the tool.
 - **Undo undoes the change the person sees** (`DATA-04`). A running tool may change the data after the history loaded; Undo checks that the change it shows is still the newest, and if not, shows the newer one and undoes nothing. An interface change is undone by restoring the version before it.
 - **Buttons say which workspace they act on.** Their visible labels are short ("Rename", "Move to trash"); their accessible names include the workspace's name.
 - **The React Compiler does the memoizing** (A15). No hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case, with a comment saying so. ESLint runs the hooks rules and the compiler's rules (`eslint-plugin-react-hooks`, `recommended-latest`) on every component.
@@ -74,5 +75,5 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `src/i18n/en.ts`: `en`, `MessageKey` (type)
 - `src/i18n/translate.ts`: `Messages` (type), `Params` (type), `Translate` (type), `MissingHandler` (type), `createTranslator`, `t`
 - `src/index.ts`: `App`, `EmptyState`, `ask`, `HostError`, `Send` (type), `en`, `MessageKey` (type), `createTranslator`, `t`, `Messages` (type), `MissingHandler` (type), `Params` (type), `Translate` (type)
-- `src/tool-start.ts`: `StartDeps` (type), `startTool`, `rememberedState`, `rememberState`
+- `src/tool-start.ts`: `StartDeps` (type), `StartOptions` (type), `startTool`, `rememberedState`, `rememberState`
 - `vite.config.ts`: `default`
