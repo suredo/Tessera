@@ -101,7 +101,8 @@ const noSavedTool = (store: Store, id: string) => missing(store, "saved_tools", 
 export const getWorkspace = (store: Store, id: string): Workspace | undefined =>
   store.db.get(workspaceFromRow, `${SELECT_WORKSPACE} AND w.id = ?`, id);
 
-const existingWorkspace = (store: Store, id: string): Workspace => {
+/** The workspace, or a plain error if it is missing or in the trash. Module-internal. */
+export const existingWorkspace = (store: Store, id: string): Workspace => {
   const found = getWorkspace(store, id);
   if (!found) throw noWorkspace(store, id);
   return found;
@@ -146,23 +147,31 @@ export function addWorkspaceVersion(store: Store, id: string, hash: string): Wor
   const checkedHash = workspaceVersionSchema.shape.hash.parse(hash);
   return store.db.transaction(() => {
     existingWorkspace(store, id);
-    const last = store.db.get(
-      lastNumber,
-      "SELECT MAX(number) AS number FROM workspace_versions WHERE workspace_id = ?",
-      id,
-    );
-    const number = (last?.number ?? 0) + 1;
-    const at = stamp(store);
-    store.db.run(
-      "INSERT INTO workspace_versions (workspace_id, number, hash, created_at) VALUES (?, ?, ?, ?)",
-      id,
-      number,
-      checkedHash,
-      at,
-    );
-    store.db.run("UPDATE workspaces SET updated_at = ? WHERE id = ?", at, id);
-    return workspaceVersionSchema.parse({ index: number, hash: checkedHash, createdAt: at });
+    return appendVersion(store, id, checkedHash);
   });
+}
+
+/**
+ * Inside the caller's transaction: makes a stored version the workspace's current one, as the
+ * next entry of its history. Module-internal: activation (`activation.ts`) uses it too.
+ */
+export function appendVersion(store: Store, id: string, hash: string): WorkspaceVersion {
+  const last = store.db.get(
+    lastNumber,
+    "SELECT MAX(number) AS number FROM workspace_versions WHERE workspace_id = ?",
+    id,
+  );
+  const number = (last?.number ?? 0) + 1;
+  const at = stamp(store);
+  store.db.run(
+    "INSERT INTO workspace_versions (workspace_id, number, hash, created_at) VALUES (?, ?, ?, ?)",
+    id,
+    number,
+    hash,
+    at,
+  );
+  store.db.run("UPDATE workspaces SET updated_at = ? WHERE id = ?", at, id);
+  return workspaceVersionSchema.parse({ index: number, hash, createdAt: at });
 }
 
 /** A workspace's version history, the first version first. */
@@ -187,28 +196,37 @@ export function saveWorkspaceData(
   expectedRevision: number,
 ): Workspace {
   const parsed = workspaceSchema.shape.data.parse(data);
-  const body = JSON.stringify(parsed);
   return store.db.transaction(() => {
     const current = existingWorkspace(store, id);
     if (current.dataRevision !== expectedRevision) {
       throw new Error("The data changed since it was read, so nothing was saved.");
     }
-    // Every record the workspace has held: those it holds, and those removed, at their last count.
-    const before = new Map([
-      ...savedRows(store, id),
-      ...savedState(store, id, current.data ?? {}).revisions,
-    ]);
-    store.db.run(
-      "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
-      body,
-      stamp(store),
-      id,
-    );
-    const after = createDataState(parsed ?? {}).revisions;
-    const revisions = new Map([...after.keys()].map((key) => [key, (before.get(key) ?? 0) + 1]));
-    saveRevisions(store, id, revisions, before);
+    replaceData(store, current, parsed);
     return existingWorkspace(store, id);
   });
+}
+
+/**
+ * Inside the caller's transaction: replaces a workspace's data whole and raises its revision.
+ * Every record it keeps moves to a new revision, so a change planned before the replacement is
+ * refused (DATA-02). Module-internal: activation (`activation.ts`) uses it too.
+ */
+export function replaceData(store: Store, current: Workspace, data: Workspace["data"]): void {
+  const id = current.id;
+  // Every record the workspace has held: those it holds, and those removed, at their last count.
+  const before = new Map([
+    ...savedRows(store, id),
+    ...savedState(store, id, current.data ?? {}).revisions,
+  ]);
+  store.db.run(
+    "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
+    JSON.stringify(data),
+    stamp(store),
+    id,
+  );
+  const after = createDataState(data ?? {}).revisions;
+  const revisions = new Map([...after.keys()].map((key) => [key, (before.get(key) ?? 0) + 1]));
+  saveRevisions(store, id, revisions, before);
 }
 
 const revisionRow = z.object({
