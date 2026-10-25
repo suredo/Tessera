@@ -3,8 +3,8 @@ import { useState } from "react";
 import { t } from "./i18n/translate.ts";
 import { NameForm } from "./NameForm.tsx";
 
-// My tools, the saved-tools library (APP-04, DATA-07): each saved tool with its name, when it was
-// last updated and the workspace Continue opens, so the target is clear. Continue goes back to that
+// My tools, the saved-tools library (APP-04, DATA-07): each saved tool with its name, when it or
+// its workspace was last updated and the workspace Continue opens, so the target is clear. Continue goes back to that
 // workspace; Use again starts a new one from the tool's starting data; Save as a new tool does the
 // same under a new name in the library. Each can be renamed or moved to the trash, and the list
 // can be searched by name.
@@ -27,7 +27,7 @@ export function Library(props: Props) {
   const { savedTools, workspaces } = props;
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Editing>(null);
-  const titles = new Map(workspaces.map((w) => [w.id, w.title]));
+  const linked = new Map(workspaces.map((w) => [w.id, w]));
   const wanted = query.trim().toLocaleLowerCase();
   const shown = savedTools.filter((tool) => tool.name.toLocaleLowerCase().includes(wanted));
 
@@ -48,13 +48,16 @@ export function Library(props: Props) {
       <ul>
         {shown.map((tool) => {
           const name = tool.name;
-          const workspace = titles.get(tool.workspaceId) ?? "";
+          const workspace = linked.get(tool.workspaceId)?.title ?? "";
+          // A saved tool follows its workspace (A32), so it was updated when either changed last.
+          const changed = linked.get(tool.workspaceId)?.updatedAt ?? tool.updatedAt;
+          const updated = changed > tool.updatedAt ? changed : tool.updatedAt;
           const done = () => setEditing(null);
           return (
             <li key={tool.id} className="saved-tool">
               <h3>{name}</h3>
               <p className="detail">
-                {t("library.updated", { when: when.format(new Date(tool.updatedAt)) })}
+                {t("library.updated", { when: when.format(new Date(updated)) })}
               </p>
               <p className="detail">{t("library.continues", { workspace })}</p>
               {editing?.id === tool.id ? (
