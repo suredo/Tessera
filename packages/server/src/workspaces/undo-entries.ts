@@ -8,12 +8,15 @@ import { recordKey, type DataState, type ToolData } from "../patches/index.ts";
 type DataRecord = { id: string } & Record<string, unknown>;
 
 // One record a change touched: what it was before (null if the change added it), where it stood
-// in its collection, and its revision just after (null if the change removed it).
+// in its collection, and its revision just before and just after (null where it didn't exist). A
+// removed record keeps its last revision in the saved rows, so its revision before also tells
+// whether it came back and changed since.
 const touchedSchema = z.strictObject({
   collection: z.string(),
   id: recordIdSchema,
   before: jsonObjectSchema.nullable(),
   beforeIndex: z.int().nonnegative().nullable(),
+  revisionBefore: z.int().min(1).nullable(),
   revisionAfter: z.int().min(1).nullable(),
 });
 
@@ -47,6 +50,7 @@ export function changeOfPatch(before: DataState, after: DataState): UndoChange |
       id,
       before: index === -1 ? null : (list[index] as z.infer<typeof jsonObjectSchema>),
       beforeIndex: index === -1 ? null : index,
+      revisionBefore: before.revisions.get(key) ?? null,
       revisionAfter: after.revisions.get(key) ?? null,
     });
   }
@@ -58,16 +62,24 @@ export type Undone =
 
 /**
  * The data with a records change undone, if every record it touched is still as the change left
- * it, at the same revision; otherwise stale, and nothing is undone. `restored` are the keys of the
- * records it brings back or changes back, which move to their next revision.
+ * it, at the same revision; otherwise stale, and nothing is undone. A record the change removed
+ * must still be gone and still at the revision it had then, in `saved`, the saved revision of
+ * every record the workspace has held: one that came back, changed and went again is refused.
+ * `restored` are the keys of the records it brings back or changes back, which move to their next
+ * revision.
  */
 export function undoRecords(
   change: Extract<UndoChange, { kind: "records" }>,
   current: DataState,
+  saved: ReadonlyMap<string, number>,
 ): Undone {
   for (const record of change.records) {
-    const now = current.revisions.get(recordKey(record.collection, record.id)) ?? null;
+    const key = recordKey(record.collection, record.id);
+    const now = current.revisions.get(key) ?? null;
     if (now !== record.revisionAfter) return { ok: false, reason: "stale" };
+    if (record.revisionAfter === null && (saved.get(key) ?? null) !== record.revisionBefore) {
+      return { ok: false, reason: "stale" };
+    }
   }
   const data = structuredClone(current.data);
   const restored: string[] = [];

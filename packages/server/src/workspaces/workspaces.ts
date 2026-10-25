@@ -216,24 +216,20 @@ export const UNDO_LIMIT = 100;
  * data revision `dataRevision`, and discards all but the newest UNDO_LIMIT. Module-internal.
  */
 export function keepUndo(store: Store, id: string, change: UndoChange, dataRevision: number): void {
-  const last = store.db.get(
-    lastNumber,
-    "SELECT MAX(number) AS number FROM data_undo WHERE workspace_id = ?",
-    id,
-  );
-  const number = (last?.number ?? 0) + 1;
+  // Its number comes from SQLite and is never given twice, even once an entry is used up.
   store.db.run(
-    "INSERT INTO data_undo (workspace_id, number, change, data_revision, created_at) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO data_undo (workspace_id, change, data_revision, created_at) VALUES (?, ?, ?, ?)",
     id,
-    number,
     JSON.stringify(change),
     dataRevision,
     stamp(store),
   );
   store.db.run(
-    "DELETE FROM data_undo WHERE workspace_id = ? AND number <= ?",
+    `DELETE FROM data_undo WHERE workspace_id = ? AND number NOT IN
+       (SELECT number FROM data_undo WHERE workspace_id = ? ORDER BY number DESC LIMIT ?)`,
     id,
-    number - UNDO_LIMIT,
+    id,
+    UNDO_LIMIT,
   );
 }
 

@@ -184,6 +184,37 @@ describe("data undo (DATA-04)", () => {
     folder.close();
   });
 
+  it("DATA-04: an undone change's number is never given to a later one", async () => {
+    const { folder, id } = await withTasks();
+    patch(folder, id, [replace("t-1", 1, "First edit")]);
+    const first = latest(folder, id);
+    expect(undoDataChange(folder, id, first).ok).toBe(true);
+    patch(folder, id, [replace("t-1", 3, "Later edit")]);
+    expect(latest(folder, id)).not.toBe(first);
+    // Asking again for the change already undone undoes nothing else.
+    expect(undoDataChange(folder, id, first)).toMatchObject({ ok: false, reason: "no-entry" });
+    expect(readWorkspaceData(folder, id).data["tasks"]).toContainEqual({
+      id: "t-1",
+      title: "Later edit",
+    });
+    folder.close();
+  });
+
+  it("DATA-04: refuses to bring back a removed record that came back and changed since", async () => {
+    const { folder, id } = await withTasks();
+    patch(folder, id, [{ op: "remove", collection: "tasks", id: "t-1", revisionCount: 1 }]);
+    const removal = latest(folder, id);
+    // The same ID comes back with newer work, then goes again.
+    const back = { tasks: [{ id: "t-1", title: "Newer work" }, ...tasks.tasks.slice(1)] };
+    saveWorkspaceData(folder, id, back, 2);
+    const revision = readWorkspaceData(folder, id).revisions["tasks"]!["t-1"]!;
+    patch(folder, id, [{ op: "remove", collection: "tasks", id: "t-1", revisionCount: revision }]);
+    const before = readWorkspaceData(folder, id);
+    expect(undoDataChange(folder, id, removal)).toMatchObject({ ok: false, reason: "stale" });
+    expect(readWorkspaceData(folder, id)).toEqual(before);
+    folder.close();
+  });
+
   it("DATA-08: undo history survives a restart, and goes with its workspace", async () => {
     const { folder, id } = await withTasks();
     patch(folder, id, [replace("t-1", 1, "Buy oat milk")]);

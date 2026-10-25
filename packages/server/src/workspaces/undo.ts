@@ -93,7 +93,7 @@ export function undoDataChange(store: Store, id: string, number: number): UndoRe
       }
       data = change.before;
     } else {
-      const undone = undoRecords(change, current);
+      const undone = undoRecords(change, current, savedRows(store, id));
       if (!undone.ok) {
         return refuse(
           "stale",
