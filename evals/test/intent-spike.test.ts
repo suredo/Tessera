@@ -50,6 +50,7 @@ const request = (id: string) => {
 };
 
 // The dry run starts one process per request (ENG-20: a bounded, generous limit).
+const PER_START_MS = 8_000;
 describe("intent spike (GEN-01, GEN-02, GEN-15, #20)", { timeout: 60_000 }, () => {
   it("has one well-formed request per planned call, with every category and its context", () => {
     const all = requests();
@@ -89,28 +90,39 @@ describe("intent spike (GEN-01, GEN-02, GEN-15, #20)", { timeout: 60_000 }, () =
     expect(score(request("r12"), answer({ language: "es" })).mismatches).toEqual(["language es"]);
   });
 
-  it("rehearses the whole run at no cost, with the same prompt for every request (ENG-07, GEN-02)", async () => {
-    const dataFolder = newFolder();
-    const report = await runIntentSpike({
-      mode: "dry-run",
-      provider: fakeProvider(dataFolder),
-      dataFolder,
-    });
-    expect(report.results.filter((r) => r.misrouted || r.error)).toEqual([]);
-    expect(report.summary).toMatchObject({ callCount: 31, inputTokens: 0, outputTokens: 0 });
-    expect(readLedger(dataFolder).every((e) => e.mode === "dry-run")).toBe(true);
+  // The dry run starts the fake provider as its own Node process for each of its calls, one after
+  // another: 12 to 14 s in all on an idle Windows machine, but a start can take seconds on a busy
+  // one, such as when the browser tests run alongside. It asserts what the run records, never how
+  // fast Node starts, so its limit grows with the starts: 8 s each, about 20 times an idle one
+  // (ENG-20, #81).
+  it(
+    "rehearses the whole run at no cost, with the same prompt for every request (ENG-07, GEN-02)",
+    {
+      timeout: PLAN.callCap * PER_START_MS,
+    },
+    async () => {
+      const dataFolder = newFolder();
+      const report = await runIntentSpike({
+        mode: "dry-run",
+        provider: fakeProvider(dataFolder),
+        dataFolder,
+      });
+      expect(report.results.filter((r) => r.misrouted || r.error)).toEqual([]);
+      expect(report.summary).toMatchObject({ callCount: 31, inputTokens: 0, outputTokens: 0 });
+      expect(readLedger(dataFolder).every((e) => e.mode === "dry-run")).toBe(true);
 
-    // Nothing is switched on or off by the request's words: every call gets the same system prompt.
-    const calls = fs.readdirSync(path.join(dataFolder, "fake-calls")).map(
-      (f) =>
-        JSON.parse(fs.readFileSync(path.join(dataFolder, "fake-calls", f), "utf8")) as {
-          args: string[];
-        },
-    );
-    const systems = new Set(calls.map((c) => c.args[c.args.indexOf("--system-prompt") + 1]));
-    expect([...systems]).toEqual([systemPrompt]);
-    expect(fs.existsSync(path.join(dataFolder, "report.md"))).toBe(true);
-  });
+      // Nothing is switched on or off by the request's words: every call gets the same system prompt.
+      const calls = fs.readdirSync(path.join(dataFolder, "fake-calls")).map(
+        (f) =>
+          JSON.parse(fs.readFileSync(path.join(dataFolder, "fake-calls", f), "utf8")) as {
+            args: string[];
+          },
+      );
+      const systems = new Set(calls.map((c) => c.args[c.args.indexOf("--system-prompt") + 1]));
+      expect([...systems]).toEqual([systemPrompt]);
+      expect(fs.existsSync(path.join(dataFolder, "report.md"))).toBe(true);
+    },
+  );
 
   it("stops after two failed calls in a row (ENG-07)", async () => {
     const dataFolder = newFolder();
