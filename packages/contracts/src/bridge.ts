@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ASSET_LIMIT_BYTES, ASSET_TYPES, assetIdSchema } from "./asset.ts";
 import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
 import { patchBatchSchema, recordIdSchema, TOOL_DATA_LIMIT_BYTES } from "./patch.ts";
 
@@ -87,6 +88,27 @@ export const BRIDGE_ACTIONS = {
           ],
         },
         result: { addedIds: ["t-2"] },
+      },
+    ],
+  },
+  "asset.read": {
+    description:
+      "Reads an image the tool's data names, by its ID: its type and its bytes, as base64. Show it through a blob: URL, as tessera.assetUrl(id) does; a tool never sees a file path (DATA-11).",
+    capability: null,
+    writes: false,
+    args: z.strictObject({ id: assetIdSchema }),
+    result: z.strictObject({
+      type: z.enum(ASSET_TYPES),
+      bytesBase64: z
+        .base64()
+        .max(Math.ceil(ASSET_LIMIT_BYTES / 3) * 4)
+        .describe("The image's bytes, as base64."),
+    }),
+    maxArgsBytes: 1024,
+    examples: [
+      {
+        args: { id: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08" },
+        result: { type: "image/png", bytesBase64: "iVBORw0KGgo=" },
       },
     ],
   },

@@ -1,9 +1,11 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { Artifact, BridgeDataRequest, BridgeReply } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { BRIDGE_ROUTE } from "@tessera/contracts";
+import { storeAsset } from "../src/assets/index.ts";
 import { answerDataCall, bridgeRoutes } from "../src/bridge/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
@@ -208,6 +210,56 @@ describe("the bridge's route (SEC-03)", () => {
     );
     expect(foreign.status).toBeGreaterThanOrEqual(400);
     await server.close();
+    folder.close();
+  });
+});
+
+describe("handing a tool an image (DATA-11, AST-03 to AST-05)", () => {
+  const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "assets");
+  const png = fs.readFileSync(path.join(fixtures, "photo.png"));
+  const jpeg = fs.readFileSync(path.join(fixtures, "photo.jpg"));
+
+  it("DATA-11, AST-05: gives an image the tool's data names as its type and bytes, never a path", async () => {
+    const { folder, id, ask } = await workspaceWith();
+    const stored = await storeAsset(folder, new Uint8Array(png));
+    if (!stored.ok) throw new Error(stored.message);
+    saveWorkspaceData(folder, id, { ...tasks, cover: stored.asset.id }, 1);
+    const reply = ask("asset.read", { id: stored.asset.id }, "starting");
+    expect(reply).toMatchObject({ ok: true });
+    const result = (reply as { result: Record<string, string> }).result;
+    expect(Object.keys(result).sort()).toEqual(["bytesBase64", "type"]);
+    expect(result["type"]).toBe("image/png");
+    expect(Buffer.from(result["bytesBase64"]!, "base64").equals(png)).toBe(true);
+    // Nothing in the reply says where the image is kept.
+    const text = JSON.stringify(reply);
+    expect(text).not.toContain(folder.paths.root);
+    expect(text).not.toMatch(/assets[\\/]|\.png"/);
+    folder.close();
+  });
+
+  it("AST-04: refuses an image the tool's workspace doesn't name, even by its ID", async () => {
+    const { folder, ask } = await workspaceWith();
+    // Another workspace's image, stored in the same data folder.
+    const other = createWorkspace(folder, "Holiday").id;
+    const stored = await storeAsset(folder, new Uint8Array(jpeg));
+    if (!stored.ok) throw new Error(stored.message);
+    saveWorkspaceData(folder, other, { photos: [{ id: "p-1", asset: stored.asset.id }] }, 0);
+    expect(ask("asset.read", { id: stored.asset.id })).toEqual({
+      requestId: expect.any(String) as string,
+      ok: false,
+      error: { code: "invalid-args", message: "That image isn't one this tool's data names." },
+    });
+    folder.close();
+  });
+
+  it("AST-03: refuses an ID that isn't a SHA-256 before anything is read", async () => {
+    const { folder, ask } = await workspaceWith();
+    for (const id of ["../tessera.db", "C:/Windows/win.ini", "A".repeat(64), "photo.png"]) {
+      expect(ask("asset.read", { id })).toMatchObject({
+        ok: false,
+        error: { code: "invalid-args" },
+      });
+    }
     folder.close();
   });
 });

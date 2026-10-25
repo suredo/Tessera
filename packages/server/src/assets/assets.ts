@@ -113,6 +113,23 @@ function idsIn(store: AssetStore, queries: readonly string[], ...params: string[
   return found;
 }
 
+/** The IDs of the assets one workspace's data, versions and snapshots name (AST-04). */
+export const workspaceAssets = (store: AssetStore, workspaceId: string): Set<string> =>
+  idsIn(store, WORKSPACE_SOURCES, workspaceId);
+
+/**
+ * An asset's row and bytes, read at once, for a caller that can't wait, such as the bridge's
+ * answer to a tool. Undefined for an ID that isn't a stored asset's (AST-03).
+ */
+export function readAssetNow(
+  store: AssetStore,
+  id: string,
+): { asset: Asset; bytes: Uint8Array } | undefined {
+  const asset = getAsset(store, id);
+  if (!asset) return undefined;
+  return { asset, bytes: new Uint8Array(fs.readFileSync(fileOf(store, asset))) };
+}
+
 /** The IDs of the assets something stored still refers to (DATA-09, DATA-11). */
 export const referencedAssets = (store: AssetStore): Set<string> => idsIn(store, REFERENCE_SOURCES);
 

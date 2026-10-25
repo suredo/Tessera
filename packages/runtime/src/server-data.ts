@@ -32,5 +32,7 @@ export function serverData(
     // The bridge checks every result against the manifest before the tool sees it.
     read: (context) => ask(context) as ReturnType<DataHandlers["read"]>,
     patch: (_batch, context) => ask(context) as ReturnType<DataHandlers["patch"]>,
+    // The server checks the image is one the workspace's data names (AST-04).
+    asset: (_args, context) => ask(context) as ReturnType<NonNullable<DataHandlers["asset"]>>,
   };
 }
