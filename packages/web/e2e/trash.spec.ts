@@ -131,7 +131,9 @@ test("DATA-09: emptying the trash never removes something the person wasn't show
   // Something else goes to the trash while the person reads the list.
   deleteWorkspace(app.folder, laterId);
   await confirm.getByRole("button", { name: en["trash.confirm"], exact: true }).click();
-  await expect(page.getByText(/^Something went wrong: /)).toBeVisible();
+  await expect(
+    page.getByText("The trash changed since you looked at it, so nothing was removed."),
+  ).toBeVisible();
   // Nothing went, and the trash now shows what it holds.
   await expect(entry(page, shown)).toHaveCount(1);
   await expect(entry(page, later)).toHaveCount(1);

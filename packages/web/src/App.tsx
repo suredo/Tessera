@@ -1,6 +1,6 @@
 import type { SavedTool, Trash as TrashList, Workspace } from "@tessera/contracts";
 import { useEffect, useState } from "react";
-import { ask } from "./host-api.ts";
+import { ask, HostError } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import { History } from "./History.tsx";
 import { Library } from "./Library.tsx";
@@ -274,8 +274,10 @@ export function App() {
                   const { removed } = await ask("trash.empty", { confirmation });
                   setNotice(t("trash.emptied", { count: removed.length }));
                 } catch (error) {
-                  // Such as the trash having changed since it was shown: show it as it is now.
-                  report(error);
+                  // Such as the trash having changed since it was shown: the server says so in
+                  // plain words, and the trash shows what it holds now.
+                  if (error instanceof HostError) setNotice(error.message);
+                  else report(error);
                 }
                 await refresh().catch(report);
               }}
