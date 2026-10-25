@@ -4,7 +4,7 @@ title: "Asset store"
 description: "Images stored once by the SHA-256 of their bytes, checked by content and size, swept of interrupted writes at start, and removed only when nothing stored refers to them any more."
 resource: ../../../packages/server/src/assets/
 implements: [DATA-11, AST-01, AST-02, AST-03, AST-06]
-tests: [../../../packages/server/test/assets.test.ts]
+tests: [../../../packages/server/test/assets.test.ts, ../../../packages/server/test/asset-undo-scenario.test.ts]
 tags: [code, server, data, assets]
 status: draft
 generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:38:15Z }
@@ -33,6 +33,7 @@ Keeps the person's images (`DATA-11`, A48): photos and other pictures a tool sho
 - **An ID is only ever a SHA-256** (`AST-03`). Every lookup checks the ID first, and a file's path is built from the checked ID and the row's type, never from anything a caller passes, so nothing outside the asset store can be read through it.
 - **An asset goes only when nothing refers to it** (`DATA-09`, `DATA-11`). What refers to an asset isn't recorded: `collectAssets` looks through everything stored, as JSON text, for its ID ([ADR 0007](../../decisions/adr/0007-asset-references-by-scanning.md)). That is every workspace's data, trashed ones included, every tool version, every recovery snapshot and every data undo entry, so an undo can always bring back the images it names. A workspace in the trash keeps its assets until it is removed for good. The row goes in one transaction that checks again, then the file; a crash between them leaves a file without a row, which the next start removes.
 - **Storing, cleanup and the sweep run one at a time** for each database. Each touches rows and files with waits between them; otherwise cleanup could remove the file of an asset stored again while it waited, leaving a row with no file.
+- **A cropped photo can be undone across a restart** (M1's exit criterion). `asset-undo-scenario.test.ts` replaces a photo with a cropped copy, lets cleanup run, restarts Tessera through its launcher, undoes the crop and finds the original's bytes again; and, once 100 newer changes have discarded the crop's undo entry, cleanup removes the original.
 - **The start-up sweep touches only what is the store's** (`AST-06`). It removes every temporary file, and every file named like an asset, in the folder its name belongs in, that has no row. Any other file is left alone, as is everything outside the assets folder. The [launcher](launcher.md) sweeps and then cleans up at start, and cleans up again hourly after the trash's expiry.
 
 # Depends on / used by
