@@ -19,6 +19,7 @@ import {
   type ToolData,
 } from "../patches/index.ts";
 import type { DataFolder } from "../storage/index.ts";
+import { changeOfPatch, type UndoChange } from "./undo-entries.ts";
 
 // Workspaces, their version history and the saved-tools library (DATA-08). Every change is one
 // transaction, committed before the call returns: there is no "unsaved work" to lose on a restart.
@@ -202,8 +203,34 @@ export function saveWorkspaceData(
       throw new Error("The data changed since it was read, so nothing was saved.");
     }
     replaceData(store, current, parsed);
+    keepUndo(store, id, { kind: "whole", before: current.data }, current.dataRevision + 1);
     return existingWorkspace(store, id);
   });
+}
+
+/** How many data changes a workspace keeps to undo (DATA-04); older ones are discarded. */
+export const UNDO_LIMIT = 100;
+
+/**
+ * Inside the caller's transaction: keeps `change` as the workspace's newest undo entry, made at
+ * data revision `dataRevision`, and discards all but the newest UNDO_LIMIT. Module-internal.
+ */
+export function keepUndo(store: Store, id: string, change: UndoChange, dataRevision: number): void {
+  // Its number comes from SQLite and is never given twice, even once an entry is used up.
+  store.db.run(
+    "INSERT INTO data_undo (workspace_id, change, data_revision, created_at) VALUES (?, ?, ?, ?)",
+    id,
+    JSON.stringify(change),
+    dataRevision,
+    stamp(store),
+  );
+  store.db.run(
+    `DELETE FROM data_undo WHERE workspace_id = ? AND number NOT IN
+       (SELECT number FROM data_undo WHERE workspace_id = ? ORDER BY number DESC LIMIT ?)`,
+    id,
+    id,
+    UNDO_LIMIT,
+  );
 }
 
 /**
@@ -236,7 +263,8 @@ const revisionRow = z.object({
 });
 
 // Every saved row: the records the workspace holds, and those it removed, at their last count.
-const savedRows = (store: Store, id: string): Map<string, number> =>
+/** Module-internal: every saved revision row of a workspace, removed records' included. */
+export const savedRows = (store: Store, id: string): Map<string, number> =>
   new Map(
     store.db
       .all(
@@ -247,8 +275,8 @@ const savedRows = (store: Store, id: string): Map<string, number> =>
       .map((row) => [recordKey(row.collection, row.record_id), row.revision_count]),
   );
 
-// The workspace's data with each record's saved revision; a record with no saved row is at 1.
-function savedState(store: Store, id: string, data: ToolData): DataState {
+/** Module-internal: the data with each record's saved revision; one with no saved row is at 1. */
+export function savedState(store: Store, id: string, data: ToolData): DataState {
   const state = createDataState(data);
   const saved = savedRows(store, id);
   const revisions = new Map(
@@ -261,7 +289,7 @@ function savedState(store: Store, id: string, data: ToolData): DataState {
 // that is removed keeps its last count, so one that comes back with the same ID continues from
 // there, and a change planned before it left stays stale (DATA-02). `held` are the records'
 // counts before the change, removed ones included.
-function saveRevisions(
+export function saveRevisions(
   store: Store,
   id: string,
   revisions: ReadonlyMap<string, number>,
@@ -338,6 +366,8 @@ export function patchWorkspaceData(
       id,
     );
     saveRevisions(store, id, result.state.revisions, before.revisions);
+    const change = changeOfPatch(before, result.state);
+    if (change) keepUndo(store, id, change, workspace.dataRevision + 1);
     return { ok: true, addedIds: result.addedIds, workspace: existingWorkspace(store, id) };
   });
 }

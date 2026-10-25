@@ -8,6 +8,13 @@ export {
 } from "./activation.ts";
 export { activationRoutes } from "./routes.ts";
 export {
+  listUndo,
+  undoDataChange,
+  type UndoEntry,
+  type UndoRefusal,
+  type UndoResult,
+} from "./undo.ts";
+export {
   continueSavedTool,
   useAgain,
   type ContinueTarget,
@@ -38,6 +45,7 @@ export {
   renameWorkspace,
   saveTool,
   saveWorkspaceData,
+  UNDO_LIMIT,
   workspaceVersions,
   type Store,
   type WorkspaceData,
