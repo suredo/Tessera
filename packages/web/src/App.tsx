@@ -1,10 +1,11 @@
-import type { SavedTool, Workspace } from "@tessera/contracts";
+import type { SavedTool, Trash as TrashList, Workspace } from "@tessera/contracts";
 import { useEffect, useState } from "react";
-import { ask } from "./host-api.ts";
+import { ask, HostError } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import { History } from "./History.tsx";
 import { Library } from "./Library.tsx";
 import { ToolPanel } from "./ToolPanel.tsx";
+import { Trash } from "./Trash.tsx";
 import { Workspaces } from "./Workspaces.tsx";
 
 // The host's main screen (APP-01, APP-02, APP-03): the workspaces beside the open workspace's
@@ -12,7 +13,7 @@ import { Workspaces } from "./Workspaces.tsx";
 // tools (A12). The chat that makes tools comes with M2.
 
 /** The first-run screen, shown while there are no workspaces (APP-02). */
-export function EmptyState({ notice = "" }: { notice?: string }) {
+export function EmptyState({ notice = "", onTrash }: { notice?: string; onTrash?: () => void }) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
@@ -20,6 +21,12 @@ export function EmptyState({ notice = "" }: { notice?: string }) {
       <p role="status">{t("home.status")}</p>
       {/* Such as the trash notice after the last workspace is deleted. */}
       <p role="status">{notice}</p>
+      {/* What was deleted can still come back from here (DATA-09). */}
+      {onTrash && (
+        <button type="button" onClick={onTrash}>
+          {t("home.trash")}
+        </button>
+      )}
     </main>
   );
 }
@@ -59,17 +66,20 @@ export function App() {
   const [lastUsed, setLastUsed] = useState<Record<string, string>>({});
   const [openId, setOpenId] = useState<string | null>(remembered);
   const [notice, setNotice] = useState("");
-  const [view, setView] = useState<"workspaces" | "library">("workspaces");
+  const [view, setView] = useState<"workspaces" | "library" | "trash">("workspaces");
+  const [trash, setTrash] = useState<TrashList | null>(null);
   // Moved on after a restore or an undo, so the tool starts again with the changed data.
   const [reloads, setReloads] = useState(0);
   // Moved on by each change the running tool saves, so the history shows it at once (APP-05).
   const [toolChanges, setToolChanges] = useState(0);
 
   const refresh = async () => {
-    const [list, library] = await Promise.all([
+    const [list, library, deleted] = await Promise.all([
       ask("workspaces.list", {}),
       ask("library.list", {}),
+      ask("trash.list", {}),
     ]);
+    setTrash(deleted);
     const ordered = inPlace(workspaces, list.workspaces);
     setWorkspaces(ordered);
     setLastUsed(list.lastUsed);
@@ -83,9 +93,10 @@ export function App() {
 
   useEffect(() => {
     let current = true;
-    Promise.all([ask("workspaces.list", {}), ask("library.list", {})]).then(
-      ([list, library]) => {
+    Promise.all([ask("workspaces.list", {}), ask("library.list", {}), ask("trash.list", {})]).then(
+      ([list, library, deleted]) => {
         if (!current) return;
+        setTrash(deleted);
         const ordered = byUse(list.workspaces, list.lastUsed);
         setWorkspaces(ordered);
         setLastUsed(list.lastUsed);
@@ -138,7 +149,10 @@ export function App() {
       </main>
     );
   }
-  if (workspaces.length === 0) return <EmptyState notice={notice} />;
+  if (workspaces.length === 0 && view !== "trash") {
+    const inTrash = (trash?.entries.length ?? 0) > 0;
+    return <EmptyState notice={notice} onTrash={inTrash ? () => setView("trash") : undefined} />;
+  }
   const current = workspaces.find((w) => w.id === openId) ?? null;
 
   // Runs an action, then reloads the lists; says `done` when it worked, or why it didn't.
@@ -157,7 +171,7 @@ export function App() {
   };
 
   return (
-    <div className={view === "library" ? "app library-view" : "app"}>
+    <div className={view === "workspaces" ? "app" : "app one-section"}>
       <header>
         <h1>{t("app.title")}</h1>
         <nav aria-label={t("nav.label")} className="sections">
@@ -174,6 +188,13 @@ export function App() {
             onClick={() => setView("library")}
           >
             {t("nav.library")}
+          </button>
+          <button
+            type="button"
+            aria-current={view === "trash" ? "page" : undefined}
+            onClick={() => setView("trash")}
+          >
+            {t("nav.trash")}
           </button>
         </nav>
       </header>
@@ -228,6 +249,41 @@ export function App() {
             )}
           </main>
         </>
+      ) : view === "trash" ? (
+        <main>
+          {trash && (
+            <Trash
+              trash={trash}
+              onRestore={async (entry) => {
+                try {
+                  if (entry.kind === "workspace") {
+                    await ask("trash.restoreWorkspace", { id: entry.id });
+                  } else {
+                    await ask("trash.restoreSavedTool", { id: entry.id });
+                  }
+                  await refresh();
+                  // A restored workspace opens when none is open, as after the last one went.
+                  if (entry.kind === "workspace" && !current) open(entry.id);
+                  setNotice(t("trash.restored", { name: entry.name }));
+                } catch (error) {
+                  report(error);
+                }
+              }}
+              onEmpty={async (confirmation) => {
+                try {
+                  const { removed } = await ask("trash.empty", { confirmation });
+                  setNotice(t("trash.emptied", { count: removed.length }));
+                } catch (error) {
+                  // Such as the trash having changed since it was shown: the server says so in
+                  // plain words, and the trash shows what it holds now.
+                  if (error instanceof HostError) setNotice(error.message);
+                  else report(error);
+                }
+                await refresh().catch(report);
+              }}
+            />
+          )}
+        </main>
       ) : (
         <main>
           <Library
