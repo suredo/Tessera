@@ -2,7 +2,7 @@
 
 ## 2026-10-25
 
-* **Update**: The bridge's clock test is back from quarantine ([issue 98](https://github.com/suredo/Tessera/issues/98)). The [runtime package](code/runtime/package.md) doc says why it waits 15 s, and that the test host page logs long tasks; the [web package](code/web/package.md) doc says a failed browser test keeps a light trace, to tell a stalled page from a slow browser, which the [CI workflow](code/ci/workflow.md) doc says its artifact keeps.
+* **Update**: The bridge's clock test is back from quarantine ([issue 98](https://github.com/suredo/Tessera/issues/98)). The [runtime package](code/runtime/package.md) doc says why it waits 15 s, and that the test host page logs long tasks; the [web package](code/web/package.md) doc says a failed browser test keeps a light trace with its actions and console (after Codex's review, it says the trace has no network: Playwright records it only with page snapshots, and snapshots would let a tool write before any click), to tell a stalled page from a slow browser, which the [CI workflow](code/ci/workflow.md) doc says its artifact keeps.
 
 * **Update**: Continue and Use again ([issue 50](https://github.com/suredo/Tessera/issues/50), last part): the [workspaces](code/server/workspaces.md) doc describes `continueSavedTool` and `useAgain`, which never move a saved tool's link, and claims `DATA-07`. Use again starts a new workspace from the tool's current version and its reusable defaults only, checked as activation checks a version, in one transaction.
 

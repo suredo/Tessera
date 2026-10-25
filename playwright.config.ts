@@ -3,8 +3,10 @@ import { defineConfig } from "@playwright/test";
 
 // Browser tests (TEST-06): the installed Chrome and Edge, at fixed viewports including 320 px,
 // set when each browser context is created (ENG-14). Every test records a video (ENG-10), and a
-// failed one keeps a light trace, its actions, console and network without screenshots or
-// snapshots, to tell a stalled page from a slow browser (#83, #98).
+// failed one keeps a light trace, its actions and console, to tell a stalled page from a slow
+// browser (#83, #98). Snapshots stay off: Playwright takes them inside every frame, which counts as
+// the person's activation there and lets a tool write before any click (GEN-06). Without them it
+// records no network either.
 // Each worker loads this file again, so the run's folder name is chosen once and passed down.
 process.env["TESSERA_E2E_RUN"] ??= new Date().toISOString().replace(/[:.]/g, "-");
 const runFolder = `test-output/playwright/${process.env["TESSERA_E2E_RUN"]}`;
