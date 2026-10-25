@@ -79,12 +79,6 @@ async function crop(folder: DataFolder, id: string) {
 const shownAsset = (folder: DataFolder, id: string) =>
   (readWorkspaceData(folder, id).data["photos"] as { asset: string }[])[0]!.asset;
 
-// Cleanup looks through everything stored for each asset's ID, after many writes, which takes
-// about 0.3 s alone but measured up to 2.8 s while the whole suite runs, and went past the 5 s
-// default three times in fifteen full runs. None asserts how long it takes, so the limit leaves room for
-// that (ENG-20, as #94 did for archives).
-const SLOW_MACHINE = { timeout: 20_000 };
-
 describe("a cropped photo and its undo (M1 exit criterion, DATA-11, DATA-04)", () => {
   it("DATA-11: cleanup and a restart keep the original while the crop can be undone, and undoing brings it back", async () => {
     const { dataDir, folder, id, first } = await withPhoto();
@@ -106,32 +100,28 @@ describe("a cropped photo and its undo (M1 exit criterion, DATA-11, DATA-04)", (
     await again.stop();
   });
 
-  it(
-    "DATA-11: once the crop's undo entry is discarded, cleanup removes the original",
-    SLOW_MACHINE,
-    async () => {
-      const { folder, id, first } = await withPhoto();
-      const copy = await crop(folder, id);
-      expect(await collectAssets(folder)).toEqual([]);
-      // 100 newer changes discard the crop's undo entry (DATA-04).
-      for (let i = 0; i < UNDO_LIMIT; i += 1) {
-        const revision = readWorkspaceData(folder, id).revisions["photos"]!["p-1"]!;
-        patchWorkspaceData(folder, id, {
-          operations: [
-            {
-              op: "replace",
-              collection: "photos",
-              id: "p-1",
-              revisionCount: revision,
-              fields: { note: `${i}` },
-            },
-          ],
-        });
-      }
-      expect(await collectAssets(folder)).toEqual([first]);
-      expect(getAsset(folder, first)).toBeUndefined();
-      expect(getAsset(folder, copy)).toBeDefined();
-      await folder.stop();
-    },
-  );
+  it("DATA-11: once the crop's undo entry is discarded, cleanup removes the original", async () => {
+    const { folder, id, first } = await withPhoto();
+    const copy = await crop(folder, id);
+    expect(await collectAssets(folder)).toEqual([]);
+    // 100 newer changes discard the crop's undo entry (DATA-04).
+    for (let i = 0; i < UNDO_LIMIT; i += 1) {
+      const revision = readWorkspaceData(folder, id).revisions["photos"]!["p-1"]!;
+      patchWorkspaceData(folder, id, {
+        operations: [
+          {
+            op: "replace",
+            collection: "photos",
+            id: "p-1",
+            revisionCount: revision,
+            fields: { note: `${i}` },
+          },
+        ],
+      });
+    }
+    expect(await collectAssets(folder)).toEqual([first]);
+    expect(getAsset(folder, first)).toBeUndefined();
+    expect(getAsset(folder, copy)).toBeDefined();
+    await folder.stop();
+  });
 });

@@ -141,12 +141,7 @@ async function refused(bytes: Uint8Array, message: string | RegExp) {
   folder.close();
 }
 
-// Each test opens one or more data folders (SQLite, migrations and the backup before migrating)
-// and packs or unpacks a whole workspace, which can take seconds on a busy machine. None asserts
-// how long it takes, so the limit leaves room for that (ENG-20, #94).
-const SLOW_MACHINE = { timeout: 20_000 };
-
-describe("export and import (DATA-05)", SLOW_MACHINE, () => {
+describe("export and import (DATA-05)", () => {
   it("DATA-05: export, wipe and import restores a workspace exactly", async () => {
     const root = newFolder();
     const clock = testClock();
@@ -241,7 +236,7 @@ describe("export and import (DATA-05)", SLOW_MACHINE, () => {
   });
 });
 
-describe("import boundary checks (threat model, IMP-01 to IMP-07)", SLOW_MACHINE, () => {
+describe("import boundary checks (threat model, IMP-01 to IMP-07)", () => {
   it("IMP-01: refuses entry names that escape, and writes nothing outside", async () => {
     const { files, manifest } = await exportedFiles();
     const canary = createCanary();
@@ -411,7 +406,7 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", SLOW_MACHINE
   });
 });
 
-describe("images in archives (DATA-05, DATA-11)", SLOW_MACHINE, () => {
+describe("images in archives (DATA-05, DATA-11)", () => {
   const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "assets");
   const png = new Uint8Array(fs.readFileSync(path.join(fixtures, "photo.png")));
   const jpeg = new Uint8Array(fs.readFileSync(path.join(fixtures, "photo.jpg")));
