@@ -1,5 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
-import { patchWorkspaceData, saveTool } from "../../server/src/workspaces/index.ts";
+import { saveVersion } from "../../server/src/versions/index.ts";
+import {
+  activateVersion,
+  getWorkspace,
+  patchWorkspaceData,
+  saveTool,
+} from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
 
@@ -62,6 +68,31 @@ test("DATA-08: a workspace is saved to my tools by name, and found there by sear
   await expect(
     library(page).getByText(`No saved tool matches “nothing like it ${id}”.`),
   ).toBeVisible();
+});
+
+test("APP-04: a saved tool shows when its tool was last updated, after it was saved", async ({
+  page,
+}) => {
+  const { id, name, workspaceId } = savedTool();
+  const old = "2020-01-01T09:00:00.000Z";
+  app.folder.db.run(
+    "UPDATE saved_tools SET updated_at = ? WHERE workspace_id = ?",
+    old,
+    workspaceId,
+  );
+  app.folder.db.run("UPDATE workspaces SET updated_at = ? WHERE id = ?", old, workspaceId);
+  await page.goto(app.url);
+  await toLibrary(page);
+  await expect(entry(page, name)).toContainText("Updated Jan 1, 2020");
+
+  // The tool is improved in its workspace; the entry follows it (A32).
+  const better = saveVersion(app.folder.db, testTool(`Errands tool ${id}, improved`));
+  const revision = getWorkspace(app.folder, workspaceId)!.dataRevision;
+  expect(activateVersion(app.folder, workspaceId, better, revision).ok).toBe(true);
+  await page.reload();
+  await toLibrary(page);
+  await expect(entry(page, name)).toContainText(String(new Date().getFullYear()));
+  await expect(entry(page, name)).not.toContainText("2020");
 });
 
 test("APP-04, DATA-07: Continue opens the linked workspace, and says which before", async ({

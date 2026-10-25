@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07]
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T13:20:32Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T13:32:05Z }
 ---
 
 # Purpose
@@ -18,7 +18,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 - `src/App.tsx`: `App`, the main screen: it loads the workspaces and the library through the host API, keeps which workspace is open for the tab, and shows `EmptyState`, the first-run screen, while there are none, with the trash notice when the last one was just deleted. The workspaces come most recently used first when the app opens, and keep their places after that.
 - `src/Workspaces.tsx`: the workspaces list, each with its name, when it was last used and whether it is saved, with opening, renaming, saving to my tools under a name, and moving to the trash (`APP-03`).
-- `src/Library.tsx`: my tools, the saved-tools library (`APP-04`): each saved tool with its name, when it was last updated and the workspace Continue opens, searchable by name, with Continue, Use again (`DATA-07`), Save as a new tool, renaming and moving to the trash.
+- `src/Library.tsx`: my tools, the saved-tools library (`APP-04`): each saved tool with its name, when it was last updated (the entry or the workspace it follows, whichever changed later, A32) and the workspace Continue opens, searchable by name, with Continue, Use again (`DATA-07`), Save as a new tool, renaming and moving to the trash.
 - `src/NameForm.tsx`: the small form that names something, for renaming, saving and Save as a new tool.
 - `src/ToolPanel.tsx`: the open workspace's tool, run through the [runtime](../runtime/package.md) with the bridge to its saved data, with minimize, show again and full screen (`APP-01`).
 - `src/tool-start.ts`: `startTool` opens the workspace through the host API, then starts its tool and serves it the bridge; `rememberedState` and `rememberState` keep, for the tab, how each workspace's tool was left.
