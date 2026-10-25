@@ -1,10 +1,10 @@
 {
-  // The TypeScript scripts: the coverage report and its tests. allowJs lets them use the shared
+  // The TypeScript scripts: the coverage report and its tests, and the development data scripts. allowJs lets them use the shared
   // .mjs helpers with the types TypeScript infers.
   "extends": "../tsconfig.base.json",
   "compilerOptions": {
     "types": ["node"],
     "allowJs": true
   },
-  "include": ["coverage-report.ts", "test/**/*.test.ts"]
+  "include": ["coverage-report.ts", "dev-data.ts", "seed.ts", "dev.ts", "test/**/*.test.ts"]
 }
