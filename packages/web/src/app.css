@@ -86,7 +86,7 @@ button.primary {
   border-color: var(--ui-accent);
 }
 /* The library takes the whole width. */
-.app.library-view {
+.app.one-section {
   grid-template-columns: 1fr;
   grid-template-areas: "header" "main" "notice";
 }
@@ -165,7 +165,8 @@ button.primary {
   min-width: 0;
 }
 
-.library {
+.library,
+.trash {
   max-width: 48rem;
 }
 .library > label {
@@ -177,25 +178,30 @@ button.primary {
   max-width: 24rem;
   box-sizing: border-box;
 }
-.library ul {
+.library ul,
+.trash > ul,
+.trash .confirm ul {
   list-style: none;
   margin: var(--ui-space-4) 0 0;
   padding: 0;
   display: grid;
   gap: var(--ui-space-3);
 }
-.saved-tool {
+.saved-tool,
+.trash-entry {
   border: 1px solid var(--ui-divider);
   border-radius: var(--ui-radius-panel);
   padding: var(--ui-space-3);
   background: var(--ui-surface);
 }
-.saved-tool h3 {
+.saved-tool h3,
+.trash-entry h3 {
   font-size: var(--ui-size-section);
   font-weight: 600;
   margin: 0;
 }
-.saved-tool .detail {
+.saved-tool .detail,
+.trash-entry .detail {
   margin: var(--ui-space-1) 0 0;
   font-size: var(--ui-size-secondary);
   color: var(--ui-text-secondary);
@@ -262,13 +268,22 @@ button.primary {
   font-size: var(--ui-size-secondary);
   color: var(--ui-text-secondary);
 }
-.history .confirm {
+.history .confirm,
+.trash .confirm {
   margin-top: var(--ui-space-4);
   padding: var(--ui-space-3);
   border: 1px solid var(--ui-accent);
   border-radius: var(--ui-radius-panel);
   background: var(--ui-surface);
 }
-.history .confirm li {
+.history .confirm li,
+.trash .confirm li {
   overflow-wrap: anywhere;
+}
+.trash-entry button,
+.trash > button {
+  margin-top: var(--ui-space-2);
+}
+.trash > button {
+  margin-top: var(--ui-space-4);
 }
