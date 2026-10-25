@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
+import { ready } from "./support/ready.ts";
 
 // The bridge end to end (RUN-04, GEN-06, RUN-07), in Chrome and Edge (TEST-06): a hostile tool in
 // the sandbox tries each bridge check of the threat model (BRG), and the host page serves it with
@@ -86,7 +87,7 @@ type Serve = { capabilities?: string[]; staging?: boolean; epochMs?: number; tim
 /** Mounts the bridger and serves it the bridge, with data that keeps every write it is asked for. */
 async function serve(page: Page, options: Serve = {}) {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "serveBridge" in window);
+  await ready(page, "serveBridge");
   await page.evaluate(async ({ capabilities = [], staging = false, epochMs, timeZone = "UTC" }) => {
     const w = window as unknown as TestWindow;
     w.messages = [];

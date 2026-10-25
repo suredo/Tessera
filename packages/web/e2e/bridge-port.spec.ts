@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
+import { ready } from "./support/ready.ts";
 
 // The bridge's two ends of the port (CON-03, RUN-04, GEN-06), in Chrome and Edge (TEST-06): a
 // tool's calls reach the host in their own envelope, each reply settles only the call it names, on
@@ -100,7 +101,7 @@ type TestWindow = {
 /** Mounts a tool and records its messages, calls and interactions from the start. */
 async function mountRecording(page: Page, mountId: string) {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "mountTool" in window);
+  await ready(page, "mountTool");
   await page.evaluate(async (mountId) => {
     const w = window as unknown as TestWindow;
     w.messages = [];

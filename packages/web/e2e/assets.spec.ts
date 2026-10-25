@@ -11,6 +11,7 @@ import {
   saveWorkspaceData,
 } from "../../server/src/workspaces/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
+import { ready } from "./support/ready.ts";
 
 // Images in a tool (DATA-11, AST-04, AST-05), end to end in Chrome and Edge (TEST-06): a
 // hand-written tool shows an image its saved data names, through a blob: URL under its strict CSP
@@ -80,7 +81,7 @@ type TestWindow = {
 
 async function open(page: Page, workspaceId: string) {
   await page.goto(`${host.url}/`);
-  await page.waitForFunction(() => "serverData" in window);
+  await ready(page, "serverData");
   host.reset();
   await page.evaluate(async (workspaceId) => {
     const w = window as unknown as TestWindow;
