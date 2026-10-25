@@ -76,8 +76,16 @@ export type SandboxHost = {
  * Starts the host. With `data`, it also opens a temporary data folder, never the real one
  * (ENG-19), and serves the server's bridge route from it, so tools can read and change saved data.
  */
+/** A test tool: its code, which runs in custom mode, or its code with the UI mode it asks for. */
+export type TestTool = Artifact["code"] | Pick<Artifact, "code" | "ui">;
+
+// Plain code runs in custom mode: it gets the accessibility floor (RUN-05) but not the UI
+// standard's look, so the boundary tests' tools keep exactly the styles they set.
+const asTool = (tool: TestTool): Pick<Artifact, "code" | "ui"> =>
+  "code" in tool ? tool : { code: tool, ui: { standardVersion: 1, mode: "custom" } };
+
 export async function startSandboxHost(
-  tools: Record<string, Artifact["code"]>,
+  tools: Record<string, TestTool>,
   options: { data?: boolean } = {},
 ): Promise<SandboxHost> {
   let connections = 0;
@@ -106,7 +114,7 @@ export async function startSandboxHost(
     port: 0,
     webRoot,
     routes: {
-      ...runtimeRoutes((id) => tools[id]),
+      ...runtimeRoutes((id) => (tools[id] ? asTool(tools[id]) : undefined)),
       ...(folder ? { ...bridgeRoutes(folder), ...activationRoutes(folder) } : {}),
     },
   });

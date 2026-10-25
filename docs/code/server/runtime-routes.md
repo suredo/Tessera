@@ -7,7 +7,7 @@ implements: [RUN-01, SEC-03]
 tests: [../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts]
 tags: [code, server, runtime]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:31:50Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T08:29:34Z }
 ---
 
 # Purpose
@@ -16,13 +16,14 @@ Serves the two documents of the [runtime](../runtime/package.md) (`RUN-01`): `/r
 
 # Entry points
 
-- `src/runtime/routes.ts`: `runtimeRoutes` takes a `ToolFor`, which gives the tool code of a mount, and returns the two routes; `toolDocument` builds a tool's document.
+- `src/runtime/routes.ts`: `runtimeRoutes` takes a `ToolFor`, which gives a mount's tool code and UI mode, and returns the two routes; `toolDocument` builds a tool's document.
 
 # Invariants
 
 - **The guard's policy stays.** Each route adds its own Content-Security-Policy beside the guard's `frame-ancestors`; the browser enforces every policy.
 - **The wrapper runs only its own script,** marked with a new nonce on every request, and frames only the tool's document.
 - **A tool's document is sandboxed and under the strict CSP,** by header (`sandbox allow-scripts`), whatever frames it. The preamble runs before the tool's markup and code. Neither document is cached.
+- **The host's styles come before the tool's** (`RUN-05`). The tool's document carries the runtime's host stylesheets inline, after the preamble and before the tool's own styles: the accessibility floor always, the UI standard's look in standard mode only (`VER-06`). Their cascade layers are named with a new random mark for every document, so a tool's styles can't add rules to them ([runtime package](../runtime/package.md)).
 - **An unknown mount gets 404.** Which mounts exist, and what code each shows, is the caller's (`ToolFor`); the host app's mounts arrive with the app shell (#53).
 
 # Depends on / used by
