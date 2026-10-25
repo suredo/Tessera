@@ -44,6 +44,13 @@ const remember = (id: string | null) => {
 const byUse = (list: readonly Workspace[], used: Record<string, string>) =>
   [...list].sort((a, b) => (used[b.id] ?? b.updatedAt).localeCompare(used[a.id] ?? a.updatedAt));
 
+// A list from the server, in the order already shown: rows keep their place while the person
+// works, so nothing moves under a click or takes the keyboard focus with it. New ones come first.
+const inPlace = (shown: readonly Workspace[] | null, list: readonly Workspace[]) => {
+  const place = new Map((shown ?? []).map((w, index) => [w.id, index]));
+  return [...list].sort((a, b) => (place.get(a.id) ?? -1) - (place.get(b.id) ?? -1));
+};
+
 export function App() {
   const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
   const [savedTools, setSavedTools] = useState<SavedTool[]>([]);
@@ -56,7 +63,7 @@ export function App() {
       ask("workspaces.list", {}),
       ask("library.list", {}),
     ]);
-    const ordered = byUse(list.workspaces, list.lastUsed);
+    const ordered = inPlace(workspaces, list.workspaces);
     setWorkspaces(ordered);
     setLastUsed(list.lastUsed);
     setSavedTools(library.savedTools);
@@ -88,6 +95,29 @@ export function App() {
       current = false;
     };
   }, []);
+
+  // Opening a workspace is using it (APP-03), whether the person picked it or it opened by
+  // itself, and whether or not its tool starts: the server records it, and the list shows it.
+  const usedId = workspaces?.find((w) => w.id === openId)?.id;
+  useEffect(() => {
+    if (!usedId) return;
+    let current = true;
+    ask("workspaces.open", { id: usedId })
+      .then(() => ask("workspaces.list", {}))
+      .then(
+        (list) => {
+          if (!current) return;
+          setLastUsed(list.lastUsed);
+          setWorkspaces((shown) => inPlace(shown, list.workspaces));
+        },
+        (error: unknown) => {
+          if (current) report(error);
+        },
+      );
+    return () => {
+      current = false;
+    };
+  }, [usedId]);
 
   const open = (id: string | null) => {
     setOpenId(id);

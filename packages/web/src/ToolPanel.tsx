@@ -63,8 +63,12 @@ export function ToolPanel({ workspace }: { workspace: Workspace }) {
     // A new workspace, or a new tool version, starts a new runtime.
   }, [id, hasTool, left, workspace.currentVersion]);
 
+  // One start at a time: the button goes while this one runs, and a second click does nothing,
+  // so two restores never race for the same runtime.
   const restore = () => {
-    if (runtime.current) start(runtime.current, (r) => r.restore());
+    if (!runtime.current || mode === "starting") return;
+    setMode("starting");
+    start(runtime.current, (r) => r.restore());
   };
 
   return (

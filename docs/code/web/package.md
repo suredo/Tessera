@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03]
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T12:48:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T13:05:37Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 # Entry points
 
-- `src/App.tsx`: `App`, the main screen: it loads the workspaces and the library through the host API, keeps which workspace is open for the tab, and shows `EmptyState`, the first-run screen, while there are none, with the trash notice when the last one was just deleted. The workspaces come most recently used first.
+- `src/App.tsx`: `App`, the main screen: it loads the workspaces and the library through the host API, keeps which workspace is open for the tab, and shows `EmptyState`, the first-run screen, while there are none, with the trash notice when the last one was just deleted. The workspaces come most recently used first when the app opens, and keep their places after that.
 - `src/Workspaces.tsx`: the workspaces list, each with its name, when it was last used and whether it is saved, with opening, renaming and moving to the trash (`APP-03`).
 - `src/ToolPanel.tsx`: the open workspace's tool, run through the [runtime](../runtime/package.md) with the bridge to its saved data, with minimize, show again and full screen (`APP-01`).
 - `src/tool-start.ts`: `startTool` opens the workspace through the host API, then starts its tool and serves it the bridge; `rememberedState` and `rememberState` keep, for the tab, how each workspace's tool was left.
@@ -37,7 +37,8 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **The open workspace survives a reload** (`UX-07`): which one is open is kept in the tab's session storage, and the app opens it again, or the most recently used one if it is gone.
 - **A minimized or stopped tool stays so** (`UX-07`): the tool panel keeps each workspace's runtime state in the tab's session storage, so after a reload, or switching away and back, it shows the tool as it was left instead of starting it.
 - **A closed panel never starts its tool** (`RUN-02`). Starting waits for the server's answer before opening the tool; if the panel closed meanwhile, as React's development mode does once to every new panel, `startTool` stops at whichever step it is, so no tool runs in a runtime nobody can close.
-- **"Last used" means opened or changed** (`APP-03`): the server records each time a workspace is opened, and the list shows, and sorts by, whichever is later.
+- **"Last used" means opened or changed** (`APP-03`): the app tells the server each time a workspace opens, picked or opened by default, whether or not its tool starts, and shows the server's answer at once: whichever is later. The list is sorted by it when the app opens; after that, rows keep their places, so none moves under a click or takes the keyboard focus with it.
+- **One start at a time** (`RUN-02`). "Show again" goes while its start runs, and the panel ignores a second one, so two starts never race for one runtime and leave a tool running without its bridge.
 - **Buttons say which workspace they act on.** Their visible labels are short ("Rename", "Move to trash"); their accessible names include the workspace's name.
 - **The React Compiler does the memoizing** (A15). No hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case, with a comment saying so. ESLint runs the hooks rules and the compiler's rules (`eslint-plugin-react-hooks`, `recommended-latest`) on every component.
 
