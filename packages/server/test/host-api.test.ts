@@ -74,6 +74,47 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     folder.close();
   });
 
+  it("APP-03: opening a workspace counts as using it, even when nothing changes", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-host-api-"));
+    temps.push(dir);
+    let now = Date.parse("2026-10-20T09:00:00Z");
+    const folder = await openDataFolder(dir, { now: () => new Date(now) });
+    const { workspace } = ask(folder, "workspaces.create", { title: "Old" });
+    now += 3 * 86_400_000;
+    const other = ask(folder, "workspaces.create", { title: "Newer" }).workspace;
+    expect(ask(folder, "workspaces.list").lastUsed).toEqual({
+      [workspace.id]: "2026-10-20T09:00:00.000Z",
+      [other.id]: "2026-10-23T09:00:00.000Z",
+    });
+    // Days later the old one is opened, and nothing else: it was used now.
+    now += 2 * 86_400_000;
+    ask(folder, "workspaces.open", { id: workspace.id });
+    const after = ask(folder, "workspaces.list");
+    expect(after.lastUsed[workspace.id]).toBe("2026-10-25T09:00:00.000Z");
+    expect(after.workspaces.find((w) => w.id === workspace.id)?.updatedAt).toBe(
+      "2026-10-20T09:00:00.000Z",
+    );
+    folder.close();
+  });
+
+  it("CAP-01: opening a workspace gives what its tool declares, and none without a tool", async () => {
+    const folder = await newFolder();
+    const { workspace } = ask(folder, "workspaces.create", { title: "Clock" });
+    expect(ask(folder, "workspaces.open", { id: workspace.id })).toEqual({
+      workspace,
+      capabilities: [],
+    });
+    const clock = saveVersion(folder.db, { ...tool, capabilities: ["clock"] });
+    expect(activateVersion(folder, workspace.id, clock, 0).ok).toBe(true);
+    expect(ask(folder, "workspaces.open", { id: workspace.id }).capabilities).toEqual(["clock"]);
+    ask(folder, "workspaces.delete", { id: workspace.id });
+    expect(refusal(folder, "workspaces.open", { id: workspace.id })).toEqual({
+      ok: false,
+      error: { code: "refused", message: "The workspace is in the trash; restore it first." },
+    });
+    folder.close();
+  });
+
   it("APP-04, DATA-07: saves to the library, and continues or uses again from it", async () => {
     const folder = await newFolder();
     const { workspace } = ask(folder, "workspaces.create", { title: "This week" });

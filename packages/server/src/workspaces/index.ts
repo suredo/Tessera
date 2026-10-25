@@ -37,6 +37,8 @@ export {
   createWorkspace,
   getSavedTool,
   getWorkspace,
+  lastUsed,
+  recordUse,
   listSavedTools,
   listWorkspaces,
   patchWorkspaceData,

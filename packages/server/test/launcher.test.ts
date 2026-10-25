@@ -101,7 +101,7 @@ describe("the launcher (PLAT-02)", () => {
       HOST_ROUTE,
       JSON.stringify({ action: "workspaces.list", args: {} }),
     );
-    expect(JSON.parse(host.body)).toEqual({ ok: true, result: { workspaces: [] } });
+    expect(JSON.parse(host.body)).toEqual({ ok: true, result: { workspaces: [], lastUsed: {} } });
     await launched.stop();
   });
 

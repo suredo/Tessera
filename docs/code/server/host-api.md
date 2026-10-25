@@ -7,7 +7,7 @@ implements: [CON-01]
 tests: [../../../packages/server/test/host-api.test.ts]
 tags: [code, server, api, host]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:55:32Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T12:48:03Z }
 ---
 
 # Purpose
@@ -23,6 +23,7 @@ Connects the host app's screens (#53) to the server's modules. Everything the ap
 
 # Invariants
 
+- **Opening a workspace gives what its tool declares.** `workspaces.open` answers with the workspace and its current tool's capabilities (`CAP-01`), which the app serves the bridge with; none without a tool. It also records that the workspace was used, which `workspaces.list` gives with the workspaces (`APP-03`).
 - **One handler per action.** TypeScript refuses the handler table if an action in the contract has none, and each handler's return must be its action's result.
 - **Nothing of the server leaks.** An action the contract doesn't list, or arguments that don't fit it, get `invalid`. A module's own refusal, a plain error written for the person (such as "The workspace is in the trash; restore it first."), gets `refused` with its words. Anything else, such as a database error, which carries a code, gets `failed`, "Tessera couldn't do that. Nothing was changed.", with none of its words. A result that doesn't fit the contract is `failed` too.
 - **Refusals that are answers stay answers.** A restore or undo that is refused for a reason, such as stale data, comes back as its result with `ok: false`, its reason and plain message, as the modules give it, so the screen can say why.

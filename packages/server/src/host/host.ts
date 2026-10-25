@@ -34,6 +34,8 @@ import {
   saveTool,
   undoDataChange,
   getWorkspace,
+  lastUsed,
+  recordUse,
   useAgain,
   workspaceVersions,
   type Store,
@@ -50,7 +52,18 @@ const FAILED = "Tessera couldn't do that. Nothing was changed.";
 const run: {
   [A in HostActionName]: (store: Store, args: HostArgs<A>) => HostResult<A>;
 } = {
-  "workspaces.list": (store) => ({ workspaces: listWorkspaces(store) }),
+  "workspaces.list": (store) => ({ workspaces: listWorkspaces(store), lastUsed: lastUsed(store) }),
+  "workspaces.open": (store, { id }) => {
+    // Opening it is using it (APP-03); refused in the workspaces module's own words if it is
+    // missing or in the trash.
+    recordUse(store, id);
+    const workspace = getWorkspace(store, id)!;
+    const version = workspace.currentVersion && loadVersion(store.db, workspace.currentVersion);
+    return {
+      workspace,
+      capabilities: version && version.kind === "ok" ? version.artifact.capabilities : [],
+    };
+  },
   "workspaces.create": (store, { title }) => ({ workspace: createWorkspace(store, title) }),
   "workspaces.rename": (store, { id, title }) => ({ workspace: renameWorkspace(store, id, title) }),
   "workspaces.delete": (store, { id }) => ({ entry: deleteWorkspace(store, id) }),
