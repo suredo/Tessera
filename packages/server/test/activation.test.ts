@@ -7,6 +7,7 @@ import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { saveVersion } from "../src/versions/index.ts";
 import {
   activateVersion,
+  addWorkspaceVersion,
   createWorkspace,
   getWorkspace,
   patchWorkspaceData,
@@ -269,6 +270,28 @@ describe("activating a tool version (DATA-10)", () => {
     const { folder, id, firstHash } = await withFirstActive();
     const before = unit(folder, id);
     expect(activateVersion(folder, id, firstHash, 1)).toMatchObject({ ok: true, steps: 0 });
+    expect(unit(folder, id)).toEqual(before);
+    folder.close();
+  });
+
+  it("DATA-03: re-activating the current version still checks its starting data", async () => {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Errands");
+    const misfit = saveVersion(
+      folder.db,
+      version("<p>Misfit</p>", {
+        schemaVersion: 1,
+        schema: listOf(v1Task),
+        defaults: { tasks: "not a list" },
+      }),
+    );
+    // Made current without activation's checks, as an older Tessera could have.
+    addWorkspaceVersion(folder, id, misfit);
+    const before = unit(folder, id);
+    expect(activateVersion(folder, id, misfit, 0)).toMatchObject({
+      ok: false,
+      reason: "invalid-defaults",
+    });
     expect(unit(folder, id)).toEqual(before);
     folder.close();
   });

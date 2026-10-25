@@ -3,11 +3,11 @@ type: Code Module
 title: "Workspaces and saved tools"
 description: "Workspaces, their version history and data, and the saved-tools library, each change committed to the data folder's database before the call returns."
 resource: ../../../packages/server/src/workspaces/
-implements: [DATA-08, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06]
-tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts]
+implements: [DATA-08, DATA-07, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06]
+tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T03:42:33Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T05:17:59Z }
 ---
 
 # Purpose
@@ -21,6 +21,7 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
   - `addWorkspaceVersion` makes a stored [tool version](versions.md) the workspace's current one, as the next entry of its history; `workspaceVersions` lists the history.
   - `saveWorkspaceData` replaces the workspace's data and raises its revision.
 - `src/workspaces/restore.ts`: `planRestore` says what restoring a version would do without doing it (`RestorePlan`: it keeps the data, or it loses exactly these values, with a confirmation), and `restoreVersion` does it; `listRecoverySnapshots` and `restoreRecoverySnapshot` bring back the unit a lossy restore replaced (`DATA-10`).
+- `src/workspaces/reuse.ts`: opening a saved tool (`DATA-07`). `continueSavedTool` gives the entry and its linked workspace with its current data (`ContinueTarget`); `useAgain` makes a new workspace from the tool's current version and its reusable defaults, or returns why not (`UseAgainResult`).
 - `src/workspaces/activation.ts`: `activateVersion` makes a stored tool version the workspace's current one, with its data brought to the version's shape, in one transaction (`DATA-10`), or returns why not (`ActivationResult`).
   - `readWorkspaceData` gives the data as the bridge does (`WorkspaceData`): the data, and each record's revision count by collection and ID. Data the tool hasn't filled yet reads as empty.
   - `patchWorkspaceData` applies a batch of changes through the [patch engine](patches.md), against the records' saved revisions, and returns `{ ok: true, addedIds, workspace }` or the engine's refusal (`WorkspacePatchResult`).
@@ -42,6 +43,7 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
 - **A recovery snapshot brings back the unit before a conversion.** `restoreRecoverySnapshot` makes the snapshot's version current again with its data, if the data revision is still the planned one, and first keeps the unit it replaces as a snapshot of its own, so bringing one back never loses newer work either. Like a lossy restore, it first checks that the unit it replaces fits its own version, so that snapshot can be brought back in turn, and is refused otherwise. Snapshots go with their workspace.
 - **A new workspace has no tool and no data**: its current version and data are null until a version is activated and fills the data from the tool's defaults (`DATA-03`).
 - **A saved tool follows its workspace** (A32): it names the workspace that Continue opens, not a version, so later improvements are kept.
+- **Continue and Use again never move the entry's link** (`DATA-07`). Continue returns the linked workspace, with its title so the target is clear, and its current data. Use again makes a separate workspace, named after the entry unless given a title, with the linked workspace's current version and that version's reusable defaults as its data: never the person's entries, which stay in the linked workspace. The version is checked as activation checks it (it can be read and its defaults fit its shape and the data limit), the workspace, its data and its first history entry are written in one transaction, and a refusal or a crash leaves nothing behind. The new workspace is saved as it is made and can be saved to the library as its own entry.
 - **What is in the trash is out of reach.** Trashed workspaces and saved tools are not returned or listed, and changing one is refused with "restore it first" ([trash](trash.md)).
 - **Times come from the store's clock**, which tests replace, so the trash's 30 days can be tested without waiting (`DATA-09`).
 
@@ -56,8 +58,8 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 - **Recovery snapshots don't travel in archives,** and nothing removes them while their workspace lasts; a retention limit, and assets kept by snapshots (`DATA-11`), come with the asset store (#49).
 - **Restore's types are the server's for now.** The plan and its losses will cross to the host app with the restore screen (#53); they move to the contracts then (`CON-01`).
 - **Revisions don't travel in archives.** An exported workspace keeps its data and its revision; after an import every record starts at revision 1, so a change planned before the export can't be applied after it only by luck of matching counts. Plans don't outlive an import.
-- **Two writers are module-internal.** `appendVersion` and `replaceData` write inside the caller's transaction; `addWorkspaceVersion`, `saveWorkspaceData` and `activateVersion` wrap them in one. They aren't exported from the module's index, and nothing outside it should call them.
-- **`afterWrites` is for tests.** `activateVersion` calls it inside the transaction after its writes; a test throws there to stand for a crash. Production code never passes it.
+- **Two writers are module-internal.** `appendVersion` and `replaceData` write inside the caller's transaction; `addWorkspaceVersion`, `saveWorkspaceData` and `activateVersion` wrap them in one. They aren't exported from the module's index, and nothing outside it should call them. The same holds for `existingSavedTool` and `usableVersion`, the checks activation and Use again share.
+- **`afterWrites` is for tests.** `activateVersion` and `useAgain` call it inside the transaction after its writes; a test throws there to stand for a crash. Production code never passes it.
 - **Deleting is the trash's job.** Nothing here deletes a workspace or saved tool; the [trash](trash.md) (`DATA-09`) does, so nothing is removed without passing through it.
 - **Errors for a missing ID are plain sentences**, but a title or name that breaks its contract (empty, or over 200 characters) throws zod's error; the API layer turns it into a plain message (#53).
 
@@ -65,7 +67,8 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `activation.ts`: `ActivationRefusal` (type), `ActivationResult` (type), `ActivationOptions` (type), `defaultsProblem`, `activateVersion`
-- `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `getWorkspace`, `listSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `renameSavedTool`, `renameWorkspace`, `saveTool`, `saveWorkspaceData`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type)
+- `activation.ts`: `ActivationRefusal` (type), `ActivationResult` (type), `ActivationOptions` (type), `defaultsProblem`, `UsableVersion` (type), `usableVersion`, `activateVersion`
+- `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `getWorkspace`, `listSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `renameSavedTool`, `renameWorkspace`, `saveTool`, `saveWorkspaceData`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type)
 - `restore.ts`: `RestoreRefusal` (type), `RestorePlan` (type), `RestoreResult` (type), `planRestore`, `restoreVersion`, `RecoverySnapshot` (type), `listRecoverySnapshots`, `restoreRecoverySnapshot`
-- `workspaces.ts`: `Store` (type), `getWorkspace`, `existingWorkspace`, `listWorkspaces`, `createWorkspace`, `renameWorkspace`, `addWorkspaceVersion`, `appendVersion`, `workspaceVersions`, `saveWorkspaceData`, `replaceData`, `WorkspaceData` (type), `readWorkspaceData`, `WorkspacePatchResult` (type), `patchWorkspaceData`, `getSavedTool`, `listSavedTools`, `saveTool`, `renameSavedTool`
+- `reuse.ts`: `ContinueTarget` (type), `continueSavedTool`, `UseAgainRefusal` (type), `UseAgainResult` (type), `UseAgainOptions` (type), `useAgain`
+- `workspaces.ts`: `Store` (type), `getWorkspace`, `existingWorkspace`, `listWorkspaces`, `createWorkspace`, `renameWorkspace`, `addWorkspaceVersion`, `appendVersion`, `workspaceVersions`, `saveWorkspaceData`, `replaceData`, `WorkspaceData` (type), `readWorkspaceData`, `WorkspacePatchResult` (type), `patchWorkspaceData`, `getSavedTool`, `existingSavedTool`, `listSavedTools`, `saveTool`, `renameSavedTool`
