@@ -31,6 +31,11 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 const list = (items: readonly string[]) =>
   items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} or ${items.at(-1)}`;
+// A value as the person wrote it, quoted, if it is a plain one; never coerced, which can throw.
+const shown = (value: unknown) =>
+  typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+    ? `"${value}"`
+    : "something that isn't a name";
 
 /**
  * What is wrong with a routes file's content, in plain words (GEN-12), or undefined if nothing
@@ -50,10 +55,10 @@ function problemWith(content: unknown): string | undefined {
       return `the ${stage} step has "${extra[0]}", but a step has only a model and an effort`;
     }
     if (!(MODELS as readonly unknown[]).includes(route["model"])) {
-      return `the ${stage} step names a model Tessera doesn't know, "${String(route["model"])}"; the models are ${list(MODELS)}`;
+      return `the ${stage} step names a model Tessera doesn't know, ${shown(route["model"])}; the models are ${list(MODELS)}`;
     }
     if (!(EFFORTS as readonly unknown[]).includes(route["effort"])) {
-      return `the ${stage} step's effort should be ${list(EFFORTS)}, not "${String(route["effort"])}"`;
+      return `the ${stage} step's effort should be ${list(EFFORTS)}, not ${shown(route["effort"])}`;
     }
   }
   return undefined;

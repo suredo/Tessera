@@ -109,6 +109,19 @@ describe("the routing table (CLI-09)", () => {
         JSON.stringify({ create: { model: "claude-sonnet-5-5", effort: "extreme" } }),
         'the create step\'s effort should be low, medium or high, not "extreme"',
       ],
+      // A value that isn't a plain one is never coerced to text, which could throw instead.
+      [
+        JSON.stringify({ create: { model: { toString: null }, effort: "low" } }),
+        "the create step names a model Tessera doesn't know, something that isn't a name; the models are claude-haiku-5-5, claude-sonnet-5-5 or claude-opus-5-5",
+      ],
+      [
+        JSON.stringify({ create: { model: "claude-sonnet-5-5", effort: { toString: null } } }),
+        "the create step's effort should be low, medium or high, not something that isn't a name",
+      ],
+      [
+        JSON.stringify({ create: { model: "claude-sonnet-5-5", effort: 3 } }),
+        'the create step\'s effort should be low, medium or high, not "3"',
+      ],
     ];
     for (const [content, why] of cases) {
       const file = routesFile(content);
