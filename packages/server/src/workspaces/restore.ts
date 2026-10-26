@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import {
   canonicalJson,
+  type LossStep,
   type RecoverySnapshot,
   type RestorePlan,
   type RestoreRefusal,
@@ -8,7 +9,14 @@ import {
   type Workspace,
 } from "@tessera/contracts";
 import { z } from "zod";
-import { checkToolData, migrateData, projectData, type Loss } from "../data-shape/index.ts";
+import {
+  checkToolData,
+  LOSS_PREVIEW_LIMIT_BYTES,
+  migrateData,
+  projectData,
+  stepFor,
+  type Loss,
+} from "../data-shape/index.ts";
 import type { ToolData } from "../patches/index.ts";
 import { loadVersion } from "../versions/index.ts";
 import { defaultsProblem, type ActivationOptions } from "./activation.ts";
@@ -121,34 +129,57 @@ export function planRestore(store: Store, id: string, hash: string): RestorePlan
   const planned = plan(store, workspace, hash);
   if ("ok" in planned) return planned;
   if (planned.kind !== "loses") return { ok: true, keepsData: true };
+  // Described for the person after the confirmation is made, so it confirms exactly the losses.
+  const losses = planned.losses.map((loss) => ({ ...loss, steps: stepsOf(loss, workspace.data) }));
+  // Names make a preview longer; it stays within the same bound as before (DATA-06).
+  if (Buffer.byteLength(JSON.stringify(losses), "utf8") > LOSS_PREVIEW_LIMIT_BYTES) {
+    return refuse(
+      "too-large",
+      `the restore would remove or replace more than a preview of it can list (${LOSS_PREVIEW_LIMIT_BYTES / 1024} KB).`,
+    );
+  }
   return {
     ok: true,
     keepsData: false,
-    // Named for the person after the confirmation is made, so it confirms exactly the losses.
-    losses: planned.losses.map((loss) => withRecord(loss, workspace.data)),
+    losses,
     confirmation: confirmationOf(hash, workspace.dataRevision, planned.losses),
   };
 }
 
-/** The fields a record is known by, in order: the first that holds text names it (GEN-12). */
+/** The fields a list item is known by, in order: the first that holds text names it (GEN-12). */
 const NAME_FIELDS = ["title", "name", "label", "text"];
 
-/** A loss with its record's name, from the data before the restore, when the record has one. */
-function withRecord(loss: Loss, data: Workspace["data"]): Loss {
-  const [collection, key] = loss.path;
-  const records = collection === undefined ? undefined : data?.[collection];
-  if (!Array.isArray(records) || key === undefined) return loss;
-  const record = records.find(
-    (item, position) =>
-      typeof item === "object" &&
-      item !== null &&
-      !Array.isArray(item) &&
-      ((item as Record<string, unknown>)["id"] === key || String(position) === key),
-  ) as Record<string, unknown> | undefined;
-  const name = NAME_FIELDS.map((field) => record?.[field]).find(
-    (value): value is string => typeof value === "string" && value.trim() !== "",
-  );
-  return name === undefined ? loss : { ...loss, record: name };
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+/**
+ * Where a loss was, for the person, walked through the data before the restore: a field by its
+ * name, and a list item by its name, or none, and the list it is in. An item is found the way its
+ * path names it, by its ID when it has one and by its position otherwise, never mixing the two.
+ */
+function stepsOf(loss: Loss, data: Workspace["data"]): LossStep[] {
+  const steps: LossStep[] = [];
+  let at: unknown = data;
+  let list = "";
+  for (const segment of loss.path) {
+    if (Array.isArray(at)) {
+      const item: unknown = (at as unknown[]).find(
+        (entry, position) => stepFor(entry, position) === segment,
+      );
+      const name = isPlainObject(item)
+        ? NAME_FIELDS.map((field) => item[field]).find(
+            (value): value is string => typeof value === "string" && value.trim() !== "",
+          )
+        : undefined;
+      steps.push({ item: name ?? null, in: list });
+      at = item;
+    } else {
+      steps.push({ field: segment });
+      list = segment;
+      at = isPlainObject(at) ? at[segment] : undefined;
+    }
+  }
+  return steps;
 }
 
 // Inside the caller's transaction: keeps the workspace's whole current unit, its tool version and

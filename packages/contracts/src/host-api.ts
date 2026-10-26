@@ -39,14 +39,24 @@ export const RESTORE_REFUSALS = [
 ] as const;
 export type RestoreRefusal = (typeof RESTORE_REFUSALS)[number];
 
+/** One step of where a lost value was, as the person reads it (GEN-12). */
+export const lossStepSchema = z.union([
+  z.strictObject({ field: z.string() }),
+  z.strictObject({
+    item: z.string().nullable().describe("The item's name (its title or name), or null if none."),
+    in: z.string().describe("The list it is in."),
+  }),
+]);
+export type LossStep = z.infer<typeof lossStepSchema>;
+
 /** A value a restore would lose: where it was, and what it held (DATA-10). */
 export const lossSchema = z.strictObject({
   path: z.array(z.string()).describe("Collection, record ID (or position) and field."),
   value: jsonValueSchema,
-  record: z
-    .string()
+  steps: z
+    .array(lossStepSchema)
     .optional()
-    .describe("The record as the person knows it, by its title or name, when it has one (GEN-12)."),
+    .describe("The same place for the person: fields by name, and items by name, never by ID."),
 });
 export type Loss = z.infer<typeof lossSchema>;
 

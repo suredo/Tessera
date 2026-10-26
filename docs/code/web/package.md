@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T11:33:01Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T11:45:09Z }
 ---
 
 # Purpose
@@ -46,7 +46,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **"Last used" means opened or changed** (`APP-03`): the app tells the server each time a workspace opens, picked or opened by default, whether or not its tool starts, and shows the server's answer at once: whichever is later. The list is sorted by it when the app opens; after that, rows keep their places, so none moves under a click or takes the keyboard focus with it.
 - **One start at a time** (`RUN-02`). "Show again" goes while its start runs, and the panel ignores a second one, so two starts never race for one runtime and leave a tool running without its bridge.
 - **Continue opens exactly the linked workspace** (`DATA-07`), and says which before: its accessible name names the workspace. Use again opens a new workspace from the tool's starting data, and the entry still continues the first. Save as a new tool does the same under a new name and saves it as its own entry, so the variant changes apart from the original (`DATA-08`).
-- **A restore is planned, then confirmed** (`DATA-10`). Restore asks the server for its plan first and shows it: the data stays, or exactly these values would be lost, each by its record's name and field ("Buy milk: done was false"), never a record's ID (`GEN-12`), and a copy is kept. Only the confirmation runs it, against the data revision the plan was made with, so data that changed meanwhile makes the server refuse it rather than lose something unseen. Cancel changes nothing.
+- **A restore is planned, then confirmed** (`DATA-10`). Restore asks the server for its plan first and shows it: the data stays, or exactly these values would be lost, each in plain words from the server's steps (`lossText`): "Buy milk: done was false", "Trip › Milk: note was "oat"" for an item in an item's list, "An item in tasks: …" for one without a name, and "heading was …" for a field outside any list; never a record's ID (`GEN-12`). A copy is kept. Only the confirmation runs it, against the data revision the plan was made with, so data that changed meanwhile makes the server refuse it rather than lose something unseen. Cancel changes nothing.
 - **The history shows the tool's changes at once** (`APP-05`). A change the running tool saves goes straight to the server; the tool panel hears each one that was saved, never one refused, and the history loads again, so it can be undone without leaving the tool.
 - **Undo undoes the change the person sees** (`DATA-04`). A running tool may change the data after the history loaded; Undo checks that the change it shows is still the newest, and if not, shows the newer one and undoes nothing. An interface change is undone by restoring the version before it.
 - **Emptying the trash removes only what the person was shown** (`DATA-09`). The confirmation lists every entry, and the server empties the trash only if it still holds exactly those; if something was deleted meanwhile, it refuses, nothing goes, and the trash shows what it holds now.
@@ -73,7 +73,7 @@ Depends on React 19, the [contracts](../contracts/package.md) and the [runtime](
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `src/App.tsx`: `EmptyState`, `App`
-- `src/History.tsx`: `History`
+- `src/History.tsx`: `lossText`, `History`
 - `src/ImportFile.tsx`: `ImportFile`
 - `src/Library.tsx`: `Library`
 - `src/NameForm.tsx`: `NameForm`

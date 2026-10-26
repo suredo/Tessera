@@ -91,8 +91,11 @@ export const en = {
   "history.confirmHeading": "Restore version {index}?",
   "history.keepsData": "Your data stays as it is.",
   "history.losesData": "Your data has to change to fit this version. These values would be lost:",
-  "history.loss": "{record}: {field} was {value}",
-  "history.lossUnnamed": "An item in {collection}: {field} was {value}",
+  "history.loss": "{where}: {field} was {value}",
+  "history.lossField": "{field} was {value}",
+  "history.lossItem": "{where}, the whole item",
+  "history.unnamedFirst": "An item in {list}",
+  "history.unnamed": "an item in {list}",
   "history.keptCopy":
     "A copy of the current version and its data is kept, so you can bring it back.",
   "history.confirm": "Restore",

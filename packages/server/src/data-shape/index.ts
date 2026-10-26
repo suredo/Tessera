@@ -2,12 +2,13 @@
 // A tool's data shape: its declared schema checked with care, and declarative migrations run on a copy (DATA-03).
 export {
   applyMigrations,
+  LOSS_PREVIEW_LIMIT_BYTES,
   migrateData,
   type DataShape,
   type MigrationRefusal,
   type MigrationResult,
 } from "./migrate.ts";
-export { projectData, type Loss } from "./project.ts";
+export { projectData, stepFor, type Loss } from "./project.ts";
 export {
   checkToolData,
   compileToolSchema,
