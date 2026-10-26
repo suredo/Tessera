@@ -4,7 +4,7 @@ title: "Live budget summary"
 description: "Live-call envelopes per milestone and how they are derived."
 tags: [roadmap, budgets]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T12:38:53Z }
 ---
 # Live budget summary
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
 | --- | ---: | --- |
 | M0 | ~33 | Spikes: schema acceptance, locked flags, structured output (~3); intent routing over ~30 requests (~30, Haiku) |
 | M1 | 0 | Deterministic core, fully tested offline |
-| M2 | ~35 | Pipeline reality check: 3 scenarios, a limits run, probe and image check |
+| M2 | ~35, **approved** | Pipeline reality check: 3 scenarios, a limits run, probe and image check. The owner approved this envelope on 2026-10-26; each run still gets its plan and hard cap, announced before it starts, within it (`ENG-07`) |
 | M3 | ~65 | 5 scenarios and one unmatched tool with reviews, the acceptance-check experiment, the Codex probe |
 | M4 | ~140 | 12 app runs plus P1/P2 and reviews; reconcile per-stage costs before approval |
 | **Total to the first release** | **~270 provisional** | Offline replay uses no calls; changed prompts and new behavior still need approved live evidence |
