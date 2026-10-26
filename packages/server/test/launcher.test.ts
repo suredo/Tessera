@@ -195,24 +195,45 @@ describe("the launcher (PLAT-02)", () => {
 
 // The entry point Tessera.cmd runs, as its own process.
 const main = fileURLToPath(new URL("../src/launcher/main.ts", import.meta.url));
-function runMain(dataDir: string, nodeArgs: string[] = []) {
+function runMain(dataDir: string, nodeArgs: string[] = [], env: NodeJS.ProcessEnv = {}) {
   const child = spawn(process.execPath, [...nodeArgs, main], {
-    env: { ...process.env, TESSERA_DATA_DIR: dataDir, TESSERA_OPEN_BROWSER: "0" },
+    env: { ...process.env, TESSERA_DATA_DIR: dataDir, TESSERA_OPEN_BROWSER: "0", ...env },
     stdio: ["ignore", "pipe", "pipe"],
   });
   children.push(child);
   let output = "";
+  let errors = "";
   child.stdout.setEncoding("utf8").on("data", (chunk: string) => (output += chunk));
+  child.stderr.setEncoding("utf8").on("data", (chunk: string) => (errors += chunk));
   const line = new Promise<string>((resolve, reject) => {
     child.stdout.on("data", () => output.includes("\n") && resolve(output.trim()));
     child.on("exit", (code) => reject(new Error(`main.ts exited (${code}): ${output}`)));
   });
   const exit = new Promise<number | null>((resolve) => child.on("exit", resolve));
-  return { child, line, exit };
+  return { child, line, exit, errors: () => errors };
 }
 
 // Each case starts Node up to three times, which takes seconds on a busy Windows machine.
 describe("the launcher's entry point (PLAT-02)", { timeout: 30_000 }, () => {
+  it("PLAT-03: prints the setup check's problem on start, and keeps running when Claude Code can't start", async () => {
+    // A program file that isn't one, alone on the PATH: the system refuses to start it.
+    const bin = dataFolder();
+    const claude = path.join(bin, process.platform === "win32" ? "claude.exe" : "claude");
+    fs.writeFileSync(claude, "");
+    fs.chmodSync(claude, 0o755);
+    const run = runMain(dataFolder(), [], { PATH: bin, Path: bin });
+    expect(await run.line).toContain("Tessera is running at");
+    const deadline = Date.now() + 15_000;
+    while (!run.errors().includes("couldn't start it") && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(run.errors()).toContain(`Tessera found Claude Code at ${claude} but couldn't start it.`);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(run.child.exitCode).toBeNull();
+    run.child.kill("SIGKILL");
+    await run.exit;
+  });
+
   it("runs one copy per data folder, and a copy that was killed leaves nothing that blocks the next", async () => {
     const dataDir = dataFolder();
     const first = runMain(dataDir);

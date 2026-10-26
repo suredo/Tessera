@@ -7,7 +7,7 @@ implements: [PLAT-03, CLI-02]
 tests: [../../../packages/server/test/setup.test.ts]
 tags: [code, server, setup, cli]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T22:52:08Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T23:01:26Z }
 ---
 
 # Purpose
@@ -25,6 +25,7 @@ Guides a fresh machine to a working connection (`PLAT-03`): Tessera checks what 
 # Invariants
 
 - **The check spends no model call.** Node's version is read from the process, and Claude Code is checked with `claude --version` and `claude auth status`, which reach no model (L-71).
+- **The check never fails itself.** A Claude Code that is found but can't start (access denied, or removed during an update) is a failed check with its fix, and so is anything else that stops the check, so Tessera stays up to show it, on start and on the status screen.
 - **Each failure says what is wrong and how to fix it,** in plain words (`GEN-12`): the adapter's messages for Claude Code, and the Node.js version to install.
 - **`MINIMUM_NODE` is the root package.json's lower bound;** a test fails if the two disagree.
 - **The probe runs only on request, and never while the check fails.** The probe route answers POST only, checks first, and spends nothing if the check fails. Probes sent while one is running share its call, so a double click costs one call.

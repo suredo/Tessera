@@ -7,7 +7,7 @@ implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, CLI-09, TEST-02, EN
 tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/routing.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
 tags: [code, server, providers]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T22:52:33Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T23:01:26Z }
 ---
 # Purpose
 
@@ -17,7 +17,7 @@ Puts every model connection behind one interface (`CLI-01`): a stage's system pr
 
 - `src/providers/provider.ts`: `Provider`, `StageSpec` and `StageResult`; `ProviderError`, a failed call with its kind (`CLI-05`) and what it cost; `UNKNOWN_USAGE`.
 - `src/providers/claude.ts`: the Claude Code adapter.
-  - `createClaudeProvider` runs a stage through the claude program given (`ClaudeOptions`). `findClaude` finds the real one and checks it without spending a call: on the PATH as a program, at least `TESTED_CLI_VERSION`, and signed in (`CLI-02`). It answers a `ClaudeStatus`, the contracts' Claude Code check, with a plain message for each problem, for the [setup check](setup.md) (`PLAT-03`).
+  - `createClaudeProvider` runs a stage through the claude program given (`ClaudeOptions`). `findClaude` finds the real one and checks it without spending a call: on the PATH as a program, at least `TESTED_CLI_VERSION`, and signed in (`CLI-02`). It answers a `ClaudeStatus`, the contracts' Claude Code check, with a plain message for each problem, a program that is found but can't start included, for the [setup check](setup.md) (`PLAT-03`).
   - `buildArgs` gives the locked flags (`CLI-03`), `MAX_TURNS` the CLI's turn limit, `SYSTEM_PROMPT_FILE` the system prompt's file in the call's folder, and `wrapSchema` wraps a contract's JSON Schema as `{ answer: … }` (`ANSWER_KEY`). `removeFolder` removes a call's folder.
   - `cleanEnvironment` is the allowlisted environment (`CLI-08`); `resultEnvelopeSchema` reads the CLI's result (`ResultEnvelope`); `toUsage` normalizes usage (`CLI-04`).
   - `failureKind` reads which failure a result is, and `FAILURE_MESSAGES` is what the person reads for each (`CLI-05`); `versionOf` and `atLeast` read and compare versions.

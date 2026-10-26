@@ -321,7 +321,19 @@ export async function findClaude(
     };
   }
   const clean = cleanEnvironment(env);
-  const answer = await run(executable, ["--version"], { env: clean, timeoutMs: 30_000 });
+  // A program that is found but can't start (access denied, or removed during an update) is a
+  // problem to explain, not an error that stops the check.
+  const cantStart: ClaudeStatus = {
+    ok: false,
+    problem: "broken",
+    message: `Tessera found Claude Code at ${executable} but couldn't start it. Reinstall Claude Code, or check that your account may run it, then try again.`,
+  };
+  let answer: Awaited<ReturnType<typeof runProcess>>;
+  try {
+    answer = await run(executable, ["--version"], { env: clean, timeoutMs: 30_000 });
+  } catch {
+    return cantStart;
+  }
   const version = versionOf(answer.stdout);
   if (answer.exitCode !== 0 || version === undefined) {
     return {
@@ -337,11 +349,16 @@ export async function findClaude(
       message: `Claude Code ${version} is older than ${TESTED_CLI_VERSION}, the version Tessera is tested with. Update it with \`claude update\`, then try again.`,
     };
   }
-  const status = await run(executable, ["auth", "status"], {
-    cwd: os.tmpdir(),
-    env: clean,
-    timeoutMs: 30_000,
-  });
+  let status: Awaited<ReturnType<typeof runProcess>>;
+  try {
+    status = await run(executable, ["auth", "status"], {
+      cwd: os.tmpdir(),
+      env: clean,
+      timeoutMs: 30_000,
+    });
+  } catch {
+    return cantStart;
+  }
   let signedIn: boolean;
   try {
     signedIn = (JSON.parse(status.stdout) as { loggedIn?: unknown }).loggedIn === true;

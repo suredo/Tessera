@@ -218,6 +218,30 @@ describe("the setup routes (APP-07)", () => {
     }
   });
 
+  it("PLAT-03: a check that fails to run is answered as a problem to fix, and the server stays up", async () => {
+    const denied = Object.assign(new Error("spawn EACCES"), { code: "EACCES" });
+    const server = await startLocalServer({
+      port: 0,
+      routes: setupRoutes({ dataDir: tempDir(), findClaude: () => Promise.reject(denied) }),
+    });
+    try {
+      for (let i = 0; i < 2; i += 1) {
+        const check = await send(server.port, SETUP_ROUTE, "GET");
+        expect(check.status).toBe(200);
+        expect(setupReportSchema.parse(JSON.parse(check.body))).toMatchObject({
+          ready: false,
+          claude: {
+            ok: false,
+            problem: "broken",
+            message: "Tessera couldn't check Claude Code. Reinstall Claude Code, then try again.",
+          },
+        });
+      }
+    } finally {
+      await server.close();
+    }
+  });
+
   it("CLI-02: never spends a call while the check fails, and shares one call between probes sent together", async () => {
     const dataDir = tempDir();
     const { provider, made } = fakeClaude([{ ...connected, _delayMs: 300 }]);

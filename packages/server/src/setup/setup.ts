@@ -46,6 +46,8 @@ export type SetupOptions = {
   nodeVersion?: string;
 };
 
+const COULDNT_CHECK = "Tessera couldn't check Claude Code. Reinstall Claude Code, then try again.";
+
 /** Whether this Node.js is recent enough, and if not, how to fix it. */
 export function checkNode(version: string = process.versions.node): NodeCheck {
   if (atLeast(version, MINIMUM_NODE)) return { ok: true, version, minimum: MINIMUM_NODE };
@@ -83,7 +85,12 @@ export function folderBytes(dir: string): number {
 /** The setup check: ready only when Node.js and Claude Code both pass (PLAT-03). */
 export async function checkSetup(options: SetupOptions): Promise<SetupReport> {
   const node = checkNode(options.nodeVersion);
-  const claude = await (options.findClaude ?? (() => findClaude()))();
+  // The check explains what it finds; it never fails itself, so Tessera stays up to show it.
+  const claude = await (options.findClaude ?? (() => findClaude()))().catch((): ClaudeCheck => ({
+    ok: false,
+    problem: "broken",
+    message: COULDNT_CHECK,
+  }));
   return {
     ready: node.ok && claude.ok,
     node,
