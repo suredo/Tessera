@@ -13,8 +13,8 @@ export type { Loss };
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
-// The way a list item is named in a loss's path.
-const stepFor = (item: unknown, index: number): string =>
+/** How a list item is named in a loss's path: its ID when it has one, else its position. */
+export const stepFor = (item: unknown, index: number): string =>
   isPlainObject(item) && typeof item["id"] === "string" ? item["id"] : String(index);
 
 const DROPPED = Symbol("dropped");

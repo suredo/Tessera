@@ -17,6 +17,7 @@ import {
   readWorkspaceData,
   restoreRecoverySnapshot,
   restoreVersion,
+  saveWorkspaceData,
   workspaceVersions,
 } from "../src/workspaces/index.ts";
 
@@ -477,6 +478,119 @@ describe("restoring a tool version (DATA-10)", () => {
       "SELECT COUNT(*) AS n FROM recovery_snapshots",
     );
     expect(left).toEqual({ n: 0 });
+    folder.close();
+  });
+});
+
+describe("GEN-12: a restore's losses say where they were in plain words", () => {
+  /** A workspace on `newer`, holding exactly `data`, and the hash of `older` to restore. */
+  async function holding(newer: Artifact, older: Artifact, data: object) {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Plain");
+    const hashes = { newer: saveVersion(folder.db, newer), older: saveVersion(folder.db, older) };
+    expect(activateVersion(folder, id, hashes.newer, 0).ok).toBe(true);
+    saveWorkspaceData(folder, id, data, getWorkspace(folder, id)!.dataRevision);
+    return { folder, id, hashes };
+  }
+  const shape = (schemaVersion: number, schema: object) =>
+    version("<p>x</p>", {
+      schemaVersion,
+      schema: schema as Artifact["data"]["schema"],
+      defaults: {},
+    });
+  const losses = (plan: ReturnType<typeof planRestore>) => {
+    if (!plan.ok || plan.keepsData)
+      throw new Error(`expected a lossy plan: ${JSON.stringify(plan)}`);
+    return plan.losses.map((loss) => loss.steps);
+  };
+
+  it("GEN-12: names each lost value's item by its title, and the confirmation still holds", async () => {
+    const { folder, id, hashes } = await onVersion2();
+    const plan = planRestore(folder, id, hashes.v1);
+    expect(losses(plan)).toEqual([
+      [{ field: "tasks" }, { item: "Buy milk", in: "tasks" }, { field: "done" }],
+      [{ field: "tasks" }, { item: "Buy milk", in: "tasks" }, { field: "note" }],
+    ]);
+    // The words are for the person: the plan's own confirmation still runs exactly this restore.
+    if (!plan.ok || plan.keepsData) throw new Error("expected a lossy plan");
+    expect(restoreVersion(folder, id, hashes.v1, 3, plan.confirmation)).toMatchObject({ ok: true });
+    folder.close();
+  });
+
+  it("GEN-12: finds an item by its ID, even one that looks like another item's position", async () => {
+    const withDone = shape(2, listOf(task({ done: { type: "boolean" } })));
+    const { folder, id, hashes } = await holding(withDone, shape(1, listOf(task({}))), {
+      tasks: [
+        { id: "a", title: "First", done: true },
+        { id: "0", title: "Second", done: false },
+      ],
+    });
+    expect(losses(planRestore(folder, id, hashes.older))).toEqual([
+      [{ field: "tasks" }, { item: "First", in: "tasks" }, { field: "done" }],
+      [{ field: "tasks" }, { item: "Second", in: "tasks" }, { field: "done" }],
+    ]);
+    folder.close();
+  });
+
+  it("GEN-12: names items in a list inside an item, and an item with no name by its list", async () => {
+    const inner = (properties: object) => ({ type: "array", items: task(properties) });
+    const { folder, id, hashes } = await holding(
+      shape(2, listOf(task({ items: inner({ note: { type: "string" } }) }))),
+      shape(1, listOf(task({ items: inner({}) }))),
+      {
+        tasks: [
+          { id: "trip", title: "Trip", items: [{ id: "m", title: "Milk", note: "oat" }] },
+          { id: "x", title: " ", items: [{ id: "n", title: "", note: "kept?" }] },
+        ],
+      },
+    );
+    expect(losses(planRestore(folder, id, hashes.older))).toEqual([
+      [
+        { field: "tasks" },
+        { item: "Trip", in: "tasks" },
+        { field: "items" },
+        { item: "Milk", in: "items" },
+        { field: "note" },
+      ],
+      [
+        { field: "tasks" },
+        { item: null, in: "tasks" },
+        { field: "items" },
+        { item: null, in: "items" },
+        { field: "note" },
+      ],
+    ]);
+    folder.close();
+  });
+
+  it("GEN-12: keeps the name of a field outside any list", async () => {
+    const { folder, id, hashes } = await holding(
+      shape(2, { type: "object", properties: { heading: { type: "string" } } }),
+      shape(1, { type: "object", properties: {}, additionalProperties: false }),
+      { heading: "My planner" },
+    );
+    expect(losses(planRestore(folder, id, hashes.older))).toEqual([[{ field: "heading" }]]);
+    folder.close();
+  });
+
+  it("DATA-06: a preview the names would make too large is refused, as one too large already is", async () => {
+    const fields = Object.fromEntries(
+      Array.from({ length: 40 }, (_, i) => [`f${i}`, { type: "boolean" }]),
+    );
+    const { folder, id, hashes } = await holding(
+      shape(2, listOf(task(fields))),
+      shape(1, listOf(task({}))),
+      {
+        tasks: [
+          {
+            id: "t",
+            title: "x".repeat(20_000),
+            ...Object.fromEntries(Object.keys(fields).map((f) => [f, true])),
+          },
+        ],
+      },
+    );
+    expect(planRestore(folder, id, hashes.older)).toMatchObject({ ok: false, reason: "too-large" });
     folder.close();
   });
 });

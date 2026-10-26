@@ -7,7 +7,7 @@ implements: [DATA-03, MIG-03, MIG-04, MIG-05]
 tests: [../../../packages/server/test/data-shape.test.ts]
 tags: [code, server, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:58:57Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T11:45:20Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Each tool declares a versioned data shape: a JSON Schema and a schema version, w
 # Entry points
 
 - `src/data-shape/schema.ts`: `compileToolSchema` checks a tool's schema and compiles it with Ajv, or says why it can't be used; `checkToolData` says whether data fits a schema, and if not where and why. `TOOL_SCHEMA_LIMIT_BYTES` is the largest schema accepted.
-- `src/data-shape/project.ts`: `projectData` keeps what a schema allows of some data and drops the rest, without changing the data, and lists every value dropped (`Loss`: its path, with a record's ID where it has one, and its value; the contracts' type, since the host app shows these in a restore's preview). Restoring a version with an older shape uses it (`DATA-10`).
+- `src/data-shape/project.ts`: `projectData` keeps what a schema allows of some data and drops the rest, without changing the data, and lists every value dropped (`Loss`: its path, with a record's ID where it has one, and its value; the contracts' type, since the host app shows these in a restore's preview). Restoring a version with an older shape uses it (`DATA-10`). `stepFor` is how a list item is named in a loss's path, its ID when it has one and its position otherwise; the migration's losses and the restore's plain description use the same rule.
 - `src/data-shape/migrate.ts`: `migrateData` migrates data from the shape it is in (`DataShape`: a schema version and its schema) to a tool version's, and returns the new data, or a refusal with a reason (`MigrationRefusal`); when asked to track losses, as a restore does, it also lists every value the migrations removed or replaced (a removed field, a value a table replaced) as losses, within `LOSS_PREVIEW_LIMIT_BYTES` and a message that starts with "Nothing was changed:". `applyMigrations` runs migrations on a copy.
 
 # Invariants
@@ -47,7 +47,7 @@ Depends on the contracts and Ajv (draft-07, the owner's choice on #50). Activati
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `applyMigrations`, `migrateData`, `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `projectData`, `Loss` (type), `checkToolData`, `compileToolSchema`, `TOOL_SCHEMA_LIMIT_BYTES`, `SchemaCheck` (type)
+- `index.ts`: `applyMigrations`, `LOSS_PREVIEW_LIMIT_BYTES`, `migrateData`, `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `projectData`, `stepFor`, `Loss` (type), `checkToolData`, `compileToolSchema`, `TOOL_SCHEMA_LIMIT_BYTES`, `SchemaCheck` (type)
 - `migrate.ts`: `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `LOSS_PREVIEW_LIMIT_BYTES`, `LossLog`, `applyMigrations`, `migrateData`
-- `project.ts`: `Loss` (type), `projectData`
+- `project.ts`: `Loss` (type), `stepFor`, `projectData`
 - `schema.ts`: `TOOL_SCHEMA_LIMIT_BYTES`, `TOOL_SCHEMA_MAX_DEPTH`, `TOOL_SCHEMA_MAX_ENUM`, `TOOL_SCHEMA_MAX_PARTS`, `TOOL_SCHEMA_KEYWORDS`, `SchemaCheck` (type), `compileToolSchema`, `checkToolData`

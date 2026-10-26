@@ -6,7 +6,7 @@ import {
   type MigrationOperation,
 } from "@tessera/contracts";
 import type { ToolData } from "../patches/index.ts";
-import type { Loss } from "./project.ts";
+import { stepFor, type Loss } from "./project.ts";
 import { checkToolData } from "./schema.ts";
 
 // Migrating a tool's data to a newer shape (DATA-03): the declared operations, run on a copy,
@@ -202,10 +202,6 @@ class SizeBudget {
     this.change(SizeBudget.jsonBytes(after) - SizeBudget.jsonBytes(before));
   }
 }
-
-// How a record is named in a loss's path: its ID when it has one, else its position.
-const stepFor = (record: DataRecord, index: number) =>
-  typeof record.id === "string" ? record.id : String(index);
 
 // One operation, applied in place to a copy that belongs to the run, with each change counted in
 // the budget, and each value it removes or replaces listed in `losses`. Renames and added fields

@@ -35,8 +35,31 @@ type Props = {
 };
 
 /** A lost value as the person reads it: where it was, and what it held. */
-const lossText = (loss: Loss) =>
-  t("history.loss", { where: loss.path.join(" › "), value: JSON.stringify(loss.value) });
+export const lossText = (loss: Loss) => {
+  const value = JSON.stringify(loss.value);
+  const steps = loss.steps ?? loss.path.map((field) => ({ field }));
+  const last = steps.findLastIndex((step) => "item" in step);
+  const field = steps
+    .slice(last + 1)
+    .map((step) => ("field" in step ? step.field : ""))
+    .join(" › ");
+  if (last === -1) return t("history.lossField", { field, value });
+  // Where it was: items by their names, never their IDs (GEN-12). A list's name is left out
+  // before an item that has a name, and kept, as "an item in", for one that has none.
+  const where = steps
+    .slice(0, last + 1)
+    .flatMap((step, index, before) => {
+      if ("field" in step) return "item" in (before[index + 1] ?? {}) ? [] : [step.field];
+      if (step.item !== null) return [step.item];
+      return [
+        index === 0 || before.slice(0, index).every((s) => "field" in s)
+          ? t("history.unnamedFirst", { list: step.in })
+          : t("history.unnamed", { list: step.in }),
+      ];
+    })
+    .join(" › ");
+  return field ? t("history.loss", { where, field, value }) : t("history.lossItem", { where });
+};
 
 export function History({ workspace, changes, onChanged }: Props) {
   const id = workspace.id;
