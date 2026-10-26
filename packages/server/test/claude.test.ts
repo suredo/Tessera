@@ -452,4 +452,37 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
       executable: expect.stringMatching(/claude\.exe$/i) as unknown,
     });
   });
+
+  it("PLAT-03: a Claude Code that is found but can't start is a problem to explain, not an error", async () => {
+    // A program the system refuses to start: on Windows a file that isn't a program; elsewhere a
+    // script naming an interpreter that doesn't exist (an empty file would run through sh there).
+    const dir = tempDir();
+    const file = path.join(dir, process.platform === "win32" ? "claude.exe" : "claude");
+    fs.writeFileSync(file, process.platform === "win32" ? "" : "#!/nonexistent/tessera-test\n");
+    fs.chmodSync(file, 0o755);
+    const found = await findClaude({ PATH: dir, PATHEXT: ".COM;.EXE;.BAT;.CMD" });
+    expect(found).toEqual({
+      ok: false,
+      problem: "broken",
+      message: expect.stringMatching(
+        /^Tessera found Claude Code at .+ but couldn't start it\. Reinstall Claude Code, or check that your account may run it, then try again\.$/,
+      ) as unknown,
+    });
+  });
+
+  it("PLAT-03: a start refused on the version or the sign-in check is a problem to explain", async () => {
+    const denied = Object.assign(new Error("spawn EACCES"), { code: "EACCES" });
+    const failsOn =
+      (failing: string) =>
+      (exe: string, args: readonly string[]): Promise<ProcessResult> =>
+        args[0] === failing
+          ? Promise.reject(denied)
+          : answering("2.1.310 (Claude Code)", '{"loggedIn":true}')(exe, args);
+    for (const failing of ["--version", "auth"]) {
+      expect(await findClaude(pathWith("claude.exe"), "win32", failsOn(failing))).toMatchObject({
+        ok: false,
+        problem: "broken",
+      });
+    }
+  });
 });

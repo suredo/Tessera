@@ -2,6 +2,7 @@
 // Starts Tessera from Tessera.cmd or `node packages/server/src/launcher/main.ts` (PLAT-02), and
 // stops it cleanly on Ctrl+C or when its window closes.
 import { fileURLToPath } from "node:url";
+import { checkSetup } from "../setup/index.ts";
 import { chooseDataFolder, syncedFolderOf } from "../storage/index.ts";
 import { launch, openInBrowser } from "./launcher.ts";
 
@@ -41,4 +42,9 @@ if (launched.status === "already-running") {
 } else {
   stop = () => launched.stop();
   console.log(`Tessera is running at ${launched.url}.${opened} Close this window to stop it.`);
+  // The setup check on start (PLAT-03); the status screen shows the same, with the fixes.
+  const report = await checkSetup({ dataDir });
+  for (const check of [report.node, report.claude]) {
+    if (!check.ok) console.warn(check.message);
+  }
 }

@@ -167,6 +167,20 @@ export {
   type RouteOverrides,
 } from "./routes.ts";
 export {
+  CLAUDE_PROBLEMS,
+  claudeCheckSchema,
+  nodeCheckSchema,
+  PROBE_ROUTE,
+  probeResultSchema,
+  SETUP_ROUTE,
+  setupReportSchema,
+  type ClaudeCheck,
+  type ClaudeProblem,
+  type NodeCheck,
+  type ProbeResult,
+  type SetupReport,
+} from "./setup.ts";
+export {
   numericFieldsWithoutUnit,
   UNIT_SUFFIXES,
   UNITLESS_NAMES,

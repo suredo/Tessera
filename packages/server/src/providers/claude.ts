@@ -1,7 +1,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { jsonSchemaOf, type ProviderErrorKind, type Usage } from "@tessera/contracts";
+import {
+  jsonSchemaOf,
+  type ClaudeCheck,
+  type ProviderErrorKind,
+  type Usage,
+} from "@tessera/contracts";
 import { z } from "zod";
 import { findExecutable, runProcess } from "../platform/index.ts";
 import { ProviderError, type Provider, type StageResult, type StageSpec } from "./provider.ts";
@@ -285,13 +290,7 @@ export function atLeast(version: string, minimum: string): boolean {
 }
 
 /** What Tessera found about Claude Code, for the setup check (PLAT-03) and the status screen. */
-export type ClaudeStatus =
-  | { ok: true; executable: string; version: string }
-  | {
-      ok: false;
-      problem: "missing" | "batch-file" | "old" | "signed-out" | "broken";
-      message: string;
-    };
+export type ClaudeStatus = ClaudeCheck;
 
 /**
  * Finds the real Claude Code and checks it, without spending a model call (CLI-02): it is on the
@@ -322,7 +321,19 @@ export async function findClaude(
     };
   }
   const clean = cleanEnvironment(env);
-  const answer = await run(executable, ["--version"], { env: clean, timeoutMs: 30_000 });
+  // A program that is found but can't start (access denied, or removed during an update) is a
+  // problem to explain, not an error that stops the check.
+  const cantStart: ClaudeStatus = {
+    ok: false,
+    problem: "broken",
+    message: `Tessera found Claude Code at ${executable} but couldn't start it. Reinstall Claude Code, or check that your account may run it, then try again.`,
+  };
+  let answer: Awaited<ReturnType<typeof runProcess>>;
+  try {
+    answer = await run(executable, ["--version"], { env: clean, timeoutMs: 30_000 });
+  } catch {
+    return cantStart;
+  }
   const version = versionOf(answer.stdout);
   if (answer.exitCode !== 0 || version === undefined) {
     return {
@@ -338,11 +349,16 @@ export async function findClaude(
       message: `Claude Code ${version} is older than ${TESTED_CLI_VERSION}, the version Tessera is tested with. Update it with \`claude update\`, then try again.`,
     };
   }
-  const status = await run(executable, ["auth", "status"], {
-    cwd: os.tmpdir(),
-    env: clean,
-    timeoutMs: 30_000,
-  });
+  let status: Awaited<ReturnType<typeof runProcess>>;
+  try {
+    status = await run(executable, ["auth", "status"], {
+      cwd: os.tmpdir(),
+      env: clean,
+      timeoutMs: 30_000,
+    });
+  } catch {
+    return cantStart;
+  }
   let signedIn: boolean;
   try {
     signedIn = (JSON.parse(status.stdout) as { loggedIn?: unknown }).loggedIn === true;
