@@ -216,10 +216,11 @@ function runMain(dataDir: string, nodeArgs: string[] = [], env: NodeJS.ProcessEn
 // Each case starts Node up to three times, which takes seconds on a busy Windows machine.
 describe("the launcher's entry point (PLAT-02)", { timeout: 30_000 }, () => {
   it("PLAT-03: prints the setup check's problem on start, and keeps running when Claude Code can't start", async () => {
-    // A program file that isn't one, alone on the PATH: the system refuses to start it.
+    // Alone on the PATH, a program the system refuses to start: on Windows a file that isn't a
+    // program; elsewhere a script naming an interpreter that doesn't exist.
     const bin = dataFolder();
     const claude = path.join(bin, process.platform === "win32" ? "claude.exe" : "claude");
-    fs.writeFileSync(claude, "");
+    fs.writeFileSync(claude, process.platform === "win32" ? "" : "#!/nonexistent/tessera-test\n");
     fs.chmodSync(claude, 0o755);
     const run = runMain(dataFolder(), [], { PATH: bin, Path: bin });
     expect(await run.line).toContain("Tessera is running at");

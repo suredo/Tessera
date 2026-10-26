@@ -454,9 +454,13 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
   });
 
   it("PLAT-03: a Claude Code that is found but can't start is a problem to explain, not an error", async () => {
-    // A program file that isn't one: the system refuses to start it, on Windows and elsewhere.
-    const env = pathWith(process.platform === "win32" ? "claude.exe" : "claude");
-    const found = await findClaude(env);
+    // A program the system refuses to start: on Windows a file that isn't a program; elsewhere a
+    // script naming an interpreter that doesn't exist (an empty file would run through sh there).
+    const dir = tempDir();
+    const file = path.join(dir, process.platform === "win32" ? "claude.exe" : "claude");
+    fs.writeFileSync(file, process.platform === "win32" ? "" : "#!/nonexistent/tessera-test\n");
+    fs.chmodSync(file, 0o755);
+    const found = await findClaude({ PATH: dir, PATHEXT: ".COM;.EXE;.BAT;.CMD" });
     expect(found).toEqual({
       ok: false,
       problem: "broken",
@@ -464,6 +468,9 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
         /^Tessera found Claude Code at .+ but couldn't start it\. Reinstall Claude Code, or check that your account may run it, then try again\.$/,
       ) as unknown,
     });
+  });
+
+  it("PLAT-03: a start refused on the version or the sign-in check is a problem to explain", async () => {
     const denied = Object.assign(new Error("spawn EACCES"), { code: "EACCES" });
     const failsOn =
       (failing: string) =>
