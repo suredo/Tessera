@@ -10,6 +10,7 @@ import { openDataFolder, tryLockFile, type Clock, type DataFolder } from "../sto
 import { collectAssets, sweepAssets } from "../assets/index.ts";
 import { hostRoutes, workspaceTools } from "../host/index.ts";
 import { runtimeRoutes } from "../runtime/index.ts";
+import { setupRoutes, type SetupOptions } from "../setup/index.ts";
 import { removeExpired } from "../trash/index.ts";
 import { activationRoutes } from "../workspaces/index.ts";
 
@@ -39,6 +40,8 @@ export type LaunchOptions = {
   waitMs?: number;
   /** What time it is; tests pass a clock they can move (DATA-09). */
   now?: Clock;
+  /** How the setup check finds Claude Code and what the probe calls; tests pass a fake (ENG-11). */
+  setup?: Omit<SetupOptions, "dataDir">;
 };
 
 export type Launched = { url: string; browserOpened: boolean } & (
@@ -156,6 +159,7 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
         ...activationRoutes(dataFolder),
         ...hostRoutes(dataFolder),
         ...archiveRoutes(dataFolder),
+        ...setupRoutes({ ...options.setup, dataDir: options.dataDir }),
         ...runtimeRoutes(workspaceTools(dataFolder)),
         [INSTANCE_ROUTE]: (_req, res) => {
           res.writeHead(200, { "content-type": "application/json" });

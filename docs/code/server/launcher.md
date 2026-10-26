@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T20:50:52Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T22:52:33Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Starts Tessera with one double-click (`PLAT-02`): it opens the data folder ([sto
 # Entry points
 
 - `Tessera.cmd`, at the repository's root: the double-click on Windows. It runs `main.ts` with Node, and pauses on an error so the window stays open to read it.
-- `src/launcher/main.ts`: the entry point. It chooses the data folder through [storage](storage.md) (`PLAT-04`), warns if a cloud service syncs it, launches, prints where Tessera runs, and stops it on Ctrl+C, Ctrl+Break, a stop signal or a closed window (which Windows reports as SIGHUP).
+- `src/launcher/main.ts`: the entry point. It chooses the data folder through [storage](storage.md) (`PLAT-04`), warns if a cloud service syncs it, launches, prints where Tessera runs and any failure of the [setup check](setup.md) (`PLAT-03`), and stops it on Ctrl+C, Ctrl+Break, a stop signal or a closed window (which Windows reports as SIGHUP).
 - `src/launcher/launcher.ts`: `launch` starts a copy, or opens the one already running; a copy it starts comes with its open data folder. `openInBrowser` opens an address in the default browser. `LOCK_FILE` is the lock's name, which the [development seed](../scripts/dev-data.md) takes too.
 
 # Invariants
@@ -36,11 +36,11 @@ Starts Tessera with one double-click (`PLAT-02`): it opens the data folder ([sto
 
 # Depends on / used by
 
-The [local server](local-server.md), [storage](storage.md)'s `openDataFolder` and `tryLockFile`, the [trash](trash.md)'s `removeExpired`, the [asset store](assets.md)'s `sweepAssets` and `collectAssets`, which it runs at start, the clean-up hourly too, the [bridge route](bridge.md), the activation route ([workspaces](workspaces.md)), the [host API](host-api.md)'s route, the archive routes ([export and import](archives.md)) and the [runtime routes](runtime-routes.md), serving each workspace's current tool, which it mounts on the server with the open data folder, and the [platform helpers](platform.md) (`runProcess`, `findExecutable`). The setup check (`PLAT-03`, M2) will run from here.
+The [local server](local-server.md), [storage](storage.md)'s `openDataFolder` and `tryLockFile`, the [trash](trash.md)'s `removeExpired`, the [asset store](assets.md)'s `sweepAssets` and `collectAssets`, which it runs at start, the clean-up hourly too, the [bridge route](bridge.md), the activation route ([workspaces](workspaces.md)), the [host API](host-api.md)'s route, the archive routes ([export and import](archives.md)), the [setup routes](setup.md) and the [runtime routes](runtime-routes.md), serving each workspace's current tool, which it mounts on the server with the open data folder, and the [platform helpers](platform.md) (`runProcess`, `findExecutable`). Its `setup` option passes a fake Claude Code to the setup check, for tests.
 
 # Pitfalls
 
-- **The data folder isn't shown yet.** `PLAT-04` asks for it on the setup screen (`PLAT-03`, M2); until then `main.ts` prints a warning only when a cloud service syncs it.
+- **The data folder isn't shown in the app yet.** The setup report carries it and its size, and the status screen (#142) will show it; until then `main.ts` prints a warning only when a cloud service syncs it.
 - **Windows has no stop signals between programs.** A test can't close the window the way a person does, so on Windows the tests stop a copy through `stop()` and kill one outright to check that its lock is released; the signal path is tested on Linux.
 - **A launch can wait up to 10 seconds** while the holder starts. A holder that is stuck, rather than killed, keeps the lock; the launch then says so and starts nothing.
 - **Node must be on the PATH** for `Tessera.cmd`; the setup check and the installer handle that later.
