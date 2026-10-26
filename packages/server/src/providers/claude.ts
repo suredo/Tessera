@@ -39,7 +39,14 @@ export function wrapSchema(schema: Record<string, unknown>): Record<string, unkn
 
 const wrappedAnswer = z.object({ [ANSWER_KEY]: z.unknown() });
 
-/** The locked flags of a stage (CLI-03), then the request. No stage gets file tools. */
+/** Where the stage's system prompt is written, in the call's own empty working folder. */
+export const SYSTEM_PROMPT_FILE = "system-prompt.md";
+
+/**
+ * The locked flags of a stage (CLI-03). The system prompt is read from `SYSTEM_PROMPT_FILE` in the
+ * working folder, and the request from standard input, so neither counts toward the command
+ * line's limit, about 32,000 characters on Windows (ADR 0002). No stage gets file tools.
+ */
 export function buildArgs(spec: StageSpec<unknown>): string[] {
   return [
     "--print",
@@ -60,9 +67,8 @@ export function buildArgs(spec: StageSpec<unknown>): string[] {
     "dontAsk",
     "--max-turns",
     String(MAX_TURNS),
-    "--system-prompt",
-    spec.system,
-    spec.prompt,
+    "--system-prompt-file",
+    SYSTEM_PROMPT_FILE,
   ];
 }
 
@@ -106,6 +112,10 @@ export const resultEnvelopeSchema = z.looseObject({
   num_turns: z.number().optional(),
   duration_ms: z.number().optional(),
   result: z.string().optional(),
+  /** The API's HTTP status for a failed call, or null. */
+  api_error_status: z.number().nullable().optional(),
+  /** Why the run ended, such as "completed". */
+  terminal_reason: z.string().nullable().optional(),
   structured_output: z.unknown().optional(),
   /** Tools the CLI was asked for and refused: with every tool off, none should appear. */
   permission_denials: z.array(z.unknown()).optional(),
@@ -146,9 +156,18 @@ export const FAILURE_MESSAGES: Record<ProviderErrorKind, string> = {
   cancelled: "Stopped, as asked.",
 };
 
-/** Reads which failure a result is, from `is_error` and its error text, never `subtype` (L-71). */
+/**
+ * Reads which failure a result is: from its structured fields first, the API's status and why the
+ * run ended (ADR 0002), then from its subtype and error text. Never from `subtype` alone, which can
+ * say "success" for a failed call (L-71).
+ */
 export function failureKind(envelope: ResultEnvelope): ProviderErrorKind | undefined {
-  const text = `${envelope.subtype} ${envelope.result ?? ""}`.toLowerCase();
+  const status = envelope.api_error_status;
+  if (status === 401 || status === 403) return "sign_in";
+  if (status === 429) return "usage_limit";
+  const text =
+    `${envelope.subtype} ${envelope.terminal_reason ?? ""} ${envelope.result ?? ""}`.toLowerCase();
+  if (status === 404 && /model/.test(text)) return "unavailable_model";
   if (envelope.subtype === "error_max_turns") return "turn_limit";
   if (envelope.subtype === "error_max_structured_output_retries" || /input_schema/.test(text)) {
     return "schema";
@@ -164,16 +183,37 @@ export function failureKind(envelope: ResultEnvelope): ProviderErrorKind | undef
   return undefined;
 }
 
+/** What the CLI said about a failure, for the ledger (GEN-10): its fields and its own words. */
+const detailOf = (envelope: ResultEnvelope): string =>
+  JSON.stringify({
+    subtype: envelope.subtype,
+    api_error_status: envelope.api_error_status ?? null,
+    terminal_reason: envelope.terminal_reason ?? null,
+    result: (envelope.result ?? "").slice(0, 500),
+  });
+
 function failure(envelope: ResultEnvelope): Error {
   const usage = toUsage(envelope);
   const kind = failureKind(envelope);
-  // The CLI's own words stay with the error, for the ledger (GEN-10); the person reads the
-  // plain message.
-  const said = (envelope.result ?? "").slice(0, 500);
   if (kind === undefined) {
-    return new Error(`The CLI failed in an unexpected way (${envelope.subtype}): ${said}`);
+    return new Error(`The CLI failed in an unexpected way: ${detailOf(envelope)}`);
   }
-  return new ProviderError(kind, `${FAILURE_MESSAGES[kind]} (${envelope.subtype}: ${said})`, usage);
+  // The person reads only the plain sentence; the CLI's words go to the ledger (CLI-05, GEN-12).
+  return new ProviderError(kind, FAILURE_MESSAGES[kind], usage, detailOf(envelope));
+}
+
+/**
+ * Removes a call's working folder. On Windows the CLI, or a program it started, can still hold it
+ * for a moment after answering (a signed-out run did), so removal is retried briefly; a folder
+ * still held is left in the system's temp folder rather than failing the call or hiding its
+ * answer. It holds nothing but the call's system prompt.
+ */
+export function removeFolder(folder: string): void {
+  try {
+    fs.rmSync(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  } catch {
+    // Left behind in the temp folder, which the system clears.
+  }
 }
 
 export type ClaudeOptions = {
@@ -193,6 +233,7 @@ export function createClaudeProvider(options: ClaudeOptions): Provider {
     // A new, empty working folder outside the repository for every call (CLI-08).
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-cli-"));
     try {
+      fs.writeFileSync(path.join(cwd, SYSTEM_PROMPT_FILE), spec.system, "utf8");
       const result = await runProcess(
         options.executable,
         [...(options.leadingArgs ?? []), ...buildArgs(spec)],
@@ -201,6 +242,7 @@ export function createClaudeProvider(options: ClaudeOptions): Provider {
           env: cleanEnvironment(options.env ?? process.env),
           timeoutMs: spec.timeLimitMs,
           signal: spec.signal,
+          input: spec.prompt,
         },
       );
       if (result.cancelled) throw new ProviderError("cancelled", FAILURE_MESSAGES.cancelled);
@@ -224,7 +266,7 @@ export function createClaudeProvider(options: ClaudeOptions): Provider {
       if (!checked.success) throw new ProviderError("schema", FAILURE_MESSAGES.schema, usage);
       return { value: checked.data, usage, raw: result.stdout };
     } finally {
-      fs.rmSync(cwd, { recursive: true, force: true });
+      removeFolder(cwd);
     }
   };
   return { name: options.live ? "claude" : "claude-fake", live: options.live, run };

@@ -7,7 +7,7 @@ implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, TEST-02, ENG-11, OB
 tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
 tags: [code, server, providers]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T12:51:02Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:10:10Z }
 ---
 # Purpose
 
@@ -18,7 +18,7 @@ Puts every model connection behind one interface (`CLI-01`): a stage's system pr
 - `src/providers/provider.ts`: `Provider`, `StageSpec` and `StageResult`; `ProviderError`, a failed call with its kind (`CLI-05`) and what it cost; `UNKNOWN_USAGE`.
 - `src/providers/claude.ts`: the Claude Code adapter.
   - `createClaudeProvider` runs a stage through the claude program given (`ClaudeOptions`). `findClaude` finds the real one and checks it without spending a call: on the PATH as a program, at least `TESTED_CLI_VERSION`, and signed in (`CLI-02`). It answers a `ClaudeStatus` with a plain message for each problem, for the setup check (`PLAT-03`).
-  - `buildArgs` gives the locked flags (`CLI-03`), `MAX_TURNS` the CLI's turn limit, and `wrapSchema` wraps a contract's JSON Schema as `{ answer: … }` (`ANSWER_KEY`).
+  - `buildArgs` gives the locked flags (`CLI-03`), `MAX_TURNS` the CLI's turn limit, `SYSTEM_PROMPT_FILE` the system prompt's file in the call's folder, and `wrapSchema` wraps a contract's JSON Schema as `{ answer: … }` (`ANSWER_KEY`). `removeFolder` removes a call's folder.
   - `cleanEnvironment` is the allowlisted environment (`CLI-08`); `resultEnvelopeSchema` reads the CLI's result (`ResultEnvelope`); `toUsage` normalizes usage (`CLI-04`).
   - `failureKind` reads which failure a result is, and `FAILURE_MESSAGES` is what the person reads for each (`CLI-05`); `versionOf` and `atLeast` read and compare versions.
 - `src/providers/scripted.ts`: `createScriptedProvider` answers from a script; `loadScript` reads one from a JSON fixture file; `ScriptError` means the script doesn't fit the calls made.
@@ -27,11 +27,13 @@ Puts every model connection behind one interface (`CLI-01`): a stage's system pr
 
 # Invariants
 
-- **The locked flags, exactly** (`CLI-03`, ADR 0002): `--print --output-format json --json-schema <wrapped schema> --model --effort --tools "" --safe-mode --strict-mcp-config --no-session-persistence --permission-mode dontAsk --max-turns 3 --system-prompt <the stage's system prompt>`, then the request. Only research gets web tools; no stage gets file tools. A contract test checks the whole argument list.
+- **The locked flags, exactly** (`CLI-03`, ADR 0002): `--print --output-format json --json-schema <wrapped schema> --model --effort --tools "" --safe-mode --strict-mcp-config --no-session-persistence --permission-mode dontAsk --max-turns 3 --system-prompt-file system-prompt.md`. Only research gets web tools; no stage gets file tools. A contract test checks the whole argument list.
+- **The request and the system prompt stay off the command line**, which Windows limits to about 32,000 characters (ADR 0002): the request goes on standard input, and the system prompt in a file in the call's own folder. A contract test sends 40,000 characters of each. Checked live on Claude Code 2.1.310 (#159).
 - **The schema travels wrapped** as `{ answer: <contract> }`, in draft-07, with shared definitions moved to the top, because the API takes it as a tool's input schema, which must be an object at the top level (L-72). The answer is unwrapped before it is checked.
-- **A clean start for every call** (`CLI-08`): an allowlisted environment, so API keys never switch billing to the API and a parent Claude Code session's variables never redirect the call; and a new, empty working folder outside the repository, removed afterwards.
+- **A clean start for every call** (`CLI-08`): an allowlisted environment, so API keys never switch billing to the API and a parent Claude Code session's variables never redirect the call; and a new, empty working folder outside the repository, removed afterwards. Removal is retried, and a folder the CLI still holds is left in the temp folder: tidying up never fails a call or hides its answer (a signed-out run on Windows did, #159).
 - **The host checks every answer**, whatever the provider promises (`CLI-01`). An answer that doesn't fit the stage's contract is a `schema` failure, with what the call cost.
-- **A failure is read from `is_error`, never `subtype`**, which can say `success` for a failed call (L-71). Each known failure (sign-in, usage limit, unavailable model, unsupported effort, schema, turn limit, time limit, cancelled) is a `ProviderError` whose message starts with the plain sentence for the person and keeps the CLI's own words after it, for the ledger (`CLI-05`, `GEN-10`). A failure the adapter can't name, or output that isn't a result, is a plain `Error`: a crash to look into, never a guess. Provider errors stop the request; they are not repaired.
+- **A failure is read from `is_error`, never `subtype`**, which can say `success` for a failed call (L-71). Its kind comes from the result's structured fields first, as ADR 0002 asks: `api_error_status` 401 or 403 is sign-in, 429 the usage limit, and 404 about a model an unavailable model. Then from its wording, since some failures carry no status: a signed-out call, captured live, has `api_error_status` null and says "Not logged in".
+- **The person reads only the plain sentence** (`CLI-05`, `GEN-12`). A `ProviderError`'s message is exactly the plain sentence for its kind, and the CLI's own words (subtype, status, `terminal_reason`, result) are its `detail`, which the ledger keeps (`GEN-10`). A failure the adapter can't name, or output that isn't a result, is a plain `Error`: a crash to look into, never a guess. Provider errors stop the request; they are not repaired.
 - **Every call is bounded.** `--max-turns` is not a hard bound (L-73), so each call also stops at its time limit (`time_limit`); a cancel stops the running CLI at once (`cancelled`), and a call cancelled before it starts never starts.
 - **Unknown usage is null, never 0** (`CLI-04`). Input counts uncached input, cache writes and cache reads; cached input is also given apart; a missing part makes the total unknown.
 - **No call is spent to find out the CLI isn't usable** (`CLI-02`). `findClaude` reads `claude --version` and `claude auth status`, which reach no model. On Windows it looks for `claude.exe` first, since npm's `claude.cmd`, which can't start without a shell (L-45), could come earlier on the PATH.
@@ -48,14 +50,14 @@ Depends on `@tessera/contracts`, zod, and the [platform](platform.md) helpers `r
 
 - **`ScriptError` is not a `ProviderError`.** It means the test or the pipeline is wrong, so nothing should handle it like a model failure.
 - **The scripted provider doesn't enforce time limits or stop a running call.** Its answers are immediate; the adapter does both.
-- **Failure texts are matched by words.** The CLI gives no stable error codes, so `failureKind` reads its text. A new wording falls through to a plain `Error`, never a wrong kind; add its words, with a test, when one is seen.
+- **Some failures are known only by their words.** A sign-in failure carries no API status, so `failureKind` falls back to the CLI's text after the structured fields. A new wording falls through to a plain `Error`, never a wrong kind; capture it, and add it with a test, when one is seen. The contract tests hold two failures captured live from 2.1.310.
 - **The tested version is a floor, not a pin.** A new CLI release can change a flag's meaning; the probe on each new version is the check, and the version in the ledger traces a change to it.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `claude.ts`: `TESTED_CLI_VERSION`, `MAX_TURNS`, `ANSWER_KEY`, `wrapSchema`, `buildArgs`, `cleanEnvironment`, `resultEnvelopeSchema`, `ResultEnvelope` (type), `toUsage`, `FAILURE_MESSAGES`, `failureKind`, `ClaudeOptions` (type), `createClaudeProvider`, `versionOf`, `atLeast`, `ClaudeStatus` (type), `findClaude`
+- `claude.ts`: `TESTED_CLI_VERSION`, `MAX_TURNS`, `ANSWER_KEY`, `wrapSchema`, `SYSTEM_PROMPT_FILE`, `buildArgs`, `cleanEnvironment`, `resultEnvelopeSchema`, `ResultEnvelope` (type), `toUsage`, `FAILURE_MESSAGES`, `failureKind`, `removeFolder`, `ClaudeOptions` (type), `createClaudeProvider`, `versionOf`, `atLeast`, `ClaudeStatus` (type), `findClaude`
 - `index.ts`: `ProviderError`, `UNKNOWN_USAGE`, `Provider` (type), `StageResult` (type), `StageSpec` (type), `createScriptedProvider`, `loadScript`, `ScriptError`, `ScriptedProvider` (type), `ANSWER_KEY`, `atLeast`, `buildArgs`, `cleanEnvironment`, `createClaudeProvider`, `FAILURE_MESSAGES`, `failureKind`, `findClaude`, `MAX_TURNS`, `resultEnvelopeSchema`, `TESTED_CLI_VERSION`, `toUsage`, `versionOf`, `wrapSchema`, `ClaudeOptions` (type), `ClaudeStatus` (type), `ResultEnvelope` (type)
 - `provider.ts`: `StageSpec` (type), `StageResult` (type), `Provider` (type), `UNKNOWN_USAGE`, `ProviderError`
 - `scripted.ts`: `ScriptError`, `ScriptedProvider` (type), `createScriptedProvider`, `loadScript`

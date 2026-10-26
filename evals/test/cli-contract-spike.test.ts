@@ -33,6 +33,7 @@ const fakeCalls = (dataFolder: string) =>
           args: string[];
           cwd: string;
           envNames: string[];
+          stdin: string;
         },
     );
 
@@ -78,9 +79,8 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => 
       "dontAsk",
       "--max-turns",
       "3",
-      "--system-prompt",
-      "System prompt",
-      "Make me a list",
+      "--system-prompt-file",
+      "system-prompt.md",
     ]);
   });
 
@@ -154,10 +154,10 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => 
     expect(report.summary).toMatchObject({ callCount: 3, inputTokens: 0, outputTokens: 0 });
     expect(readLedger(dataFolder).every((e) => e.mode === "dry-run")).toBe(true);
 
-    // What reached the program: the prompt intact as the last argument, a fresh folder outside
-    // the repository, and nothing from a parent Claude Code session.
+    // What reached the program: the prompt intact on standard input, a fresh folder outside the
+    // repository, and nothing from a parent Claude Code session.
     const calls = fakeCalls(dataFolder);
-    expect(calls.map((c) => c.args.at(-1))).toEqual(plannedCalls().map((c) => c.request));
+    expect(calls.map((c) => c.stdin)).toEqual(plannedCalls().map((c) => c.request));
     for (const call of calls) {
       expect(path.relative(process.cwd(), call.cwd).startsWith("..")).toBe(true);
       expect(fs.existsSync(call.cwd)).toBe(false);
@@ -228,7 +228,14 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => 
       kind: "failed",
       error: "sign_in",
       message:
-        "Claude Code isn't signed in. Open a terminal, run `claude auth login`, then try again. (success: Not logged in · Please run /login)",
+        "Claude Code isn't signed in. Open a terminal, run `claude auth login`, then try again.",
+      // The CLI's own words, kept for diagnosis apart from what the person reads (GEN-10).
+      detail: JSON.stringify({
+        subtype: "success",
+        api_error_status: null,
+        terminal_reason: null,
+        result: "Not logged in · Please run /login",
+      }),
     });
   });
 

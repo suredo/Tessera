@@ -9,6 +9,7 @@ import {
   atLeast,
   buildArgs,
   createClaudeProvider,
+  FAILURE_MESSAGES,
   findClaude,
   ProviderError,
   TESTED_CLI_VERSION,
@@ -92,6 +93,8 @@ function withReplies(replies: unknown[], env: NodeJS.ProcessEnv = process.env) {
                 args: string[];
                 cwd: string;
                 envNames: string[];
+                stdin: string;
+                system: string;
               },
           )
       : [];
@@ -99,7 +102,7 @@ function withReplies(replies: unknown[], env: NodeJS.ProcessEnv = process.env) {
 }
 
 describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
-  it("CLI-03: passes the locked flags exactly, the wrapped draft-07 schema, the system prompt, then the request", async () => {
+  it("CLI-03: passes the locked flags exactly, with the wrapped draft-07 schema, and the request and system prompt apart", async () => {
     const { provider, made } = withReplies([success({ answer: { title: "Shopping" } })]);
     await provider.run(spec());
     const [call] = made();
@@ -130,10 +133,12 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
       "dontAsk",
       "--max-turns",
       "3",
-      "--system-prompt",
-      "Make the tool the person asks for.",
-      "I need a shopping list",
+      "--system-prompt-file",
+      "system-prompt.md",
     ]);
+    // The request on standard input, the system prompt in its file: neither on the command line.
+    expect(call!.stdin).toBe("I need a shopping list");
+    expect(call!.system).toBe("Make the tool the person asks for.");
     // Only research gets web tools, and never file tools.
     expect(buildArgs({ ...spec(), tools: "web" })).toContain("WebSearch,WebFetch");
   });
@@ -164,6 +169,21 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
     expect(call!.envNames.map((name) => name.toUpperCase())).toContain("PATH");
     expect(path.basename(call!.cwd)).toMatch(/^tessera-cli-/);
     expect(fs.existsSync(call!.cwd)).toBe(false);
+  });
+});
+
+describe("long requests (CLI-01, ADR 0002)", () => {
+  it("CLI-01: sends a request and a system prompt longer than Windows' command line allows, whole", async () => {
+    const { provider, made } = withReplies([success({ answer: { title: "Long" } })]);
+    const prompt = "a".repeat(40_000);
+    const system = "b".repeat(40_000);
+    await expect(provider.run(spec({ prompt, system }))).resolves.toMatchObject({
+      value: { title: "Long" },
+    });
+    const [call] = made();
+    expect(call!.stdin).toBe(prompt);
+    expect(call!.system).toBe(system);
+    expect(call!.args.join(" ").length).toBeLessThan(32_000);
   });
 });
 
@@ -222,9 +242,67 @@ describe("error mapping (CLI-05)", () => {
       const error = (await provider.run(spec()).catch((e: unknown) => e)) as ProviderError;
       expect(error).toBeInstanceOf(ProviderError);
       expect(error.kind).toBe(kind);
-      expect(error.message.length).toBeGreaterThan(20);
+      // The person reads only the plain sentence; the CLI's words are kept apart, for the ledger.
+      expect(error.message).toBe(FAILURE_MESSAGES[kind as keyof typeof FAILURE_MESSAGES]);
+      expect(error.message).not.toMatch(/error_max|input_schema|API Error|subtype/);
+      expect(JSON.parse(error.detail!)).toMatchObject({
+        subtype: (envelope as { subtype: string }).subtype,
+      });
     });
   }
+
+  it("CLI-05: reads the API's status before the CLI's wording (ADR 0002)", async () => {
+    const generic = (status: number, result = "Request failed") => ({
+      ...failed("error_during_execution", result),
+      api_error_status: status,
+      terminal_reason: "error",
+    });
+    const { provider } = withReplies([
+      generic(401),
+      generic(403),
+      generic(429),
+      generic(404, "model: claude-x"),
+    ]);
+    for (const kind of ["sign_in", "sign_in", "usage_limit", "unavailable_model"]) {
+      await expect(provider.run(spec())).rejects.toMatchObject({ kind });
+    }
+  });
+
+  it("CLI-05: maps the real CLI's failures, as captured from Claude Code 2.1.310 (#159)", async () => {
+    // Both captured live on 2026-10-26, through the harness; neither used a token.
+    const unknownModel = {
+      type: "result",
+      subtype: "success",
+      is_error: true,
+      api_error_status: 404,
+      terminal_reason: "api_error",
+      result:
+        "There's an issue with the selected model (claude-nonexistent-0-0). It may not exist or you may not have access to it. Run --model to pick a different model.",
+    };
+    // No API status when signed out: only the words say so, which is why the wording is read too.
+    const signedOut = {
+      type: "result",
+      subtype: "success",
+      is_error: true,
+      api_error_status: null,
+      terminal_reason: "api_error",
+      result: "Not logged in · Please run /login",
+    };
+    const { provider } = withReplies([unknownModel, signedOut]);
+    const first = (await provider.run(spec()).catch((e: unknown) => e)) as ProviderError;
+    expect(first).toMatchObject({
+      kind: "unavailable_model",
+      message: FAILURE_MESSAGES.unavailable_model,
+    });
+    expect(JSON.parse(first.detail!)).toMatchObject({
+      api_error_status: 404,
+      terminal_reason: "api_error",
+    });
+    await expect(provider.run(spec())).rejects.toMatchObject({
+      kind: "sign_in",
+      message: FAILURE_MESSAGES.sign_in,
+    });
+  });
 
   it("CLI-05: reads a failure from is_error, even when subtype says success (L-71)", async () => {
     const { provider } = withReplies([failed("success", "Not logged in · Please run /login")]);

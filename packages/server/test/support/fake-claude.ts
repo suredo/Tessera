@@ -13,9 +13,28 @@ if (!repliesFile || !callsFolder) {
 }
 fs.mkdirSync(callsFolder, { recursive: true });
 const callIndex = fs.readdirSync(callsFolder).length;
+// Like the real one in --print mode: the request arrives on standard input, and the system prompt
+// in the file --system-prompt-file names, read from the working folder.
+const readOr = (read: () => string, otherwise: string) => {
+  try {
+    return read();
+  } catch {
+    return otherwise;
+  }
+};
+const stdin = readOr(() => fs.readFileSync(0, "utf8"), "");
+const systemFileAt = args.indexOf("--system-prompt-file") + 1;
+const system =
+  systemFileAt > 0 ? readOr(() => fs.readFileSync(args[systemFileAt] ?? "", "utf8"), "") : "";
 fs.writeFileSync(
   path.join(callsFolder, `call-${callIndex}.json`),
-  JSON.stringify({ args, cwd: process.cwd(), envNames: Object.keys(process.env).sort() }),
+  JSON.stringify({
+    args,
+    cwd: process.cwd(),
+    envNames: Object.keys(process.env).sort(),
+    stdin,
+    system,
+  }),
 );
 // Like Claude Code 2.1.296, which checks --json-schema with a default (draft-07) ajv before it
 // calls a model: the live run found it refuses draft 2020-12 (#19).

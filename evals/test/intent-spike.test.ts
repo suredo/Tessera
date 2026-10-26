@@ -115,10 +115,10 @@ describe("intent spike (GEN-01, GEN-02, GEN-15, #20)", { timeout: 60_000 }, () =
       const calls = fs.readdirSync(path.join(dataFolder, "fake-calls")).map(
         (f) =>
           JSON.parse(fs.readFileSync(path.join(dataFolder, "fake-calls", f), "utf8")) as {
-            args: string[];
+            system: string;
           },
       );
-      const systems = new Set(calls.map((c) => c.args[c.args.indexOf("--system-prompt") + 1]));
+      const systems = new Set(calls.map((c) => c.system));
       expect([...systems]).toEqual([systemPrompt]);
       expect(fs.existsSync(path.join(dataFolder, "report.md"))).toBe(true);
     },

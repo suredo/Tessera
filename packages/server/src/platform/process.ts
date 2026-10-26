@@ -28,6 +28,11 @@ export type RunOptions = {
   timeoutMs?: number;
   /** Cancels the run: the process is stopped as at the time limit. Already aborted: never started. */
   signal?: AbortSignal;
+  /**
+   * Sent on standard input, then closed: text too long for the command line, which Windows limits
+   * to about 32,000 characters. Without it the program gets no input at all.
+   */
+  input?: string;
 };
 
 // A file a shell would start: on macOS and Linux it also needs permission to run, or the shell
@@ -112,8 +117,7 @@ export function runProcess(
       env: options.env,
       shell: false,
       windowsHide: true,
-      // No input is sent, so the program reads end-of-input at once instead of waiting.
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
@@ -131,6 +135,10 @@ export function runProcess(
       stop();
     };
     options.signal?.addEventListener("abort", onAbort, { once: true });
+    // The input, if any, then end-of-input, so a program that reads it never waits. One that exits
+    // without reading it all closes the pipe early; that is its business.
+    child.stdin.on("error", () => {});
+    child.stdin.end(options.input ?? "", "utf8");
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
     child.stderr.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
     const timer =
