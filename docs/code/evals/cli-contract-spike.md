@@ -7,7 +7,7 @@ implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-13, ENG-16]
 tests: [../../../evals/test/cli-contract-spike.test.ts]
 tags: [code, evals, cli, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:18:53Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:25:12Z }
 ---
 
 # Purpose
@@ -43,7 +43,7 @@ Depends on the [evaluation harness](harness.md), the platform helpers' `runProce
 - **The third live run stopped at its first call as well:** the API refused the intent schema with `400 tools.1.custom.input_schema.type: Field required`, since a union has no top-level `type`. Every schema is now wrapped in an object. The error names `tools.1`, so the request carried another tool even with `--tools ""`; the no-tools check looks at that.
 - **The fourth live run answered all three calls,** with every answer passing its contract. One check flags a call that ran 4 turns under `--max-turns 3`: the flag is not a hard bound. Results and the rules they set: [ADR 0002](../../decisions/adr/0002-claude-code-cli-contract.md).
 - **`--max-turns` is not in the help of Claude Code 2.1.296.** The POC relied on it. If the CLI rejects it, the first call fails before reaching a model and the run stops; the ADR then says how `CLI-03`'s turn limit is kept.
-- **The prompt travels as a command-line argument,** which Windows limits to about 32,000 characters. The spike's prompts are small; the M2 adapter should send the prompt on standard input.
+- **In M0 the prompt travelled as a command-line argument,** which Windows limits to about 32,000 characters. That was fine for the spike's small prompts; the adapter the spikes now use sends the request on standard input and the system prompt in a file (#159).
 - **The error mapping reads the CLI's text,** which can change between versions; anything it doesn't recognize is recorded as a crash, not guessed.
 - **`--safe-mode` doesn't skip user settings.** Settings can still set environment variables and permissions; whether `--setting-sources` should also be locked is a question for the ADR.
 
