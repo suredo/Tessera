@@ -2,6 +2,8 @@
 
 ## 2026-10-26
 
+* **Update**: M2 starts. The [budget summary](roadmap/budgets.md) records the owner's approval of M2's live envelope (about 35 calls), each run's plan and cap still announced first, and the [decision log](decisions/decision-log.md) records A18 confirmed: per task, the cheapest model that fits, configured and recorded, never an automatic escalation.
+
 * **Update**: A restore's preview names each lost value's record in plain words (`GEN-12`), found in the run before M1's sign-off: the [workspaces](code/server/workspaces.md) doc says the plan names records by their title or name, and the [web package](code/web/package.md) doc that the preview never shows a record's ID. After Codex's review of [pull request 138](https://github.com/suredo/Tessera/pull/138), the plan describes each place as steps, fields and items by name, found by ID or else by position through the one shared rule ([data shape](code/server/data-shape.md)), within the preview's size bound.
 
 * **Update**: M1 is signed off ([closing report](../evals/reports/2026-10-26-m1-report.md)); the [coverage report](code/scripts/coverage-report.md) doc says `pnpm coverage` now counts toward M2.
