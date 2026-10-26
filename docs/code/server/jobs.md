@@ -7,7 +7,7 @@ implements: [CLI-06]
 tests: [../../../packages/server/test/jobs.test.ts]
 tags: [code, server, jobs, cli]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T22:28:33Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T22:36:24Z }
 ---
 
 # Purpose
@@ -23,8 +23,9 @@ Keeps every AI request accounted for (`CLI-06`). The POC's ad hoc queue lost bot
 - **One job at a time unless configured** (`atOnce`, a whole number of at least 1). The rest wait in the order they came; the next starts only when one has ended.
 - **A job cancelled while it waits never starts.** Its work is never called, and the jobs after it still run.
 - **A job cancelled while it runs is stopped through its signal.** The provider adapters stop the Claude Code process when the signal aborts ([platform](platform.md)), and the job is recorded as cancelled once its work has stopped.
-- **A newer request can replace the jobs before it.** With `replace`, every job not yet ended is cancelled and names the job that replaced it, and the new one starts only once they have stopped, so two never write at once. The replaced requests stay in the record with their words, marked as cancelled.
+- **A newer request can replace the jobs before it.** With `replace`, every job not yet ended is cancelled and names the job that replaced it, and the new one starts only once they have stopped, even when a place is free, so two never write at once. Jobs submitted after it wait with it, so none overtakes the newest request. The replaced requests stay in the record with their words, marked as cancelled.
 - **No request disappears.** Every job ends as done, failed or cancelled, `outcome` never rejects, and work that throws is a failed job whose error the caller reports.
+- **A display that fails never strands a job.** An error thrown by `onChange` goes to `onChangeError` (the console by default), and the job still moves on, settles its outcome and frees its place.
 - **A late cancel never hides done work.** If the work finished before it saw the cancel, the job is done, and a replacement that came too late is not recorded as having replaced it.
 
 # Depends on / used by

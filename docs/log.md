@@ -2,7 +2,7 @@
 
 ## 2026-10-26
 
-* **Create**: Job control ([issue 141](https://github.com/suredo/Tessera/issues/141)): the [job control](code/server/jobs.md) doc describes `JobQueue`, which runs AI jobs one at a time unless configured, never starts a job cancelled while it waits, stops a running one through its signal, and lets a newer request replace the ones before it, which stay recorded as cancelled; it claims `CLI-06`.
+* **Create**: Job control ([issue 141](https://github.com/suredo/Tessera/issues/141)): the [job control](code/server/jobs.md) doc describes `JobQueue`, which runs AI jobs one at a time unless configured, never starts a job cancelled while it waits, stops a running one through its signal, and lets a newer request replace the ones before it, which stay recorded as cancelled; it claims `CLI-06`. After Codex's review of [pull request 161](https://github.com/suredo/Tessera/pull/161), a replacement waits for the jobs it replaced to stop even when a place is free, and a failing display never strands a job.
 
 * **Update**: Model routing ([issue 140](https://github.com/suredo/Tessera/issues/140)): the [provider adapters](code/server/providers.md) doc describes `runStage` and `loadRoutes`, with each stage on the cheapest model that fits it, a routes file that replaces only the stages it names, no automatic escalation, and the route in the ledger; it claims `CLI-09`. A routes file Tessera can't use is refused with a plain sentence naming the step and the allowed choices. The [contracts](code/contracts/package.md) doc describes the routing contract.
 

@@ -35,6 +35,11 @@ export type JobQueueOptions = {
   atOnce?: number;
   /** Told of every change to a job, with the job as it now stands. */
   onChange?: (job: Job) => void;
+  /**
+   * Told when `onChange` throws. The queue carries on regardless, so a broken display never strands
+   * a job; by default the error is written to the console.
+   */
+  onChangeError?: (error: unknown) => void;
 };
 
 type Entry = {
@@ -42,11 +47,14 @@ type Entry = {
   work: JobWork<unknown>;
   controller: AbortController;
   settle: (outcome: JobOutcome<unknown>) => void;
+  /** The running jobs this one replaced: it starts only once they have all stopped. */
+  after: Entry[];
 };
 
 export class JobQueue {
   readonly atOnce: number;
   readonly #onChange: (job: Job) => void;
+  readonly #onChangeError: (error: unknown) => void;
   readonly #entries = new Map<string, Entry>();
   readonly #waiting: Entry[] = [];
   #running = 0;
@@ -58,6 +66,9 @@ export class JobQueue {
     }
     this.atOnce = atOnce;
     this.#onChange = options.onChange ?? (() => {});
+    this.#onChangeError =
+      options.onChangeError ??
+      ((error) => console.error("A job's change couldn't be passed on:", error));
   }
 
   /**
@@ -71,9 +82,12 @@ export class JobQueue {
     options: { replace?: boolean } = {},
   ): { job: Job; outcome: Promise<JobOutcome<T>> } {
     const id = randomUUID();
+    const after: Entry[] = [];
     if (options.replace) {
       for (const entry of this.#entries.values()) {
-        if (!finished(entry.job.state)) this.#cancel(entry, id);
+        if (finished(entry.job.state)) continue;
+        if (entry.job.state === "running") after.push(entry);
+        this.#cancel(entry, id);
       }
     }
     let settle!: (outcome: JobOutcome<unknown>) => void;
@@ -83,10 +97,11 @@ export class JobQueue {
       work,
       controller: new AbortController(),
       settle,
+      after,
     };
     this.#entries.set(id, entry);
     this.#waiting.push(entry);
-    this.#onChange(entry.job);
+    this.#tell(entry.job);
     this.#startNext();
     return { job: entry.job, outcome: outcome as Promise<JobOutcome<T>> };
   }
@@ -119,6 +134,9 @@ export class JobQueue {
 
   #startNext() {
     while (this.#running < this.atOnce && this.#waiting.length > 0) {
+      // A free place isn't enough for a replacement: the jobs it replaced must have stopped, and
+      // the jobs after it wait with it, so none overtakes the newest request.
+      if (this.#waiting[0]!.after.some((replaced) => !finished(replaced.job.state))) return;
       const entry = this.#waiting.shift()!;
       this.#running += 1;
       this.#update(entry, { state: "running" });
@@ -156,7 +174,19 @@ export class JobQueue {
 
   #update(entry: Entry, change: Partial<Job>) {
     entry.job = { ...entry.job, ...change };
-    this.#onChange(entry.job);
+    this.#tell(entry.job);
+  }
+
+  #tell(job: Job) {
+    try {
+      this.#onChange(job);
+    } catch (error) {
+      try {
+        this.#onChangeError(error);
+      } catch {
+        // Nothing more can be told; the job carries on.
+      }
+    }
   }
 }
 

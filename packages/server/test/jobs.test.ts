@@ -198,6 +198,100 @@ describe("job control without a process (CLI-06)", () => {
     expect(await second.outcome).toEqual({ state: "done", value: "two" });
   });
 
+  /** Work that, once cancelled, takes until `stopped` is called to stop. */
+  const slowToStop = () => {
+    let stop!: () => void;
+    const stopping = new Promise<void>((done) => (stop = done));
+    let started = false;
+    const work = (signal: AbortSignal) => {
+      started = true;
+      return new Promise<string>((_, reject) =>
+        signal.addEventListener(
+          "abort",
+          () => void stopping.then(() => reject(new Error("stopped"))),
+        ),
+      );
+    };
+    return { work, stopped: () => stop(), started: () => started };
+  };
+  const turn = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+  it("CLI-06: a replacement waits for the jobs it replaced to stop, even with a place free", async () => {
+    const queue = new JobQueue({ atOnce: 2 });
+    const old = slowToStop();
+    const replaced = queue.submit("a shopping list", old.work);
+    let newerStarted = false;
+    const newer = queue.submit(
+      "a calculator",
+      () => {
+        newerStarted = true;
+        return Promise.resolve("Calculator");
+      },
+      { replace: true },
+    );
+    const later = queue.submit("some notes", () => Promise.resolve("Notes"));
+    await turn();
+    expect(newerStarted).toBe(false);
+    expect(queue.jobs().map((job) => job.state)).toEqual(["running", "queued", "queued"]);
+    old.stopped();
+    expect(await replaced.outcome).toEqual({ state: "cancelled", replacedBy: newer.job.id });
+    expect(await newer.outcome).toEqual({ state: "done", value: "Calculator" });
+    expect(await later.outcome).toEqual({ state: "done", value: "Notes" });
+  });
+
+  it("CLI-06: a replacement of two running jobs starts only once both have stopped", async () => {
+    const queue = new JobQueue({ atOnce: 2 });
+    const first = slowToStop();
+    const second = slowToStop();
+    const one = queue.submit("one", first.work);
+    const two = queue.submit("two", second.work);
+    let newerStarted = false;
+    const newer = queue.submit(
+      "three",
+      () => {
+        newerStarted = true;
+        return Promise.resolve("three");
+      },
+      { replace: true },
+    );
+    first.stopped();
+    expect(await one.outcome).toMatchObject({ state: "cancelled" });
+    await turn();
+    expect(newerStarted).toBe(false);
+    second.stopped();
+    expect(await two.outcome).toMatchObject({ state: "cancelled" });
+    expect(await newer.outcome).toEqual({ state: "done", value: "three" });
+  });
+
+  it("CLI-06: a display that throws never strands a job: outcomes settle, the queue drains and the error is passed on", async () => {
+    const errors: unknown[] = [];
+    const queue = new JobQueue({
+      onChange: (job) => {
+        if (job.state === "queued" || job.state === "done") throw new Error(`display failed`);
+      },
+      onChangeError: (error) => errors.push(error),
+    });
+    const first = queue.submit("one", () => Promise.resolve(1));
+    const second = queue.submit("two", () => Promise.resolve(2));
+    expect(await first.outcome).toEqual({ state: "done", value: 1 });
+    expect(await second.outcome).toEqual({ state: "done", value: 2 });
+    expect(queue.jobs().map((job) => job.state)).toEqual(["done", "done"]);
+    expect(errors).toHaveLength(4);
+
+    const quiet = new JobQueue({
+      onChange: () => {
+        throw new Error("display failed");
+      },
+      onChangeError: () => {
+        throw new Error("and so did its report");
+      },
+    });
+    expect(await quiet.submit("three", () => Promise.resolve(3)).outcome).toEqual({
+      state: "done",
+      value: 3,
+    });
+  });
+
   it("CLI-06: refuses a number of jobs at once that isn't a whole number of at least 1", () => {
     for (const atOnce of [0, -1, 1.5, Number.NaN]) {
       expect(() => new JobQueue({ atOnce })).toThrow(RangeError);
