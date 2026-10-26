@@ -84,6 +84,29 @@ describe("processes (PLAT-01)", { timeout: 20_000 }, () => {
     expect(result).toMatchObject({ exitCode: null, timedOut: true });
   });
 
+  it("CLI-06: stops a program when cancelled, and never starts one cancelled before", async () => {
+    const controller = new AbortController();
+    const started = Date.now();
+    const running = runProcess(node, ["-e", "setTimeout(() => {}, 10000)"], {
+      signal: controller.signal,
+    });
+    setTimeout(() => controller.abort(), 200);
+    const result = await running;
+    // Stopped within seconds, not at the program's own 10 s.
+    expect(Date.now() - started).toBeLessThan(8000);
+    expect(result).toMatchObject({ cancelled: true, timedOut: false });
+    const never = await runProcess(node, ["-e", "require('fs').writeFileSync('x','')"], {
+      signal: AbortSignal.abort(),
+    });
+    expect(never).toEqual({
+      exitCode: null,
+      stdout: "",
+      stderr: "",
+      timedOut: false,
+      cancelled: true,
+    });
+  });
+
   it("gives a program no input, so one that reads until the end finishes", async () => {
     const readsAll = "process.stdin.resume(); process.stdin.on('end', () => console.log('done'));";
     // A program left waiting for input would reach the 8 s limit and report timedOut.

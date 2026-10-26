@@ -129,7 +129,12 @@ export function startHarness(options: HarnessOptions): Harness {
       log(null);
       if (error instanceof ProviderError) {
         if (STOPPING_ERRORS.has(error.kind)) stopped = true;
-        record(error.usage, { kind: "failed", error: error.kind, message: error.message });
+        record(error.usage, {
+          kind: "failed",
+          error: error.kind,
+          message: error.message,
+          ...(error.detail === undefined ? {} : { detail: error.detail }),
+        });
       } else {
         record(UNKNOWN_USAGE, { kind: "crashed", message: String(error) });
       }

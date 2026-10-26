@@ -12,6 +12,12 @@ const outcome = z.discriminatedUnion("kind", [
     kind: z.literal("failed"),
     error: providerErrorKindSchema,
     message: z.string(),
+    detail: z
+      .string()
+      .optional()
+      .describe(
+        "What the provider itself said: for diagnosis, never shown to the person as it is.",
+      ),
   }),
   z
     .strictObject({ kind: z.literal("crashed"), message: z.string() })

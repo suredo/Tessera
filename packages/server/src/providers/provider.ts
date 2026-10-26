@@ -7,6 +7,9 @@ import type { z } from "zod";
 /** One model call: what to ask, the shape the answer must have, and how to run it. */
 export type StageSpec<T> = {
   stage: Stage;
+  /** The stage's instructions, assembled from its prompt parts (GEN-03). */
+  system: string;
+  /** The request: what the person asked, and what the stage needs to answer it. */
   prompt: string;
   /** The host checks the answer against this, whatever the provider promises. */
   schema: z.ZodType<T>;
@@ -39,11 +42,22 @@ export class ProviderError extends Error {
   readonly kind: ProviderErrorKind;
   /** What the call cost before it failed, as far as it is known (CLI-04). */
   readonly usage: Usage;
+  /**
+   * What the provider itself said, for the ledger and the details view (GEN-10). The message is
+   * the plain sentence the person reads; this is never shown to them as it is.
+   */
+  readonly detail: string | undefined;
 
-  constructor(kind: ProviderErrorKind, message: string, usage: Usage = UNKNOWN_USAGE) {
+  constructor(
+    kind: ProviderErrorKind,
+    message: string,
+    usage: Usage = UNKNOWN_USAGE,
+    detail?: string,
+  ) {
     super(message);
     this.name = "ProviderError";
     this.kind = kind;
     this.usage = usage;
+    this.detail = detail;
   }
 }

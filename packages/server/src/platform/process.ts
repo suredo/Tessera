@@ -17,6 +17,8 @@ export type ProcessResult = {
   stderr: string;
   /** True when the time limit ended the process. */
   timedOut: boolean;
+  /** True when the signal ended the process. */
+  cancelled: boolean;
 };
 
 export type RunOptions = {
@@ -24,6 +26,13 @@ export type RunOptions = {
   env?: NodeJS.ProcessEnv;
   /** The process is asked to stop after this long, and ended outright if it hasn't a second later. */
   timeoutMs?: number;
+  /** Cancels the run: the process is stopped as at the time limit. Already aborted: never started. */
+  signal?: AbortSignal;
+  /**
+   * Sent on standard input, then closed: text too long for the command line, which Windows limits
+   * to about 32,000 characters. Without it the program gets no input at all.
+   */
+  input?: string;
 };
 
 // A file a shell would start: on macOS and Linux it also needs permission to run, or the shell
@@ -93,19 +102,43 @@ export function runProcess(
       ),
     );
   }
+  if (options.signal?.aborted) {
+    return Promise.resolve({
+      exitCode: null,
+      stdout: "",
+      stderr: "",
+      timedOut: false,
+      cancelled: true,
+    });
+  }
   return new Promise((resolve, reject) => {
     const child = spawn(executable, args, {
       cwd: options.cwd,
       env: options.env,
       shell: false,
       windowsHide: true,
-      // No input is sent, so the program reads end-of-input at once instead of waiting.
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "pipe"],
     });
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    let cancelled = false;
     let killer: ReturnType<typeof setTimeout> | undefined;
+    // Asked to stop, then ended outright a second later: at the time limit or when cancelled.
+    const stop = () => {
+      child.kill();
+      // Outside Windows a program can catch or ignore that request; then it's ended outright.
+      killer = setTimeout(() => child.kill("SIGKILL"), STOP_GRACE_MS);
+    };
+    const onAbort = () => {
+      cancelled = true;
+      stop();
+    };
+    options.signal?.addEventListener("abort", onAbort, { once: true });
+    // The input, if any, then end-of-input, so a program that reads it never waits. One that exits
+    // without reading it all closes the pipe early; that is its business.
+    child.stdin.on("error", () => {});
+    child.stdin.end(options.input ?? "", "utf8");
     child.stdout.setEncoding("utf8").on("data", (chunk: string) => (stdout += chunk));
     child.stderr.setEncoding("utf8").on("data", (chunk: string) => (stderr += chunk));
     const timer =
@@ -113,9 +146,7 @@ export function runProcess(
         ? undefined
         : setTimeout(() => {
             timedOut = true;
-            child.kill();
-            // Outside Windows a program can catch or ignore that request; then it's ended outright.
-            killer = setTimeout(() => child.kill("SIGKILL"), STOP_GRACE_MS);
+            stop();
           }, options.timeoutMs);
     // The result comes when the program exits, once its output has arrived. A program it started
     // and left running can hold the output open; the call then waits only OUTPUT_GRACE_MS more.
@@ -127,14 +158,16 @@ export function runProcess(
       settled = true;
       clearTimeout(timer);
       clearTimeout(grace);
+      options.signal?.removeEventListener("abort", onAbort);
       child.stdout.destroy();
       child.stderr.destroy();
-      resolve({ exitCode, stdout, stderr, timedOut });
+      resolve({ exitCode, stdout, stderr, timedOut, cancelled });
     };
     child.on("error", (error) => {
       settled = true;
       clearTimeout(timer);
       clearTimeout(killer);
+      options.signal?.removeEventListener("abort", onAbort);
       reject(error);
     });
     child.on("exit", (code) => {

@@ -25,6 +25,7 @@ const spec = (
   prompt = "I need a shopping list",
 ): StageSpec<z.infer<typeof answer>> => ({
   stage,
+  system: "Answer as the schema says.",
   prompt,
   schema: answer,
   model: "scripted",

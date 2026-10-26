@@ -8,18 +8,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { intentSchema, stageSchema } from "@tessera/contracts";
-import type { Provider } from "@tessera/server";
+import { MAX_TURNS, resultEnvelopeSchema, type Provider } from "@tessera/server";
 import { z } from "zod";
 import { HarnessError, startHarness, type LedgerSummary, type RunMode } from "../../src/index.ts";
 import { artifactDraftSchema } from "./artifact-draft.ts";
-import {
-  fakeClaudeProvider,
-  liveClaudeProvider,
-  MAX_TURNS,
-  resultEnvelopeSchema,
-  runFolder,
-  runModeFrom,
-} from "./claude-cli.ts";
+import { fakeClaudeProvider, liveClaudeProvider, runFolder, runModeFrom } from "./claude-cli.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -83,6 +76,7 @@ export async function runSpike(options: {
     try {
       const result = await harness.provider.run({
         stage: call.stage,
+        system: readPrompt("system.md"),
         prompt: call.request,
         schema: SCHEMAS[call.contract] as z.ZodType<unknown>,
         model: PLAN.model,
@@ -119,7 +113,6 @@ export async function runSpike(options: {
 /** The provider for a dry run: the same caller, starting the fake claude instead of the real one. */
 export const fakeProvider = (dataFolder: string, repliesFile?: string): Provider =>
   fakeClaudeProvider(
-    readPrompt("system.md"),
     repliesFile ?? path.join(here, "dry-run-replies.json"),
     path.join(dataFolder, "fake-calls"),
   );
@@ -129,7 +122,7 @@ async function main(argv: string[]): Promise<void> {
   const dataFolder = runFolder("cli", mode);
   const { provider, cliVersion } =
     mode === "live"
-      ? await liveClaudeProvider(readPrompt("system.md"))
+      ? await liveClaudeProvider()
       : { provider: fakeProvider(dataFolder), cliVersion: null };
   const report = await runSpike({ mode, provider, dataFolder, cliVersion });
   console.log(JSON.stringify(report, null, 2));

@@ -19,8 +19,8 @@ import {
   type LedgerSummary,
   type RunMode,
 } from "../../src/index.ts";
+import { ANSWER_KEY } from "@tessera/server";
 import {
-  ANSWER_KEY,
   fakeClaudeProvider,
   liveClaudeProvider,
   runFolder,
@@ -200,6 +200,7 @@ export async function runIntentSpike(options: {
     try {
       const { value } = await harness.provider.run({
         stage: "intent",
+        system: read("prompts", "system.md"),
         prompt: renderPrompt(request),
         schema: intentSchema,
         model: PLAN.model,
@@ -386,11 +387,7 @@ export function fakeProvider(dataFolder: string, replies: unknown[] = expectedRe
   fs.mkdirSync(path.dirname(dataFolder), { recursive: true });
   const repliesFile = `${dataFolder}-replies.json`;
   fs.writeFileSync(repliesFile, JSON.stringify(replies));
-  return fakeClaudeProvider(
-    read("prompts", "system.md"),
-    repliesFile,
-    path.join(dataFolder, "fake-calls"),
-  );
+  return fakeClaudeProvider(repliesFile, path.join(dataFolder, "fake-calls"));
 }
 
 async function main(argv: string[]): Promise<void> {
@@ -408,7 +405,7 @@ async function main(argv: string[]): Promise<void> {
   const dataFolder = runFolder("intent", mode);
   const { provider, cliVersion } =
     mode === "live"
-      ? await liveClaudeProvider(read("prompts", "system.md"))
+      ? await liveClaudeProvider()
       : { provider: fakeProvider(dataFolder), cliVersion: null };
   const report = await runIntentSpike({ mode, provider, dataFolder, cliVersion });
   console.log(renderReport(report));
