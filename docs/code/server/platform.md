@@ -7,7 +7,7 @@ implements: [PLAT-01]
 tests: [../../../packages/server/test/platform.test.ts]
 tags: [code, server, platform]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T03:48:01Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T12:51:02Z }
 ---
 
 # Purpose
@@ -16,10 +16,12 @@ Keeps Windows-only assumptions (path separators, letter case, line endings, how 
 
 # Entry points
 
-- `src/platform/process.ts`: `runProcess` starts a program and collects its output and exit code, with an optional time limit; `findExecutable` finds a program on the PATH.
+- `src/platform/process.ts`: `runProcess` starts a program and collects its output and exit code, with an optional time limit and an optional cancel signal; `findExecutable` finds a program on the PATH.
 - `src/platform/paths.ts`: `toPosixPath` for logs and keys, `normalizeNewlines`, and `isInsideFolder`.
 
 # Invariants
+
+- **A cancel stops a program as the time limit does** (`CLI-06`): it is asked to stop, then ended outright a second later, and the result says `cancelled`. A signal already cancelled starts nothing.
 
 - **Programs start by absolute path, never through a shell.** Arguments reach the program exactly as given, spaces, quotes, `%`, `&` and `|` included, and no shell ever reads them. The program gets no input, so one that reads until the end of its input finishes instead of waiting. The result comes when the program exits, once its output has arrived: a program it started and left running can't hold the call open for more than a quarter of a second. At the time limit the program is asked to stop, and ended outright if it hasn't a second later, since outside Windows a program can ignore the request.
 - **No Windows batch files.** Windows starts a `.cmd` or `.bat` file only through a shell, so `runProcess` refuses one and says to use the program's own `.exe`. npm's `claude.cmd` shim was the POC's case (L-45).

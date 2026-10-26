@@ -7,7 +7,7 @@ implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-13, ENG-16]
 tests: [../../../evals/test/cli-contract-spike.test.ts]
 tags: [code, evals, cli, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T07:07:20Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T12:51:02Z }
 ---
 
 # Purpose
@@ -17,8 +17,7 @@ Tests the riskiest assumptions about Claude Code before anything is built on the
 # Entry points
 
 - `run.ts`: the script. `PLAN` is the approved run (cap, model, effort, time limit); `runSpike` makes the planned calls and writes `report.json`; `inspectEnvelope` checks what a call shows beyond its schema (turns, attempted tools, usage); `fakeProvider` is the dry run's provider. Run it with `node evals/spikes/cli-contract/run.ts --dry-run`, or `--live --approved-cap 3` once the owner has approved the budget.
-- `claude-cli.ts`: `buildArgs` (the locked flags), `cleanEnvironment`, `toUsage`, `createClaudeCliProvider` and the result envelope it reads, `resultEnvelopeSchema`; `isSignedIn`, the free sign-in check a live run makes first. Shared by the M0 spikes: `fakeClaudeProvider` and `liveClaudeProvider` (which makes the free checks), `runModeFrom` (the `--dry-run` or `--live --approved-cap` arguments) and `runFolder`.
-- `fake-claude.ts`: a stand-in for the claude program that records the arguments, working folder and environment it was given, checks `--json-schema` as the real one does, and prints canned result envelopes from `dry-run-replies.json`.
+- `claude-cli.ts`: what the spikes need beyond the product's [Claude Code adapter](../server/providers.md), which their calls now go through (#139): `fakeClaudeProvider` (the adapter on `FAKE_CLAUDE`, the fake program in the server's tests), `liveClaudeProvider` (after the adapter's free checks), `runModeFrom` (the `--dry-run` or `--live --approved-cap` arguments) and `runFolder`. The locked flags, environment and usage reading now live in the adapter.
 - `artifact-draft.ts`: `artifactDraftSchema`, a spike-only schema shaped like a generation answer.
 - `prompts/`: the system prompt and the three planned requests (`ENG-16`).
 
@@ -53,5 +52,5 @@ Depends on the [evaluation harness](harness.md), the platform helpers' `runProce
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `artifact-draft.ts`: `artifactDraftSchema`
-- `claude-cli.ts`: `MAX_TURNS`, `ANSWER_KEY`, `wrapSchema`, `buildArgs`, `cleanEnvironment`, `resultEnvelopeSchema`, `ResultEnvelope` (type), `toUsage`, `isSignedIn`, `ClaudeCliOptions` (type), `createClaudeCliProvider`, `fakeClaudeProvider`, `liveClaudeProvider`, `runModeFrom`, `runFolder`
+- `claude-cli.ts`: `FAKE_CLAUDE`, `fakeClaudeProvider`, `liveClaudeProvider`, `runModeFrom`, `runFolder`
 - `run.ts`: `PLAN`, `plannedCalls`, `CallReport` (type), `SpikeReport` (type), `inspectEnvelope`, `runSpike`, `fakeProvider`

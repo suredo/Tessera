@@ -7,6 +7,9 @@ import type { z } from "zod";
 /** One model call: what to ask, the shape the answer must have, and how to run it. */
 export type StageSpec<T> = {
   stage: Stage;
+  /** The stage's instructions, assembled from its prompt parts (GEN-03). */
+  system: string;
+  /** The request: what the person asked, and what the stage needs to answer it. */
   prompt: string;
   /** The host checks the answer against this, whatever the provider promises. */
   schema: z.ZodType<T>;

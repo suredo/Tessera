@@ -2,6 +2,8 @@
 
 ## 2026-10-26
 
+* **Update**: The Claude Code adapter ([issue 139](https://github.com/suredo/Tessera/issues/139)): the [provider adapters](code/server/providers.md) doc describes `createClaudeProvider` and `findClaude`, with the locked flags, the clean start, plain errors read from `is_error`, bounded calls, normalized usage and the tested version as a floor; it claims `CLI-02`, `CLI-03`, `CLI-08` and `TEST-02`. The [platform](code/server/platform.md) doc says `runProcess` can be cancelled, and the [CLI contract spike](code/evals/cli-contract-spike.md) doc that the spikes call the product's adapter.
+
 * **Update**: A restore's preview names each lost value's record in plain words (`GEN-12`), found in the run before M1's sign-off: the [workspaces](code/server/workspaces.md) doc says the plan names records by their title or name, and the [web package](code/web/package.md) doc that the preview never shows a record's ID. After Codex's review of [pull request 138](https://github.com/suredo/Tessera/pull/138), the plan describes each place as steps, fields and items by name, found by ID or else by position through the one shared rule ([data shape](code/server/data-shape.md)), within the preview's size bound.
 
 * **Update**: M1 is signed off ([closing report](../evals/reports/2026-10-26-m1-report.md)); the [coverage report](code/scripts/coverage-report.md) doc says `pnpm coverage` now counts toward M2.

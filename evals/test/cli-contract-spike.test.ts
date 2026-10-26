@@ -3,18 +3,19 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { intentSchema, toJsonSchema } from "@tessera/contracts";
-import { runProcess } from "@tessera/server";
+import {
+  buildArgs,
+  cleanEnvironment,
+  createClaudeProvider,
+  runProcess,
+  toUsage,
+  wrapSchema,
+} from "@tessera/server";
 import { Ajv } from "ajv";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { readLedger } from "../src/index.ts";
-import {
-  buildArgs,
-  cleanEnvironment,
-  createClaudeCliProvider,
-  toUsage,
-  wrapSchema,
-} from "../spikes/cli-contract/claude-cli.ts";
+import { FAKE_CLAUDE } from "../spikes/cli-contract/claude-cli.ts";
 import { fakeProvider, plannedCalls, PLAN, runSpike } from "../spikes/cli-contract/run.ts";
 
 // The spike's own runs use the system's temporary folder, never a real data folder (ENG-19).
@@ -45,18 +46,16 @@ const spikeFolder = path.join(
 // These tests start real processes, which can take seconds on a busy machine (ENG-20).
 describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => {
   it("passes the locked flags of a normal stage, then the prompt", () => {
-    const args = buildArgs(
-      {
-        stage: "intent",
-        prompt: "Make me a list",
-        schema: intentSchema,
-        model: "claude-haiku-5-5",
-        effort: "low",
-        tools: "none",
-        timeLimitMs: 1000,
-      },
-      "System prompt",
-    );
+    const args = buildArgs({
+      stage: "intent",
+      system: "System prompt",
+      prompt: "Make me a list",
+      schema: intentSchema,
+      model: "claude-haiku-5-5",
+      effort: "low",
+      tools: "none",
+      timeLimitMs: 1000,
+    });
     const schemaAt = args.indexOf("--json-schema") + 1;
     // The contract's own schema, in the draft the CLI accepts, wrapped in an object for the API.
     expect(JSON.parse(args[schemaAt] ?? "")).toEqual(wrapSchema(toJsonSchema("intent")));
@@ -228,14 +227,15 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => 
     expect(readLedger(dataFolder)[0]?.outcome).toEqual({
       kind: "failed",
       error: "sign_in",
-      message: "The CLI call failed (success): Not logged in · Please run /login",
+      message:
+        "Claude Code isn't signed in. Open a terminal, run `claude auth login`, then try again. (success: Not logged in · Please run /login)",
     });
   });
 
   it("fails like the API did in the third live run for a schema that isn't an object (ENG-13)", async () => {
     const spike = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "spikes");
     const result = await runProcess(process.execPath, [
-      path.join(spike, "cli-contract", "fake-claude.ts"),
+      FAKE_CLAUDE,
       path.join(spike, "cli-contract", "dry-run-replies.json"),
       path.join(root, "replay-union-calls"),
       "--json-schema",
@@ -251,7 +251,7 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => 
     const spike = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "spikes");
     const draft2020 = JSON.stringify(z.toJSONSchema(intentSchema, { target: "draft-2020-12" }));
     const result = await runProcess(process.execPath, [
-      path.join(spike, "cli-contract", "fake-claude.ts"),
+      FAKE_CLAUDE,
       path.join(spike, "cli-contract", "dry-run-replies.json"),
       path.join(root, "replay-calls"),
       "--json-schema",
@@ -264,7 +264,7 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => 
   });
 
   it("records a CLI that prints no JSON result as a crash, with its message", async () => {
-    const provider = createClaudeCliProvider({
+    const provider = createClaudeProvider({
       executable: process.execPath,
       leadingArgs: [
         "-e",
@@ -272,10 +272,10 @@ describe("CLI contract spike (CLI-03, CLI-08, #19)", { timeout: 30_000 }, () => 
         "--",
       ],
       live: false,
-      systemPrompt: "",
     });
     const spec = {
       stage: "intent" as const,
+      system: "",
       prompt: "x",
       schema: intentSchema,
       model: PLAN.model,

@@ -31,6 +31,7 @@ const intent: Intent = {
 const value = (stage: Stage): ScriptedReply => ({ kind: "value", stage, value: intent });
 const spec = (stage: Stage, prompt = "I need a shopping list"): StageSpec<Intent> => ({
   stage,
+  system: "Read the request.",
   prompt,
   schema: intentSchema,
   model: "haiku-5.5",

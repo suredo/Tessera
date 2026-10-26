@@ -1,4 +1,4 @@
-// A stand-in for the claude program, for the spike's dry run and tests. Run as
+// A stand-in for the claude program, for the adapter's contract tests (TEST-02) and the dry runs. Run as
 // `node fake-claude.ts <replies.json> <calls folder> ...the CLI's arguments`. It writes the
 // arguments it got to the calls folder and prints the next canned result envelope, chosen by call
 // order, never by the prompt (ENG-11). It never reaches a model.
@@ -44,10 +44,17 @@ if (schemaAt > 0) {
     process.exit(1);
   }
 }
-const replies = JSON.parse(fs.readFileSync(repliesFile, "utf8")) as unknown[];
+// A reply is the result envelope to print. For tests of what can go wrong, it may also say how
+// long to take first (`_delayMs`), what to print instead (`_stdout`), and the exit code (`_exitCode`).
+type Reply = Record<string, unknown> & { _delayMs?: number; _stdout?: string; _exitCode?: number };
+const replies = JSON.parse(fs.readFileSync(repliesFile, "utf8")) as Reply[];
 const reply = replies[callIndex];
 if (reply === undefined) {
   process.stderr.write(`fake-claude: no reply for call ${callIndex}\n`);
   process.exit(1);
 }
-process.stdout.write(JSON.stringify(reply));
+const { _delayMs = 0, _stdout, _exitCode = 0, ...envelope } = reply;
+setTimeout(() => {
+  process.stdout.write(_stdout ?? JSON.stringify(envelope));
+  process.exitCode = _exitCode;
+}, _delayMs);
