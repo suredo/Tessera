@@ -304,3 +304,27 @@ button.primary {
   padding: var(--ui-space-1);
   box-sizing: border-box;
 }
+
+/* The setup check's notice, the whole width under the sections (PLAT-03). */
+.setup-notice {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-2) var(--ui-space-3);
+  border: 1px solid var(--ui-accent);
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-accent-soft);
+}
+.setup-notice p {
+  margin: 0;
+}
+/* The status screen (APP-07): long paths wrap instead of scrolling sideways at 320 px. */
+.status {
+  max-width: 48rem;
+  overflow-wrap: anywhere;
+}
+.status h3 {
+  margin: var(--ui-space-4) 0 var(--ui-space-2);
+}

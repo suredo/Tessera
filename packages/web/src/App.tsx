@@ -1,4 +1,4 @@
-import type { SavedTool, Trash as TrashList, Workspace } from "@tessera/contracts";
+import type { SavedTool, SetupReport, Trash as TrashList, Workspace } from "@tessera/contracts";
 import { useEffect, useState } from "react";
 import { exportArchive, importArchive, saveFile } from "./archives.ts";
 import { ask, HostError } from "./host-api.ts";
@@ -6,6 +6,8 @@ import { t } from "./i18n/translate.ts";
 import { History } from "./History.tsx";
 import { ImportFile } from "./ImportFile.tsx";
 import { Library } from "./Library.tsx";
+import { checkSetup, runProbe } from "./setup.ts";
+import { SetupNotice, Status } from "./Status.tsx";
 import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
 import { Workspaces } from "./Workspaces.tsx";
@@ -20,9 +22,12 @@ type EmptyProps = {
   onTrash?: () => void;
   /** Imports a file, such as work brought from another computer (APP-06). */
   onImport?: (file: File) => Promise<void>;
+  /** The setup check, and opening the status screen (PLAT-03, APP-07). */
+  setup?: SetupReport | null;
+  onStatus?: () => void;
 };
 
-export function EmptyState({ notice = "", onTrash, onImport }: EmptyProps) {
+export function EmptyState({ notice = "", onTrash, onImport, setup = null, onStatus }: EmptyProps) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
@@ -37,6 +42,14 @@ export function EmptyState({ notice = "", onTrash, onImport }: EmptyProps) {
         </button>
       )}
       {onImport && <ImportFile onImport={onImport} />}
+      {onStatus &&
+        (setup && !setup.ready ? (
+          <SetupNotice report={setup} onOpen={onStatus} />
+        ) : (
+          <button type="button" onClick={onStatus}>
+            {t("setup.openStatus")}
+          </button>
+        ))}
     </main>
   );
 }
@@ -76,7 +89,9 @@ export function App() {
   const [lastUsed, setLastUsed] = useState<Record<string, string>>({});
   const [openId, setOpenId] = useState<string | null>(remembered);
   const [notice, setNotice] = useState("");
-  const [view, setView] = useState<"workspaces" | "library" | "trash">("workspaces");
+  const [view, setView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
+  // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
+  const [setup, setSetup] = useState<SetupReport | null>(null);
   const [trash, setTrash] = useState<TrashList | null>(null);
   // Moved on after a restore or an undo, so the tool starts again with the changed data.
   const [reloads, setReloads] = useState(0);
@@ -100,6 +115,18 @@ export function App() {
     setNotice(
       t("app.problem", { message: error instanceof Error ? error.message : String(error) }),
     );
+
+  // The setup check on start (PLAT-03); the status screen runs it again on request.
+  useEffect(() => {
+    let current = true;
+    checkSetup().then(
+      (report) => current && setSetup(report),
+      (error: unknown) => current && setNotice(error instanceof Error ? error.message : ""),
+    );
+    return () => {
+      current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let current = true;
@@ -193,13 +220,15 @@ export function App() {
       </main>
     );
   }
-  if (workspaces.length === 0 && view !== "trash") {
+  if (workspaces.length === 0 && view !== "trash" && view !== "status") {
     const inTrash = (trash?.entries.length ?? 0) > 0;
     return (
       <EmptyState
         notice={notice}
         onTrash={inTrash ? () => setView("trash") : undefined}
         onImport={importFile}
+        setup={setup}
+        onStatus={() => setView("status")}
       />
     );
   }
@@ -246,7 +275,15 @@ export function App() {
           >
             {t("nav.trash")}
           </button>
+          <button
+            type="button"
+            aria-current={view === "status" ? "page" : undefined}
+            onClick={() => setView("status")}
+          >
+            {t("nav.status")}
+          </button>
         </nav>
+        {view !== "status" && <SetupNotice report={setup} onOpen={() => setView("status")} />}
       </header>
       {view === "workspaces" ? (
         <>
@@ -306,6 +343,20 @@ export function App() {
             )}
           </main>
         </>
+      ) : view === "status" ? (
+        <main>
+          <Status
+            report={setup}
+            onRecheck={async () => {
+              try {
+                setSetup(await checkSetup());
+              } catch (error) {
+                say(error);
+              }
+            }}
+            onProbe={() => runProbe()}
+          />
+        </main>
       ) : view === "trash" ? (
         <main>
           {trash && (
