@@ -1,5 +1,11 @@
 # Documentation log
 
+## 2026-10-26
+
+* **Update**: M1 is signed off ([closing report](../evals/reports/2026-10-26-m1-report.md)); the [coverage report](code/scripts/coverage-report.md) doc says `pnpm coverage` now counts toward M2.
+
+* **Update**: At M1's close, the [M1](roadmap/m1-runtime-and-data.md) and [M2](roadmap/m2-generation-pipeline.md) roadmaps move the host shell's three parts that need generation to M2: the chat beside the tool with a divider and an expanded mode (#132), a saved tool's description (#119), and a version's change summary and check results (#121) (`ENG-30`).
+
 ## 2026-10-25
 
 * **Update**: The [web package](code/web/package.md) doc claims `UX-07`, which its browser tests check, and says the open workspace and how its tool was left are kept per tab, while the data is always saved. `APP-01`'s remaining parts, the chat beside the tool, a resizable divider and an expanded mode, went to [issue 132](https://github.com/suredo/Tessera/issues/132).

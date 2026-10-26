@@ -12,7 +12,7 @@
     "contracts:schemas": "node packages/contracts/scripts/generate-schemas.ts",
     "build": "vite build packages/web",
     "typecheck": "tsc -p packages/contracts && tsc -p packages/server && tsc -p packages/web && tsc -p packages/runtime && tsc -p packages/runtime/test && tsc -p evals && tsc -p scripts",
-    "coverage": "node scripts/coverage-report.ts --milestone M1",
+    "coverage": "node scripts/coverage-report.ts --milestone M2",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

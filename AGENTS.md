@@ -6,7 +6,7 @@ Codex loads this file automatically, and Claude Code loads it through `CLAUDE.md
 
 Tessera is a local-first web app where people get the interface they need by describing it: an AI writes a small tool that runs in a sandbox, and the host owns its data, versions and lifecycle. It is a fresh build that uses the Harness POC as reference.
 
-Current state: M0, foundations, is done and signed off (`evals/reports/2026-10-17-m0-report.md`). Current milestone: M1, runtime and data core (`docs/roadmap/m1-runtime-and-data.md`). The repository belongs to the personal GitHub account `suredo` (public since 2026-10-21, ADR 0005; GitHub Free), so nothing secret or personal goes into code, docs, issues or pull requests.
+Current state: M1, runtime and data core, is done and signed off (`evals/reports/2026-10-26-m1-report.md`), after M0 (`evals/reports/2026-10-17-m0-report.md`). Current milestone: M2, the generation pipeline (`docs/roadmap/m2-generation-pipeline.md`). The repository belongs to the personal GitHub account `suredo` (public since 2026-10-21, ADR 0005; GitHub Free), so nothing secret or personal goes into code, docs, issues or pull requests.
 
 ## Using the docs
 

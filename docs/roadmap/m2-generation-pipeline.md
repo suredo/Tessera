@@ -4,7 +4,7 @@ title: "M2: Generation pipeline"
 description: "The Claude Code adapter and generation pipeline, ending in the internal alpha."
 tags: [roadmap, generation-pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T00:46:30Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T10:34:33Z }
 ---
 # M2: Generation pipeline (size L, live budget about 35 calls) → internal alpha
 
@@ -14,6 +14,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-22T00:46:30Z }
 | --- | --- |
 | Claude Code adapter: executable resolution, probe, locked flags, clean environment, usage normalization, error mapping, version gate; full contract tests | CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, TEST-02 |
 | Job control: queue, cancel before start, supersede | CLI-06 |
+| The host shell's parts that need generation, moved from M1: the chat beside the tool with a resizable divider and an expanded mode ([#132](https://github.com/suredo/Tessera/issues/132)); a saved tool's short description ([#119](https://github.com/suredo/Tessera/issues/119)); each version's change summary and check results ([#121](https://github.com/suredo/Tessera/issues/121)) | APP-01, APP-04, APP-05 |
 | Setup check and status screen (Claude Code installed, version, signed in; probe) | PLAT-03, APP-07 |
 | Structured intent stage with the POC failure cases as fixtures (style, behavior statements, unrelated, mixed, non-English) | GEN-01, GEN-02, GEN-15 |
 | Finding saved tools by asking: saved-tools catalogue in the intent stage, Continue or Use again offered | GEN-18 |
