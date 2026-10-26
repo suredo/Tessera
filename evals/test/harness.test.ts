@@ -1,8 +1,14 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { intentSchema, type Intent, type ScriptedReply, type Stage } from "@tessera/contracts";
-import { createScriptedProvider, type Provider, type StageSpec } from "@tessera/server";
+import {
+  DEFAULT_ROUTES,
+  intentSchema,
+  type Intent,
+  type ScriptedReply,
+  type Stage,
+} from "@tessera/contracts";
+import { createScriptedProvider, runStage, type Provider, type StageSpec } from "@tessera/server";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   HarnessError,
@@ -159,6 +165,27 @@ describe("evaluation harness (OBS-02, ENG-07)", () => {
     ]);
     // A crash's cost is unknown: counted, never added as 0 (CLI-04).
     expect(harness.finish()).toMatchObject({ callCount: 4, failedCount: 3, unknownUsageCount: 1 });
+  });
+
+  it("CLI-09: records the route each stage ran on, as the routing table gave it", async () => {
+    const { harness } = dryRun([value("intent"), value("create")]);
+    const routes = {
+      ...DEFAULT_ROUTES,
+      create: { model: "claude-opus-5-5", effort: "high" },
+    } as const;
+    for (const stage of ["intent", "create"] as const) {
+      await runStage(harness.provider, routes, {
+        stage,
+        system: "Read the request.",
+        prompt: "I need a shopping list",
+        schema: intentSchema,
+        timeLimitMs: 10_000,
+      });
+    }
+    expect(readLedger(harness.dataFolder).map((e) => [e.stage, e.model, e.effort])).toEqual([
+      ["intent", "claude-haiku-5-5", "low"],
+      ["create", "claude-opus-5-5", "high"],
+    ]);
   });
 
   it("refuses a run whose provider, cap or data folder is wrong, before any call", () => {

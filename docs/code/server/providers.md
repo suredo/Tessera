@@ -3,11 +3,11 @@ type: Code Module
 title: "Provider adapters"
 description: "The one interface every model connection implements: the Claude Code adapter, with locked flags, a clean environment, normalized usage and plain errors, and the scripted provider that answers from a script chosen by test configuration."
 resource: ../../../packages/server/src/providers/
-implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, TEST-02, ENG-11, OBS-02]
-tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
+implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, CLI-09, TEST-02, ENG-11, OBS-02]
+tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/routing.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
 tags: [code, server, providers]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:10:10Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:59:30Z }
 ---
 # Purpose
 
@@ -21,6 +21,7 @@ Puts every model connection behind one interface (`CLI-01`): a stage's system pr
   - `buildArgs` gives the locked flags (`CLI-03`), `MAX_TURNS` the CLI's turn limit, `SYSTEM_PROMPT_FILE` the system prompt's file in the call's folder, and `wrapSchema` wraps a contract's JSON Schema as `{ answer: … }` (`ANSWER_KEY`). `removeFolder` removes a call's folder.
   - `cleanEnvironment` is the allowlisted environment (`CLI-08`); `resultEnvelopeSchema` reads the CLI's result (`ResultEnvelope`); `toUsage` normalizes usage (`CLI-04`).
   - `failureKind` reads which failure a result is, and `FAILURE_MESSAGES` is what the person reads for each (`CLI-05`); `versionOf` and `atLeast` read and compare versions.
+- `src/providers/routing.ts`: model routing (`CLI-09`). `runStage` runs a stage once on its route, from a `StageCall` without a model. `loadRoutes` reads the optional `ROUTES_FILE` (`routes.json`) over the defaults, giving `Routes`, and `RoutesError` is a file it can't use. The defaults and their contract are in `packages/contracts/src/routes.ts`.
 - `src/providers/scripted.ts`: `createScriptedProvider` answers from a script; `loadScript` reads one from a JSON fixture file; `ScriptError` means the script doesn't fit the calls made.
 - The shapes that cross the boundary (stages, efforts, error kinds, usage and the script itself) are in `packages/contracts/src/provider.ts`.
 - `test/support/fake-claude.ts`: a stand-in for the claude program. It records the arguments, working folder and environment it got, checks `--json-schema` as the real one does, and prints canned result envelopes by call order; it can also wait, print raw text or exit with an error, for the contract tests (`TEST-02`). The M0 spikes' dry runs use it too.
@@ -40,6 +41,10 @@ Puts every model connection behind one interface (`CLI-01`): a stage's system pr
 - **Older than tested is refused; newer is used and recorded.** ADR 0002 tested the flags on 2.1.296. A newer CLI is accepted, its version is recorded with each run, and the probe, a tiny real call, checks the flags still work on it.
 - **The request text never chooses a scripted reply** (`ENG-11`). A script is chosen by test configuration: the script given to the provider, or the fixture file it is loaded from. The provider never reads the prompt. (In the POC a test marker containing "engine" changed what the product did, L-09.) The fake claude program answers by call order for the same reason.
 - **Scripted replies come in order, and each names its stage.** A call for another stage than the next reply's, or past the end of the script, is a `ScriptError`, so a pipeline that calls stages in an unexpected order fails its test instead of getting the wrong answer.
+- **Each stage runs on the cheapest model that fits its task** (`CLI-09`, A18, confirmed by the owner on 2026-10-26). The routing table is the one definition of each stage's model and effort: Haiku 5.5 low for intent, data actions and acceptance; Sonnet 5.5 medium for creation, repairs and research; Sonnet 5.5 low for edits. The evaluation reviewer, which A18 doesn't name, starts on Sonnet 5.5 medium. Opus is used only when a routes file names it.
+- **A routes file replaces only the stages it names**, and one Tessera can't use (unreadable, or an unknown step, model or effort, or a step missing one) is refused with a plain sentence that names the step and the allowed choices (`GEN-12`), never quietly replaced by some other route. The contract's own check still runs last.
+- **No automatic escalation.** `runStage` makes one call on the stage's route; a failure goes back to the caller, to report or repair on the same route. A test proves a failed call is never retried on another model.
+- **The route is in the ledger.** Each call's model and effort are recorded as used (`OBS-01`); the evaluation harness's ledger has them now, and the product's ledger (#151) will.
 - **`live` says whether a call can cost something.** Only the adapter on the real claude program is live, which is how the evaluation harness tells a dry run from a live one.
 
 # Depends on / used by
@@ -58,6 +63,7 @@ Depends on `@tessera/contracts`, zod, and the [platform](platform.md) helpers `r
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `claude.ts`: `TESTED_CLI_VERSION`, `MAX_TURNS`, `ANSWER_KEY`, `wrapSchema`, `SYSTEM_PROMPT_FILE`, `buildArgs`, `cleanEnvironment`, `resultEnvelopeSchema`, `ResultEnvelope` (type), `toUsage`, `FAILURE_MESSAGES`, `failureKind`, `removeFolder`, `ClaudeOptions` (type), `createClaudeProvider`, `versionOf`, `atLeast`, `ClaudeStatus` (type), `findClaude`
-- `index.ts`: `ProviderError`, `UNKNOWN_USAGE`, `Provider` (type), `StageResult` (type), `StageSpec` (type), `createScriptedProvider`, `loadScript`, `ScriptError`, `ScriptedProvider` (type), `ANSWER_KEY`, `atLeast`, `buildArgs`, `cleanEnvironment`, `createClaudeProvider`, `FAILURE_MESSAGES`, `failureKind`, `findClaude`, `MAX_TURNS`, `resultEnvelopeSchema`, `TESTED_CLI_VERSION`, `toUsage`, `versionOf`, `wrapSchema`, `ClaudeOptions` (type), `ClaudeStatus` (type), `ResultEnvelope` (type)
+- `index.ts`: `ProviderError`, `UNKNOWN_USAGE`, `Provider` (type), `StageResult` (type), `StageSpec` (type), `createScriptedProvider`, `loadScript`, `ScriptError`, `ScriptedProvider` (type), `ANSWER_KEY`, `atLeast`, `buildArgs`, `cleanEnvironment`, `createClaudeProvider`, `FAILURE_MESSAGES`, `failureKind`, `findClaude`, `MAX_TURNS`, `resultEnvelopeSchema`, `TESTED_CLI_VERSION`, `toUsage`, `versionOf`, `wrapSchema`, `ClaudeOptions` (type), `ClaudeStatus` (type), `ResultEnvelope` (type), `loadRoutes`, `ROUTES_FILE`, `RoutesError`, `runStage`, `Routes` (type), `StageCall` (type)
 - `provider.ts`: `StageSpec` (type), `StageResult` (type), `Provider` (type), `UNKNOWN_USAGE`, `ProviderError`
+- `routing.ts`: `Routes` (type), `ROUTES_FILE`, `RoutesError`, `loadRoutes`, `StageCall` (type), `runStage`
 - `scripted.ts`: `ScriptError`, `ScriptedProvider` (type), `createScriptedProvider`, `loadScript`

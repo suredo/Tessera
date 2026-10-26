@@ -32,3 +32,11 @@ export {
   type ClaudeStatus,
   type ResultEnvelope,
 } from "./claude.ts";
+export {
+  loadRoutes,
+  ROUTES_FILE,
+  RoutesError,
+  runStage,
+  type Routes,
+  type StageCall,
+} from "./routing.ts";

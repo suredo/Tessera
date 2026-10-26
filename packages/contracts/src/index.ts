@@ -156,6 +156,17 @@ export {
   type Usage,
 } from "./provider.ts";
 export {
+  DEFAULT_ROUTES,
+  MODELS,
+  modelSchema,
+  routeOverridesSchema,
+  routeSchema,
+  withOverrides,
+  type Model,
+  type Route,
+  type RouteOverrides,
+} from "./routes.ts";
+export {
   numericFieldsWithoutUnit,
   UNIT_SUFFIXES,
   UNITLESS_NAMES,
