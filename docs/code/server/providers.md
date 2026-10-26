@@ -7,7 +7,7 @@ implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, CLI-09, TEST-02, EN
 tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/routing.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
 tags: [code, server, providers]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:43:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:59:30Z }
 ---
 # Purpose
 
@@ -42,7 +42,7 @@ Puts every model connection behind one interface (`CLI-01`): a stage's system pr
 - **The request text never chooses a scripted reply** (`ENG-11`). A script is chosen by test configuration: the script given to the provider, or the fixture file it is loaded from. The provider never reads the prompt. (In the POC a test marker containing "engine" changed what the product did, L-09.) The fake claude program answers by call order for the same reason.
 - **Scripted replies come in order, and each names its stage.** A call for another stage than the next reply's, or past the end of the script, is a `ScriptError`, so a pipeline that calls stages in an unexpected order fails its test instead of getting the wrong answer.
 - **Each stage runs on the cheapest model that fits its task** (`CLI-09`, A18, confirmed by the owner on 2026-10-26). The routing table is the one definition of each stage's model and effort: Haiku 5.5 low for intent, data actions and acceptance; Sonnet 5.5 medium for creation, repairs and research; Sonnet 5.5 low for edits. The evaluation reviewer, which A18 doesn't name, starts on Sonnet 5.5 medium. Opus is used only when a routes file names it.
-- **A routes file replaces only the stages it names**, and one Tessera can't use (not JSON, or an unknown stage, model or effort) is refused in plain words, never quietly replaced by some other route.
+- **A routes file replaces only the stages it names**, and one Tessera can't use (unreadable, or an unknown step, model or effort, or a step missing one) is refused with a plain sentence that names the step and the allowed choices (`GEN-12`), never quietly replaced by some other route. The contract's own check still runs last.
 - **No automatic escalation.** `runStage` makes one call on the stage's route; a failure goes back to the caller, to report or repair on the same route. A test proves a failed call is never retried on another model.
 - **The route is in the ledger.** Each call's model and effort are recorded as used (`OBS-01`); the evaluation harness's ledger has them now, and the product's ledger (#151) will.
 - **`live` says whether a call can cost something.** Only the adapter on the real claude program is live, which is how the evaluation harness tells a dry run from a live one.

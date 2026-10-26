@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import {
   DEFAULT_ROUTES,
+  EFFORTS,
+  MODELS,
   routeOverridesSchema,
+  STAGES,
   withOverrides,
   type Route,
   type Stage,
@@ -24,10 +27,42 @@ export class RoutesError extends Error {
   override name = "RoutesError";
 }
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+const list = (items: readonly string[]) =>
+  items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} or ${items.at(-1)}`;
+
+/**
+ * What is wrong with a routes file's content, in plain words (GEN-12), or undefined if nothing
+ * is: which step is affected, and what it may say instead.
+ */
+function problemWith(content: unknown): string | undefined {
+  if (!isObject(content)) return "it should list steps, each with a model and an effort";
+  for (const [stage, route] of Object.entries(content)) {
+    if (!(STAGES as readonly string[]).includes(stage)) {
+      return `it names a step Tessera doesn't have, "${stage}"; the steps are ${list(STAGES)}`;
+    }
+    if (!isObject(route) || !("model" in route) || !("effort" in route)) {
+      return `the ${stage} step needs both a model and an effort`;
+    }
+    const extra = Object.keys(route).filter((key) => key !== "model" && key !== "effort");
+    if (extra.length > 0) {
+      return `the ${stage} step has "${extra[0]}", but a step has only a model and an effort`;
+    }
+    if (!(MODELS as readonly unknown[]).includes(route["model"])) {
+      return `the ${stage} step names a model Tessera doesn't know, "${String(route["model"])}"; the models are ${list(MODELS)}`;
+    }
+    if (!(EFFORTS as readonly unknown[]).includes(route["effort"])) {
+      return `the ${stage} step's effort should be ${list(EFFORTS)}, not "${String(route["effort"])}"`;
+    }
+  }
+  return undefined;
+}
+
 /**
  * The routes in use: the defaults, with the stages `file` names replaced. A missing file means the
- * defaults. A file that isn't valid, or names an unknown stage, model or effort, is refused with
- * a plain message, so a mistake there never silently falls back to some other route.
+ * defaults. A file Tessera can't use is refused with a plain message that says what to change, so
+ * a mistake there never silently falls back to some other route.
  */
 export function loadRoutes(file: string): Routes {
   let text: string;
@@ -37,19 +72,21 @@ export function loadRoutes(file: string): Routes {
     if ((error as { code?: string }).code === "ENOENT") return DEFAULT_ROUTES;
     throw error;
   }
-  let json: unknown;
+  const refuse = (why: string) =>
+    new RoutesError(
+      `Tessera can't use the model settings in ${file}: ${why}. Correct it, or delete the file to use the standard settings.`,
+    );
+  let content: unknown;
   try {
-    json = JSON.parse(text);
+    content = JSON.parse(text);
   } catch {
-    throw new RoutesError(`The routes file ${file} isn't valid JSON, so Tessera can't use it.`);
+    throw refuse("its text isn't written in the settings format");
   }
-  const parsed = routeOverridesSchema.safeParse(json);
-  if (!parsed.success) {
-    const problem = parsed.error.issues
-      .map((issue) => `${issue.path.join(".") || "the file"}: ${issue.message}`)
-      .join("; ");
-    throw new RoutesError(`The routes file ${file} has something Tessera can't use (${problem}).`);
-  }
+  const problem = problemWith(content);
+  if (problem !== undefined) throw refuse(problem);
+  // The contract has the last word; the checks above only put its refusals into plain words.
+  const parsed = routeOverridesSchema.safeParse(content);
+  if (!parsed.success) throw refuse("one of its steps isn't written as a model and an effort");
   return withOverrides(parsed.data);
 }
 

@@ -84,19 +84,49 @@ describe("the routing table (CLI-09)", () => {
     );
   });
 
-  it("CLI-09: refuses, in plain words, a routes file it can't use, never falling back quietly", () => {
-    const cases = [
-      "not json",
-      JSON.stringify({ create: { model: "gpt-5", effort: "low" } }),
-      JSON.stringify({ create: { model: "claude-sonnet-5-5", effort: "extreme" } }),
-      JSON.stringify({ painting: { model: "claude-sonnet-5-5", effort: "low" } }),
-      JSON.stringify({ create: { model: "claude-sonnet-5-5" } }),
+  it("CLI-09, GEN-12: refuses a routes file it can't use, saying in plain words what to change", () => {
+    const tail = ". Correct it, or delete the file to use the standard settings.";
+    const cases: [string, string][] = [
+      ["not json", "its text isn't written in the settings format"],
+      ["[]", "it should list steps, each with a model and an effort"],
+      [
+        JSON.stringify({ painting: { model: "claude-sonnet-5-5", effort: "low" } }),
+        'it names a step Tessera doesn\'t have, "painting"; the steps are intent, create, edit, repair, data, research, review or acceptance',
+      ],
+      [
+        JSON.stringify({ create: { model: "claude-sonnet-5-5" } }),
+        "the create step needs both a model and an effort",
+      ],
+      [
+        JSON.stringify({ create: { model: "claude-sonnet-5-5", effort: "low", temperature: 1 } }),
+        'the create step has "temperature", but a step has only a model and an effort',
+      ],
+      [
+        JSON.stringify({ create: { model: "gpt-5", effort: "low" } }),
+        'the create step names a model Tessera doesn\'t know, "gpt-5"; the models are claude-haiku-5-5, claude-sonnet-5-5 or claude-opus-5-5',
+      ],
+      [
+        JSON.stringify({ create: { model: "claude-sonnet-5-5", effort: "extreme" } }),
+        'the create step\'s effort should be low, medium or high, not "extreme"',
+      ],
     ];
-    for (const content of cases) {
+    for (const [content, why] of cases) {
       const file = routesFile(content);
-      expect(() => loadRoutes(file)).toThrow(RoutesError);
-      expect(() => loadRoutes(file)).toThrow(
-        /^The routes file .+ (isn't valid JSON|has something Tessera can't use)/,
+      const error = (() => {
+        try {
+          loadRoutes(file);
+        } catch (caught) {
+          return caught;
+        }
+        return undefined;
+      })();
+      expect(error).toBeInstanceOf(RoutesError);
+      expect((error as Error).message).toBe(
+        `Tessera can't use the model settings in ${file}: ${why}${tail}`,
+      );
+      // Plain words (GEN-12): none of the internal terms a person shouldn't meet.
+      expect((error as Error).message.replace(file, "")).not.toMatch(
+        /json|schema|invalid|expected|option|enum/i,
       );
     }
   });
