@@ -480,3 +480,18 @@ describe("restoring a tool version (DATA-10)", () => {
     folder.close();
   });
 });
+
+describe("GEN-12: a restore's losses name their records as the person knows them", () => {
+  it("GEN-12: names each lost value's record by its title, and the confirmation still holds", async () => {
+    const { folder, id, hashes } = await onVersion2();
+    const plan = planRestore(folder, id, hashes.v1);
+    if (!plan.ok || plan.keepsData) throw new Error("expected a lossy plan");
+    expect(plan.losses).toEqual([
+      { path: ["tasks", "t-1", "done"], value: false, record: "Buy milk" },
+      { path: ["tasks", "t-1", "note"], value: "oat", record: "Buy milk" },
+    ]);
+    // The name is for the person: the plan's own confirmation still runs exactly this restore.
+    expect(restoreVersion(folder, id, hashes.v1, 3, plan.confirmation)).toMatchObject({ ok: true });
+    folder.close();
+  });
+});

@@ -35,8 +35,14 @@ type Props = {
 };
 
 /** A lost value as the person reads it: where it was, and what it held. */
-const lossText = (loss: Loss) =>
-  t("history.loss", { where: loss.path.join(" › "), value: JSON.stringify(loss.value) });
+const lossText = (loss: Loss) => {
+  const [collection = "", , ...fields] = loss.path;
+  const field = fields.join(" › ");
+  const value = JSON.stringify(loss.value);
+  // A record by its name, never its ID (GEN-12).
+  if (loss.record !== undefined) return t("history.loss", { record: loss.record, field, value });
+  return t("history.lossUnnamed", { collection, field, value });
+};
 
 export function History({ workspace, changes, onChanged }: Props) {
   const id = workspace.id;

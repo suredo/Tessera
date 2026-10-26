@@ -43,6 +43,10 @@ export type RestoreRefusal = (typeof RESTORE_REFUSALS)[number];
 export const lossSchema = z.strictObject({
   path: z.array(z.string()).describe("Collection, record ID (or position) and field."),
   value: jsonValueSchema,
+  record: z
+    .string()
+    .optional()
+    .describe("The record as the person knows it, by its title or name, when it has one (GEN-12)."),
 });
 export type Loss = z.infer<typeof lossSchema>;
 

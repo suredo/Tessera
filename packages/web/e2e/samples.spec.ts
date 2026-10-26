@@ -43,7 +43,7 @@ test("ENG-19, APP-05, DATA-04: the sample shopping list saves what the person ad
   await page.getByRole("button", { name: "Restore version 1" }).click();
   const confirm = page.getByRole("group", { name: "Restore version 1?" });
   await expect(confirm).toContainText(en["history.losesData"]);
-  await expect(confirm.getByRole("listitem").filter({ hasText: "done: true" })).toHaveCount(2);
+  await expect(confirm.getByRole("listitem").filter({ hasText: "done was true" })).toHaveCount(2);
   await confirm.getByRole("button", { name: en["history.cancel"] }).click();
 });
 

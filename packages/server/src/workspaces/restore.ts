@@ -124,9 +124,31 @@ export function planRestore(store: Store, id: string, hash: string): RestorePlan
   return {
     ok: true,
     keepsData: false,
-    losses: planned.losses,
+    // Named for the person after the confirmation is made, so it confirms exactly the losses.
+    losses: planned.losses.map((loss) => withRecord(loss, workspace.data)),
     confirmation: confirmationOf(hash, workspace.dataRevision, planned.losses),
   };
+}
+
+/** The fields a record is known by, in order: the first that holds text names it (GEN-12). */
+const NAME_FIELDS = ["title", "name", "label", "text"];
+
+/** A loss with its record's name, from the data before the restore, when the record has one. */
+function withRecord(loss: Loss, data: Workspace["data"]): Loss {
+  const [collection, key] = loss.path;
+  const records = collection === undefined ? undefined : data?.[collection];
+  if (!Array.isArray(records) || key === undefined) return loss;
+  const record = records.find(
+    (item, position) =>
+      typeof item === "object" &&
+      item !== null &&
+      !Array.isArray(item) &&
+      ((item as Record<string, unknown>)["id"] === key || String(position) === key),
+  ) as Record<string, unknown> | undefined;
+  const name = NAME_FIELDS.map((field) => record?.[field]).find(
+    (value): value is string => typeof value === "string" && value.trim() !== "",
+  );
+  return name === undefined ? loss : { ...loss, record: name };
 }
 
 // Inside the caller's transaction: keeps the workspace's whole current unit, its tool version and

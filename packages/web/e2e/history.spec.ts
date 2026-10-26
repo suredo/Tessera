@@ -140,8 +140,8 @@ test("APP-05, DATA-10: a restore that loses data names each value, and its copy 
   await history(page).getByRole("button", { name: "Restore version 1" }).click();
   const confirm = page.getByRole("group", { name: "Restore version 1?" });
   await expect(confirm.getByRole("listitem")).toHaveText([
-    "tasks › t-1 › done: false",
-    'tasks › t-1 › note: "oat"',
+    "Buy milk: done was false",
+    'Buy milk: note was "oat"',
   ]);
   await confirm.getByRole("button", { name: en["history.confirmLoss"] }).click();
   // The notice comes with the tool's restart: only then are the frames read, never the old ones
