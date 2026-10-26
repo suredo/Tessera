@@ -7,7 +7,7 @@ implements: [ENG-17, ENG-24, ENG-28, SEC-05]
 tests: [../../../scripts/test/coverage-report.test.ts]
 tags: [code, scripts, coverage]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T21:48:30Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T11:19:05Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Shows, for every requirement in the spec and the practices and every lesson, whe
 # Entry points
 
 - `scripts/coverage-report.ts`: `collect` reads a repository into `Coverage` (each `Requirement` and `Lesson`, and the unknown IDs); `render` writes it as Markdown; `testTitles` reads the test names a file declares. `MILESTONES` lists M0 to M6.
-- The `pnpm coverage` command in `package.json` sets the current milestone (`--milestone M1` since M0's sign-off on 2026-10-17). Change it when the owner signs off a milestone.
+- The `pnpm coverage` command in `package.json` sets the current milestone (`--milestone M2` since M1's sign-off on 2026-10-26). Change it when the owner signs off a milestone.
 
 # Invariants
 
