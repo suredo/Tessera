@@ -404,7 +404,10 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
         timedOut: false,
         cancelled: false,
       });
-  /** A PATH folder holding an empty `claude` program file, as the platform names it. */
+  /**
+   * A PATH folder holding an empty `claude` program file. Its extension is spelled as PATHEXT
+   * spells it: Windows ignores the case, but these tests also run on Linux, which doesn't.
+   */
   const pathWith = (file: string) => {
     const dir = tempDir();
     fs.writeFileSync(path.join(dir, file), "");
@@ -425,7 +428,7 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
       ok: false,
       problem: "missing",
     });
-    expect(await findClaude(pathWith("claude.cmd"), "win32")).toMatchObject({
+    expect(await findClaude(pathWith("claude.CMD"), "win32")).toMatchObject({
       ok: false,
       problem: "batch-file",
       message: expect.stringContaining("claude.exe") as unknown,
