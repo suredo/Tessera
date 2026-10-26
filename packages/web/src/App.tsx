@@ -24,10 +24,19 @@ type EmptyProps = {
   onImport?: (file: File) => Promise<void>;
   /** The setup check, and opening the status screen (PLAT-03, APP-07). */
   setup?: SetupReport | null;
+  /** Why the check couldn't be made, or "". */
+  setupProblem?: string;
   onStatus?: () => void;
 };
 
-export function EmptyState({ notice = "", onTrash, onImport, setup = null, onStatus }: EmptyProps) {
+export function EmptyState({
+  notice = "",
+  onTrash,
+  onImport,
+  setup = null,
+  setupProblem = "",
+  onStatus,
+}: EmptyProps) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
@@ -43,8 +52,8 @@ export function EmptyState({ notice = "", onTrash, onImport, setup = null, onSta
       )}
       {onImport && <ImportFile onImport={onImport} />}
       {onStatus &&
-        (setup && !setup.ready ? (
-          <SetupNotice report={setup} onOpen={onStatus} />
+        ((setup && !setup.ready) || (!setup && setupProblem) ? (
+          <SetupNotice report={setup} problem={setupProblem} onOpen={onStatus} />
         ) : (
           <button type="button" onClick={onStatus}>
             {t("setup.openStatus")}
@@ -92,6 +101,9 @@ export function App() {
   const [view, setView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
   // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
   const [setup, setSetup] = useState<SetupReport | null>(null);
+  // Why the last check couldn't be made, such as the server not answering; "" when it was.
+  const [setupProblem, setSetupProblem] = useState("");
+  const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
   const [trash, setTrash] = useState<TrashList | null>(null);
   // Moved on after a restore or an undo, so the tool starts again with the changed data.
   const [reloads, setReloads] = useState(0);
@@ -121,7 +133,7 @@ export function App() {
     let current = true;
     checkSetup().then(
       (report) => current && setSetup(report),
-      (error: unknown) => current && setNotice(error instanceof Error ? error.message : ""),
+      (error: unknown) => current && setSetupProblem(message(error)),
     );
     return () => {
       current = false;
@@ -228,6 +240,7 @@ export function App() {
         onTrash={inTrash ? () => setView("trash") : undefined}
         onImport={importFile}
         setup={setup}
+        setupProblem={setupProblem}
         onStatus={() => setView("status")}
       />
     );
@@ -283,7 +296,9 @@ export function App() {
             {t("nav.status")}
           </button>
         </nav>
-        {view !== "status" && <SetupNotice report={setup} onOpen={() => setView("status")} />}
+        {view !== "status" && (
+          <SetupNotice report={setup} problem={setupProblem} onOpen={() => setView("status")} />
+        )}
       </header>
       {view === "workspaces" ? (
         <>
@@ -347,11 +362,13 @@ export function App() {
         <main>
           <Status
             report={setup}
+            problem={setupProblem}
             onRecheck={async () => {
               try {
                 setSetup(await checkSetup());
+                setSetupProblem("");
               } catch (error) {
-                say(error);
+                setSetupProblem(message(error));
               }
             }}
             onProbe={() => runProbe()}

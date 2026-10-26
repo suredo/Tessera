@@ -230,3 +230,26 @@ test("PLAT-03: a Node.js older than Tessera needs is explained with its fix", as
     await old.close();
   }
 });
+
+test("PLAT-03: a check that couldn't be made says so, never looks endless, and can be tried again", async ({
+  page,
+}) => {
+  state = "ready";
+  let failures = 1;
+  await page.route("**/api/setup", (route) =>
+    failures-- > 0 ? route.fulfill({ status: 500, body: "" }) : route.continue(),
+  );
+  await page.goto(app.url);
+  await expect(page.getByRole("alert")).toContainText(
+    `Tessera can't make tools yet. ${en["setup.unreadable"]}`,
+  );
+  await page.getByRole("alert").getByRole("button", { name: en["setup.openStatus"] }).click();
+  await expect(status(page).getByText(en["setup.unreadable"])).toBeVisible();
+  await expect(status(page).getByText(en["setup.checking"])).toHaveCount(0);
+  await expect(probeButton(page)).toHaveCount(0);
+  await status(page).getByRole("button", { name: en["setup.recheck"] }).click();
+  await expect(status(page).getByText(/^Claude Code 2\.1\.310 is ready/)).toBeVisible();
+  await expect(status(page).getByText(en["setup.unreadable"])).toHaveCount(0);
+  await expect(probeButton(page)).toBeVisible();
+  expect(await violations(page)).toEqual([]);
+});

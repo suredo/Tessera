@@ -35,7 +35,7 @@ export const en = {
   "nav.status": "Status",
   "setup.heading": "Status",
   "setup.checking": "Checking what Tessera needs…",
-  "setup.unreadable": "Tessera couldn't check its setup. Reload the page to try again.",
+  "setup.unreadable": "Tessera couldn't check its setup. Check again, or reload the page.",
   "setup.notReady": "Tessera can't make tools yet. {message}",
   "setup.openStatus": "Open the status screen",
   "setup.recheck": "Check again",

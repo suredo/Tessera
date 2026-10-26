@@ -8,7 +8,10 @@ import { formatBytes } from "./setup.ts";
 // only when asked and offered only once the checks pass (CLI-02).
 
 type Props = {
+  /** The last check's report; null until one has come. */
   report: SetupReport | null;
+  /** Why the last check couldn't be made, or "" if it was. */
+  problem: string;
   /** Runs the check again; the screen shows the new report. */
   onRecheck: () => Promise<void>;
   onProbe: () => Promise<ProbeResult>;
@@ -24,7 +27,7 @@ const probeText = (result: ProbeResult) =>
           model: result.model,
         });
 
-export function Status({ report, onRecheck, onProbe }: Props) {
+export function Status({ report, problem, onRecheck, onProbe }: Props) {
   const [checking, setChecking] = useState(false);
   const [probing, setProbing] = useState(false);
   const [probed, setProbed] = useState("");
@@ -56,8 +59,10 @@ export function Status({ report, onRecheck, onProbe }: Props) {
   return (
     <section aria-labelledby="status-heading" className="status">
       <h2 id="status-heading">{t("setup.heading")}</h2>
+      {/* A check that couldn't be made says so, and can be tried again; it never looks endless. */}
+      {problem && <p className="check-problem">{problem}</p>}
       {report === null ? (
-        <p role="status">{t("setup.checking")}</p>
+        !problem && <p role="status">{t("setup.checking")}</p>
       ) : (
         <>
           <h3>{t("setup.claude.heading")}</h3>
@@ -82,9 +87,15 @@ export function Status({ report, onRecheck, onProbe }: Props) {
               size: formatBytes(report.dataFolder.bytes),
             })}
           </p>
-          <button type="button" disabled={checking} onClick={() => void recheck()}>
-            {t("setup.recheck")}
-          </button>
+        </>
+      )}
+      {(report !== null || problem) && (
+        <button type="button" disabled={checking} onClick={() => void recheck()}>
+          {t("setup.recheck")}
+        </button>
+      )}
+      {report !== null && (
+        <>
           <h3>{t("setup.probe.heading")}</h3>
           <p>{t("setup.probe.intro")}</p>
           {report.ready ? (
@@ -103,16 +114,25 @@ export function Status({ report, onRecheck, onProbe }: Props) {
 
 type NoticeProps = {
   report: SetupReport | null;
+  /** Why the check couldn't be made, or "". */
+  problem?: string;
   onOpen: () => void;
 };
 
 /** Says, on the main screens, that Tessera can't reach a model yet, and where the fix is (PLAT-03). */
-export function SetupNotice({ report, onOpen }: NoticeProps) {
-  if (report === null || report.ready) return null;
-  const problem = !report.node.ok ? report.node : !report.claude.ok ? report.claude : undefined;
+export function SetupNotice({ report, problem = "", onOpen }: NoticeProps) {
+  const failed =
+    report === null
+      ? problem
+      : !report.node.ok
+        ? report.node.message
+        : !report.claude.ok
+          ? report.claude.message
+          : "";
+  if (!failed) return null;
   return (
     <div className="setup-notice" role="alert">
-      <p>{t("setup.notReady", { message: problem?.message ?? "" })}</p>
+      <p>{t("setup.notReady", { message: failed })}</p>
       <button type="button" onClick={onOpen}>
         {t("setup.openStatus")}
       </button>
