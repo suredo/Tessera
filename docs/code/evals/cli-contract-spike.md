@@ -7,7 +7,7 @@ implements: [CON-01, CLI-03, CLI-04, CLI-05, CLI-08, ENG-07, ENG-13, ENG-16]
 tests: [../../../evals/test/cli-contract-spike.test.ts]
 tags: [code, evals, cli, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T12:51:02Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:18:53Z }
 ---
 
 # Purpose
@@ -26,7 +26,7 @@ Tests the riskiest assumptions about Claude Code before anything is built on the
 - **Live only with approval.** `--live` refuses to start without `--approved-cap` equal to `PLAN.callCap`, and the harness refuses every call past it. Changing `PLAN` needs a new approval (`ENG-07`).
 - **The dry run is the exact run.** It uses the same caller, arguments, environment and checks, and starts a real process; only the program is the fake, which never reaches a model and is chosen by configuration, not by the prompt (`ENG-11`). The fake refuses a schema the real CLI refuses: it checks `--json-schema` with a default (draft-07) ajv, as Claude Code 2.1.296 does.
 - **The schema is the contract's own,** from `jsonSchemaOf` in `@tessera/contracts`, in draft-07, wrapped by `wrapSchema` as `{ answer: <contract> }`. The CLI hands it to the API as a tool's input schema, which must be an object at the top level, while a contract may be a union (`CON-02`). Shared definitions move to the top so references still resolve, and the caller unwraps the answer before checking it. The fake refuses a schema that isn't an object, as the API did.
-- **Locked flags** (`CLI-03`): `--print --output-format json --json-schema <schema> --model --effort --tools "" --safe-mode --strict-mcp-config --no-session-persistence --permission-mode dontAsk --max-turns 3 --system-prompt <prompt>`, then the request. No stage gets file tools.
+- **Locked flags** (`CLI-03`): the spikes' calls go through the product adapter, so they get its flags, as the [provider adapters](../server/providers.md) doc lists them: the request on standard input and the system prompt from a file. In M0 the spike passed both as arguments (`--system-prompt <prompt>`, then the request), which is what ADR 0002 tested. No stage gets file tools.
 - **An allowlisted environment** (`CLI-08`): only the variables the CLI needs to start and find its sign-in. API keys would switch billing to the API (L-52), and a parent Claude Code session sets variables such as `ANTHROPIC_BASE_URL` and `CLAUDE_CODE_SIMPLE` that change where and how the CLI calls the model.
 - **A fresh, empty working folder** outside the repository for each call, removed afterwards (`CLI-08`).
 - **Usage counts cache writes and reads as input** (`CLI-04`, L-47); a missing part makes the total unknown, never 0.

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { ProcessResult } from "../src/platform/index.ts";
 import {
@@ -169,6 +169,52 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
     expect(call!.envNames.map((name) => name.toUpperCase())).toContain("PATH");
     expect(path.basename(call!.cwd)).toMatch(/^tessera-cli-/);
     expect(fs.existsSync(call!.cwd)).toBe(false);
+  });
+});
+
+describe("tidying up never hides an answer (CLI-08, #159)", () => {
+  // On Windows the CLI can still hold its working folder after answering: a live signed-out call
+  // crashed removing it, which hid the CLI's answer (#159). Removal now failing must change
+  // nothing about the call's result.
+  function withHeldFolders() {
+    const real = fs.rmSync.bind(fs);
+    return vi.spyOn(fs, "rmSync").mockImplementation((target, options) => {
+      if (path.basename(String(target)).startsWith("tessera-cli-")) {
+        throw Object.assign(
+          new Error(`EBUSY: resource busy or locked, rmdir '${String(target)}'`),
+          {
+            code: "EBUSY",
+          },
+        );
+      }
+      real(target, options);
+    });
+  }
+
+  it("CLI-08: an answer still comes back when the folder can't be removed", async () => {
+    const held = withHeldFolders();
+    try {
+      const { provider } = withReplies([success({ answer: { title: "Shopping" } })]);
+      await expect(provider.run(spec())).resolves.toMatchObject({ value: { title: "Shopping" } });
+      expect(held).toHaveBeenCalled();
+    } finally {
+      held.mockRestore();
+    }
+  });
+
+  it("CLI-08: a failure keeps its kind, plain message and detail when the folder can't be removed", async () => {
+    const held = withHeldFolders();
+    try {
+      const { provider } = withReplies([failed("success", "Not logged in · Please run /login")]);
+      const error = (await provider.run(spec()).catch((e: unknown) => e)) as ProviderError;
+      expect(error).toBeInstanceOf(ProviderError);
+      expect(error).toMatchObject({ kind: "sign_in", message: FAILURE_MESSAGES.sign_in });
+      expect(JSON.parse(error.detail!)).toMatchObject({
+        result: "Not logged in · Please run /login",
+      });
+    } finally {
+      held.mockRestore();
+    }
   });
 });
 
