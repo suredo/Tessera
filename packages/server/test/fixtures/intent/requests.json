@@ -1,0 +1,374 @@
+{
+  "about": "The intent stage's fixtures (GEN-01, TEST-04): the POC's routing failures from the intent spike (evals/spikes/intent), with ADR 0008's pairs. Each request has its context and the host's expected action. Answers recorded from live runs are in replays.json; the live evaluation runs the rest.",
+  "contexts": {
+    "empty": {
+      "open": null,
+      "savedToolIds": []
+    },
+    "library": {
+      "open": null,
+      "savedToolIds": ["t-shop", "t-budget", "t-study"]
+    },
+    "shopping-open": {
+      "open": {
+        "name": "Shopping list",
+        "lists": [
+          {
+            "name": "items",
+            "fields": ["title", "quantity", "done"]
+          }
+        ]
+      },
+      "savedToolIds": ["t-budget"]
+    },
+    "party-open": {
+      "open": {
+        "name": "Party seating planner",
+        "lists": [
+          {
+            "name": "tables",
+            "fields": ["name", "seats"]
+          },
+          {
+            "name": "guests",
+            "fields": ["name", "table"]
+          }
+        ]
+      },
+      "savedToolIds": []
+    },
+    "queue-open": {
+      "open": {
+        "name": "Clinic waiting room board",
+        "lists": [
+          {
+            "name": "patients",
+            "fields": ["number", "name", "arrivedAt", "hasAppointment"]
+          }
+        ]
+      },
+      "savedToolIds": []
+    }
+  },
+  "requests": [
+    {
+      "id": "r01",
+      "family": "create",
+      "source": "A12",
+      "context": "empty",
+      "language": "en",
+      "request": "I need a shopping list I can tick off at the store. We need milk, eggs, bread and apples.",
+      "expected": "create"
+    },
+    {
+      "id": "r02",
+      "family": "create",
+      "source": "GEN-15",
+      "context": "empty",
+      "language": "pt",
+      "request": "Quero um controle de gastos do mês, com categorias e o total de cada uma.",
+      "expected": "create"
+    },
+    {
+      "id": "r03",
+      "family": "create",
+      "source": "GEN-15",
+      "context": "empty",
+      "language": "es",
+      "request": "Necesito un temporizador para mis ejercicios: 30 segundos de trabajo y 10 de descanso.",
+      "expected": "create"
+    },
+    {
+      "id": "r04",
+      "family": "open-saved",
+      "source": "L-67",
+      "context": "library",
+      "language": "en",
+      "request": "Open my weekly shopping list.",
+      "expected": "open_saved",
+      "savedToolId": "t-shop"
+    },
+    {
+      "id": "r05",
+      "family": "open-saved",
+      "source": "L-67",
+      "context": "library",
+      "language": "pt",
+      "request": "Abre o meu orçamento do mês.",
+      "expected": "open_saved",
+      "savedToolId": "t-budget"
+    },
+    {
+      "id": "r06",
+      "family": "open-saved",
+      "source": "L-67",
+      "context": "library",
+      "language": "en",
+      "request": "I need my study planner again.",
+      "expected": "open_saved",
+      "savedToolId": "t-study"
+    },
+    {
+      "id": "r07",
+      "family": "create",
+      "source": "GEN-18",
+      "context": "library",
+      "language": "en",
+      "request": "Open my recipe book.",
+      "expected": "create"
+    },
+    {
+      "id": "r08",
+      "family": "create",
+      "source": "GEN-18",
+      "context": "library",
+      "language": "en",
+      "request": "Make me a new shopping list, a separate one just for the party.",
+      "expected": "create"
+    },
+    {
+      "id": "r09",
+      "family": "style",
+      "source": "L-16",
+      "context": "shopping-open",
+      "language": "en",
+      "request": "Make it calmer.",
+      "expected": "edit"
+    },
+    {
+      "id": "r10",
+      "family": "style",
+      "source": "L-20",
+      "context": "shopping-open",
+      "language": "en",
+      "request": "Make it easier to read.",
+      "expected": "edit"
+    },
+    {
+      "id": "r11",
+      "family": "style",
+      "source": "L-20",
+      "context": "queue-open",
+      "language": "en",
+      "request": "Make the waiting numbers bigger.",
+      "expected": "edit"
+    },
+    {
+      "id": "r12",
+      "family": "style",
+      "source": "L-20",
+      "context": "shopping-open",
+      "language": "pt",
+      "request": "Deixa mais clean, com menos cor.",
+      "expected": "edit"
+    },
+    {
+      "id": "r13",
+      "family": "style",
+      "source": "L-20",
+      "context": "party-open",
+      "language": "de",
+      "request": "Mach die Schrift größer und die Farben dunkler.",
+      "expected": "edit"
+    },
+    {
+      "id": "r14",
+      "family": "style",
+      "source": "L-20",
+      "context": "shopping-open",
+      "language": "fr",
+      "request": "Affiche les articles déjà achetés en gris.",
+      "expected": "edit"
+    },
+    {
+      "id": "r15",
+      "family": "behavior",
+      "source": "L-17",
+      "context": "party-open",
+      "language": "en",
+      "request": "Guests arrive in groups of 2 to 4.",
+      "expected": "edit"
+    },
+    {
+      "id": "r16",
+      "family": "behavior",
+      "source": "L-17",
+      "context": "party-open",
+      "language": "en",
+      "request": "Couples always sit together.",
+      "expected": "edit"
+    },
+    {
+      "id": "r17",
+      "family": "behavior",
+      "source": "L-17",
+      "context": "shopping-open",
+      "language": "pt",
+      "request": "Quando eu marcar um item, ele vai pro fim da lista.",
+      "expected": "edit"
+    },
+    {
+      "id": "r18",
+      "family": "behavior",
+      "source": "L-17",
+      "context": "queue-open",
+      "language": "es",
+      "request": "Los pacientes con cita pasan antes que los que no tienen.",
+      "expected": "edit"
+    },
+    {
+      "id": "r19",
+      "family": "data",
+      "source": "GEN-01",
+      "context": "shopping-open",
+      "language": "en",
+      "request": "Add cheese and take the apples off.",
+      "expected": "data"
+    },
+    {
+      "id": "r20",
+      "family": "data",
+      "source": "GEN-15",
+      "context": "shopping-open",
+      "language": "pt",
+      "request": "Coloca 2 litros de leite e 1 pão.",
+      "expected": "data"
+    },
+    {
+      "id": "r21",
+      "family": "mixed",
+      "source": "L-19",
+      "context": "shopping-open",
+      "language": "en",
+      "request": "Group them by aisle and add cheese.",
+      "expected": "mixed"
+    },
+    {
+      "id": "r22",
+      "family": "mixed",
+      "source": "L-19",
+      "context": "party-open",
+      "language": "en",
+      "request": "Add a table for the kids and put Ana and Leo at it.",
+      "expected": "data",
+      "note": "ADR 0008: the planner keeps tables as records, so adding one is a data change."
+    },
+    {
+      "id": "r23",
+      "family": "mixed",
+      "source": "L-19",
+      "context": "shopping-open",
+      "language": "pt",
+      "request": "Mostra o total de itens no topo e tira os ovos.",
+      "expected": "mixed"
+    },
+    {
+      "id": "r24",
+      "family": "unrelated",
+      "source": "L-18",
+      "context": "shopping-open",
+      "language": "en",
+      "request": "I need a workout timer.",
+      "expected": "new_tool"
+    },
+    {
+      "id": "r25",
+      "family": "unrelated",
+      "source": "L-18",
+      "context": "party-open",
+      "language": "pt",
+      "request": "Preciso de um controle das minhas plantas, de quando reguei cada uma.",
+      "expected": "new_tool"
+    },
+    {
+      "id": "r26",
+      "family": "unrelated",
+      "source": "L-18",
+      "context": "shopping-open",
+      "language": "fr",
+      "request": "Fais-moi un convertisseur de devises.",
+      "expected": "new_tool"
+    },
+    {
+      "id": "r27",
+      "family": "clarify",
+      "source": "GEN-01",
+      "context": "shopping-open",
+      "language": "en",
+      "request": "Change it.",
+      "expected": "clarify"
+    },
+    {
+      "id": "r28",
+      "family": "clarify",
+      "source": "GEN-01",
+      "context": "empty",
+      "language": "en",
+      "request": "Do the same as last time.",
+      "expected": "clarify"
+    },
+    {
+      "id": "r29",
+      "family": "unsupported",
+      "source": "L-16",
+      "context": "empty",
+      "language": "en",
+      "request": "Book me a table for two at an Italian restaurant tonight.",
+      "expected": "unsupported"
+    },
+    {
+      "id": "r30",
+      "family": "unsupported",
+      "source": "L-16",
+      "context": "shopping-open",
+      "language": "en",
+      "request": "Order these from the supermarket for delivery.",
+      "expected": "unsupported"
+    },
+    {
+      "id": "r31",
+      "family": "unsupported",
+      "source": "GEN-15",
+      "context": "shopping-open",
+      "language": "pt",
+      "request": "Manda essa lista pro WhatsApp da minha mãe.",
+      "expected": "unsupported"
+    },
+    {
+      "id": "r32",
+      "family": "data",
+      "source": "ADR 0008",
+      "context": "party-open",
+      "language": "en",
+      "request": "Put Maria at the window table.",
+      "expected": "data"
+    },
+    {
+      "id": "r33",
+      "family": "data",
+      "source": "ADR 0008",
+      "context": "party-open",
+      "language": "pt",
+      "request": "Põe a Maria na mesa da janela.",
+      "expected": "data"
+    },
+    {
+      "id": "r34",
+      "family": "mixed",
+      "source": "ADR 0008",
+      "context": "shopping-open",
+      "language": "en",
+      "request": "Add a price to each item and put 3.50 on the milk.",
+      "expected": "mixed"
+    },
+    {
+      "id": "r35",
+      "family": "mixed",
+      "source": "ADR 0008",
+      "context": "shopping-open",
+      "language": "pt",
+      "request": "Adiciona um preço a cada item e põe 3,50 no leite.",
+      "expected": "mixed"
+    }
+  ]
+}

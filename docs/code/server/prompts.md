@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:35:16Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T02:43:23Z }
 ---
 
 # Purpose
@@ -16,9 +16,10 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 
 # Entry points
 
-- `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `source.md`, `diagnostics.md`, and the probe's `probe.md` and `probe-request.md`.
+- `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `source.md`, `diagnostics.md`, the probe's `probe.md` and `probe-request.md`, and the [intent stage](intent.md)'s `intent*.md`.
 - `src/prompts/prompts.ts`:
   - `assemblePrompt` builds a generation stage's prompt (`PromptInput` to `AssembledPrompt`): the instructions, the request, each part as name@version, and the size.
+  - `assembleIntentPrompt` builds the intent stage's prompt: its instructions, then the open tool (`OpenTool`) with each `RecordList` it keeps, or none, the request, and on a second ask the reminder; `INTENT_PROMPT_BUDGET` caps it.
   - `fixedPart` gives a part used as it is, such as the probe's.
   - `fillPart`, `partText` and `partVersion` read, fill and version a part. `PROMPT_PARTS` lists them, `PROMPT_BUDGETS` caps each stage, and `manifestForPrompt` is the bridge manifest as the bridge part quotes it.
 
@@ -40,11 +41,11 @@ The [contracts](../contracts/package.md)' bridge manifest and intent, and the [r
 
 - **The replay suite doesn't exist yet** (`TEST-04`, #156). `ENG-16` asks every prompt change to pass it; until it exists, a change to a part is reviewed and its tests run, and one that changes behavior gets a small budgeted live check.
 - **The bridge manifest is most of the instructions,** about 7,000 characters, and grows with every action. The budgets will say when it needs a shorter form.
-- **Only create, edit and repair are assembled so far.** Intent, data actions, research, review and acceptance get their parts with their stages.
+- **Create, edit, repair and intent are assembled so far.** Data actions, research, review and acceptance get their parts with their stages.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `assemblePrompt`, `fillPart`, `fixedPart`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `AssembledPrompt` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type)
-- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `fixedPart`
+- `index.ts`: `assembleIntentPrompt`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `AssembledPrompt` (type), `OpenTool` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type)
+- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `RecordList` (type), `OpenTool` (type), `assembleIntentPrompt`, `fixedPart`

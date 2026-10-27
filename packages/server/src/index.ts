@@ -4,6 +4,7 @@ export * from "./archives/index.ts";
 export * from "./bridge/index.ts";
 export * from "./data-shape/index.ts";
 export * from "./http/index.ts";
+export * from "./intent/index.ts";
 export * from "./jobs/index.ts";
 export * from "./launcher/index.ts";
 export * from "./patches/index.ts";

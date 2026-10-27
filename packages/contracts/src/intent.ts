@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-// The intent stage's answer (GEN-01): what a request asks for, so the host can route it. A draft
-// for the intent spike (#20); the generation pipeline (M2) settles it. Each kind is a branch of a
+// The intent stage's answer (GEN-01): what a request asks for, so the host can route it. Drafted
+// for the intent spike (#20) and used by the intent stage (#144). Each kind is a branch of a
 // discriminated union, so a field exists only where it means something (CON-02).
 
 export const INTENT_KINDS = [
