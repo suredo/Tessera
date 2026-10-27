@@ -11,6 +11,15 @@ import { collectAssets, sweepAssets } from "../assets/index.ts";
 import { hostRoutes, workspaceTools } from "../host/index.ts";
 import { runtimeRoutes } from "../runtime/index.ts";
 import { setupRoutes, type SetupOptions } from "../setup/index.ts";
+import { generationRoutes } from "../generation/index.ts";
+import { JobQueue } from "../jobs/index.ts";
+import {
+  createClaudeProvider,
+  findClaude,
+  loadRoutes,
+  ROUTES_FILE,
+  type Provider,
+} from "../providers/index.ts";
 import { removeExpired } from "../trash/index.ts";
 import { activationRoutes } from "../workspaces/index.ts";
 
@@ -42,6 +51,8 @@ export type LaunchOptions = {
   now?: Clock;
   /** How the setup check finds Claude Code and what the probe calls; tests pass a fake (ENG-11). */
   setup?: Omit<SetupOptions, "dataDir">;
+  /** The provider requests are carried out with; Claude Code unless a test passes a scripted one (ENG-11). */
+  provider?: Provider;
 };
 
 export type Launched = { url: string; browserOpened: boolean } & (
@@ -160,6 +171,19 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
         ...hostRoutes(dataFolder),
         ...archiveRoutes(dataFolder),
         ...setupRoutes({ ...options.setup, dataDir: options.dataDir }),
+        ...generationRoutes({
+          store: dataFolder,
+          jobs: new JobQueue(),
+          provider: async () => {
+            if (options.provider) return options.provider;
+            // Found when a request comes, so a fix made on the status screen counts at once.
+            const claude = await (options.setup?.findClaude ?? (() => findClaude()))();
+            return claude.ok
+              ? createClaudeProvider({ executable: claude.executable, live: true })
+              : { problem: claude.message };
+          },
+          routes: () => loadRoutes(path.join(options.dataDir, ROUTES_FILE)),
+        }),
         ...runtimeRoutes(workspaceTools(dataFolder)),
         [INSTANCE_ROUTE]: (_req, res) => {
           res.writeHead(200, { "content-type": "application/json" });

@@ -66,3 +66,55 @@ export const creationSchema = z
   ])
   .describe("The create stage's answer: a new tool, or why none can be made (CON-02, GEN-05).");
 export type Creation = z.infer<typeof creationSchema>;
+
+/** The host app asks for a request to be carried out here (GEN-01, GEN-04). */
+export const GENERATE_ROUTE = "/api/generate";
+
+export const generateRequestSchema = z
+  .strictObject({
+    request: z.string().trim().min(1).max(4000).describe("What the person asked, in their words."),
+    workspaceId: z
+      .uuid()
+      .optional()
+      .describe("The workspace open when they asked; none when nothing is open."),
+  })
+  .describe("A request for Tessera to carry out (GEN-01).");
+export type GenerateRequest = z.infer<typeof generateRequestSchema>;
+
+/** What the host can say instead of making a tool, for the chat to word (GEN-08). */
+export const GENERATE_ANSWERS = [
+  "clarify",
+  "unsupported",
+  "cannot",
+  "ask_to_split",
+  "not_yet",
+] as const;
+
+export const generateReplySchema = z
+  .discriminatedUnion("kind", [
+    z.strictObject({
+      kind: z.literal("candidate"),
+      workspaceId: z.uuid(),
+      hash: z.string().regex(/^[0-9a-f]{64}$/),
+      mountId: z.string().min(1).describe("Where the candidate is served for staging (RUN-03)."),
+      capabilities: z.array(z.string()),
+      syntheticData: jsonObjectSchema.describe("What staging runs it against: its defaults."),
+      expectedDataRevision: z.int().nonnegative(),
+      name: z.string().min(1),
+      summary: z.string().min(1),
+    }),
+    z.strictObject({
+      kind: z.literal("answer"),
+      answer: z.enum(GENERATE_ANSWERS),
+      reason: z.string().optional().describe("The model's own plain reason, for cannot."),
+    }),
+    z.strictObject({ kind: z.literal("open_saved"), savedToolId: z.string().min(1) }),
+    z.strictObject({
+      kind: z.literal("failed"),
+      failure: z.enum(FAILURE_CLASSES),
+      message: z.string().min(1).describe("Plain words for the person."),
+      findings: z.array(z.string()).describe("For repair and the details view (GEN-10)."),
+    }),
+  ])
+  .describe("What came of a request: a candidate to stage, an answer, a saved tool, or a failure.");
+export type GenerateReply = z.infer<typeof generateReplySchema>;

@@ -149,14 +149,25 @@ export function hostRoutes(store: Store): Record<string, Handler> {
   };
 }
 
+/** The mount a candidate version is staged on: `v-` and its hash (RUN-03). */
+export const candidateMount = (hash: string): string => `v-${hash}`;
+
 /**
  * The tool each mount shows in the host app: a mount is a workspace, by its ID, and shows that
  * workspace's current tool version, its code and UI mode (RUN-01, RUN-05). A workspace that is
- * missing, in the trash, without a tool or with a damaged version shows nothing.
+ * missing, in the trash, without a tool or with a damaged version shows nothing. A candidate's
+ * mount shows that stored version, for staging.
  */
 export const workspaceTools =
   (store: Store): ToolFor =>
   (mountId) => {
+    const candidate = /^v-([0-9a-f]{64})$/.exec(mountId)?.[1];
+    if (candidate) {
+      const version = loadVersion(store.db, candidate);
+      return version?.kind === "ok"
+        ? { code: version.artifact.code, ui: version.artifact.ui }
+        : undefined;
+    }
     const workspace = getWorkspace(store, mountId);
     if (!workspace?.currentVersion) return undefined;
     const version = loadVersion(store.db, workspace.currentVersion);

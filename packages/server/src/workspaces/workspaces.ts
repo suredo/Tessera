@@ -142,16 +142,30 @@ export const listWorkspaces = (store: Store): Workspace[] =>
   store.db.all(workspaceFromRow, `${SELECT_WORKSPACE} ORDER BY w.updated_at DESC, w.id`);
 
 /** A new, empty workspace: no tool yet, and no data until the tool's defaults fill it. */
-export function createWorkspace(store: Store, title: string): Workspace {
+/**
+ * A new workspace, with no tool yet. A created tool's workspace starts with its starting data
+ * (GEN-05), as its first data, with nothing to undo; its tool's activation checks it.
+ */
+export function createWorkspace(
+  store: Store,
+  title: string,
+  options: { data?: Workspace["data"] } = {},
+): Workspace {
   const id = randomUUID();
   const at = stamp(store);
+  const name = workspaceSchema.shape.title.parse(title);
+  const data =
+    options.data === undefined ? undefined : workspaceSchema.shape.data.parse(options.data);
+  // No transaction of its own: callers such as Use again create it inside theirs. The data was
+  // checked above, so writing it can't fail halfway.
   store.db.run(
     "INSERT INTO workspaces (id, title, data, data_revision, created_at, updated_at) VALUES (?, ?, 'null', 0, ?, ?)",
     id,
-    workspaceSchema.shape.title.parse(title),
+    name,
     at,
     at,
   );
+  if (data !== undefined) replaceData(store, existingWorkspace(store, id), data);
   return existingWorkspace(store, id);
 }
 

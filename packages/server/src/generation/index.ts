@@ -9,3 +9,5 @@ export {
   type CreateInput,
   type CreateResult,
 } from "./create.ts";
+export { generate } from "./pipeline.ts";
+export { generationRoutes, type GenerationOptions } from "./routes.ts";

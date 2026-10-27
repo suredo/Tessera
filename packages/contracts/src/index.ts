@@ -166,7 +166,18 @@ export {
   type Route,
   type RouteOverrides,
 } from "./routes.ts";
-export { creationSchema, FAILURE_CLASSES, type Creation, type FailureClass } from "./generation.ts";
+export {
+  creationSchema,
+  FAILURE_CLASSES,
+  GENERATE_ANSWERS,
+  GENERATE_ROUTE,
+  generateReplySchema,
+  generateRequestSchema,
+  type Creation,
+  type FailureClass,
+  type GenerateReply,
+  type GenerateRequest,
+} from "./generation.ts";
 export {
   CLAUDE_PROBLEMS,
   claudeCheckSchema,
