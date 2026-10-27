@@ -3,11 +3,11 @@ type: Code Package
 title: "Web package"
 description: "@tessera/web: the host app in the browser, built with Vite and React 19 with the React Compiler, with all host text going through the translation layer."
 resource: ../../../packages/web/
-implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06, APP-11, UX-07]
-tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts]
+implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06, APP-11, UX-07, APP-07]
+tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T11:45:09Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T23:49:04Z }
 ---
 
 # Purpose
@@ -21,6 +21,8 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - `src/Library.tsx`: my tools, the saved-tools library (`APP-04`): each saved tool with its name, when it was last updated (the entry or the workspace it follows, whichever changed later, A32) and the workspace Continue opens, searchable by name, with Continue, Use again (`DATA-07`), Save as a new tool, renaming and moving to the trash.
 - `src/History.tsx`: the open workspace's history (`APP-05`): its tool versions, newest first, with restore; undo of its last data change (`DATA-04`); and the copies kept before a restore that lost data, which can be brought back (`DATA-10`). After a restore or an undo, the app starts the tool again with the changed data.
 - `src/Trash.tsx`: the trash (`APP-08`, `DATA-09`): each deleted workspace and saved tool, with the saved tools that went with a workspace, when it was deleted and when it goes for good, and restore. Emptying it early first lists everything that goes.
+- `src/Status.tsx`: the status screen (`APP-07`): Claude Code's status, Node.js, the data folder and its size, each failure with its fix (`PLAT-03`), Check again, and the probe (`CLI-02`). `SetupNotice` says on the first-run and main screens that Tessera can't make tools yet, and why, with the way to the status screen.
+- `src/setup.ts`: the app's side of the [setup routes](../server/setup.md): `checkSetup` and `runProbe`, checked against the contracts, and `formatBytes` for the data folder's size.
 - `src/archives.ts`: the app's side of the archive routes ([export and import](../server/archives.md)): `exportArchive` asks for a workspace's or saved tool's file and gives its name and bytes, `saveFile` has the browser save it as a download, and `importArchive` sends a file and gives back the report of what came in, checked against the contracts.
 - `src/ImportFile.tsx`: `ImportFile`, the control that picks a `.tessera` file to import.
 - `src/NameForm.tsx`: the small form that names something, for renaming, saving and Save as a new tool.
@@ -53,6 +55,9 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **The trash is never out of reach.** After the last workspace is deleted, the first-run screen offers the trash while it holds something, so that workspace can come back.
 - **An import says what came in, then opens it** (`APP-06`): the workspace by name, with its saved tools, and when something with the same IDs was already here, that it came in as a copy and nothing here changed. A refused file shows the server's plain reason, and nothing comes in.
 - **The host is accessible** (`APP-11`). `e2e/a11y.spec.ts` runs axe (`@axe-core/playwright`) on every host screen, form and confirmation, on the sample workspaces (the [development data](../scripts/dev-data.md)): the first-run screen, the main screen with a running tool, full screen, a restore that keeps the data and one that would lose some, a workspace's rename and save forms, my tools and its two naming forms, and the trash with its emptying confirmation. It fails on any WCAG 2.2 A or AA violation, leaving out a tool's own frame, which has its own floor (`RUN-05`). It also checks directly what a checker can't judge: on each of those screens, the first-run screen included, nothing moves when reduced motion is asked for, and the app works by keyboard alone, reaching each control with Tab and Shift+Tab, into a form and a confirmation, with the focus showing a 3 px outline on each.
+- **The setup check runs when the app opens** (`PLAT-03`). While it fails, the first-run and main screens say what is wrong, with the fix on the status screen, and the probe isn't offered. The chat (#132) will not be offered either; the app keeps the report for it. Check again shows a fix at once. A check that couldn't be made (the server didn't answer it) says so on those screens, never "Checking" without end, and Check again tries once more.
+- **The probe runs only when asked** (`CLI-02`). Its button says it costs one call, and the result says in plain words how it went.
+- **No browser test reaches the real Claude Code** (`ENG-11`). The test host's setup check finds a ready, fake one unless a test passes its own state; `e2e/status.spec.ts` runs the real check against a faked CLI for each state, and the probe against the fake claude program.
 - **Buttons say which workspace they act on.** Their visible labels are short ("Rename", "Move to trash"); their accessible names include the workspace's name.
 - **The React Compiler does the memoizing** (A15). No hand-written `useMemo`, `useCallback` or `React.memo` unless profiling shows the compiler missed a case, with a comment saying so. ESLint runs the hooks rules and the compiler's rules (`eslint-plugin-react-hooks`, `recommended-latest`) on every component.
 
@@ -77,6 +82,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `src/ImportFile.tsx`: `ImportFile`
 - `src/Library.tsx`: `Library`
 - `src/NameForm.tsx`: `NameForm`
+- `src/Status.tsx`: `Status`, `SetupNotice`
 - `src/ToolPanel.tsx`: `ToolPanel`
 - `src/Trash.tsx`: `Trash`
 - `src/Workspaces.tsx`: `Workspaces`
@@ -84,6 +90,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `src/host-api.ts`: `HostError`, `Send` (type), `ask`
 - `src/i18n/en.ts`: `en`, `MessageKey` (type)
 - `src/i18n/translate.ts`: `Messages` (type), `Params` (type), `Translate` (type), `MissingHandler` (type), `createTranslator`, `t`
-- `src/index.ts`: `App`, `EmptyState`, `ask`, `HostError`, `Send` (type), `en`, `MessageKey` (type), `createTranslator`, `t`, `Messages` (type), `MissingHandler` (type), `Params` (type), `Translate` (type)
+- `src/index.ts`: `App`, `EmptyState`, `checkSetup`, `formatBytes`, `runProbe`, `SetupNotice`, `Status`, `ask`, `HostError`, `Send` (type), `en`, `MessageKey` (type), `createTranslator`, `t`, `Messages` (type), `MissingHandler` (type), `Params` (type), `Translate` (type)
+- `src/setup.ts`: `checkSetup`, `runProbe`, `formatBytes`
 - `src/tool-start.ts`: `StartDeps` (type), `StartOptions` (type), `startTool`, `rememberedState`, `rememberState`
 - `vite.config.ts`: `default`

@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Artifact } from "../../../contracts/src/index.ts";
-import { launch } from "../../../server/src/launcher/index.ts";
+import { launch, type LaunchOptions } from "../../../server/src/launcher/index.ts";
 import type { DataFolder } from "../../../server/src/storage/index.ts";
 import { saveVersion } from "../../../server/src/versions/index.ts";
 import { activateVersion, createWorkspace } from "../../../server/src/workspaces/index.ts";
@@ -17,21 +17,37 @@ const webRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 export type AppHost = {
   url: string;
   folder: DataFolder;
+  /** The temporary data folder's path. */
+  dataDir: string;
   close(): Promise<void>;
 };
 
-export async function startApp(): Promise<AppHost> {
+/**
+ * Claude Code as the setup check sees it, unless a test passes its own: ready, without starting a
+ * program, so no browser test reaches the real CLI (ENG-11). The probe has nothing to call.
+ */
+const READY_SETUP: NonNullable<LaunchOptions["setup"]> = {
+  findClaude: () =>
+    Promise.resolve({ ok: true, executable: "C:\\Tools\\claude.exe", version: "2.1.310" }),
+  probeProvider: () => {
+    throw new Error("This test has no probe.");
+  },
+};
+
+export async function startApp(setup = READY_SETUP): Promise<AppHost> {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-app-"));
   const launched = await launch({
     dataDir,
     port: 0,
     webRoot,
     openBrowser: () => Promise.resolve(),
+    setup,
   });
   if (launched.status !== "started") throw new Error("Tessera didn't start.");
   return {
     url: launched.url,
     folder: launched.dataFolder,
+    dataDir,
     close: async () => {
       await launched.stop();
       fs.rmSync(dataDir, { recursive: true, force: true });

@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T22:52:33Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T23:28:23Z }
 ---
 
 # Purpose
@@ -40,7 +40,7 @@ The [local server](local-server.md), [storage](storage.md)'s `openDataFolder` an
 
 # Pitfalls
 
-- **The data folder isn't shown in the app yet.** The setup report carries it and its size, and the status screen (#142) will show it; until then `main.ts` prints a warning only when a cloud service syncs it.
+- **The data folder is shown on the status screen,** with its size ([web app](../web/package.md)); `main.ts` also prints a warning when a cloud service syncs it.
 - **Windows has no stop signals between programs.** A test can't close the window the way a person does, so on Windows the tests stop a copy through `stop()` and kill one outright to check that its lock is released; the signal path is tested on Linux.
 - **A launch can wait up to 10 seconds** while the holder starts. A holder that is stuck, rather than killed, keeps the lock; the launch then says so and starts nothing.
 - **Node must be on the PATH** for `Tessera.cmd`; the setup check and the installer handle that later.
