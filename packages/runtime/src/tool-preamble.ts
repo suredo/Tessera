@@ -44,6 +44,7 @@
       const data = e.data as { message?: unknown; ping?: unknown; reply?: unknown };
       if (data && "ping" in data) port?.postMessage({ pong: data.ping });
       else if (data && "reply" in data) settle(data.reply);
+      else if (data && "inspect" in data) void inspect((data as { inspect?: unknown }).inspect);
       else listeners.forEach((listen) => listen(data?.message));
     };
     for (const envelope of waiting.splice(0)) port.postMessage(envelope);
@@ -64,6 +65,125 @@
     const message = r.error?.message;
     const error = new Error(typeof message === "string" ? message : "The host refused the call.");
     call.reject(Object.assign(error, { code: r.error?.code }));
+  }
+
+  // What went wrong as the tool started and ran, for the smoke check (VER-02): recorded from
+  // before the tool's code, so its first error counts too. A few, each cut short.
+  const problems: string[] = [];
+  const note = (text: string) => {
+    if (problems.length < 10) problems.push(text.slice(0, 300));
+  };
+  addEventListener(
+    "error",
+    (event: Event) => {
+      if (event instanceof ErrorEvent) note(`An error: ${event.message}`);
+      else if (event.target instanceof Element) {
+        note(`A <${event.target.tagName.toLowerCase()}> couldn't load.`);
+      }
+    },
+    true,
+  );
+  addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
+    const reason = event.reason as { message?: unknown } | undefined;
+    note(`An error nothing handled: ${String(reason?.message ?? event.reason)}`);
+  });
+  addEventListener("securitypolicyviolation", (event: SecurityPolicyViolationEvent) => {
+    note(`Something the tool tried was blocked (${event.effectiveDirective}).`);
+  });
+
+  // The smoke check's question: once the tool's calls have settled (or 3 seconds have passed),
+  // what it shows, whether it scrolls sideways, and the accessibility floor's basics.
+  async function inspect(id: unknown) {
+    const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
+    for (let waited = 0; pending.size > 0 && waited < 3000; waited += 50) await wait(50);
+    // Watched for at least two seconds from the page's start, so an error a quiet tool makes a
+    // moment after starting is seen too.
+    await wait(Math.max(100, 2000 - performance.now()));
+    const body = document.body;
+    const all = (selector: string) => (body ? [...body.querySelectorAll(selector)] : []);
+    // Visible: rendered, not hidden by CSS visibility, and not fully transparent.
+    const visible = (element: Element) => {
+      if (typeof element.checkVisibility === "function") {
+        return element.checkVisibility({ visibilityProperty: true, opacityProperty: true });
+      }
+      const style = getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    };
+    // Hidden from assistive technology, by the accessible-name rules: not by how it looks, so
+    // text in a box of its own (display: contents) or a transparent one still names.
+    const hiddenFromReaders = (element: Element) => {
+      if (element.getAttribute("aria-hidden") === "true" || element.hasAttribute("hidden")) {
+        return true;
+      }
+      const style = getComputedStyle(element);
+      return (
+        style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse"
+      );
+    };
+    // The text a name comes from, as assistive technology reads it (accessible-name rules): text,
+    // an image's alt text and an element's aria-label. What is hidden is left out, except under
+    // an element that aria-labelledby names and that is itself hidden: then all its text counts.
+    const textOf = (node: Node, includeHidden = false): string => {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+      if (!(node instanceof Element)) return "";
+      if (!includeHidden && hiddenFromReaders(node)) return "";
+      const label = node.getAttribute("aria-label")?.trim();
+      if (label) return label;
+      if (node instanceof HTMLImageElement) return node.alt;
+      return [...node.childNodes].map((child) => textOf(child, includeHidden)).join(" ");
+    };
+    const labelledBy = (element: Element) =>
+      (element.getAttribute("aria-labelledby") ?? "")
+        .split(/\s+/)
+        .map((ref) => (ref ? document.getElementById(ref) : null))
+        .map((target) => (target ? textOf(target, hiddenFromReaders(target)) : ""))
+        .join(" ")
+        .trim();
+    const ownName = (element: Element) =>
+      labelledBy(element) ||
+      element.getAttribute("aria-label")?.trim() ||
+      element.getAttribute("title")?.trim() ||
+      "";
+    const fieldName = (field: Element) =>
+      ownName(field) ||
+      [...((field as HTMLInputElement).labels ?? [])]
+        .map((label) => textOf(label))
+        .join(" ")
+        .trim();
+    // A button's own text: what it holds, less what is hidden inside it.
+    const buttonName = (button: Element) =>
+      ownName(button) ||
+      (button instanceof HTMLInputElement
+        ? button.value.trim()
+        : [...button.childNodes]
+            .map((child) => textOf(child))
+            .join(" ")
+            .trim());
+    // Shown: laid out with a size, and visible.
+    const shown = (element: Element) => {
+      const box = element.getBoundingClientRect();
+      return box.width > 0 && box.height > 0 && visible(element);
+    };
+    const fields = all(
+      "input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image]), select, textarea",
+    );
+    const buttons = all(
+      "button, [role=button], input[type=button], input[type=submit], input[type=reset]",
+    );
+    const root = document.documentElement;
+    post({
+      report: {
+        id,
+        problems: [...problems],
+        elements: all("*").length,
+        text: body ? body.innerText.trim().length : 0,
+        media: all("canvas, svg, img, video").filter(shown).length,
+        overflow: Math.max(root.scrollWidth, body?.scrollWidth ?? 0) - root.clientWidth,
+        unlabeled: fields.filter((field) => !fieldName(field)).length,
+        unnamed: buttons.filter((button) => !buttonName(button)).length,
+        noAlt: all("img:not([alt])").length,
+      },
+    });
   }
 
   // Registered before the tool's code, so it runs first. A page in this frame that never says hello,

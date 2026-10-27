@@ -21,6 +21,8 @@
   let waiting: unknown[] = [];
   // The request IDs of the current page's calls still waiting for a reply.
   let calls = new Set<string>();
+  // The smoke check's question, if it came before the tool's page was ready (VER-02).
+  let inspecting: unknown;
   // Watches for the person's first real input in the tool's page (GEN-06).
   let watchingInput: ReturnType<typeof setInterval> | undefined;
   let checkInput: (() => void) | undefined;
@@ -64,8 +66,15 @@
         message?: unknown;
         ping?: unknown;
         reply?: unknown;
+        inspect?: unknown;
       };
       if (data?.instanceId !== instanceId) return;
+      // The smoke check's question (VER-02): it waits for the page if there is none yet.
+      if ("inspect" in data) {
+        if (toolPort) toolPort.postMessage({ inspect: data.inspect });
+        else inspecting = data.inspect;
+        return;
+      }
       // The host's watchdog pings the tool's page; with no page ready yet, the ping goes nowhere
       // and the watchdog sends another (RUN-02). A reply goes on only to the page that made the
       // call, once: a reply for a page the tool has left goes nowhere.
@@ -138,8 +147,15 @@
         // write the person's click caused reaches the host after the click does.
         toolPort.onmessage = (e: MessageEvent) => {
           checkInput?.();
-          const data = e.data as { message?: unknown; pong?: unknown; call?: unknown };
+          const data = e.data as {
+            message?: unknown;
+            pong?: unknown;
+            call?: unknown;
+            report?: unknown;
+          };
           if (data && "pong" in data) hostPort?.postMessage({ instanceId, pong: data.pong });
+          else if (data && "report" in data)
+            hostPort?.postMessage({ instanceId, report: data.report });
           else if (data && "call" in data) {
             const id = (data.call as { requestId?: unknown } | null)?.requestId;
             if (typeof id === "string") calls.add(id);
@@ -149,6 +165,8 @@
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
         frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
         for (const message of waiting.splice(0)) toolPort.postMessage({ message });
+        if (inspecting !== undefined) toolPort.postMessage({ inspect: inspecting });
+        inspecting = undefined;
       };
       frame.addEventListener("load", () => {
         if (toolFrame !== frame) return;
