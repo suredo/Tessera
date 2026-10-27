@@ -7,7 +7,7 @@ implements: [PLAT-03, CLI-02]
 tests: [../../../packages/server/test/setup.test.ts]
 tags: [code, server, setup, cli]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T23:28:23Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:24:24Z }
 ---
 
 # Purpose
@@ -29,7 +29,7 @@ Guides a fresh machine to a working connection (`PLAT-03`): Tessera checks what 
 - **Each failure says what is wrong and how to fix it,** in plain words (`GEN-12`): the adapter's messages for Claude Code, and the Node.js version to install.
 - **`MINIMUM_NODE` is the root package.json's lower bound;** a test fails if the two disagree.
 - **The probe runs only on request, and never while the check fails.** The probe route answers POST only, checks first, and spends nothing if the check fails. Probes sent while one is running share its call, so a double click costs one call.
-- **The probe is one small structured answer on the intent stage's route,** the cheapest (`CLI-09`), following the data folder's routes file, with no tools. A failure is the adapter's plain message.
+- **The probe is one small structured answer on the intent stage's route,** the cheapest (`CLI-09`), following the data folder's routes file, with no tools. Its words are the [prompt parts](prompts.md) `probe` and `probe-request`, recorded with the call. A failure is the adapter's plain message.
 - **Tests fake Claude Code by configuration:** `SetupOptions` (passed through the [launcher](launcher.md)'s `setup` option) replaces `findClaude` and the probe's provider. They never come from the request (`ENG-11`).
 
 # Depends on / used by

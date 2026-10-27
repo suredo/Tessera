@@ -8,7 +8,13 @@ import {
   type ScriptedReply,
   type Stage,
 } from "@tessera/contracts";
-import { createScriptedProvider, runStage, type Provider, type StageSpec } from "@tessera/server";
+import {
+  assemblePrompt,
+  createScriptedProvider,
+  runStage,
+  type Provider,
+  type StageSpec,
+} from "@tessera/server";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   HarnessError,
@@ -186,6 +192,38 @@ describe("evaluation harness (OBS-02, ENG-07)", () => {
       ["intent", "claude-haiku-5-5", "low"],
       ["create", "claude-opus-5-5", "high"],
     ]);
+  });
+
+  it("ENG-16, GEN-03: records the prompt parts each call was built from, and the instructions' size", async () => {
+    const { harness } = dryRun([value("create"), value("intent")]);
+    const prompt = assemblePrompt({
+      stage: "create",
+      request: "I need a shopping list",
+      uiMode: "standard",
+    });
+    await runStage(harness.provider, DEFAULT_ROUTES, {
+      stage: "create",
+      system: prompt.system,
+      prompt: prompt.prompt,
+      promptParts: prompt.parts,
+      schema: intentSchema,
+      timeLimitMs: 10_000,
+    });
+    // A call made without parts records none, never a guess.
+    await runStage(harness.provider, DEFAULT_ROUTES, {
+      stage: "intent",
+      system: "Read the request.",
+      prompt: "I need a shopping list",
+      schema: intentSchema,
+      timeLimitMs: 10_000,
+    });
+    const [made, bare] = readLedger(harness.dataFolder);
+    expect(made).toMatchObject({
+      promptParts: prompt.parts,
+      systemCharCount: prompt.system.length,
+      promptCharCount: prompt.prompt.length,
+    });
+    expect(bare).toMatchObject({ promptParts: [], systemCharCount: "Read the request.".length });
   });
 
   it("refuses a run whose provider, cap or data folder is wrong, before any call", () => {

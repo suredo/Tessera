@@ -1,0 +1,181 @@
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { bridgeManifest, type Artifact, type Intent, type Stage } from "@tessera/contracts";
+import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
+
+// Prompts are built from parts (GEN-03), each a file in packages/server/prompts (ENG-16), so every
+// change to one is reviewed like code. A part's version is a hash of its text, recorded with each
+// call, so a change in outcomes can be traced to the prompt that produced it. Parts are chosen by
+// the stage and the intent's structured fields, never by matching words in the request (GEN-02).
+// The bridge manifest (CON-03) and the UI standard's variables (VER-06) are generated into their
+// parts from their one definitions.
+
+const PROMPTS_FOLDER = fileURLToPath(new URL("../../prompts/", import.meta.url));
+
+/** Every prompt part, by the name of its file in packages/server/prompts. */
+export const PROMPT_PARTS = [
+  "base",
+  "bridge",
+  "ui-standard",
+  "accessibility",
+  "request",
+  "source",
+  "diagnostics",
+  "probe",
+  "probe-request",
+] as const;
+export type PromptPart = (typeof PROMPT_PARTS)[number];
+
+/** The stages that write a tool, and the parts they take. */
+export type GenerationStage = Extract<Stage, "create" | "edit" | "repair">;
+
+/**
+ * The largest prompt, instructions and request together, in characters, that each stage's fixture
+ * may reach (GEN-03), about a tenth above what they measured when set: a test fails past it, so a
+ * part can't grow unnoticed. The POC's one prompt reached about 18,000.
+ */
+export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
+  create: 14_500,
+  edit: 18_500,
+  repair: 19_000,
+};
+
+const PLACEHOLDER = /\{\{(\w+)\}\}/g;
+
+/** A part's text as its file holds it. */
+export function partText(part: PromptPart): string {
+  return fs.readFileSync(`${PROMPTS_FOLDER}${part}.md`, "utf8").replace(/\r\n/g, "\n").trimEnd();
+}
+
+/** A short hash of `text`: a part's version (ENG-16). */
+export const partVersion = (text: string): string =>
+  createHash("sha256").update(text).digest("hex").slice(0, 12);
+
+/**
+ * A part with its placeholders filled. Every placeholder must have a value and every value a
+ * placeholder, so a part and its caller can't drift apart.
+ */
+export function fillPart(part: PromptPart, values: Record<string, string> = {}): string {
+  const text = partText(part);
+  const named = new Set([...text.matchAll(PLACEHOLDER)].map((match) => match[1]!));
+  for (const name of named) {
+    if (!(name in values)) throw new Error(`The ${part} prompt part needs a value for ${name}.`);
+  }
+  for (const name of Object.keys(values)) {
+    if (!named.has(name)) throw new Error(`The ${part} prompt part has no place for ${name}.`);
+  }
+  // A function, so a `$` in a value is never read as a replacement pattern.
+  return text.replace(PLACEHOLDER, (_, name: string) => values[name]!);
+}
+
+/**
+ * A JSON Schema without what tells a model nothing: the `$schema` line, a pattern beside a
+ * `format` that says the same, and the bounds every JSON integer has anyway.
+ */
+function plainSchema(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(plainSchema);
+  if (value === null || typeof value !== "object") return value;
+  const schema = value as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.entries(schema)
+      .filter(([key, item]) => {
+        if (key === "$schema") return false;
+        if (key === "pattern" && "format" in schema) return false;
+        if (key === "minimum" && item === Number.MIN_SAFE_INTEGER) return false;
+        if (key === "maximum" && item === Number.MAX_SAFE_INTEGER) return false;
+        return true;
+      })
+      .map(([key, item]) => [key, plainSchema(item)]),
+  );
+}
+
+/** The bridge manifest (CON-03) as the bridge part quotes it: compact JSON, without the noise. */
+export const manifestForPrompt = (): string => JSON.stringify(plainSchema(bridgeManifest()));
+
+/** The UI standard's variables, one per line, from the one definition of its tokens (VER-06). */
+const tokenLines = () =>
+  Object.entries(UI_TOKENS)
+    .map(([name, value]) => `- --ui-${name}: ${value}`)
+    .join("\n");
+
+export type PromptInput = {
+  stage: GenerationStage;
+  /** What the person asked, in their words. */
+  request: string;
+  /** The intent stage's answer, when there is one: its fields choose parts (GEN-02). */
+  intent?: Intent;
+  /** The tool's UI mode: the UI standard's part goes only to a tool in standard mode. */
+  uiMode: Artifact["ui"]["mode"];
+  /** The tool's code now: edit and repair change it. */
+  source?: Artifact["code"];
+  /** What the checks found, in plain words: repair fixes it (GEN-09). */
+  diagnostics?: readonly string[];
+};
+
+export type AssembledPrompt = {
+  /** The stage's instructions: the parts that don't depend on the request. */
+  system: string;
+  /** The request, with the quoted material it needs. */
+  prompt: string;
+  /** Each part used, as `name@version`, in order, for the ledger (ENG-16). */
+  parts: string[];
+  /** The whole prompt's size in characters, instructions and request together (GEN-03). */
+  size: number;
+};
+
+/**
+ * Builds a generation stage's prompt from the parts it needs. The instructions always have the
+ * base rules; the bridge manifest unless the intent says the request only changes the look; the
+ * UI standard's look for a tool in standard mode; and the accessibility rules, in either mode. The request has the person's words; edit and repair
+ * add the tool's code, and repair what the checks found.
+ */
+export function assemblePrompt(input: PromptInput): AssembledPrompt {
+  const { stage } = input;
+  if (stage !== "create" && input.source === undefined) {
+    throw new Error(`The ${stage} stage needs the tool's code.`);
+  }
+  if (stage === "repair" && !input.diagnostics?.length) {
+    throw new Error("The repair stage needs what the checks found.");
+  }
+  // Each part with the text it adds. A system part's version covers its generated content too;
+  // a request part's covers only its wording, since what it quotes changes with every call.
+  const system: [PromptPart, string, string][] = [];
+  const addSystem = (part: PromptPart, values?: Record<string, string>) => {
+    const text = fillPart(part, values);
+    system.push([part, text, partVersion(text)]);
+  };
+  addSystem("base");
+  if (!input.intent?.lookOnly) {
+    addSystem("bridge", { manifest: manifestForPrompt() });
+  }
+  if (input.uiMode === "standard") {
+    addSystem("ui-standard", { version: String(UI_STANDARD_VERSION), tokens: tokenLines() });
+  }
+  // In custom mode too: a custom look drops the standard's look, never its accessibility (UX-04).
+  addSystem("accessibility");
+  const request: [PromptPart, string, string][] = [];
+  const addRequest = (part: PromptPart, values: Record<string, string>) =>
+    request.push([part, fillPart(part, values), partVersion(partText(part))]);
+  addRequest("request", { request: input.request });
+  if (input.source) addRequest("source", { ...input.source });
+  if (stage === "repair") {
+    addRequest("diagnostics", {
+      diagnostics: input.diagnostics!.map((line) => `- ${line}`).join("\n"),
+    });
+  }
+  const joined = (parts: [PromptPart, string, string][]) =>
+    parts.map(([, text]) => text).join("\n\n");
+  const assembled = { system: joined(system), prompt: joined(request) };
+  return {
+    ...assembled,
+    parts: [...system, ...request].map(([part, , version]) => `${part}@${version}`),
+    size: assembled.system.length + assembled.prompt.length,
+  };
+}
+
+/** A fixed part used as it is, such as the probe's: its text and its `name@version`. */
+export function fixedPart(part: PromptPart): { text: string; part: string } {
+  const text = fillPart(part);
+  return { text, part: `${part}@${partVersion(text)}` };
+}

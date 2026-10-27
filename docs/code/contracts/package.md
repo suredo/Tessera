@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T22:52:33Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:24:24Z }
 ---
 
 # Purpose
@@ -32,7 +32,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 - `src/intent.ts`: `intentSchema` and its `Intent` type.
 - `src/provider.ts`: `STAGES`, `EFFORTS`, `PROVIDER_ERROR_KINDS`, `usageSchema`, where unknown is null and never 0, and `providerScriptSchema`, the canned replies of a scripted provider ([provider adapters](../server/providers.md)).
 - `src/routes.ts`: model routing (`CLI-09`). `MODELS` and `modelSchema` are the Claude models a route may name, `routeSchema` (`Route`) a stage's model and effort, `DEFAULT_ROUTES` the starting routes (A18), `routeOverridesSchema` (`RouteOverrides`) a routes file, and `withOverrides` the routes in use ([provider adapters](../server/providers.md)).
-- `src/ledger.ts`: `ledgerEntrySchema` and `requestLogEntrySchema`, one line each per call of an evaluation run ([evaluation harness](../evals/harness.md)). A ledger entry's outcome is a discriminated union, so an error kind exists only on a failed call (`CON-02`); a failed call keeps its plain message and, as its detail, what the provider itself said (`GEN-10`).
+- `src/ledger.ts`: `ledgerEntrySchema` and `requestLogEntrySchema`, one line each per call of an evaluation run ([evaluation harness](../evals/harness.md)). A ledger entry's outcome is a discriminated union, so an error kind exists only on a failed call (`CON-02`); a failed call keeps its plain message and, as its detail, what the provider itself said (`GEN-10`). An entry also records the instructions' size and the prompt parts used, as name@version (`GEN-03`, `ENG-16`); both are optional, for ledgers written before them.
 - `src/json-schema.ts`: `contracts`, the list of contracts whose JSON Schema leaves the process; `bridgeManifest`, the manifest as JSON, with each action's arguments and result as JSON Schema, for the prompt's API section and the static checks (M2); `jsonSchemaOf`, the JSON Schema of any zod schema in `JSON_SCHEMA_TARGET`, the draft the CLI accepts; and `renderSchemaFiles`, which produces the schema files and `bridge-manifest.json`.
 - `src/units.ts`: the unit rule (`CON-05`) and `numericFieldsWithoutUnit`, which checks it.
 - `scripts/generate-schemas.ts`: writes `schemas/*.schema.json` and `schemas/bridge-manifest.json`. Run it as `pnpm contracts:schemas`.

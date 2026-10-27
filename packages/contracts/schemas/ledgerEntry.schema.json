@@ -46,7 +46,22 @@
     "promptCharCount": {
       "type": "integer",
       "minimum": 0,
+      "maximum": 9007199254740991,
+      "description": "The request's size in characters."
+    },
+    "systemCharCount": {
+      "description": "The instructions' size in characters (GEN-03); missing in older ledgers.",
+      "type": "integer",
+      "minimum": 0,
       "maximum": 9007199254740991
+    },
+    "promptParts": {
+      "description": "The prompt parts used, as name@version (ENG-16); missing in older ledgers.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "startedAt": {
       "type": "string",

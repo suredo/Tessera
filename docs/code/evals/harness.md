@@ -7,12 +7,12 @@ implements: [OBS-02, ENG-07, ENG-19, CLI-04]
 tests: [../../../evals/test/harness.test.ts]
 tags: [code, evals, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:10:10Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:35:16Z }
 ---
 
 # Purpose
 
-Makes every evaluation run follow the [live evaluation protocol](../../practices/live-evaluation.md) (`ENG-07`) by construction (`OBS-02`). A script calls models only through the harness's provider, which refuses calls past the approved hard cap, records each call in a ledger and each request in a log, and stops after a provider error. A dry run uses the [scripted provider](../server/providers.md), so the exact script is rehearsed at no cost before any call is spent. The live spikes (#19, #20) are its first users; the scenario runner (M2) builds on it.
+Makes every evaluation run follow the [live evaluation protocol](../../practices/live-evaluation.md) (`ENG-07`) by construction (`OBS-02`). A script calls models only through the harness's provider, which refuses calls past the approved hard cap, records each call in a ledger, with its prompt parts and sizes, and each request in a log, and stops after a provider error. A dry run uses the [scripted provider](../server/providers.md), so the exact script is rehearsed at no cost before any call is spent. The live spikes (#19, #20) are its first users; the scenario runner (M2) builds on it.
 
 # Entry points
 
@@ -37,7 +37,7 @@ Depends on `@tessera/contracts` and on the `Provider` interface from `@tessera/s
 
 - **The request log holds whole prompts and answers.** Keep run folders out of the repository (`test-output/` is ignored) and sanitize anything before committing it (`ENG-19`).
 - **The data folder is not yet checked against the real user data folder,** which doesn't exist until M1 (`PLAT-04`). The "new or empty" rule covers it until then; add the check when the data folder lands.
-- **Not yet recorded:** prompt part versions (`ENG-16`) and diagnostics (`OBS-01`), which arrive with the prompts and pipeline in M2. The step-level stop rules (step 1 fails, a step fails twice) belong to the scenario runner.
+- **Not yet recorded:** diagnostics (`OBS-01`), which arrive with the pipeline in M2. Prompt part versions are recorded (`ENG-16`). The step-level stop rules (step 1 fails, a step fails twice) belong to the scenario runner.
 
 # Symbols (generated)
 

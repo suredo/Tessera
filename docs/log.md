@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-27
+
+* **Create**: Prompt assembly ([issue 143](https://github.com/suredo/Tessera/issues/143)): the [prompt assembly](code/server/prompts.md) doc describes the part files in `packages/server/prompts`, `assemblePrompt` choosing parts by stage and structured intent, versions as hashes recorded in the ledger, the bridge manifest and UI tokens generated into their parts, and each stage's budget; it claims `GEN-03`, `ENG-16`, `GEN-02`, `VER-06` and `CON-03`. The [contracts](code/contracts/package.md), [harness](code/evals/harness.md), [provider adapters](code/server/providers.md) and [setup check](code/server/setup.md) docs say the ledger records the parts and the probe's words are parts. After Codex's review of [pull request 164](https://github.com/suredo/Tessera/pull/164), the accessibility rules are their own part, in custom mode too, and the harness doc no longer lists prompt versions as unrecorded.
+
 ## 2026-10-26
 
 * **Update**: The status screen, the rest of [issue 142](https://github.com/suredo/Tessera/issues/142): the [web package](code/web/package.md) doc describes `Status` and `SetupNotice`, with the setup check on opening, each failure with its fix on the first-run, main and status screens, the probe offered only once the check passes, and browser tests that never reach the real Claude Code; it claims `APP-07`. The [setup check](code/server/setup.md) and [launcher](code/server/launcher.md) docs say the screen shows the report and the data folder. After Codex's review of [pull request 163](https://github.com/suredo/Tessera/pull/163), a check that couldn't be made says so and can be tried again.

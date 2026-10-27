@@ -100,6 +100,7 @@ export type StageCall<T> = {
   stage: Stage;
   system: string;
   prompt: string;
+  promptParts?: readonly string[];
   schema: z.ZodType<T>;
   timeLimitMs: number;
   signal?: AbortSignal;

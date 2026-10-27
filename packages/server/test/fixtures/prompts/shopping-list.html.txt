@@ -1,0 +1,15 @@
+<header>
+  <h1>Shopping list</h1>
+  <p class="hint">Add what you need, and tick it off in the shop.</p>
+</header>
+<form id="add">
+  <label for="item">Item</label>
+  <input id="item" name="item" autocomplete="off" required />
+  <label for="quantity">Quantity</label>
+  <input id="quantity" name="quantity" type="number" min="1" value="1" />
+  <button type="submit">Add</button>
+</form>
+<p id="message" role="status"></p>
+<ul id="items" aria-label="Items to buy"></ul>
+<p id="empty">Nothing on the list yet.</p>
+<button id="clear" type="button">Remove ticked items</button>

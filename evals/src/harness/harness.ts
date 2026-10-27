@@ -103,6 +103,8 @@ export function startHarness(options: HarnessOptions): Harness {
         model: spec.model,
         effort: spec.effort,
         promptCharCount: spec.prompt.length,
+        systemCharCount: spec.system.length,
+        promptParts: [...(spec.promptParts ?? [])],
         startedAt,
         usage,
         outcome,

@@ -35,7 +35,16 @@ export const ledgerEntrySchema = z
     stage: stageSchema,
     model: z.string().min(1),
     effort: effortSchema,
-    promptCharCount: z.int().nonnegative(),
+    promptCharCount: z.int().nonnegative().describe("The request's size in characters."),
+    systemCharCount: z
+      .int()
+      .nonnegative()
+      .optional()
+      .describe("The instructions' size in characters (GEN-03); missing in older ledgers."),
+    promptParts: z
+      .array(z.string().min(1))
+      .optional()
+      .describe("The prompt parts used, as name@version (ENG-16); missing in older ledgers."),
     startedAt: z.iso.datetime(),
     usage: usageSchema,
     outcome,
