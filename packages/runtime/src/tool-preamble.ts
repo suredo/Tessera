@@ -96,15 +96,46 @@
   async function inspect(id: unknown) {
     const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
     for (let waited = 0; pending.size > 0 && waited < 3000; waited += 50) await wait(50);
-    await wait(100);
+    // Watched for at least two seconds from the page's start, so an error a quiet tool makes a
+    // moment after starting is seen too.
+    await wait(Math.max(100, 2000 - performance.now()));
     const body = document.body;
     const all = (selector: string) => (body ? [...body.querySelectorAll(selector)] : []);
-    const named = (element: Element) =>
-      Boolean(
-        element.getAttribute("aria-label")?.trim() ||
-        element.getAttribute("aria-labelledby")?.trim() ||
-        element.getAttribute("title")?.trim(),
-      );
+    // The text a name comes from, as assistive technology reads it: text, an image's alt text and
+    // an element's aria-label, leaving out what is hidden from it.
+    const textOf = (node: Node): string => {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+      if (!(node instanceof Element) || node.getAttribute("aria-hidden") === "true") return "";
+      const label = node.getAttribute("aria-label")?.trim();
+      if (label) return label;
+      if (node instanceof HTMLImageElement) return node.alt;
+      return [...node.childNodes].map(textOf).join(" ");
+    };
+    const labelledBy = (element: Element) =>
+      (element.getAttribute("aria-labelledby") ?? "")
+        .split(/\s+/)
+        .map((ref) => (ref ? document.getElementById(ref) : null))
+        .map((target) => (target ? textOf(target) : ""))
+        .join(" ")
+        .trim();
+    const ownName = (element: Element) =>
+      labelledBy(element) ||
+      element.getAttribute("aria-label")?.trim() ||
+      element.getAttribute("title")?.trim() ||
+      "";
+    const fieldName = (field: Element) =>
+      ownName(field) ||
+      [...((field as HTMLInputElement).labels ?? [])].map(textOf).join(" ").trim();
+    const buttonName = (button: Element) =>
+      ownName(button) ||
+      (button instanceof HTMLInputElement ? button.value.trim() : textOf(button).trim());
+    // Shown: laid out with a size, and visible.
+    const shown = (element: Element) => {
+      const box = element.getBoundingClientRect();
+      const visible =
+        typeof element.checkVisibility === "function" ? element.checkVisibility() : true;
+      return box.width > 0 && box.height > 0 && visible;
+    };
     const fields = all(
       "input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image]), select, textarea",
     );
@@ -118,17 +149,10 @@
         problems: [...problems],
         elements: all("*").length,
         text: body ? body.innerText.trim().length : 0,
-        media: all("canvas, svg, img, video").length,
+        media: all("canvas, svg, img, video").filter(shown).length,
         overflow: Math.max(root.scrollWidth, body?.scrollWidth ?? 0) - root.clientWidth,
-        unlabeled: fields.filter(
-          (field) => !((field as HTMLInputElement).labels?.length ?? 0) && !named(field),
-        ).length,
-        unnamed: buttons.filter(
-          (button) =>
-            !button.textContent?.trim() &&
-            !named(button) &&
-            !(button instanceof HTMLInputElement && button.value.trim()),
-        ).length,
+        unlabeled: fields.filter((field) => !fieldName(field)).length,
+        unnamed: buttons.filter((button) => !buttonName(button)).length,
         noAlt: all("img:not([alt])").length,
       },
     });

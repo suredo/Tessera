@@ -23,6 +23,26 @@ const tools: Record<string, Artifact["code"]> = {
   },
   throws: { html: "<p>Hi</p>", css: "", js: 'throw new Error("boom");' },
   rejects: { html: "<p>Hi</p>", css: "", js: 'Promise.reject(new Error("later"));' },
+  // A quiet tool, with no calls, whose error comes a moment after it starts.
+  throwsLater: {
+    html: "<p>Hi</p>",
+    css: "",
+    js: 'setTimeout(() => { throw new Error("half a second in"); }, 500);',
+  },
+  // Only a hidden drawing: nothing shows.
+  hiddenMedia: { html: '<canvas hidden aria-label="Drawing"></canvas>', css: "", js: "" },
+  // Only a drawing, visible: something shows.
+  drawing: {
+    html: '<canvas aria-label="Drawing" width="200" height="100"></canvas>',
+    css: "",
+    js: "",
+  },
+  // Names that point at nothing, an empty label, and a button named by its image.
+  names: {
+    html: '<p>Form</p><input aria-labelledby="missing"><label for="empty"></label><input id="empty"><button><img alt="Add"></button>',
+    css: "",
+    js: "",
+  },
   empty: { html: "", css: "", js: "" },
   wide: { html: '<div class="wide">A very wide box</div>', css: ".wide { width: 600px; }", js: "" },
   unlabelled: {
@@ -88,6 +108,30 @@ test("VER-02: an error or an unhandled rejection as the tool starts fails it", a
   const rejected = await smoke(page, "rejects");
   expect(rejected).toMatchObject({ outcome: "check-failed", check: "smoke" });
   expect(rejected.reason).toContain("An error nothing handled: later");
+});
+
+test("VER-02: an error a moment after a quiet tool starts is still seen", async ({ page }) => {
+  const result = await smoke(page, "throwsLater");
+  expect(result).toMatchObject({ outcome: "check-failed", check: "smoke" });
+  expect(result.reason).toContain("half a second in");
+});
+
+test("VER-02: hidden media shows nothing; a visible drawing does", async ({ page }) => {
+  expect(await smoke(page, "hiddenMedia")).toMatchObject({
+    outcome: "check-failed",
+    reason: "The tool shows nothing.",
+  });
+  expect(await smoke(page, "drawing")).toMatchObject({ outcome: "refused" });
+});
+
+test("VER-02: names are resolved: a reference to nothing and an empty label don't count; an image's alt names its button", async ({
+  page,
+}) => {
+  expect(await smoke(page, "names")).toEqual({
+    outcome: "check-failed",
+    check: "smoke",
+    reason: "2 fields have no label.",
+  });
 });
 
 test("VER-02: a tool that shows nothing fails", async ({ page }) => {
