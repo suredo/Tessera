@@ -5,6 +5,7 @@ import {
   creationSchema,
   fieldName,
   recordIdSchema,
+  TOOL_DATA_LIMIT_BYTES,
   type Artifact,
   type Creation,
   type FailureClass,
@@ -140,6 +141,13 @@ export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>):
     ] as const) {
       const fits = checkToolData(schema, data);
       if (!fits.ok) shape.push(`${what}: ${fits.reason}`);
+      // Within the most data one tool may hold (DATA-06), before anything is stored.
+      const bytes = Buffer.byteLength(JSON.stringify(data), "utf8");
+      if (bytes > TOOL_DATA_LIMIT_BYTES) {
+        shape.push(
+          `${what}: it is ${Math.ceil(bytes / 1024)} KB, more than the ${TOOL_DATA_LIMIT_BYTES / 1024} KB a tool may hold.`,
+        );
+      }
       shape.push(...recordProblems(schema, data, what));
     }
   }

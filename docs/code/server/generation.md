@@ -3,11 +3,11 @@ type: Code Module
 title: "Generation stages"
 description: "A request becomes a checked candidate tool: the create stage's answer, a discriminated union, with the tool's data shape, reusable defaults and the request's own entries apart, checked by the host before anything is stored or run, and every failure classed for repair; and the pipeline that carries a request through intent and creation to a stored candidate with its workspace, ready to stage."
 resource: ../../../packages/server/src/generation/
-implements: [GEN-05, CON-02, GEN-04]
+implements: [GEN-05, CON-02]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/pipeline.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T07:17:25Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T07:25:58Z }
 ---
 
 # Purpose
@@ -30,7 +30,7 @@ The core of generation (#146): a request's interface part becomes a candidate to
 - **Defaults and the request's entries stay apart** (`GEN-05`). The artifact keeps only the reusable defaults. A new workspace starts from the defaults, with each list the request gave entries for extended by them. The request's entries never become defaults.
 - **Nothing is stored or run before the host's checks.** In order:
   - the declared data shape must be one Tessera can check (`DATA-03`);
-  - the defaults and the starting data must fit it, and every record must be one the patch engine can change (`DATA-02`): its list's name, its id and its field names must be ones the patch contract accepts (one definition, the contract's own), and its id unique in its list. As the patch engine counts a list as records only when every item is one, a list holding any object must hold only records, and an empty list is held to the name rule unless the schema declares it a list of other values (an item type that rules out objects, written as one name or a list of them);
+  - the defaults and the starting data must fit it, within the most data a tool may hold (`DATA-06`), and every record must be one the patch engine can change (`DATA-02`): its list's name, its id and its field names must be ones the patch contract accepts (one definition, the contract's own), and its id unique in its list. As the patch engine counts a list as records only when every item is one, a list holding any object must hold only records, and an empty list is held to the name rule unless the schema declares it a list of other values (an item type that rules out objects, written as one name or a list of them);
   - the artifact must match its contract (`CON-04`);
   - the static check must pass (`VER-01`, [static check](checks.md)).
 - **Every failure is classed** (`GEN-09`):
@@ -41,6 +41,7 @@ The core of generation (#146): a request's interface part becomes a candidate to
   Smoke and behavior failures come from staging and M3.
 - **The prompt's schema keywords are the host's own list,** the one the data shape is checked against, so the model is told exactly what passes.
 
+- **It doesn't carry out a mixed request yet.** `GEN-04` asks that the interface part goes to generation and the data part is applied after, as a validated patch batch; until the edit and data stages exist, a mixed request is answered "not yet", and `GEN-04` isn't claimed.
 - **The pipeline carries a request as far as the server goes, and activates nothing.** The intent stage decides, with the open tool and its lists, and the saved tools' IDs.
   - Clarify, unsupported and ask-to-split are answered as they are, and a listed saved tool is offered to open.
   - A change to the open tool (edit, data, mixed) is answered "not yet" until the edit and data stages exist.

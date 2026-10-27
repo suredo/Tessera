@@ -7,10 +7,12 @@ import {
   DEFAULT_ROUTES,
   GENERATE_ROUTE,
   generateReplySchema,
+  TOOL_DATA_LIMIT_BYTES,
   type Creation,
   type Intent,
 } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { generate, generationRoutes } from "../src/generation/index.ts";
 import { workspaceTools } from "../src/host/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
@@ -26,7 +28,7 @@ import {
   saveTool,
 } from "../src/workspaces/index.ts";
 
-// A request carried out as far as the server goes (GEN-01, GEN-04): intent, then create, then the
+// A request carried out as far as the server goes (GEN-01): intent, then create, then the
 // candidate stored with its workspace and starting data (GEN-05), ready to stage. Answers come
 // from scripts (ENG-11); every data folder is a new temporary one (ENG-19).
 
@@ -87,8 +89,8 @@ const intentReply = (fields: Partial<Intent> & { kind: Intent["kind"] }) => ({
 });
 const createReply = (value: unknown) => ({ kind: "value", stage: "create", value });
 
-describe("carrying out a request (GEN-01, GEN-04, GEN-05)", () => {
-  it("GEN-04, GEN-05: a new tool is stored with a workspace holding its starting data, ready to stage", async () => {
+describe("carrying out a request (GEN-01, GEN-05)", () => {
+  it("GEN-01, GEN-05: a new tool is stored with a workspace holding its starting data, ready to stage", async () => {
     const folder = await newFolder();
     const provider = script(intentReply({ kind: "create" }), createReply(tool));
     const reply = await generate(folder, provider, DEFAULT_ROUTES, { request: "A shopping list" });
@@ -125,7 +127,7 @@ describe("carrying out a request (GEN-01, GEN-04, GEN-05)", () => {
     folder.close();
   });
 
-  it("GEN-04: an open workspace with no tool yet becomes the new tool's", async () => {
+  it("GEN-01: an open workspace with no tool yet becomes the new tool's", async () => {
     const folder = await newFolder();
     const empty = createWorkspace(folder, "New chat");
     const provider = script(intentReply({ kind: "create" }), createReply(tool));
@@ -136,6 +138,34 @@ describe("carrying out a request (GEN-01, GEN-04, GEN-05)", () => {
     expect(reply).toMatchObject({ kind: "candidate", workspaceId: empty.id });
     expect(getWorkspace(folder, empty.id)?.title).toBe("Shopping list");
     expect(listWorkspaces(folder)).toHaveLength(1);
+    folder.close();
+  });
+
+  it("DATA-06: starting data larger than a tool may hold stores nothing, in a new or an empty open workspace", async () => {
+    const folder = await newFolder();
+    const empty = createWorkspace(folder, "New chat");
+    const big = {
+      ...tool,
+      data: {
+        schema: { type: "object", properties: { note: { type: "string" } } },
+        reusableDefaults: { note: "" },
+        initialState: { note: "x".repeat(TOOL_DATA_LIMIT_BYTES + 1) },
+      },
+    };
+    for (const workspaceId of [undefined, empty.id]) {
+      const reply = await generate(
+        folder,
+        script(intentReply({ kind: "create" }), createReply(big)),
+        DEFAULT_ROUTES,
+        { request: "A note", workspaceId },
+      );
+      expect(reply).toMatchObject({ kind: "failed", failure: "schema-shape" });
+    }
+    expect(listWorkspaces(folder)).toHaveLength(1);
+    expect(getWorkspace(folder, empty.id)).toMatchObject({ title: "New chat", data: null });
+    expect(
+      folder.db.get(z.object({ n: z.number() }), "SELECT COUNT(*) AS n FROM tool_versions")?.n,
+    ).toBe(0);
     folder.close();
   });
 
