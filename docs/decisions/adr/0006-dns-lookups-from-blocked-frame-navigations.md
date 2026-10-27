@@ -4,7 +4,7 @@ title: "ADR 0006. DNS lookups from blocked frame navigations"
 description: "A blocked frame navigation in the sandbox still makes Chrome and Edge resolve and connect to its address: accepted as a known limit of CSP for M1, with a partial runtime block to reconsider at the start of M2."
 tags: [decisions, runtime, sandbox, security]
 status: stable
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-21T23:14:08Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T03:57:22Z }
 ---
 # ADR 0006. DNS lookups from blocked frame navigations
 
@@ -30,4 +30,5 @@ Option 1 for M1. In M1, every tool is hand-written, so no tool chooses a name to
 
 - `SBX-06` and `SBX-07` check that no request arrives, which holds; they don't require no connection. `SBX-01` to `SBX-05` require no connection at all, and pass.
 - The threat model lists the limit and names this record. Tessera doesn't claim that a tool can cause no network activity: it can't send requests, but it can make the browser look up a name it chooses.
-- **When to revisit:** at the start of M2 (option 3); if Chrome or Edge stop resolving blocked frame navigations, which the browser tests would show once they count connections again; or if CSP gains a way to block it.
+- **Revisited on 2026-10-27** for generated tools: [ADR 0009](0009-frames-and-navigation-in-generated-tools.md) refuses frames and navigation in the static check, before any candidate or imported tool runs, rather than hooking them in the preamble.
+- **When to revisit:** if Chrome or Edge stop resolving blocked frame navigations, which the browser tests would show once they count connections again; or if CSP gains a way to block it.
