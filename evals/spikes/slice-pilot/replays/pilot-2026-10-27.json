@@ -1,0 +1,140 @@
+{
+  "source": "The end-to-end slice pilot, live, 2026-10-27, on Claude Code 2.1.311: each stage answer exactly as structured output, by call order (intent on claude-haiku-5-5 low, create on claude-sonnet-5-5 medium).",
+  "replays": [
+    {
+      "callIndex": 0,
+      "stage": "intent",
+      "request": "No tool is open now.\n\nThe request:\nI need a shopping list I can tick off at the store, with milk, eggs and bread on it.",
+      "answer": {
+        "kind": "create",
+        "interfacePart": "a shopping list I can tick off at the store",
+        "dataPart": null,
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": false,
+        "language": "en",
+        "features": [
+          {
+            "name": "Shopping list with tick-off",
+            "request": "a shopping list I can tick off at the store"
+          },
+          {
+            "name": "Initial items",
+            "request": "with milk, eggs and bread on it"
+          }
+        ]
+      }
+    },
+    {
+      "callIndex": 1,
+      "stage": "create",
+      "request": "The person's request:\n\nI need a shopping list I can tick off at the store, with milk, eggs and bread on it.",
+      "answer": {
+        "outcome": "tool",
+        "name": "Shopping list",
+        "summary": "A shopping list with milk, eggs and bread to start. Tick items off as you shop, add new ones, and remove ones you don't need.",
+        "uiMode": "standard",
+        "capabilities": [],
+        "code": {
+          "html": "<h1>Shopping list</h1>\n<p id=\"count\" class=\"secondary\" aria-live=\"polite\"></p>\n<div class=\"add\">\n<label for=\"newItem\">New item</label>\n<div class=\"row\">\n<input id=\"newItem\" type=\"text\" autocomplete=\"off\" placeholder=\"e.g. butter\">\n<button id=\"addBtn\" type=\"button\">Add</button>\n</div>\n</div>\n<p id=\"msg\" role=\"status\" class=\"secondary\"></p>\n<ul id=\"list\" aria-label=\"Items to buy\"></ul>\n<p id=\"empty\" class=\"secondary\" hidden>The list is empty. Add your first item above.</p>\n<button id=\"clearBtn\" type=\"button\" class=\"plain\" hidden>Remove ticked items</button>",
+          "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\n.secondary{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0}\nlabel{display:block;margin-bottom:var(--ui-space-1)}\n.row{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}\ninput[type=text]{flex:1 1 180px;min-height:var(--ui-target);box-sizing:border-box;padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.plain{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border);margin-top:var(--ui-space-3)}\nbutton.del{background:var(--ui-surface);color:var(--ui-error);border-color:var(--ui-control-border)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;margin:var(--ui-space-3) 0 0;padding:0}\nli{display:flex;align-items:center;gap:var(--ui-space-2);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-1) var(--ui-space-3);margin-bottom:var(--ui-space-2);min-height:var(--ui-target)}\nli label{flex:1;display:flex;align-items:center;gap:var(--ui-space-3);margin:0;min-height:var(--ui-target);cursor:pointer;overflow-wrap:anywhere}\nli input[type=checkbox]{width:24px;height:24px;flex:none;accent-color:var(--ui-accent)}\nli.done span{text-decoration:line-through;color:var(--ui-text-secondary)}",
+          "js": "const list=document.getElementById('list');\nconst input=document.getElementById('newItem');\nconst msg=document.getElementById('msg');\nconst empty=document.getElementById('empty');\nconst count=document.getElementById('count');\nconst clearBtn=document.getElementById('clearBtn');\nlet items=[];let revs={};\nasync function load(){\ntry{const r=await tessera.call('data.read',{});items=r.data.items||[];revs=(r.revisions&&r.revisions.items)||{};render();}\ncatch(e){msg.textContent='Could not load the list. Please try again.';}\n}\nfunction render(){\nlist.textContent='';\nfor(const it of items){\nconst li=document.createElement('li');\nif(it.done)li.className='done';\nconst lab=document.createElement('label');\nconst cb=document.createElement('input');cb.type='checkbox';cb.checked=!!it.done;\nconst sp=document.createElement('span');sp.textContent=it.name;\nlab.appendChild(cb);lab.appendChild(sp);\ncb.addEventListener('change',()=>toggle(it.id,cb.checked,cb));\nconst del=document.createElement('button');del.type='button';del.className='del';del.textContent='Remove';\ndel.setAttribute('aria-label','Remove '+it.name);\ndel.addEventListener('click',()=>remove(it.id,it.name));\nli.appendChild(lab);li.appendChild(del);list.appendChild(li);\n}\nconst doneN=items.filter(i=>i.done).length;\nempty.hidden=items.length>0;\nclearBtn.hidden=doneN===0;\ncount.textContent=items.length?(doneN+' of '+items.length+' ticked'):'';\n}\nasync function toggle(id,val,cb){\ntry{await tessera.call('data.patch',{operations:[{op:'replace',collection:'items',id:id,revisionCount:revs[id],fields:{done:val}}]});msg.textContent='';await load();}\ncatch(e){cb.checked=!val;msg.textContent='Could not update that item. Please try again.';}\n}\nasync function remove(id,name){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'items',id:id,revisionCount:revs[id]}]});msg.textContent=name+' removed.';await load();input.focus();}\ncatch(e){msg.textContent='Could not remove '+name+'. Please try again.';}\n}\nasync function add(){\nconst name=input.value.trim();\nif(!name){msg.textContent='Type an item name first.';input.focus();return;}\ntry{await tessera.call('data.patch',{operations:[{op:'add',collection:'items',record:{name:name,done:false}}]});input.value='';msg.textContent=name+' added.';await load();input.focus();}\ncatch(e){msg.textContent='Could not add the item. Your text is still here; please try again.';}\n}\nasync function clearDone(){\nconst ops=items.filter(i=>i.done).map(i=>({op:'remove',collection:'items',id:i.id,revisionCount:revs[i.id]}));\nif(!ops.length)return;\ntry{await tessera.call('data.patch',{operations:ops});msg.textContent=ops.length+' ticked item(s) removed.';await load();input.focus();}\ncatch(e){msg.textContent='Could not remove the ticked items. Please try again.';}\n}\ndocument.getElementById('addBtn').addEventListener('click',add);\ninput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add();}});\nclearBtn.addEventListener('click',clearDone);\nload();"
+        },
+        "data": {
+          "schema": {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "done": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["id", "name", "done"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["items"]
+          },
+          "reusableDefaults": {},
+          "initialState": {
+            "items": [
+              {
+                "id": "i-milk",
+                "name": "Milk",
+                "done": false
+              },
+              {
+                "id": "i-eggs",
+                "name": "Eggs",
+                "done": false
+              },
+              {
+                "id": "i-bread",
+                "name": "Bread",
+                "done": false
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "callIndex": 2,
+      "stage": "intent",
+      "request": "No tool is open now.\n\nThe request:\nA simple calculator.",
+      "answer": {
+        "kind": "create",
+        "interfacePart": "A simple calculator.",
+        "dataPart": null,
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": false,
+        "language": "en",
+        "features": [
+          {
+            "name": "Simple calculator",
+            "request": "A simple calculator."
+          }
+        ]
+      }
+    },
+    {
+      "callIndex": 3,
+      "stage": "create",
+      "request": "The person's request:\n\nA simple calculator.",
+      "answer": {
+        "outcome": "tool",
+        "name": "Calculadora",
+        "summary": "Uma calculadora simples com as quatro operações, porcentagem e troca de sinal. Funciona com o teclado ou com os botões.",
+        "uiMode": "standard",
+        "capabilities": [],
+        "code": {
+          "html": "<h1>Calculadora</h1>\n<div class=\"calc\">\n<div class=\"expr\" id=\"expr\" aria-hidden=\"true\"></div>\n<output id=\"display\" class=\"display\" aria-live=\"polite\">0</output>\n<div id=\"msg\" class=\"msg\" role=\"status\"></div>\n<div class=\"keys\" id=\"keys\"></div>\n</div>",
+          "css": "h1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-3)}\n.calc{max-width:320px;width:100%}\n.expr{min-height:20px;text-align:right;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);overflow:hidden}\n.display{display:block;text-align:right;font-size:32px;padding:var(--ui-space-3);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);overflow-x:auto;white-space:nowrap}\n.msg{min-height:20px;color:var(--ui-error);font-size:var(--ui-size-secondary)}\n.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--ui-space-2);margin-top:var(--ui-space-2)}\n.keys button{min-height:var(--ui-target);font:inherit;font-size:var(--ui-size-section);background:var(--ui-surface);color:var(--ui-text);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);cursor:pointer}\n.keys button.op{background:var(--ui-accent-soft)}\n.keys button.eq{background:var(--ui-accent);color:#fff}\n.keys button:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}",
+          "js": "const layout=[['C','±','%','÷'],['7','8','9','×'],['4','5','6','−'],['1','2','3','+'],['0','.','⌫','=']];\nconst names={'C':'Limpar','±':'Trocar sinal','%':'Porcentagem','÷':'Dividir','×':'Multiplicar','−':'Subtrair','+':'Somar','=':'Igual','⌫':'Apagar'};\nlet cur='0',acc=null,op=null,fresh=true,expr='';\nconst disp=document.getElementById('display'),ex=document.getElementById('expr'),msg=document.getElementById('msg');\nfunction show(){disp.textContent=cur.replace('.',',');ex.textContent=expr;}\nfunction calc(a,b,o){if(o==='+')return a+b;if(o==='−')return a-b;if(o==='×')return a*b;if(b===0)return null;return a/b;}\nfunction fmt(n){return String(parseFloat(n.toPrecision(12)));}\nfunction press(k){\nmsg.textContent='';\nif(k>='0'&&k<='9'){if(fresh){cur=k;fresh=false;}else cur=cur==='0'?k:cur+k;}\nelse if(k==='.'){if(fresh){cur='0.';fresh=false;}else if(!cur.includes('.'))cur+='.';}\nelse if(k==='C'){cur='0';acc=null;op=null;fresh=true;expr='';}\nelse if(k==='⌫'){if(!fresh){cur=cur.length>1?cur.slice(0,-1):'0';if(cur==='-')cur='0';}}\nelse if(k==='±'){if(cur!=='0')cur=cur[0]==='-'?cur.slice(1):'-'+cur;}\nelse if(k==='%'){cur=fmt(parseFloat(cur)/100);}\nelse{\nconst v=parseFloat(cur);\nif(op&&!fresh){const r=calc(acc,v,op);if(r===null){msg.textContent='Não é possível dividir por zero.';cur='0';acc=null;op=null;fresh=true;expr='';show();return;}acc=r;cur=fmt(r);}\nelse if(!op)acc=v;\nif(k==='='){expr=op?expr+' '+fmt(v)+' =':expr;op=null;fresh=true;}\nelse{op=k;expr=fmt(acc)+' '+k;fresh=true;}\n}\nshow();}\nconst keysEl=document.getElementById('keys');\nfor(const row of layout){for(const k of row){const b=document.createElement('button');b.type='button';b.textContent=k;b.setAttribute('aria-label',names[k]||k);if('÷×−+'.includes(k))b.className='op';if(k==='=')b.className='eq';b.addEventListener('click',()=>press(k));keysEl.appendChild(b);}}\ndocument.addEventListener('keydown',e=>{\nif(e.target&&e.target.tagName==='BUTTON'&&(e.key==='Enter'||e.key===' '))return;\nconst m={'*':'×','/':'÷','-':'−','+':'+',',':'.','.':'.','Enter':'=','=':'=','Backspace':'⌫','Escape':'C','%':'%'};\nlet k=null;if(e.key>='0'&&e.key<='9'&&e.key.length===1)k=e.key;else if(m[e.key])k=m[e.key];\nif(k){e.preventDefault();press(k);}});\nshow();"
+        },
+        "data": {
+          "schema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": false
+          },
+          "reusableDefaults": {},
+          "initialState": {}
+        }
+      }
+    }
+  ]
+}
