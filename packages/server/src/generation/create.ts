@@ -65,8 +65,11 @@ export function startingDataOf(defaults: ToolData, initialState: ToolData): Tool
 function listOfValues(schema: object, list: string): boolean {
   const property = (schema as { properties?: Record<string, { items?: { type?: unknown } }> })
     .properties?.[list];
+  // `type` may be one name or a list of them: only one that rules out objects makes it values.
   const type = property?.items?.type;
-  return type !== undefined && type !== "object";
+  if (typeof type === "string") return type !== "object";
+  if (Array.isArray(type)) return !type.includes("object");
+  return false;
 }
 
 /**

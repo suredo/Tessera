@@ -200,6 +200,25 @@ describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
         { "shopping-items": [] },
       ),
     ).toMatchObject({ kind: "failed", failure: "schema-shape" });
+    // An item type written as a list that allows objects may be records too.
+    for (const type of [["object"], ["object", "null"]]) {
+      expect(
+        withData(
+          { type: "object", properties: { "shopping-items": { type: "array", items: { type } } } },
+          { "shopping-items": [] },
+        ),
+        JSON.stringify(type),
+      ).toMatchObject({ kind: "failed", failure: "schema-shape" });
+    }
+    expect(
+      withData(
+        {
+          type: "object",
+          properties: { "unit-names": { type: "array", items: { type: ["string", "null"] } } },
+        },
+        { "unit-names": [] },
+      ).kind,
+    ).toBe("candidate");
     // Undeclared, an empty list may be records: it is held to the name rule too.
     expect(withData({ type: "object" }, { "shopping-items": [] })).toMatchObject({
       kind: "failed",
