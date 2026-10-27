@@ -1,0 +1,159 @@
+{
+  "source": "The end-to-end slice pilot, second live run, 2026-10-27, after the defaults and language fixes, on Claude Code 2.1.311: each stage answer exactly as structured output, by call order (intent on claude-haiku-5-5 low, create on claude-sonnet-5-5 medium).",
+  "replays": [
+    {
+      "callIndex": 0,
+      "stage": "intent",
+      "request": "No tool is open now.\n\nThe request:\nI need a shopping list I can tick off at the store, with milk, eggs and bread on it.",
+      "answer": {
+        "kind": "create",
+        "interfacePart": "a shopping list I can tick off at the store",
+        "dataPart": "milk, eggs and bread on it",
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": false,
+        "language": "en",
+        "features": [
+          {
+            "name": "Shopping list",
+            "request": "a shopping list"
+          },
+          {
+            "name": "Tick off items",
+            "request": "I can tick off at the store"
+          },
+          {
+            "name": "Starting items",
+            "request": "with milk, eggs and bread on it"
+          }
+        ]
+      }
+    },
+    {
+      "callIndex": 1,
+      "stage": "create",
+      "request": "The person's request:\n\nI need a shopping list I can tick off at the store, with milk, eggs and bread on it.\n\nThe person's language, as a BCP 47 tag: en. Use it for the tool's name, its summary and every word the tool shows.",
+      "answer": {
+        "outcome": "tool",
+        "name": "Shopping list",
+        "summary": "A shopping list to tick off at the store. It starts with milk, eggs and bread; you can add or remove items.",
+        "uiMode": "standard",
+        "capabilities": [],
+        "code": {
+          "html": "<h1>Shopping list</h1>\n<p id=\"count\" class=\"muted\" aria-live=\"polite\"></p>\n<div class=\"add\">\n<label for=\"newItem\">New item</label>\n<div class=\"row\"><input id=\"newItem\" type=\"text\" autocomplete=\"off\"><button id=\"addBtn\" type=\"button\">Add</button></div>\n</div>\n<p id=\"msg\" role=\"status\" class=\"muted\"></p>\n<ul id=\"list\"></ul>\n<p id=\"empty\" class=\"muted\" hidden>The list is empty. Add your first item above.</p>\n<button id=\"clearBtn\" type=\"button\" class=\"secondary\" hidden>Remove ticked items</button>",
+          "css": "body{font-family:var(--ui-font);color:var(--ui-text);background:var(--ui-background)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0}\nlabel{display:block;margin-bottom:var(--ui-space-1)}\n.row{display:flex;gap:var(--ui-space-2)}\ninput[type=text]{flex:1;min-width:0;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;border-radius:var(--ui-radius-control);font:inherit;cursor:pointer}\nbutton.secondary,button.del{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;padding:0;margin:var(--ui-space-3) 0}\nli{display:flex;align-items:center;gap:var(--ui-space-3);min-height:var(--ui-target);padding:var(--ui-space-1) var(--ui-space-3);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);background:var(--ui-surface);margin-bottom:var(--ui-space-2)}\nli label{flex:1;display:flex;align-items:center;gap:var(--ui-space-3);margin:0;min-height:var(--ui-target);cursor:pointer}\nli input[type=checkbox]{width:24px;height:24px;accent-color:var(--ui-accent)}\nli.done .name{text-decoration:line-through;color:var(--ui-text-secondary)}\n.err{color:var(--ui-error)}",
+          "js": "const listEl=document.getElementById('list');\nconst input=document.getElementById('newItem');\nconst msg=document.getElementById('msg');\nconst emptyEl=document.getElementById('empty');\nconst clearBtn=document.getElementById('clearBtn');\nconst countEl=document.getElementById('count');\nlet items=[];let revs={};\nfunction say(t,bad){msg.textContent=t;msg.className=bad?'muted err':'muted';}\nasync function load(){\ntry{const r=await tessera.call('data.read',{});items=r.data.items||[];revs=r.revisions.items||{};render();}\ncatch(e){say('Could not load the list.',true);}\n}\nasync function patch(ops,okText){\ntry{await tessera.call('data.patch',{operations:ops});await load();if(okText)say(okText);}\ncatch(e){say('That change did not go through. Please try again.',true);await load();}\n}\nfunction render(){\nlistEl.textContent='';\nfor(const it of items){\nconst li=document.createElement('li');\nif(it.done)li.className='done';\nconst lab=document.createElement('label');\nconst cb=document.createElement('input');cb.type='checkbox';cb.checked=!!it.done;\nconst nm=document.createElement('span');nm.className='name';nm.textContent=it.name;\nlab.append(cb,nm);\ncb.addEventListener('change',()=>patch([{op:'replace',collection:'items',id:it.id,revisionCount:revs[it.id],fields:{done:cb.checked}}]));\nconst del=document.createElement('button');del.type='button';del.className='del';del.textContent='Remove';\ndel.setAttribute('aria-label','Remove '+it.name);\ndel.addEventListener('click',()=>patch([{op:'remove',collection:'items',id:it.id,revisionCount:revs[it.id]}],it.name+' removed.'));\nli.append(lab,del);listEl.append(li);\n}\nconst doneN=items.filter(i=>i.done).length;\nemptyEl.hidden=items.length>0;\nclearBtn.hidden=doneN===0;\ncountEl.textContent=items.length?doneN+' of '+items.length+' ticked':'';\n}\nfunction add(){\nconst v=input.value.trim();\nif(!v){say('Type an item first.',true);input.focus();return;}\ninput.value='';\npatch([{op:'add',collection:'items',record:{name:v,done:false}}],v+' added.');\ninput.focus();\n}\ndocument.getElementById('addBtn').addEventListener('click',add);\ninput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add();}});\nclearBtn.addEventListener('click',()=>{\nconst ops=items.filter(i=>i.done).map(i=>({op:'remove',collection:'items',id:i.id,revisionCount:revs[i.id]}));\nif(ops.length)patch(ops,'Ticked items removed.');\n});\nload();"
+        },
+        "data": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "done": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": ["id", "name", "done"]
+                }
+              }
+            },
+            "required": ["items"]
+          },
+          "reusableDefaults": {
+            "items": []
+          },
+          "initialState": {
+            "items": [
+              {
+                "id": "i1",
+                "name": "Milk",
+                "done": false
+              },
+              {
+                "id": "i2",
+                "name": "Eggs",
+                "done": false
+              },
+              {
+                "id": "i3",
+                "name": "Bread",
+                "done": false
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "callIndex": 2,
+      "stage": "intent",
+      "request": "The tool open now, quoted as data between the markers: its name, and each list of records it keeps with the list's fields.\n--- open tool ---\n{\"name\":\"Shopping list\",\"lists\":{\"items\":[\"done\",\"name\"]}}\n--- end of the open tool ---\n\nThe request:\nA simple calculator.",
+      "answer": {
+        "kind": "new_tool",
+        "interfacePart": null,
+        "dataPart": null,
+        "behaviorChange": false,
+        "lookOnly": false,
+        "targetsCurrentTool": false,
+        "language": "en",
+        "features": [
+          {
+            "name": "Simple calculator",
+            "request": "A simple calculator."
+          }
+        ]
+      }
+    },
+    {
+      "callIndex": 3,
+      "stage": "create",
+      "request": "The person's request:\n\nA simple calculator.\n\nThe person's language, as a BCP 47 tag: en. Use it for the tool's name, its summary and every word the tool shows.",
+      "answer": {
+        "outcome": "tool",
+        "name": "Calculator",
+        "summary": "A simple calculator for adding, subtracting, multiplying and dividing. Use the buttons or your keyboard.",
+        "uiMode": "standard",
+        "capabilities": [],
+        "data": {
+          "schema": {
+            "type": "object",
+            "properties": {
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id"]
+                }
+              }
+            },
+            "required": ["notes"]
+          },
+          "reusableDefaults": {
+            "notes": []
+          },
+          "initialState": {}
+        },
+        "code": {
+          "html": "<main class=\"calc\"><h1>Calculator</h1><div class=\"display\" role=\"status\" aria-live=\"polite\"><div id=\"expr\" class=\"expr\"></div><div id=\"out\" class=\"out\">0</div></div><div id=\"keys\" class=\"keys\"></div><p id=\"msg\" class=\"msg\"></p></main>",
+          "css": ".calc{max-width:320px;margin:0 auto;padding:var(--ui-padding)}h1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-3)}.display{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3) var(--ui-space-4);text-align:right;margin-bottom:var(--ui-space-3);overflow:hidden}.expr{min-height:1.5em;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.out{font-size:32px;overflow-wrap:anywhere}.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--ui-space-2)}.keys button{min-height:var(--ui-target);font:inherit;background:var(--ui-surface);color:var(--ui-text);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);cursor:pointer}.keys button.op{background:var(--ui-accent-soft)}.keys button.eq{background:var(--ui-accent);color:#fff}.keys button:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}.msg{color:var(--ui-error);min-height:1.5em;font-size:var(--ui-size-secondary)}",
+          "js": "const keys=[['C','clear','AC','op'],['⌫','back','Delete last digit','op'],['%','%','Percent','op'],['÷','/','Divide','op'],['7'],['8'],['9'],['×','*','Multiply','op'],['4'],['5'],['6'],['−','-','Subtract','op'],['1'],['2'],['3'],['+','+','Add','op'],['0'],['.'],['=','=','Equals','eq'],['±','neg','Change sign','op']];\nlet cur='0',prev=null,op=null,fresh=false;\nconst out=document.getElementById('out'),expr=document.getElementById('expr'),msg=document.getElementById('msg');\nconst sym={'/':'÷','*':'×','-':'−','+':'+'};\nfunction show(){out.textContent=cur;expr.textContent=op?prev+' '+sym[op]:''}\nfunction calc(a,b,o){a=parseFloat(a);b=parseFloat(b);let r;if(o==='+')r=a+b;else if(o==='-')r=a-b;else if(o==='*')r=a*b;else{if(b===0)return null;r=a/b}return String(parseFloat(r.toPrecision(12)))}\nfunction press(k){msg.textContent='';\nif(/^[0-9]$/.test(k)){if(fresh||cur==='0'){cur=k;fresh=false}else cur+=k}\nelse if(k==='.'){if(fresh){cur='0.';fresh=false}else if(!cur.includes('.'))cur+='.'}\nelse if(k==='clear'){cur='0';prev=null;op=null;fresh=false}\nelse if(k==='back'){if(!fresh){cur=cur.length>1?cur.slice(0,-1):'0';if(cur==='-')cur='0'}}\nelse if(k==='neg'){if(cur!=='0')cur=cur[0]==='-'?cur.slice(1):'-'+cur}\nelse if(k==='%'){cur=String(parseFloat((parseFloat(cur)/100).toPrecision(12)))}\nelse if(k==='='){if(op){const r=calc(prev,cur,op);if(r===null){msg.textContent='You can’t divide by zero.';cur='0'}else cur=r;prev=null;op=null;fresh=true}}\nelse{if(op&&!fresh){const r=calc(prev,cur,op);if(r===null){msg.textContent='You can’t divide by zero.';cur='0';op=null;prev=null;show();return}cur=r}\nprev=cur;op=k;fresh=true}\nshow()}\nconst box=document.getElementById('keys');\nfor(const d of keys){const b=document.createElement('button');b.type='button';b.textContent=d[0];const k=d[1]||d[0];if(d[2])b.setAttribute('aria-label',d[2]);if(d[3])b.className=d[3];b.addEventListener('click',()=>press(k));box.appendChild(b)}\ndocument.addEventListener('keydown',e=>{if(e.target.tagName==='BUTTON'&&(e.key==='Enter'||e.key===' '))return;const k=e.key;if(/^[0-9.+\\-*\\/%]$/.test(k))press(k);else if(k==='Enter'||k==='='){e.preventDefault();press('=')}else if(k==='Backspace')press('back');else if(k==='Escape')press('clear')});\nshow();"
+        }
+      }
+    }
+  ]
+}

@@ -7,7 +7,7 @@ implements: [ENG-07, ENG-11]
 tests: []
 tags: [code, evals, pilot, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T08:37:36Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T09:36:03Z }
 ---
 
 # Purpose
@@ -16,8 +16,8 @@ Tries the end-to-end slice of #146 on a real model before more is built on it. T
 
 # Entry points
 
-- `run.ts`: the script. `PLAN` is the approved run (two requests, a cap of 6 calls, a request limit); `runPilot` runs it and writes `report.json` with each request's message and time, a screenshot of each, the workspaces made and the ledger's summary. Run it with `node evals/spikes/slice-pilot/run.ts --dry-run`, or `--live --approved-cap 6` once the owner has approved the budget, after `pnpm build`.
-- `replays/pilot-2026-10-27.json`: the live run's answers, each stage's structured output by call order, for the replay suite (#156).
+- `run.ts`: the script. `PLAN` is the approved run (two requests, a cap of 6 calls, a request limit); `runPilot` runs it and writes `report.json` with each request's message and time, a screenshot of each, a video of the whole run, the workspaces made and the ledger's summary. Run it with `node evals/spikes/slice-pilot/run.ts --dry-run`, or `--live --approved-cap 6` once the owner has approved the budget, after `pnpm build`.
+- `replays/pilot-2026-10-27.json` and `replays/pilot-2026-10-27-2.json`: the two live runs' answers, each stage's structured output by call order, for the replay suite (#156).
 
 # Invariants
 
@@ -33,6 +33,7 @@ The [evaluation harness](harness.md), the [CLI contract spike](cli-contract-spik
 # Pitfalls
 
 - **It needs the built app** (`packages/web/dist`); without it, it stops before any call.
+- **Its pictures can lag under load.** On a busy machine a headless screenshot, or the video's last frames, can catch a tool before it is fully painted and make it look narrow; the run's report found the app itself sizes the frame right. Watch the video before reading a screenshot as a defect.
 - **No tests of its own.** It is a one-off run, rehearsed by its dry run; the pipeline it drives has its own tests.
 
 # Symbols (generated)

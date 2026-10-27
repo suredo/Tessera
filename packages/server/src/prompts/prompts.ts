@@ -24,6 +24,7 @@ export const PROMPT_PARTS = [
   "source",
   "diagnostics",
   "create",
+  "language",
   "probe",
   "probe-request",
   "intent",
@@ -170,6 +171,9 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   const addRequest = (part: PromptPart, values: Record<string, string>) =>
     request.push([part, fillPart(part, values), partVersion(partText(part))]);
   addRequest("request", { request: input.request });
+  // The language the intent stage found, given as a fact, so the tool's words never depend on the
+  // model guessing it (GEN-15).
+  if (input.intent) addRequest("language", { language: input.intent.language });
   if (input.source) addRequest("source", { ...input.source });
   if (stage === "repair") {
     addRequest("diagnostics", {
