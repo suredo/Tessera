@@ -2,7 +2,7 @@
 
 ## 2026-10-27
 
-* **Create**: Prompt assembly ([issue 143](https://github.com/suredo/Tessera/issues/143)): the [prompt assembly](code/server/prompts.md) doc describes the part files in `packages/server/prompts`, `assemblePrompt` choosing parts by stage and structured intent, versions as hashes recorded in the ledger, the bridge manifest and UI tokens generated into their parts, and each stage's budget; it claims `GEN-03`, `ENG-16`, `GEN-02`, `VER-06` and `CON-03`. The [contracts](code/contracts/package.md), [harness](code/evals/harness.md), [provider adapters](code/server/providers.md) and [setup check](code/server/setup.md) docs say the ledger records the parts and the probe's words are parts.
+* **Create**: Prompt assembly ([issue 143](https://github.com/suredo/Tessera/issues/143)): the [prompt assembly](code/server/prompts.md) doc describes the part files in `packages/server/prompts`, `assemblePrompt` choosing parts by stage and structured intent, versions as hashes recorded in the ledger, the bridge manifest and UI tokens generated into their parts, and each stage's budget; it claims `GEN-03`, `ENG-16`, `GEN-02`, `VER-06` and `CON-03`. The [contracts](code/contracts/package.md), [harness](code/evals/harness.md), [provider adapters](code/server/providers.md) and [setup check](code/server/setup.md) docs say the ledger records the parts and the probe's words are parts. After Codex's review of [pull request 164](https://github.com/suredo/Tessera/pull/164), the accessibility rules are their own part, in custom mode too, and the harness doc no longer lists prompt versions as unrecorded.
 
 ## 2026-10-26
 

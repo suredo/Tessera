@@ -74,7 +74,13 @@ describe("assembling a stage's prompt (GEN-03)", () => {
 
   it("GEN-03, CON-03, VER-06: creation gets the base rules, the bridge manifest and the UI standard, generated from their one definitions", () => {
     const prompt = create();
-    expect(names(prompt.parts)).toEqual(["base", "bridge", "ui-standard", "request"]);
+    expect(names(prompt.parts)).toEqual([
+      "base",
+      "bridge",
+      "ui-standard",
+      "accessibility",
+      "request",
+    ]);
     expect(prompt.system).toContain(partText("base"));
     expect(prompt.system).toContain(manifestForPrompt());
     expect(prompt.system).toContain(`Tessera's UI standard (version ${UI_STANDARD_VERSION})`);
@@ -83,6 +89,22 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     }
     expect(prompt.prompt).toBe("The person's request:\n\nI need a shopping list");
     expect(prompt.size).toBe(prompt.system.length + prompt.prompt.length);
+  });
+
+  it("UX-04, VER-06: a tool in custom mode drops the standard's look but keeps every accessibility rule", () => {
+    const custom = create({ uiMode: "custom" });
+    expect(names(custom.parts)).toEqual(["base", "bridge", "accessibility", "request"]);
+    expect(custom.system).toContain(partText("accessibility"));
+    expect(custom.system).not.toContain("--ui-");
+    for (const rule of [
+      "visible label",
+      "works by keyboard",
+      "contrast",
+      "accessible name",
+      "320 px",
+    ]) {
+      expect(custom.system).toContain(rule);
+    }
   });
 
   it("CON-03: the manifest the prompt quotes is the bridge's own, without what tells a model nothing", () => {
@@ -117,11 +139,18 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(edit({ intent: intent({ lookOnly: true }) })).toEqual([
       "base",
       "ui-standard",
+      "accessibility",
       "request",
       "source",
     ]);
     // A tool in custom mode gets no UI standard.
-    expect(edit({ uiMode: "custom" })).toEqual(["base", "bridge", "request", "source"]);
+    expect(edit({ uiMode: "custom" })).toEqual([
+      "base",
+      "bridge",
+      "accessibility",
+      "request",
+      "source",
+    ]);
     // Words that a keyword rule would act on change nothing.
     for (const request of [
       "save my data and use the clock",
@@ -129,7 +158,14 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       "only the colors please",
       "deixa-o escuro",
     ]) {
-      expect(edit({ request })).toEqual(["base", "bridge", "ui-standard", "request", "source"]);
+      expect(edit({ request })).toEqual([
+        "base",
+        "bridge",
+        "ui-standard",
+        "accessibility",
+        "request",
+        "source",
+      ]);
     }
   });
 
@@ -155,6 +191,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       "base",
       "bridge",
       "ui-standard",
+      "accessibility",
       "request",
       "source",
       "diagnostics",

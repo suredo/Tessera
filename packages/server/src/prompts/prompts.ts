@@ -18,6 +18,7 @@ export const PROMPT_PARTS = [
   "base",
   "bridge",
   "ui-standard",
+  "accessibility",
   "request",
   "source",
   "diagnostics",
@@ -125,8 +126,8 @@ export type AssembledPrompt = {
 
 /**
  * Builds a generation stage's prompt from the parts it needs. The instructions always have the
- * base rules; the bridge manifest unless the intent says the request only changes the look; and
- * the UI standard for a tool in standard mode. The request has the person's words; edit and repair
+ * base rules; the bridge manifest unless the intent says the request only changes the look; the
+ * UI standard's look for a tool in standard mode; and the accessibility rules, in either mode. The request has the person's words; edit and repair
  * add the tool's code, and repair what the checks found.
  */
 export function assemblePrompt(input: PromptInput): AssembledPrompt {
@@ -151,6 +152,8 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   if (input.uiMode === "standard") {
     addSystem("ui-standard", { version: String(UI_STANDARD_VERSION), tokens: tokenLines() });
   }
+  // In custom mode too: a custom look drops the standard's look, never its accessibility (UX-04).
+  addSystem("accessibility");
   const request: [PromptPart, string, string][] = [];
   const addRequest = (part: PromptPart, values: Record<string, string>) =>
     request.push([part, fillPart(part, values), partVersion(partText(part))]);

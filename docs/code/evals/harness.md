@@ -7,7 +7,7 @@ implements: [OBS-02, ENG-07, ENG-19, CLI-04]
 tests: [../../../evals/test/harness.test.ts]
 tags: [code, evals, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:24:24Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:35:16Z }
 ---
 
 # Purpose
@@ -37,7 +37,7 @@ Depends on `@tessera/contracts` and on the `Provider` interface from `@tessera/s
 
 - **The request log holds whole prompts and answers.** Keep run folders out of the repository (`test-output/` is ignored) and sanitize anything before committing it (`ENG-19`).
 - **The data folder is not yet checked against the real user data folder,** which doesn't exist until M1 (`PLAT-04`). The "new or empty" rule covers it until then; add the check when the data folder lands.
-- **Not yet recorded:** prompt part versions (`ENG-16`) and diagnostics (`OBS-01`), which arrive with the prompts and pipeline in M2. The step-level stop rules (step 1 fails, a step fails twice) belong to the scenario runner.
+- **Not yet recorded:** diagnostics (`OBS-01`), which arrive with the pipeline in M2. Prompt part versions are recorded (`ENG-16`). The step-level stop rules (step 1 fails, a step fails twice) belong to the scenario runner.
 
 # Symbols (generated)
 

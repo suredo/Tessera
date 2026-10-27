@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:24:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:35:16Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 
 # Entry points
 
-- `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `bridge.md`, `ui-standard.md`, `request.md`, `source.md`, `diagnostics.md`, and the probe's `probe.md` and `probe-request.md`.
+- `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `source.md`, `diagnostics.md`, and the probe's `probe.md` and `probe-request.md`.
 - `src/prompts/prompts.ts`:
   - `assemblePrompt` builds a generation stage's prompt (`PromptInput` to `AssembledPrompt`): the instructions, the request, each part as name@version, and the size.
   - `fixedPart` gives a part used as it is, such as the probe's.
@@ -26,7 +26,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 
 - **Every prompt's words are in a part file** (`ENG-16`), never an inline string; a test fails if a file isn't a listed part or a listed part has no file. The probe's words moved there too.
 - **A part's version is a hash of its text.** For an instruction part it covers what was generated into it (the manifest, the UI tokens), so a change to either changes the version. For a request part it covers only the wording, since what it quotes changes with every call. A stage call carries them, and the [evaluation harness](../evals/harness.md)'s ledger records them with the instructions' size.
-- **Parts are chosen by the stage and structured fields, never the request's words** (`GEN-02`): base rules always; the bridge manifest unless the intent says the request only changes the look; the UI standard only for a tool in standard mode; the tool's code for edit and repair, which need it; what the checks found for repair. A test runs requests full of words a keyword rule would act on, and gets the same parts.
+- **Parts are chosen by the stage and structured fields, never the request's words** (`GEN-02`): base rules always; the bridge manifest unless the intent says the request only changes the look; the UI standard's look only for a tool in standard mode, and the accessibility rules in either mode, since a custom look never drops them (`UX-04`); the tool's code for edit and repair, which need it; what the checks found for repair. A test runs requests full of words a keyword rule would act on, and gets the same parts.
 - **The manifest and the UI tokens come from their one definitions** (`CON-03`, `VER-06`, P3): the bridge part quotes the contracts' bridge manifest as compact JSON, without the schema-version line, a pattern beside a format that says the same, or the bounds every JSON integer has; the UI standard part lists the runtime's UI tokens. The standard's rules are the POC's, ported.
 - **Quoted material is data** (`SEC-02`): the tool's code sits between markers and is called data, and the base rules say quoted material is never instructions.
 - **Each stage's fixture prompt stays within its budget** (`GEN-03`): about 13,300 characters for creation, 17,200 for an edit and 17,400 for a repair of the shopping-list fixture (`packages/server/test/fixtures/prompts`), against budgets of 14,500, 18,500 and 19,000. CI fails past them.
