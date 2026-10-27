@@ -2,7 +2,7 @@
 
 ## 2026-10-27
 
-* **Update**: The [static check](code/server/checks.md) treats what crosses the bridge as plain data, and refuses a tool's own `tessera`: the slice pilot's shopping list, live ([pull request 173](https://github.com/suredo/Tessera/pull/173)), indexed its record revisions read from the bridge and was refused for it, a false positive.
+* **Update**: The [static check](code/server/checks.md) treats what crosses the bridge as plain data, and refuses a tool's own `tessera`: the slice pilot's shopping list, live ([pull request 173](https://github.com/suredo/Tessera/pull/173)), indexed its record revisions read from the bridge and was refused for it, a false positive. After Codex's review of [pull request 174](https://github.com/suredo/Tessera/pull/174), only the bridge's own calls are trusted, and a tool may not write onto `tessera`.
 
 * **Update**: The end-to-end slice's host-app part ([issue 146](https://github.com/suredo/Tessera/issues/146)): the [web package](code/web/package.md) doc describes the request box and `carryOut`, which stages a candidate behind the smoke check before the server activates it, and says what happened in plain words; a scripted test runs a request through the real pipeline in the browser. The base prompt part says a form never submits in Tessera. After Codex's review of [pull request 172](https://github.com/suredo/Tessera/pull/172), the app keeps whether a request is running across screens, and a matched saved tool is offered with Continue and Use again.
 

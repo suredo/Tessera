@@ -320,6 +320,10 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
       "const tessera = document; tessera.body[key] = html;",
       "function f(tessera) { return tessera.call[key]; }",
       "let { tessera } = window;",
+      // Only the bridge's own calls give plain data; nothing hung on them does (Codex, #174).
+      'tessera.call.pick = document.body.querySelector.bind(document.body); const el = tessera.call.pick("div"); el[atob("aW5uZXJIVE1M")] = "x";',
+      "tessera.call.pick = pick;",
+      "tessera.extra = document.body;",
     ]) {
       expect(refusedJs(js), js).toBe(true);
     }
