@@ -79,8 +79,13 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       "bridge",
       "ui-standard",
       "accessibility",
+      "create",
       "request",
     ]);
+    // The data schema keywords come from the one list the host checks schemas against.
+    expect(prompt.system).toContain(
+      "Use only these schema keywords: $schema, additionalProperties,",
+    );
     expect(prompt.system).toContain(partText("base"));
     expect(prompt.system).toContain(manifestForPrompt());
     expect(prompt.system).toContain(`Tessera's UI standard (version ${UI_STANDARD_VERSION})`);
@@ -93,7 +98,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
 
   it("UX-04, VER-06: a tool in custom mode drops the standard's look but keeps every accessibility rule", () => {
     const custom = create({ uiMode: "custom" });
-    expect(names(custom.parts)).toEqual(["base", "bridge", "accessibility", "request"]);
+    expect(names(custom.parts)).toEqual(["base", "bridge", "accessibility", "create", "request"]);
     expect(custom.system).toContain(partText("accessibility"));
     expect(custom.system).not.toContain("--ui-");
     for (const rule of [

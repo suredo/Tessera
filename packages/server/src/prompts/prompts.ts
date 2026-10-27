@@ -3,6 +3,7 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { bridgeManifest, type Artifact, type Intent, type Stage } from "@tessera/contracts";
 import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
+import { TOOL_SCHEMA_KEYWORDS } from "../data-shape/index.ts";
 
 // Prompts are built from parts (GEN-03), each a file in packages/server/prompts (ENG-16), so every
 // change to one is reviewed like code. A part's version is a hash of its text, recorded with each
@@ -22,6 +23,7 @@ export const PROMPT_PARTS = [
   "request",
   "source",
   "diagnostics",
+  "create",
   "probe",
   "probe-request",
   "intent",
@@ -42,7 +44,7 @@ export type GenerationStage = Extract<Stage, "create" | "edit" | "repair">;
  * part can't grow unnoticed. The POC's one prompt reached about 18,000.
  */
 export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
-  create: 14_500,
+  create: 17_000,
   edit: 18_500,
   repair: 19_000,
 };
@@ -160,6 +162,10 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   }
   // In custom mode too: a custom look drops the standard's look, never its accessibility (UX-04).
   addSystem("accessibility");
+  // What creation answers, with the data schema keywords the host accepts (DATA-03, GEN-05).
+  if (stage === "create") {
+    addSystem("create", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
+  }
   const request: [PromptPart, string, string][] = [];
   const addRequest = (part: PromptPart, values: Record<string, string>) =>
     request.push([part, fillPart(part, values), partVersion(partText(part))]);

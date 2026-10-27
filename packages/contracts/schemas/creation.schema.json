@@ -1,0 +1,174 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "const": "tool"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "The tool's name, short, in the person's language and plain words."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "description": "What the tool does, in one or two plain sentences for the person."
+        },
+        "code": {
+          "type": "object",
+          "properties": {
+            "html": {
+              "type": "string"
+            },
+            "css": {
+              "type": "string"
+            },
+            "js": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "html",
+            "css",
+            "js"
+          ],
+          "additionalProperties": false,
+          "description": "The tool: the HTML inside its page's body, its CSS and its JavaScript."
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "schema": {
+              "description": "The JSON Schema of the tool's data: an object of lists of records, each with a string id.",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^(?!__proto__$)"
+              },
+              "additionalProperties": {
+                "$ref": "#/definitions/__schema0"
+              }
+            },
+            "reusableDefaults": {
+              "description": "Data worth keeping when the tool is used again, such as settings or categories; never the person's own entries.",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^(?!__proto__$)"
+              },
+              "additionalProperties": {
+                "$ref": "#/definitions/__schema0"
+              }
+            },
+            "initialState": {
+              "description": "The entries this request itself gives, such as the items it lists; {} when it gives none.",
+              "type": "object",
+              "propertyNames": {
+                "type": "string",
+                "pattern": "^(?!__proto__$)"
+              },
+              "additionalProperties": {
+                "$ref": "#/definitions/__schema0"
+              }
+            }
+          },
+          "required": [
+            "schema",
+            "reusableDefaults",
+            "initialState"
+          ],
+          "additionalProperties": false
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "clock"
+            ]
+          },
+          "description": "The host capabilities the tool needs, only those it uses (CAP-01)."
+        },
+        "uiMode": {
+          "type": "string",
+          "enum": [
+            "standard",
+            "custom"
+          ],
+          "description": "custom only when the person asked for their own design or to drop the standard."
+        }
+      },
+      "required": [
+        "outcome",
+        "name",
+        "summary",
+        "code",
+        "data",
+        "capabilities",
+        "uiMode"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "const": "cannot"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "description": "Why no tool here can do this, in plain words for the person."
+        }
+      },
+      "required": [
+        "outcome",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "description": "The create stage's answer: a new tool, or why none can be made (CON-02, GEN-05).",
+  "definitions": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/__schema0"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^(?!__proto__$)"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/__schema0"
+          }
+        }
+      ]
+    }
+  }
+}

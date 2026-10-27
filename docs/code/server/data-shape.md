@@ -7,7 +7,7 @@ implements: [DATA-03, MIG-03, MIG-04, MIG-05]
 tests: [../../../packages/server/test/data-shape.test.ts]
 tags: [code, server, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T11:45:20Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T06:34:57Z }
 ---
 
 # Purpose
@@ -47,7 +47,7 @@ Depends on the contracts and Ajv (draft-07, the owner's choice on #50). Activati
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `applyMigrations`, `LOSS_PREVIEW_LIMIT_BYTES`, `migrateData`, `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `projectData`, `stepFor`, `Loss` (type), `checkToolData`, `compileToolSchema`, `TOOL_SCHEMA_LIMIT_BYTES`, `SchemaCheck` (type)
+- `index.ts`: `applyMigrations`, `LOSS_PREVIEW_LIMIT_BYTES`, `migrateData`, `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `projectData`, `stepFor`, `Loss` (type), `checkToolData`, `compileToolSchema`, `TOOL_SCHEMA_KEYWORDS`, `TOOL_SCHEMA_LIMIT_BYTES`, `SchemaCheck` (type)
 - `migrate.ts`: `DataShape` (type), `MigrationRefusal` (type), `MigrationResult` (type), `LOSS_PREVIEW_LIMIT_BYTES`, `LossLog`, `applyMigrations`, `migrateData`
 - `project.ts`: `Loss` (type), `stepFor`, `projectData`
 - `schema.ts`: `TOOL_SCHEMA_LIMIT_BYTES`, `TOOL_SCHEMA_MAX_DEPTH`, `TOOL_SCHEMA_MAX_ENUM`, `TOOL_SCHEMA_MAX_PARTS`, `TOOL_SCHEMA_KEYWORDS`, `SchemaCheck` (type), `compileToolSchema`, `checkToolData`
