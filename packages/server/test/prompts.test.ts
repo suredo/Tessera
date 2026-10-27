@@ -146,6 +146,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       "ui-standard",
       "accessibility",
       "request",
+      "language",
       "source",
     ]);
     // A tool in custom mode gets no UI standard.
@@ -210,6 +211,24 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(() =>
       assemblePrompt({ stage: "repair", request: "x", uiMode: "standard", source: shoppingList }),
     ).toThrow("needs what the checks found");
+  });
+
+  it("GEN-15: the request's language, from the intent stage, is given to generation as a fact (slice pilot, #173)", () => {
+    const withIntent = create({ intent: intent({ kind: "create", language: "pt-BR" }) });
+    expect(names(withIntent.parts)).toEqual([
+      "base",
+      "bridge",
+      "ui-standard",
+      "accessibility",
+      "create",
+      "request",
+      "language",
+    ]);
+    expect(withIntent.prompt).toContain(
+      "The person's language, as a BCP 47 tag: pt-BR. Use it for the tool's name, its summary and every word the tool shows.",
+    );
+    // Without an intent, nothing is claimed about the language.
+    expect(names(create().parts)).not.toContain("language");
   });
 
   it("ENG-16: a request part's version is its wording's, whatever it quotes", () => {

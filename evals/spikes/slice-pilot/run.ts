@@ -123,8 +123,15 @@ export async function runPilot(mode: RunMode): Promise<string> {
     throw new Error("Another Tessera holds the run's data folder.");
   const browser = await chromium.launch({ channel: "chrome" });
   const reports: RequestReport[] = [];
+  // A video of the whole run, for the owner to watch what a person would see (ENG-10).
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+    recordVideo: { dir: folder, size: { width: 1280, height: 800 } },
+  });
+  let video: string | undefined;
   try {
-    const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+    const page = await context.newPage();
+    video = await page.video()?.path();
     await page.goto(launched.url);
     for (const [index, request] of PLAN.requests.entries()) {
       const box = page.getByRole("textbox", { name: "What do you need?" });
@@ -157,7 +164,11 @@ export async function runPilot(mode: RunMode): Promise<string> {
         screenshot,
       });
     }
+    // The video's last seconds show the last tool settled.
+    await page.waitForTimeout(3000);
   } finally {
+    // The video is written when its context closes.
+    await context.close();
     await browser.close();
     const workspaces = listWorkspaces(launched.dataFolder).map((w) => ({
       title: w.title,
@@ -167,7 +178,7 @@ export async function runPilot(mode: RunMode): Promise<string> {
     const ledger = readLedger(harness.dataFolder);
     fs.writeFileSync(
       path.join(folder, "report.json"),
-      `${JSON.stringify({ mode, plan: PLAN, requests: reports, workspaces, ledger: summarizeLedger(ledger) }, null, 2)}\n`,
+      `${JSON.stringify({ mode, plan: PLAN, requests: reports, video, workspaces, ledger: summarizeLedger(ledger) }, null, 2)}\n`,
     );
   }
   return folder;

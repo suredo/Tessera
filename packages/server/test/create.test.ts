@@ -323,6 +323,27 @@ describe("the create stage (CLI-09, GEN-11)", () => {
     expect(calls[0]!.promptParts?.map((p) => p.split("@")[0])).toContain("create");
   });
 
+  it("GEN-15, DATA-03: the create prompt says the defaults must fit the schema, and gives the intent's language", async () => {
+    const { provider, calls } = answering({ kind: "value", stage: "create", value: tool() });
+    await createTool(provider, DEFAULT_ROUTES, {
+      request: "A simple calculator.",
+      intent: {
+        kind: "create",
+        interfacePart: "A simple calculator.",
+        dataPart: null,
+        behaviorChange: false,
+        lookOnly: false,
+        targetsCurrentTool: false,
+        language: "en",
+        features: [],
+      },
+    });
+    expect(calls[0]!.system).toContain(
+      "It must fit data.schema by itself: include every list the schema requires, empty if need be.",
+    );
+    expect(calls[0]!.prompt).toContain("The person's language, as a BCP 47 tag: en.");
+  });
+
   it("CON-02: an answer that no tool can do this is passed on, not a failure", async () => {
     const { provider } = answering({
       kind: "value",
