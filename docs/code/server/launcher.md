@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T23:28:23Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T07:17:25Z }
 ---
 
 # Purpose
@@ -36,7 +36,7 @@ Starts Tessera with one double-click (`PLAT-02`): it opens the data folder ([sto
 
 # Depends on / used by
 
-The [local server](local-server.md), [storage](storage.md)'s `openDataFolder` and `tryLockFile`, the [trash](trash.md)'s `removeExpired`, the [asset store](assets.md)'s `sweepAssets` and `collectAssets`, which it runs at start, the clean-up hourly too, the [bridge route](bridge.md), the activation route ([workspaces](workspaces.md)), the [host API](host-api.md)'s route, the archive routes ([export and import](archives.md)), the [setup routes](setup.md) and the [runtime routes](runtime-routes.md), serving each workspace's current tool, which it mounts on the server with the open data folder, and the [platform helpers](platform.md) (`runProcess`, `findExecutable`). Its `setup` option passes a fake Claude Code to the setup check, for tests.
+The [local server](local-server.md), [storage](storage.md)'s `openDataFolder` and `tryLockFile`, the [trash](trash.md)'s `removeExpired`, the [asset store](assets.md)'s `sweepAssets` and `collectAssets`, which it runs at start, the clean-up hourly too, the [bridge route](bridge.md), the activation route ([workspaces](workspaces.md)), the [host API](host-api.md)'s route, the archive routes ([export and import](archives.md)), the [setup routes](setup.md), the generate route ([generation stages](generation.md)) with its job queue, and the [runtime routes](runtime-routes.md), serving each workspace's current tool, which it mounts on the server with the open data folder, and the [platform helpers](platform.md) (`runProcess`, `findExecutable`). Its `setup` option passes a fake Claude Code to the setup check, for tests, and its `provider` option a scripted provider for requests (`ENG-11`); otherwise requests use Claude Code, found when each request comes, with the data folder's routes file.
 
 # Pitfalls
 

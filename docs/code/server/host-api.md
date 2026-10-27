@@ -7,7 +7,7 @@ implements: [CON-01]
 tests: [../../../packages/server/test/host-api.test.ts]
 tags: [code, server, api, host]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:12:19Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T07:17:25Z }
 ---
 
 # Purpose
@@ -19,7 +19,7 @@ Connects the host app's screens (#53) to the server's modules. Everything the ap
 - `src/host/host.ts`:
   - `answerHost` answers one request: an action and its arguments, checked against the contract, then run, and its result checked against the contract before it is sent (`CON-01`).
   - `hostRoutes` gives the local server the route: POST only, at most 64 KB, JSON. The [launcher](launcher.md) mounts it.
-  - `workspaceTools` gives the [runtime routes](runtime-routes.md) the tool each mount shows: a mount is a workspace, by its ID, and shows that workspace's current tool version, its code and UI mode.
+  - `workspaceTools` gives the [runtime routes](runtime-routes.md) the tool each mount shows: a mount is a workspace, by its ID, and shows that workspace's current tool version, its code and UI mode. A candidate's mount, `candidateMount` of its hash, shows that stored version, for staging (`RUN-03`).
 
 # Invariants
 
@@ -43,5 +43,5 @@ Depends on the [workspaces](workspaces.md), [trash](trash.md), [tool versions](v
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `host.ts`: `answerHost`, `hostRoutes`, `workspaceTools`
-- `index.ts`: `answerHost`, `hostRoutes`, `workspaceTools`
+- `host.ts`: `answerHost`, `hostRoutes`, `candidateMount`, `workspaceTools`
+- `index.ts`: `answerHost`, `candidateMount`, `hostRoutes`, `workspaceTools`

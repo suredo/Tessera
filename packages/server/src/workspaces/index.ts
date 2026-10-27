@@ -45,6 +45,7 @@ export {
   readWorkspaceData,
   renameSavedTool,
   renameWorkspace,
+  replaceData,
   saveTool,
   saveWorkspaceData,
   UNDO_LIMIT,

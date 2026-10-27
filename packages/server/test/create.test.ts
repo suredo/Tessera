@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_ROUTES, type Creation } from "@tessera/contracts";
+import { DEFAULT_ROUTES, TOOL_DATA_LIMIT_BYTES, type Creation } from "@tessera/contracts";
 import { describe, expect, it } from "vitest";
 import { candidateFrom, createTool, startingDataOf } from "../src/generation/index.ts";
 import { applyPatch, createDataState, revisionOf } from "../src/patches/index.ts";
 import { createScriptedProvider, type Provider, type StageSpec } from "../src/providers/index.ts";
 
-// The create stage (GEN-04, GEN-05, GEN-09): the model's answer, a discriminated union (CON-02),
+// The create stage (GEN-05, GEN-09): the model's answer, a discriminated union (CON-02),
 // becomes a candidate only after the host's checks, and every failure is classed for repair.
 // Answers come from scripts; nothing reaches a model (ENG-11).
 
@@ -269,6 +269,28 @@ describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
     expect(changed.ok).toBe(true);
   });
 
+  it("DATA-06: defaults or starting data larger than a tool may hold are a schema-shape failure", () => {
+    const big = "x".repeat(TOOL_DATA_LIMIT_BYTES + 1);
+    for (const [reusableDefaults, initialState] of [
+      [{ note: big }, {}],
+      [{ note: "" }, { note: big }],
+    ]) {
+      const result = candidateFrom(
+        tool({
+          data: {
+            schema: { type: "object", properties: { note: { type: "string" } } },
+            reusableDefaults: reusableDefaults as never,
+            initialState: initialState as never,
+          },
+        }),
+      );
+      expect(result).toMatchObject({ kind: "failed", failure: "schema-shape" });
+      expect(result.kind === "failed" && result.findings.join(" ")).toContain(
+        "more than the 256 KB a tool may hold.",
+      );
+    }
+  });
+
   it("GEN-09, VER-01: code the static check refuses is a static failure, saying where", () => {
     const result = candidateFrom(
       tool({
@@ -284,8 +306,8 @@ describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
   });
 });
 
-describe("the create stage (GEN-04, CLI-09, GEN-11)", () => {
-  it("GEN-04, CLI-09: asks once on the create route, with its prompt parts and the interface part as the request", async () => {
+describe("the create stage (CLI-09, GEN-11)", () => {
+  it("CLI-09: asks once on the create route, with its prompt parts and the interface part as the request", async () => {
     const { provider, calls } = answering({ kind: "value", stage: "create", value: tool() });
     const result = await createTool(provider, DEFAULT_ROUTES, { request: "A shopping list" });
     expect(result.kind).toBe("candidate");
