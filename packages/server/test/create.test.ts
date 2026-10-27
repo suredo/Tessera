@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { DEFAULT_ROUTES, type Creation } from "@tessera/contracts";
 import { describe, expect, it } from "vitest";
 import { candidateFrom, createTool, startingDataOf } from "../src/generation/index.ts";
+import { applyPatch, createDataState, revisionOf } from "../src/patches/index.ts";
 import { createScriptedProvider, type Provider, type StageSpec } from "../src/providers/index.ts";
 
 // The create stage (GEN-04, GEN-05, GEN-09): the model's answer, a discriminated union (CON-02),
@@ -150,10 +151,48 @@ describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
       }),
     );
     expect(ids.kind === "failed" && ids.findings).toEqual([
-      'The reusable defaults: record 1 in "tags" has no string id.',
-      'The starting data: record 1 in "tags" has no string id.',
+      'The reusable defaults: record 1 in "tags" needs an id of letters, digits, _ and - (up to 64).',
+      'The starting data: record 1 in "tags" needs an id of letters, digits, _ and - (up to 64).',
       'The starting data: the id "a" is used twice in "items".',
     ]);
+  });
+
+  it("DATA-02: list names, ids and field names must be ones a change can address (Codex, #170)", () => {
+    const named = (initialState: Record<string, unknown>) =>
+      candidateFrom(
+        tool({
+          data: {
+            schema: { type: "object" },
+            reusableDefaults: {},
+            initialState: initialState as never,
+          },
+        }),
+      );
+    expect(named({ items: [{ id: "guest/1", title: "Milk" }] })).toMatchObject({
+      kind: "failed",
+      failure: "schema-shape",
+    });
+    expect(named({ "shopping-items": [{ id: "i-1", title: "Milk" }] })).toMatchObject({
+      kind: "failed",
+      failure: "schema-shape",
+    });
+    expect(named({ items: [{ id: "i-1", "first name": "Ana" }] })).toMatchObject({
+      kind: "failed",
+      failure: "schema-shape",
+    });
+  });
+
+  it("DATA-02: the starting records of an accepted tool are tracked and can be changed by the patch engine", () => {
+    const result = candidateFrom(tool());
+    if (result.kind !== "candidate") throw new Error("expected a candidate");
+    const state = createDataState(result.startingData);
+    expect(revisionOf(state, "items", "i-1")).toBe(1);
+    const changed = applyPatch(state, {
+      operations: [
+        { op: "replace", collection: "items", id: "i-1", revisionCount: 1, fields: { done: true } },
+      ],
+    });
+    expect(changed.ok).toBe(true);
   });
 
   it("GEN-09, VER-01: code the static check refuses is a static failure, saying where", () => {

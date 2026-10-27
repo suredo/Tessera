@@ -1,7 +1,10 @@
 import {
   artifactSchema,
   ARTIFACT_CONTRACT_VERSION,
+  collectionName,
   creationSchema,
+  fieldName,
+  recordIdSchema,
   type Artifact,
   type Creation,
   type FailureClass,
@@ -58,21 +61,42 @@ export function startingDataOf(defaults: ToolData, initialState: ToolData): Tool
   return data;
 }
 
-/** Every record in a top-level list has a string id, unique in its list (DATA-02). */
-function idProblems(data: ToolData, what: string): string[] {
+/**
+ * Every record the tool keeps can be changed through the patch engine (DATA-02): each list of
+ * records has a name a change can address, and each record an id and field names the patch
+ * contract accepts, its id unique in its list. One definition: the patch contract's own.
+ */
+function recordProblems(data: ToolData, what: string): string[] {
   const problems: string[] = [];
   for (const [list, value] of Object.entries(data)) {
     if (!Array.isArray(value)) continue;
+    const records = value.filter(
+      (record) => record !== null && typeof record === "object" && !Array.isArray(record),
+    ) as Record<string, unknown>[];
+    if (records.length === 0) continue;
+    if (!collectionName.safeParse(list).success) {
+      problems.push(
+        `${what}: the list "${list}" needs a name of letters, digits and _ that starts with a letter.`,
+      );
+    }
     const seen = new Set<string>();
-    value.forEach((record, index) => {
-      if (record === null || typeof record !== "object" || Array.isArray(record)) return;
+    records.forEach((record, index) => {
       const id = record["id"];
-      if (typeof id !== "string" || id === "") {
-        problems.push(`${what}: record ${index + 1} in "${list}" has no string id.`);
-      } else if (seen.has(id)) {
-        problems.push(`${what}: the id "${id}" is used twice in "${list}".`);
+      if (!recordIdSchema.safeParse(id).success) {
+        problems.push(
+          `${what}: record ${index + 1} in "${list}" needs an id of letters, digits, _ and - (up to 64).`,
+        );
+      } else if (seen.has(id as string)) {
+        problems.push(`${what}: the id "${id as string}" is used twice in "${list}".`);
       } else {
-        seen.add(id);
+        seen.add(id as string);
+      }
+      for (const field of Object.keys(record)) {
+        if (field !== "id" && !fieldName.safeParse(field).success) {
+          problems.push(
+            `${what}: the field "${field}" in "${list}" needs a name of letters, digits and _ that starts with a letter.`,
+          );
+        }
       }
     });
   }
@@ -97,7 +121,7 @@ export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>):
     ] as const) {
       const fits = checkToolData(schema, data);
       if (!fits.ok) shape.push(`${what}: ${fits.reason}`);
-      shape.push(...idProblems(data, what));
+      shape.push(...recordProblems(data, what));
     }
   }
   const built = {
