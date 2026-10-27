@@ -109,25 +109,34 @@
       const style = getComputedStyle(element);
       return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
     };
-    const hiddenFromReaders = (element: Element) =>
-      element.getAttribute("aria-hidden") === "true" || !visible(element);
+    // Hidden from assistive technology, by the accessible-name rules: not by how it looks, so
+    // text in a box of its own (display: contents) or a transparent one still names.
+    const hiddenFromReaders = (element: Element) => {
+      if (element.getAttribute("aria-hidden") === "true" || element.hasAttribute("hidden")) {
+        return true;
+      }
+      const style = getComputedStyle(element);
+      return (
+        style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse"
+      );
+    };
     // The text a name comes from, as assistive technology reads it (accessible-name rules): text,
-    // an image's alt text and an element's aria-label. What is hidden is left out, except inside
-    // an element that aria-labelledby names, whose text counts even when hidden.
-    const textOf = (node: Node, referenced = false): string => {
+    // an image's alt text and an element's aria-label. What is hidden is left out, except under
+    // an element that aria-labelledby names and that is itself hidden: then all its text counts.
+    const textOf = (node: Node, includeHidden = false): string => {
       if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
       if (!(node instanceof Element)) return "";
-      if (!referenced && hiddenFromReaders(node)) return "";
+      if (!includeHidden && hiddenFromReaders(node)) return "";
       const label = node.getAttribute("aria-label")?.trim();
       if (label) return label;
       if (node instanceof HTMLImageElement) return node.alt;
-      return [...node.childNodes].map((child) => textOf(child, referenced)).join(" ");
+      return [...node.childNodes].map((child) => textOf(child, includeHidden)).join(" ");
     };
     const labelledBy = (element: Element) =>
       (element.getAttribute("aria-labelledby") ?? "")
         .split(/\s+/)
         .map((ref) => (ref ? document.getElementById(ref) : null))
-        .map((target) => (target ? textOf(target, true) : ""))
+        .map((target) => (target ? textOf(target, hiddenFromReaders(target)) : ""))
         .join(" ")
         .trim();
     const ownName = (element: Element) =>

@@ -48,6 +48,18 @@ const tools: Record<string, Artifact["code"]> = {
     css: "",
     js: "",
   },
+  // Hidden text under a visible element a field points at doesn't label it.
+  hiddenUnderReference: {
+    html: '<p>Form</p><span id="n"><span hidden>Name</span></span><input aria-labelledby="n">',
+    css: "",
+    js: "",
+  },
+  // Text without a box of its own, or transparent text, still names a button.
+  namedText: {
+    html: '<p>Form</p><button><span class="contents">Add</span></button><button><span class="clear">Remove</span></button>',
+    css: ".contents { display: contents; } .clear { opacity: 0; }",
+    js: "",
+  },
   // Only a drawing, visible: something shows.
   drawing: {
     html: '<canvas aria-label="Drawing" width="200" height="100"></canvas>',
@@ -145,6 +157,22 @@ test("VER-02: hidden media shows nothing; a visible drawing does", async ({ page
     });
   }
   expect(await smoke(page, "drawing")).toMatchObject({ outcome: "refused" });
+});
+
+test("VER-02: hidden text under a visible element a field points at doesn't label it", async ({
+  page,
+}) => {
+  expect(await smoke(page, "hiddenUnderReference")).toEqual({
+    outcome: "check-failed",
+    check: "smoke",
+    reason: "1 field has no label.",
+  });
+});
+
+test("VER-02: text without a box of its own, or transparent, still names a button", async ({
+  page,
+}) => {
+  expect(await smoke(page, "namedText")).toMatchObject({ outcome: "refused" });
 });
 
 test("VER-02: hidden text doesn't name a button, but hidden text a field points at does", async ({
