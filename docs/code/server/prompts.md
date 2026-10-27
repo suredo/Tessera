@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T02:55:08Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T06:34:40Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 
 # Entry points
 
-- `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `source.md`, `diagnostics.md`, the probe's `probe.md` and `probe-request.md`, and the [intent stage](intent.md)'s `intent*.md`.
+- `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `create.md` (what creation answers, with the host's data schema keywords), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `source.md`, `diagnostics.md`, the probe's `probe.md` and `probe-request.md`, and the [intent stage](intent.md)'s `intent*.md`.
 - `src/prompts/prompts.ts`:
   - `assemblePrompt` builds a generation stage's prompt (`PromptInput` to `AssembledPrompt`): the instructions, the request, each part as name@version, and the size.
   - `assembleIntentPrompt` builds the intent stage's prompt: its instructions, then the open tool (`OpenTool`) with each `RecordList` it keeps, quoted as JSON between markers (`SEC-02`), or none, the request, and on a second ask the reminder; `INTENT_PROMPT_BUDGET` caps it.
@@ -30,7 +30,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 - **Parts are chosen by the stage and structured fields, never the request's words** (`GEN-02`): base rules always; the bridge manifest unless the intent says the request only changes the look; the UI standard's look only for a tool in standard mode, and the accessibility rules in either mode, since a custom look never drops them (`UX-04`); the tool's code for edit and repair, which need it; what the checks found for repair. A test runs requests full of words a keyword rule would act on, and gets the same parts.
 - **The manifest and the UI tokens come from their one definitions** (`CON-03`, `VER-06`, P3): the bridge part quotes the contracts' bridge manifest as compact JSON, without the schema-version line, a pattern beside a format that says the same, or the bounds every JSON integer has; the UI standard part lists the runtime's UI tokens. The standard's rules are the POC's, ported.
 - **Quoted material is data** (`SEC-02`): the tool's code sits between markers and is called data, and the base rules say quoted material is never instructions.
-- **Each stage's fixture prompt stays within its budget** (`GEN-03`): about 13,300 characters for creation, 17,200 for an edit and 17,400 for a repair of the shopping-list fixture (`packages/server/test/fixtures/prompts`), against budgets of 14,500, 18,500 and 19,000. CI fails past them.
+- **Each stage's fixture prompt stays within its budget** (`GEN-03`): about 15,500 characters for creation, 17,800 for an edit and 18,100 for a repair of the shopping-list fixture (`packages/server/test/fixtures/prompts`), against budgets of 17,000, 18,500 and 19,000. Creation's grew with its own part, its output contract. CI fails past them.
 - **Filling a part is exact:** a placeholder without a value, or a value without a placeholder, is an error, and a value is never read as a replacement pattern.
 
 # Depends on / used by

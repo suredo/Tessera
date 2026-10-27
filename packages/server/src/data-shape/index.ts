@@ -12,6 +12,7 @@ export { projectData, stepFor, type Loss } from "./project.ts";
 export {
   checkToolData,
   compileToolSchema,
+  TOOL_SCHEMA_KEYWORDS,
   TOOL_SCHEMA_LIMIT_BYTES,
   type SchemaCheck,
 } from "./schema.ts";
