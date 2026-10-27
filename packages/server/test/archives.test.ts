@@ -354,6 +354,21 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", () => {
     await refused(pack(manifest, missing), /missing from this archive/);
   });
 
+  it("ADR 0009, VER-01: refuses a tool that does what a tool may not, as a generated one would be", async () => {
+    for (const html of [
+      '<iframe src="https://example.com"></iframe>',
+      '<img src="x" onerror="go()">',
+    ]) {
+      const folder = await openDataFolder(newFolder());
+      const workspace = createWorkspace(folder, "Shopping list");
+      // Stored directly: an archive can come from anywhere, so import can't trust its tools.
+      addWorkspaceVersion(folder, workspace.id, saveVersion(folder.db, artifact(html)));
+      const bytes = exportWorkspace(folder, workspace.id);
+      folder.close();
+      await refused(bytes, /does something Tessera doesn't let tools do/);
+    }
+  });
+
   it("IMP-05: refuses executable content outside tool code", async () => {
     const { files, manifest } = await exportedFiles();
     for (const name of ["scripts/run.js", "migrations/0001.js", "versions/run.js", "engine.wasm"]) {

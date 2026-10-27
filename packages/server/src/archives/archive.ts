@@ -23,6 +23,7 @@ import {
   sniffImage,
   type AssetStore,
 } from "../assets/index.ts";
+import { staticCheck } from "../checks/index.ts";
 import type { DataFolder } from "../storage/index.ts";
 import {
   getSavedTool,
@@ -298,6 +299,13 @@ function checkedVersions(hashes: Set<string>, files: Map<string, Uint8Array>) {
     const reading = readArtifact(parsed);
     if (reading.kind === "incompatible") {
       throw new ArchiveError(`A tool version in this archive can't be used: ${reading.reason}`);
+    }
+    // An imported tool is code from an unknown author: it is checked as a generated candidate is,
+    // before it can run (ADR 0009, VER-01).
+    if (!staticCheck(reading.artifact.code).ok) {
+      throw new ArchiveError(
+        "A tool in this archive does something Tessera doesn't let tools do, such as opening other pages, so nothing was imported.",
+      );
     }
     // Stored versions are canonical JSON, so their name is the hash of exactly this text.
     if (canonicalJson(parsed) !== body) {

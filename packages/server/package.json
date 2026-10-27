@@ -8,8 +8,10 @@
   },
   "dependencies": {
     "@tessera/contracts": "workspace:*",
-    "ajv": "8.20.0",
     "@tessera/runtime": "workspace:*",
+    "acorn": "8.19.0",
+    "ajv": "8.20.0",
+    "parse5": "8.0.1",
     "zod": "4.6.5"
   }
 }
