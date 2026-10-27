@@ -328,3 +328,27 @@ button.primary {
 .status h3 {
   margin: var(--ui-space-4) 0 var(--ui-space-2);
 }
+
+/* The request box (GEN-01): a field and its button, wrapping at narrow widths. */
+.request {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+  align-items: flex-end;
+  margin-bottom: var(--ui-space-4);
+}
+.request label {
+  flex-basis: 100%;
+}
+.request textarea {
+  flex: 1 1 16rem;
+  min-width: 0;
+  font: inherit;
+  padding: var(--ui-space-2);
+  border: 1px solid var(--ui-control-border);
+  border-radius: var(--ui-radius-control);
+}
+.request [role="status"] {
+  flex-basis: 100%;
+  margin: 0;
+}

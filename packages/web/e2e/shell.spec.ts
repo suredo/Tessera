@@ -17,7 +17,9 @@ test("APP-02: the first screen invites the person to describe a tool, and fits t
   await page.goto(app.url);
   await expect(page).toHaveTitle(en["app.title"]);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
-  await expect(page.getByRole("status").first()).toHaveText(en["home.status"]);
+  // The setup check passed, so the request box is offered (GEN-01, PLAT-03).
+  await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeVisible();
+  await expect(page.getByRole("button", { name: en["request.send"] })).toBeVisible();
   // Nothing wider than the window: at 320 px the page must not scroll sideways.
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

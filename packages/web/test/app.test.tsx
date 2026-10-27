@@ -8,7 +8,6 @@ it("APP-02: the first-run screen shows exactly the English host text, from the t
   expect(shownText(renderToStaticMarkup(<EmptyState />))).toEqual([
     en["home.heading"],
     en["home.intro"],
-    en["home.status"],
   ]);
 });
 
