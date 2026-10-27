@@ -100,9 +100,8 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       expect(seen.stagings).toEqual([]);
     }
     const saved = deps({ kind: "open_saved", savedToolId: "t-1" });
-    expect(await carryOut("x", null, saved.fake)).toEqual({
-      message: en["request.openSaved"],
-      continueSavedToolId: "t-1",
-    });
+    // GEN-18: a matched saved tool is handed to the app to offer, never opened here.
+    expect(await carryOut("x", null, saved.fake)).toEqual({ message: "", savedToolId: "t-1" });
+    expect(saved.seen.stagings).toEqual([]);
   });
 });

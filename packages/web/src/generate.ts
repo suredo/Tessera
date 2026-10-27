@@ -37,8 +37,8 @@ export type RequestOutcome = {
   message: string;
   /** The workspace to open: the new tool's, once it is active. */
   openWorkspaceId?: string;
-  /** A saved tool the request asked for, to continue. */
-  continueSavedToolId?: string;
+  /** A saved tool the request asked for: the person chooses Continue or Use again (GEN-18). */
+  savedToolId?: string;
 };
 
 export type RequestDeps = {
@@ -92,7 +92,7 @@ export async function carryOut(
       }
       break;
     case "open_saved":
-      return { message: t("request.openSaved"), continueSavedToolId: reply.savedToolId };
+      return { message: "", savedToolId: reply.savedToolId };
     case "failed":
       return { message: t("request.failed", { message: reply.message }) };
   }

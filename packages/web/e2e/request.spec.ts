@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Creation, Intent } from "../../contracts/src/index.ts";
-import { createScriptedProvider } from "../../server/src/providers/index.ts";
-import { listWorkspaces } from "../../server/src/workspaces/index.ts";
+import { UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.ts";
+import { listWorkspaces, saveTool } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, type AppHost } from "./support/app-host.ts";
 
@@ -65,28 +65,44 @@ const shoppingList: Creation = {
   uiMode: "standard",
 };
 
+/**
+ * Answers in order, as the scripted provider does (ENG-11), but a step can take its time, and its
+ * answer can be made when it is asked for, such as one naming a saved tool the test made.
+ */
+type Step = { stage: string; value: unknown; delayMs?: number };
+const steps: Step[] = [
+  // 1. A shopping list, made, staged, activated.
+  { stage: "intent", value: intent("create") },
+  { stage: "create", value: shoppingList },
+  // 2. A request too vague to act on.
+  { stage: "intent", value: intent("clarify") },
+  // 3. A tool that fails the static check: nothing is made.
+  { stage: "intent", value: intent("new_tool") },
+  {
+    stage: "create",
+    value: { ...shoppingList, code: { ...shoppingList.code, html: '<iframe src="x"></iframe>' } },
+  },
+  // 4. A slow request, while the person goes elsewhere and comes back.
+  { stage: "intent", value: intent("clarify"), delayMs: 4000 },
+  // 5 and 6. A request that matches a saved tool, twice.
+  { stage: "intent", value: () => ({ ...intent("open_saved"), savedToolId }) },
+  { stage: "intent", value: () => ({ ...intent("open_saved"), savedToolId }) },
+];
+let savedToolId = "";
+const provider: Provider = {
+  name: "scripted:request",
+  live: false,
+  async run(spec) {
+    const step = steps.shift();
+    if (step?.stage !== spec.stage) throw new Error(`No ${spec.stage} answer is scripted next.`);
+    if (step.delayMs) await new Promise((done) => setTimeout(done, step.delayMs));
+    const value = typeof step.value === "function" ? (step.value as () => unknown)() : step.value;
+    return { value: spec.schema.parse(value), usage: UNKNOWN_USAGE, raw: JSON.stringify(value) };
+  },
+};
+
 let app: AppHost;
 test.beforeAll(async () => {
-  const provider = createScriptedProvider({
-    name: "request",
-    replies: [
-      // 1. A shopping list, made, staged, activated.
-      { kind: "value", stage: "intent", value: intent("create") },
-      { kind: "value", stage: "create", value: shoppingList },
-      // 2. A request too vague to act on.
-      { kind: "value", stage: "intent", value: intent("clarify") },
-      // 3. A tool that fails the static check: nothing is made.
-      { kind: "value", stage: "intent", value: intent("new_tool") },
-      {
-        kind: "value",
-        stage: "create",
-        value: {
-          ...shoppingList,
-          code: { ...shoppingList.code, html: '<iframe src="x"></iframe>' },
-        },
-      },
-    ],
-  });
   app = await startApp(undefined, provider);
 });
 test.afterAll(() => app.close());
@@ -131,4 +147,43 @@ test("GEN-09, GEN-08: a tool that fails its checks is never called ready, and no
     ),
   ).toBeVisible({ timeout: 30_000 });
   expect(listWorkspaces(app.folder)).toHaveLength(1);
+});
+
+test("GEN-01: a request keeps running when the person goes elsewhere, and no second one starts meanwhile", async ({
+  page,
+}) => {
+  await page.goto(app.url);
+  await ask(page, "Something slow");
+  await page.getByRole("button", { name: en["nav.library"], exact: true }).click();
+  await page.getByRole("button", { name: en["nav.workspaces"], exact: true }).click();
+  // Back on the workspace: still running, so the box takes no other request.
+  await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeDisabled();
+  await expect(page.getByText(en["request.working"])).toBeVisible();
+  await expect(page.getByText(en["request.clarify"])).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeEnabled();
+});
+
+test("GEN-18: a request matching a saved tool offers Continue or Use again, and opens nothing until the person chooses", async ({
+  page,
+}) => {
+  const workspace = listWorkspaces(app.folder)[0]!;
+  savedToolId = saveTool(app.folder, workspace.id, "Weekly shop").id;
+  await page.goto(app.url);
+  const before = listWorkspaces(app.folder).length;
+
+  await ask(page, "My weekly shop");
+  await expect(page.getByText(/^That sounds like your saved tool Weekly shop\./)).toBeVisible({
+    timeout: 30_000,
+  });
+  expect(listWorkspaces(app.folder)).toHaveLength(before);
+  await page.getByRole("button", { name: "Use Weekly shop again" }).click();
+  await expect(
+    page.getByText("Weekly shop opened in a new workspace, with its starting data."),
+  ).toBeVisible();
+  expect(listWorkspaces(app.folder)).toHaveLength(before + 1);
+
+  await ask(page, "My weekly shop");
+  await page.getByRole("button", { name: "Continue Weekly shop" }).click();
+  await expect(page.getByText("Weekly shop is open again.")).toBeVisible();
+  expect(listWorkspaces(app.folder)).toHaveLength(before + 1);
 });

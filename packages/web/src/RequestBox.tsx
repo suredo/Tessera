@@ -2,27 +2,24 @@ import { useState } from "react";
 import { t } from "./i18n/translate.ts";
 
 // Where the person says what they need (GEN-01): a field and a button, the start of the chat
-// (#132). It is offered only once the setup check passes (PLAT-03), and while a request runs it
-// says so and takes no other.
+// (#132). It is offered only once the setup check passes (PLAT-03). Whether a request is running
+// is the app's to know, not this box's, so leaving the screen and coming back doesn't let a second
+// one in while the first runs.
 
 type Props = {
+  /** True while a request runs: the box says so and takes no other. */
+  working: boolean;
   /** Carries out the request; resolves when the app has said what happened. */
   onRequest: (request: string) => Promise<void>;
 };
 
-export function RequestBox({ onRequest }: Props) {
+export function RequestBox({ working, onRequest }: Props) {
   const [request, setRequest] = useState("");
-  const [working, setWorking] = useState(false);
   const send = async () => {
     const text = request.trim();
     if (!text || working) return;
-    setWorking(true);
-    try {
-      await onRequest(text);
-      setRequest("");
-    } finally {
-      setWorking(false);
-    }
+    await onRequest(text);
+    setRequest("");
   };
   return (
     <div className="request">

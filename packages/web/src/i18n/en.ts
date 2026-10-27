@@ -20,7 +20,11 @@ export const en = {
   "request.cannot": "Tessera can't make that. {reason}",
   "request.split": "Please send the change to the tool and the change to its entries separately.",
   "request.notYet": "Changing a tool comes in a later version. For now, Tessera makes new tools.",
-  "request.openSaved": "That's one of your saved tools, so it's open again.",
+  "request.offerSaved":
+    "That sounds like your saved tool {name}. Continue where you left off, or use it again with a fresh start?",
+  "request.continue": "Continue {name}",
+  "request.useAgain": "Use {name} again",
+  "request.continued": "{name} is open again.",
   "request.failed": "That didn't work. {message}",
   "request.failedPlain": "Tessera couldn't carry out that request. Nothing was changed.",
   "home.trash": "Open the trash",

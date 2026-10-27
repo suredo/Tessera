@@ -31,6 +31,8 @@ type EmptyProps = {
   onStatus?: () => void;
   /** Carries out a request; offered only once the setup check passes (PLAT-03). */
   onRequest?: (request: string) => Promise<void>;
+  /** True while a request runs. */
+  requesting?: boolean;
 };
 
 export function EmptyState({
@@ -41,12 +43,13 @@ export function EmptyState({
   setupProblem = "",
   onStatus,
   onRequest,
+  requesting = false,
 }: EmptyProps) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
       <p>{t("home.intro")}</p>
-      {onRequest && setup?.ready && <RequestBox onRequest={onRequest} />}
+      {onRequest && setup?.ready && <RequestBox working={requesting} onRequest={onRequest} />}
       {/* Such as the trash notice after the last workspace is deleted. */}
       <p role="status">{notice}</p>
       {/* What was deleted can still come back from here (DATA-09). */}
@@ -106,6 +109,9 @@ export function App() {
   const [view, setView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
   // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
   const [setup, setSetup] = useState<SetupReport | null>(null);
+  // A request running, and a saved tool a request matched, waiting for the person's choice.
+  const [requesting, setRequesting] = useState(false);
+  const [offer, setOffer] = useState<{ id: string; name: string } | null>(null);
   // Why the last check couldn't be made, such as the server not answering; "" when it was.
   const [setupProblem, setSetupProblem] = useState("");
   const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -230,20 +236,51 @@ export function App() {
     }
   };
 
-  // A request from the chat (GEN-01): carried out, then the lists are read again, and what was
-  // made, or the saved tool asked for, opens.
+  // A request from the chat (GEN-01): one at a time, whatever screen is shown; then the lists are
+  // read again and what was made opens. A saved tool the request matched is offered, to continue
+  // or to use again, and nothing opens until the person chooses (GEN-18).
   const request = async (text: string) => {
+    if (requesting) return;
+    setRequesting(true);
+    setOffer(null);
     try {
       const outcome = await carryOut(text, openId);
-      await refresh();
-      if (outcome.continueSavedToolId) {
-        const { workspace } = await ask("library.continue", { id: outcome.continueSavedToolId });
-        open(workspace.id);
-      } else if (outcome.openWorkspaceId) {
-        open(outcome.openWorkspaceId);
+      const { savedTools: saved } = await refresh().then(() => ask("library.list", {}));
+      if (outcome.savedToolId) {
+        const tool = saved.find((s) => s.id === outcome.savedToolId);
+        if (tool) {
+          setOffer({ id: tool.id, name: tool.name });
+          setNotice(t("request.offerSaved", { name: tool.name }));
+          return;
+        }
       }
-      setView("workspaces");
-      setNotice(outcome.message);
+      if (outcome.openWorkspaceId) {
+        open(outcome.openWorkspaceId);
+        setView("workspaces");
+      }
+      setNotice(outcome.message || t("request.failedPlain"));
+    } catch (error) {
+      say(error);
+    } finally {
+      setRequesting(false);
+    }
+  };
+  const takeOffer = async (choice: "continue" | "useAgain") => {
+    if (!offer) return;
+    try {
+      const workspaceId =
+        choice === "continue"
+          ? (await ask("library.continue", { id: offer.id })).workspace.id
+          : await ask("library.useAgain", { id: offer.id }).then((result) => {
+              if (!result.ok) throw new HostError(result.message);
+              return result.workspace.id;
+            });
+      setOffer(null);
+      await refresh();
+      showWorkspace(workspaceId);
+      setNotice(
+        t(choice === "continue" ? "request.continued" : "library.usedAgain", { name: offer.name }),
+      );
     } catch (error) {
       say(error);
     }
@@ -267,6 +304,7 @@ export function App() {
         setupProblem={setupProblem}
         onStatus={() => setView("status")}
         onRequest={request}
+        requesting={requesting}
       />
     );
   }
@@ -362,7 +400,7 @@ export function App() {
             <ImportFile onImport={importFile} />
           </aside>
           <main>
-            {setup?.ready && <RequestBox onRequest={request} />}
+            {setup?.ready && <RequestBox working={requesting} onRequest={request} />}
             {current && (
               <ToolPanel
                 key={`${current.id}:${reloads}`}
@@ -484,9 +522,20 @@ export function App() {
           />
         </main>
       )}
-      <p role="status" className="notice">
-        {notice}
-      </p>
+      <div className="notice">
+        <p role="status">{notice}</p>
+        {/* A saved tool the request matched: the person chooses (GEN-18). */}
+        {offer && (
+          <p className="offer">
+            <button type="button" onClick={() => void takeOffer("continue")}>
+              {t("request.continue", { name: offer.name })}
+            </button>{" "}
+            <button type="button" onClick={() => void takeOffer("useAgain")}>
+              {t("request.useAgain", { name: offer.name })}
+            </button>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
