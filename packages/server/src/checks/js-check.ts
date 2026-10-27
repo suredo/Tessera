@@ -407,7 +407,7 @@ class PageValues {
 
   private readonly program: AnyNode;
   /** Every name the script declares, anywhere. */
-  private readonly declared = new Set<string>();
+  readonly declared = new Set<string>();
 
   constructor(program: AnyNode) {
     this.program = program;
@@ -502,6 +502,8 @@ class PageValues {
       case "CallExpression": {
         const callee = node["callee"] as AnyNode;
         const args = node["arguments"] as AnyNode[];
+        // What crosses the bridge is copied as plain data; the page's objects can't cross it.
+        if (callee.type === "MemberExpression" && rootName(callee) === "tessera") return false;
         if (callee.type === "Identifier") return this.returning.has(callee["name"] as string);
         if (callee.type === "MemberExpression") {
           const method = propertyName(callee);
@@ -571,8 +573,9 @@ class PageValues {
             if (callee.type === "Identifier")
               markParams(this.functions.get(callee["name"] as string));
             // A container given them (list.push(el), map.set(k, el)) holds them.
+            // The bridge copies what it is given, so it never holds the page's objects.
             const root = callee.type === "MemberExpression" ? rootName(callee) : undefined;
-            if (root) this.names.add(root);
+            if (root && root !== "tessera") this.names.add(root);
           }
           break;
         }
@@ -665,6 +668,14 @@ export function checkJs(
   }
   const page = new PageValues(program);
   const findings: JsFinding[] = [];
+  // The bridge's values count as plain data only because `tessera` is the host's: a tool may not
+  // declare a name of its own that hides it.
+  if (page.declared.has("tessera")) {
+    findings.push({
+      message:
+        "The JavaScript declares its own tessera, which hides the host's. Choose another name.",
+    });
+  }
   const found = (node: AnyNode, message: string) =>
     findings.push({
       line: (node.loc as { start: { line: number } } | undefined)?.start.line,

@@ -7,7 +7,7 @@ implements: [SBX-06, SBX-07]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T05:04:18Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T08:46:55Z }
 ---
 
 # Purpose
@@ -42,6 +42,8 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
   - `this` in a class that stores them;
   - if the tracking is still finding more after many rounds, everything, so it fails closed;
   - names the script never declares, since an element with an `id` is a global of that name.
+
+  What crosses the bridge is plain data: `tessera.call` copies its arguments and results, and the page's objects can't be copied, so nothing given to or returned by the bridge counts as the page. A tool may not declare a name `tessera` of its own, which could pass the page off as the bridge.
 
   A property reached on any of these by a name made at run time is refused, and so are `Object.assign`, `keys`, `values` and `entries` on them, spreading them and `for…in` over them. Properties that only hold text, numbers or flags (`value`, `checked`, `textContent`, `dataset`, …) leave the page behind, so ordinary code isn't refused; plain data keeps its ordinary indexing (`totals[name]`, `records[i][field]`).
 - **No way around the names.** The page's objects (`window`, `document`, `self`, `globalThis`, `top`, `parent`, `frames`, `opener`) may only be used as `window.something`, with the name written out: never stored, passed or destructured. The check also refuses:
