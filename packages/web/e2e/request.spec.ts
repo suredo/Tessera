@@ -76,11 +76,15 @@ const steps: Step[] = [
   { stage: "create", value: shoppingList },
   // 2. A request too vague to act on.
   { stage: "intent", value: intent("clarify") },
-  // 3. A tool that fails the static check: nothing is made.
+  // 3. A tool that fails the static check, and again after its repair: nothing is made.
   { stage: "intent", value: intent("new_tool") },
   {
     stage: "create",
     value: { ...shoppingList, code: { ...shoppingList.code, html: '<iframe src="x"></iframe>' } },
+  },
+  {
+    stage: "repair",
+    value: { ...shoppingList, code: { ...shoppingList.code, html: '<iframe src="y"></iframe>' } },
   },
   // 4. A slow request, while the person goes elsewhere and comes back.
   { stage: "intent", value: intent("clarify"), delayMs: 4000 },
@@ -136,7 +140,7 @@ test("GEN-08: an unclear request is answered in plain words, and nothing is made
   expect(listWorkspaces(app.folder)).toHaveLength(1);
 });
 
-test("GEN-09, GEN-08: a tool that fails its checks is never called ready, and nothing is made", async ({
+test("GEN-09, GEN-08: a tool that fails its checks, even after its repair, is never called ready, and nothing is made", async ({
   page,
 }) => {
   await page.goto(app.url);

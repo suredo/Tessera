@@ -1,0 +1,1 @@
+Repairing the tool's code. The problems below are places where the code does something a tool here may not do. Rewrite each place within the rules above, and drop that feature if the rules leave no way to keep it. Keep everything else the tool does, and its data.

@@ -1,7 +1,14 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { bridgeManifest, type Artifact, type Intent, type Stage } from "@tessera/contracts";
+import {
+  bridgeManifest,
+  type Artifact,
+  type Creation,
+  type FailureClass,
+  type Intent,
+  type Stage,
+} from "@tessera/contracts";
 import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
 import { TOOL_SCHEMA_KEYWORDS } from "../data-shape/index.ts";
 
@@ -22,9 +29,12 @@ export const PROMPT_PARTS = [
   "accessibility",
   "request",
   "source",
+  "attempt",
   "diagnostics",
   "create",
   "language",
+  "repair-schema-shape",
+  "repair-static",
   "probe",
   "probe-request",
   "intent",
@@ -40,14 +50,23 @@ export type PromptPart = (typeof PROMPT_PARTS)[number];
 export type GenerationStage = Extract<Stage, "create" | "edit" | "repair">;
 
 /**
+ * The failure classes repair has a prompt part for (GEN-09). A provider failure is never repaired;
+ * the smoke and behavior classes get theirs with the stages that find them.
+ */
+export const REPAIR_CLASSES = ["schema-shape", "static"] as const satisfies readonly FailureClass[];
+export type RepairClass = (typeof REPAIR_CLASSES)[number];
+
+/**
  * The largest prompt, instructions and request together, in characters, that each stage's fixture
  * may reach (GEN-03), about a tenth above what they measured when set: a test fails past it, so a
- * part can't grow unnoticed. The POC's one prompt reached about 18,000.
+ * part can't grow unnoticed. The POC's one prompt reached about 18,000. Repair's covers its larger
+ * shape, the repair of a creation: the creation prompt with the failed answer quoted, about 21,400
+ * when set (GEN-09).
  */
 export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
   create: 17_000,
   edit: 18_500,
-  repair: 19_000,
+  repair: 23_500,
 };
 
 const PLACEHOLDER = /\{\{(\w+)\}\}/g;
@@ -116,8 +135,12 @@ export type PromptInput = {
   intent?: Intent;
   /** The tool's UI mode: the UI standard's part goes only to a tool in standard mode. */
   uiMode: Artifact["ui"]["mode"];
-  /** The tool's code now: edit and repair change it. */
+  /** The tool's code now: edit, and the repair of an edit, change it. */
   source?: Artifact["code"];
+  /** The answer that failed, when repair follows creation: repair answers again in full. */
+  attempt?: Extract<Creation, { outcome: "tool" }>;
+  /** Why the last attempt failed: repair takes that class's part (GEN-09). */
+  failure?: RepairClass;
   /** What the checks found, in plain words: repair fixes it (GEN-09). */
   diagnostics?: readonly string[];
 };
@@ -136,17 +159,27 @@ export type AssembledPrompt = {
 /**
  * Builds a generation stage's prompt from the parts it needs. The instructions always have the
  * base rules; the bridge manifest unless the intent says the request only changes the look; the
- * UI standard's look for a tool in standard mode; and the accessibility rules, in either mode. The request has the person's words; edit and repair
- * add the tool's code, and repair what the checks found.
+ * UI standard's look for a tool in standard mode; and the accessibility rules, in either mode.
+ * The request has the person's words; edit adds the tool's code. Repair adds its failure class's
+ * part and what the checks found, with the tool's code when it repairs an edit, or the create
+ * part and the failed answer, if there was one in the right shape, when it repairs a creation.
  */
 export function assemblePrompt(input: PromptInput): AssembledPrompt {
   const { stage } = input;
-  if (stage !== "create" && input.source === undefined) {
-    throw new Error(`The ${stage} stage needs the tool's code.`);
+  if (stage === "edit" && input.source === undefined) {
+    throw new Error("The edit stage needs the tool's code.");
   }
   if (stage === "repair" && !input.diagnostics?.length) {
     throw new Error("The repair stage needs what the checks found.");
   }
+  if (stage === "repair" && input.failure === undefined) {
+    throw new Error("The repair stage needs the failure's class.");
+  }
+  if (input.source !== undefined && input.attempt !== undefined) {
+    throw new Error("A repair follows either an edit or a creation, not both.");
+  }
+  // Repairing a creation: the tool's code isn't stored yet, so the stage answers as creation does.
+  const creating = stage === "create" || (stage === "repair" && input.source === undefined);
   // Each part with the text it adds. A system part's version covers its generated content too;
   // a request part's covers only its wording, since what it quotes changes with every call.
   const system: [PromptPart, string, string][] = [];
@@ -164,9 +197,10 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // In custom mode too: a custom look drops the standard's look, never its accessibility (UX-04).
   addSystem("accessibility");
   // What creation answers, with the data schema keywords the host accepts (DATA-03, GEN-05).
-  if (stage === "create") {
+  if (creating) {
     addSystem("create", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
   }
+  if (stage === "repair") addSystem(`repair-${input.failure!}`);
   const request: [PromptPart, string, string][] = [];
   const addRequest = (part: PromptPart, values: Record<string, string>) =>
     request.push([part, fillPart(part, values), partVersion(partText(part))]);
@@ -175,6 +209,16 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // model guessing it (GEN-15).
   if (input.intent) addRequest("language", { language: input.intent.language });
   if (input.source) addRequest("source", { ...input.source });
+  if (stage === "repair" && input.attempt) {
+    const { name, summary, code, data, capabilities, uiMode } = input.attempt;
+    addRequest("attempt", {
+      name,
+      summary,
+      ...code,
+      data: JSON.stringify(data, null, 2),
+      settings: JSON.stringify({ capabilities, uiMode }),
+    });
+  }
   if (stage === "repair") {
     addRequest("diagnostics", {
       diagnostics: input.diagnostics!.map((line) => `- ${line}`).join("\n"),
