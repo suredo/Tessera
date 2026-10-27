@@ -31,6 +31,23 @@ const tools: Record<string, Artifact["code"]> = {
   },
   // Only a hidden drawing: nothing shows.
   hiddenMedia: { html: '<canvas hidden aria-label="Drawing"></canvas>', css: "", js: "" },
+  // Only a drawing, hidden by CSS or fully transparent: nothing shows.
+  cssHiddenMedia: {
+    html: '<canvas aria-label="Drawing" width="200" height="100"></canvas>',
+    css: "canvas { visibility: hidden; }",
+    js: "",
+  },
+  transparentMedia: {
+    html: '<canvas aria-label="Drawing" width="200" height="100"></canvas>',
+    css: "canvas { opacity: 0; }",
+    js: "",
+  },
+  // A button named only by hidden text has no name; a field named by hidden text it points at has one.
+  hiddenNames: {
+    html: '<p>Form</p><button><span hidden>Add</span></button><span id="n" aria-hidden="true">Name</span><input aria-labelledby="n">',
+    css: "",
+    js: "",
+  },
   // Only a drawing, visible: something shows.
   drawing: {
     html: '<canvas aria-label="Drawing" width="200" height="100"></canvas>',
@@ -121,7 +138,23 @@ test("VER-02: hidden media shows nothing; a visible drawing does", async ({ page
     outcome: "check-failed",
     reason: "The tool shows nothing.",
   });
+  for (const hidden of ["cssHiddenMedia", "transparentMedia"]) {
+    expect(await smoke(page, hidden), hidden).toMatchObject({
+      outcome: "check-failed",
+      reason: "The tool shows nothing.",
+    });
+  }
   expect(await smoke(page, "drawing")).toMatchObject({ outcome: "refused" });
+});
+
+test("VER-02: hidden text doesn't name a button, but hidden text a field points at does", async ({
+  page,
+}) => {
+  expect(await smoke(page, "hiddenNames")).toEqual({
+    outcome: "check-failed",
+    check: "smoke",
+    reason: "1 button has no name.",
+  });
 });
 
 test("VER-02: names are resolved: a reference to nothing and an empty label don't count; an image's alt names its button", async ({

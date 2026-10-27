@@ -101,21 +101,33 @@
     await wait(Math.max(100, 2000 - performance.now()));
     const body = document.body;
     const all = (selector: string) => (body ? [...body.querySelectorAll(selector)] : []);
-    // The text a name comes from, as assistive technology reads it: text, an image's alt text and
-    // an element's aria-label, leaving out what is hidden from it.
-    const textOf = (node: Node): string => {
+    // Visible: rendered, not hidden by CSS visibility, and not fully transparent.
+    const visible = (element: Element) => {
+      if (typeof element.checkVisibility === "function") {
+        return element.checkVisibility({ visibilityProperty: true, opacityProperty: true });
+      }
+      const style = getComputedStyle(element);
+      return style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0";
+    };
+    const hiddenFromReaders = (element: Element) =>
+      element.getAttribute("aria-hidden") === "true" || !visible(element);
+    // The text a name comes from, as assistive technology reads it (accessible-name rules): text,
+    // an image's alt text and an element's aria-label. What is hidden is left out, except inside
+    // an element that aria-labelledby names, whose text counts even when hidden.
+    const textOf = (node: Node, referenced = false): string => {
       if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
-      if (!(node instanceof Element) || node.getAttribute("aria-hidden") === "true") return "";
+      if (!(node instanceof Element)) return "";
+      if (!referenced && hiddenFromReaders(node)) return "";
       const label = node.getAttribute("aria-label")?.trim();
       if (label) return label;
       if (node instanceof HTMLImageElement) return node.alt;
-      return [...node.childNodes].map(textOf).join(" ");
+      return [...node.childNodes].map((child) => textOf(child, referenced)).join(" ");
     };
     const labelledBy = (element: Element) =>
       (element.getAttribute("aria-labelledby") ?? "")
         .split(/\s+/)
         .map((ref) => (ref ? document.getElementById(ref) : null))
-        .map((target) => (target ? textOf(target) : ""))
+        .map((target) => (target ? textOf(target, true) : ""))
         .join(" ")
         .trim();
     const ownName = (element: Element) =>
@@ -125,16 +137,23 @@
       "";
     const fieldName = (field: Element) =>
       ownName(field) ||
-      [...((field as HTMLInputElement).labels ?? [])].map(textOf).join(" ").trim();
+      [...((field as HTMLInputElement).labels ?? [])]
+        .map((label) => textOf(label))
+        .join(" ")
+        .trim();
+    // A button's own text: what it holds, less what is hidden inside it.
     const buttonName = (button: Element) =>
       ownName(button) ||
-      (button instanceof HTMLInputElement ? button.value.trim() : textOf(button).trim());
+      (button instanceof HTMLInputElement
+        ? button.value.trim()
+        : [...button.childNodes]
+            .map((child) => textOf(child))
+            .join(" ")
+            .trim());
     // Shown: laid out with a size, and visible.
     const shown = (element: Element) => {
       const box = element.getBoundingClientRect();
-      const visible =
-        typeof element.checkVisibility === "function" ? element.checkVisibility() : true;
-      return box.width > 0 && box.height > 0 && visible;
+      return box.width > 0 && box.height > 0 && visible(element);
     };
     const fields = all(
       "input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image]), select, textarea",
