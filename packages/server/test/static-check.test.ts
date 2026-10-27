@@ -294,6 +294,41 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
     ).toEqual([]);
   });
 
+  it("VER-01: what comes back from the bridge is plain data, as in a live tool (slice pilot, #173)", () => {
+    // From the pilot's shopping list: revisions read through the bridge, indexed by a record's id,
+    // with page values passed to the bridge alongside.
+    expect(
+      checkJs(`
+        let items = []; let revs = {};
+        const input = document.getElementById("item");
+        async function load() {
+          const r = await tessera.call("data.read", {});
+          items = r.data.items || [];
+          revs = (r.revisions && r.revisions.items) || {};
+        }
+        async function setDone(id, val) {
+          await tessera.call("data.patch", { operations: [{ op: "replace", collection: "items", id, revisionCount: revs[id], fields: { done: val } }] });
+          input.focus();
+        }
+        document.getElementById("list").addEventListener("change", (event) => setDone(event.target.id, event.target));
+      `),
+    ).toEqual([]);
+  });
+
+  it("ADR 0009: a tool can't declare its own tessera to pass the page off as bridge data", () => {
+    for (const js of [
+      "const tessera = document; tessera.body[key] = html;",
+      "function f(tessera) { return tessera.call[key]; }",
+      "let { tessera } = window;",
+      // Only the bridge's own calls give plain data; nothing hung on them does (Codex, #174).
+      'tessera.call.pick = document.body.querySelector.bind(document.body); const el = tessera.call.pick("div"); el[atob("aW5uZXJIVE1M")] = "x";',
+      "tessera.call.pick = pick;",
+      "tessera.extra = document.body;",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
   it("VER-01: code that can't be parsed is a finding, not a crash", () => {
     expect(checkJs("function (")).toEqual([
       { part: "js", message: expect.stringMatching(/^The JavaScript can't be read: /) as unknown },
