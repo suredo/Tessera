@@ -7,12 +7,12 @@ implements: [SBX-06, SBX-07]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T04:57:55Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T05:04:18Z }
 ---
 
 # Purpose
 
-Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the JavaScript, parse5 for the HTML, which follows the HTML standard, as the browser does. Its first rules close the one way out the sandbox can't stop ([ADR 0009](../../decisions/adr/0009-frames-and-navigation-in-generated-tools.md)). A frame or navigation to an outside address is refused by the browser, but only after it looks up the name, which can carry data. A tool steered by pasted text could use that.
+Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the JavaScript, parse5 for the HTML, which follows the HTML standard, as the browser does. Its first rules reduce the risk of the one way out the sandbox can't stop, as defence in depth ([ADR 0009](../../decisions/adr/0009-frames-and-navigation-in-generated-tools.md), amended). A frame or navigation to an outside address is refused by the browser, but only after it looks up the name, which can carry data. A tool steered by pasted text could use that.
 
 # Entry points
 
@@ -70,7 +70,7 @@ acorn and parse5, pinned exactly. The [export and import](archives.md) module re
 - **It is defence in depth, not a closure** (ADR 0009, amended). A deliberately obfuscated leak can pass. Known gaps, from Codex's review of pull request 168, recorded rather than patched one by one:
   - properties and methods counted as plain by their name (such as `value` or `data`) whose value is an element the tool stored there;
   - a function passed by name as a callback, or called inline, receiving the page's objects;
-  - `createElement` taken out of `document` by destructuring;
+  - `createElement` or `setAttribute` taken out of an object by destructuring, then called with `call`;
   - `Object` reached through an alias;
   - a name declared in one scope and used undeclared in another;
   - an attribute's value changed through its attribute node (`a.attributes.item(0).value = …`);

@@ -190,14 +190,20 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
     }
   });
 
-  it("ADR 0009: fails closed when the tracking can't finish: a long, reversed alias chain is refused", () => {
-    const length = 80;
-    const lines = Array.from({ length }, (_, i) => `v${i} = v${i + 1};`).reverse();
+  it("ADR 0009: fails closed when the tracking can't finish (Codex's loop, longer than its round limit)", () => {
+    // At run time the loop carries document.body back to p0; each round of the tracking moves it
+    // one step, so a chain longer than its limit must make it refuse, never accept.
+    const names = Array.from({ length: 80 }, (_, i) => `p${i}`);
     const js = [
-      `let ${Array.from({ length: length + 1 }, (_, i) => `v${i}`).join(", ")};`,
-      ...lines,
-      `v${length} = document.body;`,
-      "v0[key] = html;",
+      `let ${names.join(",")};`,
+      "for (let turn = 0; turn < 80; turn++) {",
+      names
+        .slice(0, -1)
+        .map((name, i) => `${name}=p${i + 1};`)
+        .join(""),
+      "p79 = document.body;",
+      "}",
+      'p0[atob("aW5uZXJIVE1M")] = "<iframe src=https://leak.example></iframe>";',
     ].join("\n");
     expect(refusedJs(js)).toBe(true);
   });
