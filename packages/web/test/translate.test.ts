@@ -23,8 +23,8 @@ describe("translation layer", () => {
 
   it("fills {placeholders} from params and leaves unknown ones as written (UX-05)", () => {
     const translate = createTranslator("en", {
-      "home.status": "{count} tools, saved by {owner}",
+      "home.intro": "{count} tools, saved by {owner}",
     });
-    expect(translate("home.status", { count: 3 })).toBe("3 tools, saved by {owner}");
+    expect(translate("home.intro", { count: 3 })).toBe("3 tools, saved by {owner}");
   });
 });

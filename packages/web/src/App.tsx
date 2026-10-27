@@ -8,6 +8,8 @@ import { ImportFile } from "./ImportFile.tsx";
 import { Library } from "./Library.tsx";
 import { checkSetup, runProbe } from "./setup.ts";
 import { SetupNotice, Status } from "./Status.tsx";
+import { carryOut } from "./generate.ts";
+import { RequestBox } from "./RequestBox.tsx";
 import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
 import { Workspaces } from "./Workspaces.tsx";
@@ -27,6 +29,8 @@ type EmptyProps = {
   /** Why the check couldn't be made, or "". */
   setupProblem?: string;
   onStatus?: () => void;
+  /** Carries out a request; offered only once the setup check passes (PLAT-03). */
+  onRequest?: (request: string) => Promise<void>;
 };
 
 export function EmptyState({
@@ -36,12 +40,13 @@ export function EmptyState({
   setup = null,
   setupProblem = "",
   onStatus,
+  onRequest,
 }: EmptyProps) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
       <p>{t("home.intro")}</p>
-      <p role="status">{t("home.status")}</p>
+      {onRequest && setup?.ready && <RequestBox onRequest={onRequest} />}
       {/* Such as the trash notice after the last workspace is deleted. */}
       <p role="status">{notice}</p>
       {/* What was deleted can still come back from here (DATA-09). */}
@@ -225,6 +230,25 @@ export function App() {
     }
   };
 
+  // A request from the chat (GEN-01): carried out, then the lists are read again, and what was
+  // made, or the saved tool asked for, opens.
+  const request = async (text: string) => {
+    try {
+      const outcome = await carryOut(text, openId);
+      await refresh();
+      if (outcome.continueSavedToolId) {
+        const { workspace } = await ask("library.continue", { id: outcome.continueSavedToolId });
+        open(workspace.id);
+      } else if (outcome.openWorkspaceId) {
+        open(outcome.openWorkspaceId);
+      }
+      setView("workspaces");
+      setNotice(outcome.message);
+    } catch (error) {
+      say(error);
+    }
+  };
+
   if (workspaces === null) {
     return (
       <main>
@@ -242,6 +266,7 @@ export function App() {
         setup={setup}
         setupProblem={setupProblem}
         onStatus={() => setView("status")}
+        onRequest={request}
       />
     );
   }
@@ -337,6 +362,7 @@ export function App() {
             <ImportFile onImport={importFile} />
           </aside>
           <main>
+            {setup?.ready && <RequestBox onRequest={request} />}
             {current && (
               <ToolPanel
                 key={`${current.id}:${reloads}`}
