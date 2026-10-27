@@ -182,6 +182,61 @@ describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
     });
   });
 
+  it("DATA-02: an empty list of records needs an addressable name, and a list can't mix records with other values (Codex, #170)", () => {
+    const records = { type: "array", items: { type: "object" } };
+    const withData = (schema: object, reusableDefaults: Record<string, unknown>) =>
+      candidateFrom(
+        tool({
+          data: {
+            schema: schema as never,
+            reusableDefaults: reusableDefaults as never,
+            initialState: {},
+          },
+        }),
+      );
+    expect(
+      withData(
+        { type: "object", properties: { "shopping-items": records } },
+        { "shopping-items": [] },
+      ),
+    ).toMatchObject({ kind: "failed", failure: "schema-shape" });
+    // Undeclared, an empty list may be records: it is held to the name rule too.
+    expect(withData({ type: "object" }, { "shopping-items": [] })).toMatchObject({
+      kind: "failed",
+    });
+    // Declared as a list of text, it isn't records, and any name will do.
+    expect(
+      withData(
+        {
+          type: "object",
+          properties: { "unit-names": { type: "array", items: { type: "string" } } },
+        },
+        { "unit-names": [] },
+      ).kind,
+    ).toBe("candidate");
+    const mixed = withData({ type: "object" }, { items: [{ id: "i-1", title: "Milk" }, null] });
+    expect(mixed.kind === "failed" && mixed.findings).toContain(
+      'The reusable defaults: the list "items" mixes records with other values; keep records apart.',
+    );
+  });
+
+  it("DATA-02: the first entry can be added to an accepted tool's empty list", () => {
+    const result = candidateFrom(
+      tool({
+        data: {
+          schema: listSchema,
+          reusableDefaults: { items: [], sections: [] },
+          initialState: {},
+        },
+      }),
+    );
+    if (result.kind !== "candidate") throw new Error("expected a candidate");
+    const added = applyPatch(createDataState(result.startingData), {
+      operations: [{ op: "add", collection: "items", record: { title: "Milk" } }],
+    });
+    expect(added.ok).toBe(true);
+  });
+
   it("DATA-02: the starting records of an accepted tool are tracked and can be changed by the patch engine", () => {
     const result = candidateFrom(tool());
     if (result.kind !== "candidate") throw new Error("expected a candidate");

@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02]
 tests: [../../../packages/server/test/create.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T06:46:57Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T06:52:23Z }
 ---
 
 # Purpose
@@ -28,7 +28,7 @@ The core of generation (#146): a request's interface part becomes a candidate to
 - **Defaults and the request's entries stay apart** (`GEN-05`). The artifact keeps only the reusable defaults. A new workspace starts from the defaults, with each list the request gave entries for extended by them. The request's entries never become defaults.
 - **Nothing is stored or run before the host's checks.** In order:
   - the declared data shape must be one Tessera can check (`DATA-03`);
-  - the defaults and the starting data must fit it, and every record must be one the patch engine can change (`DATA-02`): its list's name, its id and its field names must be ones the patch contract accepts (one definition, the contract's own), and its id unique in its list;
+  - the defaults and the starting data must fit it, and every record must be one the patch engine can change (`DATA-02`): its list's name, its id and its field names must be ones the patch contract accepts (one definition, the contract's own), and its id unique in its list. As the patch engine counts a list as records only when every item is one, a list holding any object must hold only records, and an empty list is held to the name rule unless the schema declares it a list of other values;
   - the artifact must match its contract (`CON-04`);
   - the static check must pass (`VER-01`, [static check](checks.md)).
 - **Every failure is classed** (`GEN-09`):

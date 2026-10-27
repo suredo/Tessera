@@ -61,22 +61,38 @@ export function startingDataOf(defaults: ToolData, initialState: ToolData): Tool
   return data;
 }
 
+/** Whether the schema says a top-level list holds something other than objects, such as text. */
+function listOfValues(schema: object, list: string): boolean {
+  const property = (schema as { properties?: Record<string, { items?: { type?: unknown } }> })
+    .properties?.[list];
+  const type = property?.items?.type;
+  return type !== undefined && type !== "object";
+}
+
 /**
- * Every record the tool keeps can be changed through the patch engine (DATA-02): each list of
- * records has a name a change can address, and each record an id and field names the patch
- * contract accepts, its id unique in its list. One definition: the patch contract's own.
+ * Every record the tool keeps can be changed through the patch engine (DATA-02), which counts a
+ * top-level list as records only when every item is one, with an id. So a list holding any object
+ * holds only records; a list of records, or an empty list the schema doesn't declare as holding
+ * other values, has a name a change can address; and each record has an id and field names the
+ * patch contract accepts, its id unique in its list. One definition: the patch contract's own.
  */
-function recordProblems(data: ToolData, what: string): string[] {
+function recordProblems(schema: object, data: ToolData, what: string): string[] {
   const problems: string[] = [];
+  const isObject = (item: unknown) =>
+    item !== null && typeof item === "object" && !Array.isArray(item);
   for (const [list, value] of Object.entries(data)) {
     if (!Array.isArray(value)) continue;
-    const records = value.filter(
-      (record) => record !== null && typeof record === "object" && !Array.isArray(record),
-    ) as Record<string, unknown>[];
-    if (records.length === 0) continue;
+    const records = value.filter(isObject) as Record<string, unknown>[];
+    const holdsRecords = records.length > 0 || (value.length === 0 && !listOfValues(schema, list));
+    if (!holdsRecords) continue;
     if (!collectionName.safeParse(list).success) {
       problems.push(
         `${what}: the list "${list}" needs a name of letters, digits and _ that starts with a letter.`,
+      );
+    }
+    if (records.length !== value.length) {
+      problems.push(
+        `${what}: the list "${list}" mixes records with other values; keep records apart.`,
       );
     }
     const seen = new Set<string>();
@@ -121,7 +137,7 @@ export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>):
     ] as const) {
       const fits = checkToolData(schema, data);
       if (!fits.ok) shape.push(`${what}: ${fits.reason}`);
-      shape.push(...recordProblems(data, what));
+      shape.push(...recordProblems(schema, data, what));
     }
   }
   const built = {
