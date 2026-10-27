@@ -7,12 +7,12 @@ implements: [OBS-02, ENG-07, ENG-19, CLI-04]
 tests: [../../../evals/test/harness.test.ts]
 tags: [code, evals, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T13:10:10Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:24:24Z }
 ---
 
 # Purpose
 
-Makes every evaluation run follow the [live evaluation protocol](../../practices/live-evaluation.md) (`ENG-07`) by construction (`OBS-02`). A script calls models only through the harness's provider, which refuses calls past the approved hard cap, records each call in a ledger and each request in a log, and stops after a provider error. A dry run uses the [scripted provider](../server/providers.md), so the exact script is rehearsed at no cost before any call is spent. The live spikes (#19, #20) are its first users; the scenario runner (M2) builds on it.
+Makes every evaluation run follow the [live evaluation protocol](../../practices/live-evaluation.md) (`ENG-07`) by construction (`OBS-02`). A script calls models only through the harness's provider, which refuses calls past the approved hard cap, records each call in a ledger, with its prompt parts and sizes, and each request in a log, and stops after a provider error. A dry run uses the [scripted provider](../server/providers.md), so the exact script is rehearsed at no cost before any call is spent. The live spikes (#19, #20) are its first users; the scenario runner (M2) builds on it.
 
 # Entry points
 

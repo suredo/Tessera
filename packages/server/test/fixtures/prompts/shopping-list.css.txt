@@ -1,0 +1,10 @@
+body { padding: var(--ui-padding); max-width: 40rem; }
+header { margin-bottom: var(--ui-space-4); }
+.hint { color: var(--ui-text-secondary); font-size: var(--ui-size-secondary); }
+form { display: flex; flex-wrap: wrap; gap: var(--ui-space-2); align-items: end; }
+form label { width: 100%; }
+#quantity { width: 5rem; }
+ul { list-style: none; padding: 0; }
+li { display: flex; gap: var(--ui-space-3); align-items: center; padding: var(--ui-space-2) 0; border-bottom: 1px solid var(--ui-divider); }
+li.done span { text-decoration: line-through; color: var(--ui-text-secondary); }
+#message:empty { display: none; }

@@ -9,6 +9,8 @@ export type StageSpec<T> = {
   stage: Stage;
   /** The stage's instructions, assembled from its prompt parts (GEN-03). */
   system: string;
+  /** The prompt parts `system` and `prompt` were built from, as name@version, for the ledger (ENG-16). */
+  promptParts?: readonly string[];
   /** The request: what the person asked, and what the stage needs to answer it. */
   prompt: string;
   /** The host checks the answer against this, whatever the provider promises. */

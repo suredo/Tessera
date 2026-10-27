@@ -13,6 +13,7 @@ import {
 import { z } from "zod";
 import { json, text } from "../http/body.ts";
 import type { Handler } from "../http/server.ts";
+import { fixedPart } from "../prompts/index.ts";
 import {
   atLeast,
   createClaudeProvider,
@@ -108,10 +109,13 @@ const probeAnswer = z.strictObject({ connected: z.literal(true) });
 export async function runProbe(provider: Provider, dataDir: string): Promise<ProbeResult> {
   try {
     const routes = loadRoutes(path.join(dataDir, ROUTES_FILE));
+    const system = fixedPart("probe");
+    const prompt = fixedPart("probe-request");
     const result = await runStage(provider, routes, {
       stage: "intent",
-      system: "You are checking that Tessera can reach you. Answer that you are connected.",
-      prompt: "Are you connected?",
+      system: system.text,
+      prompt: prompt.text,
+      promptParts: [system.part, prompt.part],
       schema: probeAnswer,
       timeLimitMs: PROBE_TIME_LIMIT_MS,
     });

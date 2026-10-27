@@ -1,0 +1,73 @@
+const list = document.getElementById("items");
+const empty = document.getElementById("empty");
+const message = document.getElementById("message");
+let items = [];
+let revisions = {};
+
+function render() {
+  list.replaceChildren(
+    ...items.map((item) => {
+      const row = document.createElement("li");
+      row.className = item.done ? "done" : "";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.checked = item.done;
+      box.id = `item-${item.id}`;
+      const label = document.createElement("label");
+      label.htmlFor = box.id;
+      const text = document.createElement("span");
+      text.textContent = item.quantity > 1 ? `${item.title} (${item.quantity})` : item.title;
+      label.append(text);
+      box.addEventListener("change", () => toggle(item, box.checked));
+      row.append(box, label);
+      return row;
+    }),
+  );
+  empty.hidden = items.length > 0;
+}
+
+async function load() {
+  const { data, revisions: known } = await tessera.call("data.read");
+  items = data.items ?? [];
+  revisions = known.items ?? {};
+  render();
+}
+
+async function change(operations, done) {
+  try {
+    await tessera.call("data.patch", { operations });
+    await load();
+    message.textContent = done;
+  } catch (error) {
+    message.textContent = `That didn't work: ${error.message}`;
+  }
+}
+
+document.getElementById("add").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const title = form.item.value.trim();
+  if (!title) return;
+  const quantity = Math.max(1, Number(form.quantity.value) || 1);
+  change([{ op: "add", collection: "items", record: { title, quantity, done: false } }], `${title} is on the list.`);
+  form.reset();
+  form.item.focus();
+});
+
+function toggle(item, done) {
+  change(
+    [{ op: "replace", collection: "items", id: item.id, revisionCount: revisions[item.id], fields: { done } }],
+    done ? `${item.title} is ticked.` : `${item.title} is back on the list.`,
+  );
+}
+
+document.getElementById("clear").addEventListener("click", () => {
+  const ticked = items.filter((item) => item.done);
+  if (ticked.length === 0) return (message.textContent = "Nothing is ticked yet.");
+  change(
+    ticked.map((item) => ({ op: "remove", collection: "items", id: item.id, revisionCount: revisions[item.id] })),
+    `Removed ${ticked.length} ticked items.`,
+  );
+});
+
+load();

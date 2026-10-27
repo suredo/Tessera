@@ -13,6 +13,7 @@ import {
 } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { startLocalServer } from "../src/http/index.ts";
+import { partText } from "../src/prompts/index.ts";
 import { createClaudeProvider, FAILURE_MESSAGES, ROUTES_FILE } from "../src/providers/index.ts";
 import {
   checkNode,
@@ -70,12 +71,14 @@ function fakeClaude(replies: unknown[]) {
   });
   const made = () =>
     fs.existsSync(calls)
-      ? fs
-          .readdirSync(calls)
-          .map(
-            (file) =>
-              JSON.parse(fs.readFileSync(path.join(calls, file), "utf8")) as { args: string[] },
-          )
+      ? fs.readdirSync(calls).map(
+          (file) =>
+            JSON.parse(fs.readFileSync(path.join(calls, file), "utf8")) as {
+              args: string[];
+              stdin: string;
+              system: string;
+            },
+        )
       : [];
   return { provider, made };
 }
@@ -141,6 +144,9 @@ describe("the probe (CLI-02)", () => {
     const [call] = made();
     expect(call!.args[call!.args.indexOf("--model") + 1]).toBe(DEFAULT_ROUTES.intent.model);
     expect(call!.args[call!.args.indexOf("--tools") + 1]).toBe("");
+    // Its words are prompt parts, in files like every prompt (ENG-16).
+    expect(call!.system).toBe(partText("probe"));
+    expect(call!.stdin).toBe(partText("probe-request"));
   });
 
   it("CLI-02: follows the routes file, and says plainly when the call fails", async () => {
