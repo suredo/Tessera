@@ -44,6 +44,7 @@
       const data = e.data as { message?: unknown; ping?: unknown; reply?: unknown };
       if (data && "ping" in data) port?.postMessage({ pong: data.ping });
       else if (data && "reply" in data) settle(data.reply);
+      else if (data && "inspect" in data) void inspect((data as { inspect?: unknown }).inspect);
       else listeners.forEach((listen) => listen(data?.message));
     };
     for (const envelope of waiting.splice(0)) port.postMessage(envelope);
@@ -64,6 +65,73 @@
     const message = r.error?.message;
     const error = new Error(typeof message === "string" ? message : "The host refused the call.");
     call.reject(Object.assign(error, { code: r.error?.code }));
+  }
+
+  // What went wrong as the tool started and ran, for the smoke check (VER-02): recorded from
+  // before the tool's code, so its first error counts too. A few, each cut short.
+  const problems: string[] = [];
+  const note = (text: string) => {
+    if (problems.length < 10) problems.push(text.slice(0, 300));
+  };
+  addEventListener(
+    "error",
+    (event: Event) => {
+      if (event instanceof ErrorEvent) note(`An error: ${event.message}`);
+      else if (event.target instanceof Element) {
+        note(`A <${event.target.tagName.toLowerCase()}> couldn't load.`);
+      }
+    },
+    true,
+  );
+  addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
+    const reason = event.reason as { message?: unknown } | undefined;
+    note(`An error nothing handled: ${String(reason?.message ?? event.reason)}`);
+  });
+  addEventListener("securitypolicyviolation", (event: SecurityPolicyViolationEvent) => {
+    note(`Something the tool tried was blocked (${event.effectiveDirective}).`);
+  });
+
+  // The smoke check's question: once the tool's calls have settled (or 3 seconds have passed),
+  // what it shows, whether it scrolls sideways, and the accessibility floor's basics.
+  async function inspect(id: unknown) {
+    const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
+    for (let waited = 0; pending.size > 0 && waited < 3000; waited += 50) await wait(50);
+    await wait(100);
+    const body = document.body;
+    const all = (selector: string) => (body ? [...body.querySelectorAll(selector)] : []);
+    const named = (element: Element) =>
+      Boolean(
+        element.getAttribute("aria-label")?.trim() ||
+        element.getAttribute("aria-labelledby")?.trim() ||
+        element.getAttribute("title")?.trim(),
+      );
+    const fields = all(
+      "input:not([type=hidden]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image]), select, textarea",
+    );
+    const buttons = all(
+      "button, [role=button], input[type=button], input[type=submit], input[type=reset]",
+    );
+    const root = document.documentElement;
+    post({
+      report: {
+        id,
+        problems: [...problems],
+        elements: all("*").length,
+        text: body ? body.innerText.trim().length : 0,
+        media: all("canvas, svg, img, video").length,
+        overflow: Math.max(root.scrollWidth, body?.scrollWidth ?? 0) - root.clientWidth,
+        unlabeled: fields.filter(
+          (field) => !((field as HTMLInputElement).labels?.length ?? 0) && !named(field),
+        ).length,
+        unnamed: buttons.filter(
+          (button) =>
+            !button.textContent?.trim() &&
+            !named(button) &&
+            !(button instanceof HTMLInputElement && button.value.trim()),
+        ).length,
+        noAlt: all("img:not([alt])").length,
+      },
+    });
   }
 
   // Registered before the tool's code, so it runs first. A page in this frame that never says hello,

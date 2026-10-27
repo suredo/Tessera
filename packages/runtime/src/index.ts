@@ -14,7 +14,9 @@ export {
   type ServedBridge,
 } from "./bridge.ts";
 export {
+  smokeCheck,
   stubCheck,
+  type SmokeReport,
   type CheckContext,
   type CheckOutcome,
   type VerificationCheck,

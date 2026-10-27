@@ -53,6 +53,12 @@ export type MountedTool = {
    * the watchdog (RUN-02); returns a way to stop.
    */
   onEvent(listen: (event: MountEvent) => void): () => void;
+  /**
+   * Asks the tool's page what it showed and what went wrong as it started, for the smoke check
+   * (VER-02). It answers once its bridge calls have settled. Like a pong, the report is only the
+   * page's word: the tool's own code can reach the port.
+   */
+  inspect(timeoutMs?: number): Promise<unknown>;
   /** Removes the tool, its frames and its channel. */
   unmount(): void;
 };
@@ -81,6 +87,8 @@ export function mountTool(
   const callListeners = new Set<(call: unknown) => void>();
   const interactionListeners = new Set<() => void>();
   const eventListeners = new Set<(event: MountEvent) => void>();
+  const reports = new Map<number, (report: unknown) => void>();
+  let inspections = 0;
   // Every listener there when the event happens hears it, even one that unmounts the tool first.
   const emit = (event: MountEvent) => [...eventListeners].forEach((listen) => listen(event));
 
@@ -120,6 +128,7 @@ export function mountTool(
       message?: unknown;
       event?: unknown;
       call?: unknown;
+      report?: unknown;
     };
     if (data?.instanceId !== instanceId) return;
     // The wrapper's own events, the watchdog's answers, bridge calls and the first interaction sit
@@ -139,6 +148,13 @@ export function mountTool(
       if (toolEvent) emit(toolEvent);
     } else if ("call" in data) {
       callListeners.forEach((listen) => listen(data.call));
+    } else if ("report" in data) {
+      const report = data["report"] as { id?: unknown } | null;
+      const answer = typeof report?.id === "number" ? reports.get(report.id) : undefined;
+      if (answer && report) {
+        reports.delete(report.id as number);
+        answer(report);
+      }
     } else if ("interacted" in data) {
       interactionListeners.forEach((listen) => listen());
     } else {
@@ -184,8 +200,19 @@ export function mountTool(
             eventListeners.add(listen);
             return () => eventListeners.delete(listen);
           },
+          inspect: (timeoutMs = 10_000) =>
+            new Promise((answer, refuse) => {
+              inspections += 1;
+              const id = inspections;
+              reports.set(id, answer);
+              channel.port1.postMessage({ instanceId, inspect: id });
+              setTimeout(() => {
+                if (reports.delete(id)) refuse(new Error("The tool didn't answer the check."));
+              }, timeoutMs);
+            }),
           unmount: () => {
             eventListeners.clear();
+            reports.clear();
             stop();
           },
         });
