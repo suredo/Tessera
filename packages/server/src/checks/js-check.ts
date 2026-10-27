@@ -407,7 +407,7 @@ class PageValues {
 
   private readonly program: AnyNode;
   /** Every name the script declares, anywhere. */
-  private readonly declared = new Set<string>();
+  readonly declared = new Set<string>();
 
   constructor(program: AnyNode) {
     this.program = program;
@@ -502,6 +502,8 @@ class PageValues {
       case "CallExpression": {
         const callee = node["callee"] as AnyNode;
         const args = node["arguments"] as AnyNode[];
+        // What crosses the bridge is copied as plain data; the page's objects can't cross it.
+        if (isBridgeCall(callee)) return false;
         if (callee.type === "Identifier") return this.returning.has(callee["name"] as string);
         if (callee.type === "MemberExpression") {
           const method = propertyName(callee);
@@ -571,8 +573,9 @@ class PageValues {
             if (callee.type === "Identifier")
               markParams(this.functions.get(callee["name"] as string));
             // A container given them (list.push(el), map.set(k, el)) holds them.
+            // The bridge copies what it is given, so it never holds the page's objects.
             const root = callee.type === "MemberExpression" ? rootName(callee) : undefined;
-            if (root) this.names.add(root);
+            if (root && !isBridgeCall(callee)) this.names.add(root);
           }
           break;
         }
@@ -616,6 +619,22 @@ class PageValues {
       this.visit(child, see, ownBody);
     }
   }
+}
+
+/**
+ * A call of the bridge itself, `tessera.call`, `tessera.send` or `tessera.assetUrl`, with the
+ * name written out: only these copy what they are given and give back plain data. Anything else
+ * reached through `tessera` is no different from any other value.
+ */
+const BRIDGE_METHODS = new Set(["call", "send", "assetUrl"]);
+function isBridgeCall(callee: AnyNode): boolean {
+  if (callee.type !== "MemberExpression" || callee["computed"]) return false;
+  const object = callee["object"] as AnyNode;
+  return (
+    object.type === "Identifier" &&
+    object["name"] === "tessera" &&
+    BRIDGE_METHODS.has((callee["property"] as AnyNode)["name"] as string)
+  );
 }
 
 function isFunction(node: AnyNode | null | undefined): boolean {
@@ -665,6 +684,14 @@ export function checkJs(
   }
   const page = new PageValues(program);
   const findings: JsFinding[] = [];
+  // The bridge's values count as plain data only because `tessera` is the host's: a tool may not
+  // declare a name of its own that hides it.
+  if (page.declared.has("tessera")) {
+    findings.push({
+      message:
+        "The JavaScript declares its own tessera, which hides the host's. Choose another name.",
+    });
+  }
   const found = (node: AnyNode, message: string) =>
     findings.push({
       line: (node.loc as { start: { line: number } } | undefined)?.start.line,
@@ -829,6 +856,10 @@ export function checkJs(
     }
     if (FORBIDDEN_NAMES.has(name)) {
       found(node, `The JavaScript uses .${name}, which a tool can't use.`);
+      return;
+    }
+    if (rootName(node) === "tessera" && isWritten(node, parent)) {
+      found(node, "The JavaScript changes tessera, the host's bridge. Leave it as it is.");
       return;
     }
     if (ADDRESS_NAMES.has(name) && isWritten(node, parent)) {
