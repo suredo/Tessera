@@ -191,6 +191,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       request: "Add a quantity",
       uiMode: "standard",
       source: shoppingList,
+      failure: "static",
       diagnostics: ["The Add button has no name.", "The tool wrote data while it started."],
     });
     expect(names(repair.parts)).toEqual([
@@ -198,6 +199,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       "bridge",
       "ui-standard",
       "accessibility",
+      "repair-static",
       "request",
       "source",
       "diagnostics",
@@ -209,8 +211,110 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       "needs the tool's code",
     );
     expect(() =>
-      assemblePrompt({ stage: "repair", request: "x", uiMode: "standard", source: shoppingList }),
+      assemblePrompt({
+        stage: "repair",
+        request: "x",
+        uiMode: "standard",
+        source: shoppingList,
+        failure: "static",
+      }),
     ).toThrow("needs what the checks found");
+    expect(() =>
+      assemblePrompt({
+        stage: "repair",
+        request: "x",
+        uiMode: "standard",
+        source: shoppingList,
+        diagnostics: ["x"],
+      }),
+    ).toThrow("needs the failure's class");
+  });
+
+  it("GEN-09: repairing a creation answers as creation does, with its class's part, the failed answer and what the checks found", () => {
+    const attempt = {
+      outcome: "tool" as const,
+      name: "Shopping list",
+      summary: "A list to tick off.",
+      code: shoppingList,
+      data: {
+        schema: { type: "object", required: ["items"] },
+        reusableDefaults: {},
+        initialState: { items: [{ id: "i-1", title: "Milk" }] },
+      },
+      capabilities: [],
+      uiMode: "standard" as const,
+    };
+    const findings = ["The reusable defaults: items is required."];
+    const repair = assemblePrompt({
+      stage: "repair",
+      request: "A shopping list",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      attempt,
+      failure: "schema-shape",
+      diagnostics: findings,
+    });
+    expect(names(repair.parts)).toEqual([
+      "base",
+      "bridge",
+      "ui-standard",
+      "accessibility",
+      "create",
+      "repair-schema-shape",
+      "request",
+      "language",
+      "attempt",
+      "diagnostics",
+    ]);
+    expect(repair.system).toContain(partText("repair-schema-shape"));
+    // The failed answer, quoted as data between markers (SEC-02), its code as it was.
+    expect(repair.prompt).toContain(
+      `--- JavaScript ---\n${shoppingList.js}\n--- Data, as JSON ---\n${JSON.stringify(attempt.data, null, 2)}\n`,
+    );
+    expect(repair.prompt).toContain(
+      '{"capabilities":[],"uiMode":"standard"}\n--- end of the last answer ---',
+    );
+    expect(repair.prompt).toContain("- The reusable defaults: items is required.");
+    // An answer of the wrong shape has nothing to quote: the repair asks again from the request.
+    const reask = assemblePrompt({
+      stage: "repair",
+      request: "A shopping list",
+      uiMode: "standard",
+      failure: "schema-shape",
+      diagnostics: ["The answer didn't have the shape Tessera asked for."],
+    });
+    expect(names(reask.parts)).toEqual([
+      "base",
+      "bridge",
+      "ui-standard",
+      "accessibility",
+      "create",
+      "repair-schema-shape",
+      "request",
+      "diagnostics",
+    ]);
+    // A static failure takes its own part instead.
+    const fixCode = assemblePrompt({
+      stage: "repair",
+      request: "A shopping list",
+      uiMode: "standard",
+      attempt,
+      failure: "static",
+      diagnostics: ["HTML, line 1: a frame isn't allowed."],
+    });
+    expect(names(fixCode.parts)).toContain("repair-static");
+    expect(names(fixCode.parts)).not.toContain("repair-schema-shape");
+    expect(() =>
+      assemblePrompt({
+        stage: "repair",
+        request: "x",
+        uiMode: "standard",
+        source: shoppingList,
+        attempt,
+        failure: "static",
+        diagnostics: ["x"],
+      }),
+    ).toThrow("either an edit or a creation");
   });
 
   it("GEN-15: the request's language, from the intent stage, is given to generation as a fact (slice pilot, #173)", () => {
@@ -251,6 +355,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
         request: "Add a quantity next to each item, and sort them by name",
         uiMode: "standard",
         source: shoppingList,
+        failure: "static",
         diagnostics: [
           "The Add button has no name.",
           "The tool wrote data while it started.",
@@ -263,5 +368,39 @@ describe("assembling a stage's prompt (GEN-03)", () => {
         PROMPT_BUDGETS[stage],
       );
     }
+    // Repair's larger shape: a creation's repair quotes the whole failed answer (GEN-09).
+    const item = { type: "object", required: ["id", "title"], properties: {} };
+    const repairOfCreation = assemblePrompt({
+      stage: "repair",
+      request:
+        "I need a shopping list I can tick off at the store, with milk, eggs and bread on it.",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      failure: "schema-shape",
+      attempt: {
+        outcome: "tool",
+        name: "Shopping list",
+        summary: "A list to tick off at the store.",
+        code: shoppingList,
+        data: {
+          schema: {
+            type: "object",
+            required: ["items"],
+            properties: { items: { type: "array", items: item } },
+          },
+          reusableDefaults: {},
+          initialState: {
+            items: ["Milk", "Eggs", "Bread"].map((title, i) => ({ id: `i-${i}`, title })),
+          },
+        },
+        capabilities: [],
+        uiMode: "standard",
+      },
+      diagnostics: ["The reusable defaults: must have required property 'items'."],
+    }).size;
+    expect(
+      repairOfCreation,
+      `a creation's repair is ${repairOfCreation} characters`,
+    ).toBeLessThanOrEqual(PROMPT_BUDGETS.repair);
   });
 });

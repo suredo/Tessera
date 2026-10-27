@@ -14,16 +14,29 @@ import {
 import { UI_STANDARD_VERSION } from "@tessera/runtime/policy";
 import { staticCheck } from "../checks/index.ts";
 import { checkToolData, compileToolSchema } from "../data-shape/index.ts";
-import { assemblePrompt } from "../prompts/index.ts";
+import { assemblePrompt, REPAIR_CLASSES, type RepairClass } from "../prompts/index.ts";
 import { ProviderError, runStage, type Provider, type Routes } from "../providers/index.ts";
 
 // The create stage (GEN-04, GEN-05): a request becomes a candidate tool, checked by the host before
 // anything is stored or run. The model's answer is a discriminated union (CON-02); a tool's data
 // declares its shape, reusable defaults and the request's own entries apart; and every failure is
-// classed for repair (GEN-09). Staging, activation and repair come after this stage.
+// classed. A failure of the host's own checks is repaired by its class, within its budget (GEN-09);
+// staging and activation come after this stage.
 
 /** How long creation may take: the POC's creations took 105 to 131 s (GEN-11). */
 export const GENERATION_TIME_LIMIT_MS = 180_000;
+
+/** How long one repair may take: as long as creation, which it answers like (GEN-11). */
+export const REPAIR_TIME_LIMIT_MS = 180_000;
+
+/**
+ * How many repairs each failure class gets in one request (GEN-09). A repair that fails in
+ * another class can still use that class's repair. Each is a model call, counted by the ledger.
+ */
+export const REPAIR_BUDGETS: Readonly<Record<RepairClass, number>> = {
+  "schema-shape": 1,
+  static: 1,
+};
 
 type ToolData = Artifact["data"]["defaults"];
 
@@ -36,7 +49,7 @@ export type Candidate = {
   summary: string;
 };
 
-export type CreateResult =
+export type CreateResult = (
   | ({ kind: "candidate" } & Candidate)
   | { kind: "cannot"; reason: string }
   | {
@@ -47,7 +60,11 @@ export type CreateResult =
       findings: string[];
       /** The provider's own failure, when that was the cause. */
       error?: ProviderError;
-    };
+    }
+) & {
+  /** How many repairs it took, counted apart from the first attempt (A40). */
+  repairs?: number;
+};
 
 /**
  * The data a new workspace starts with: the reusable defaults, with each list the request gave
@@ -195,43 +212,88 @@ export type CreateInput = {
   signal?: AbortSignal;
 };
 
+const repairable = (failure: FailureClass): failure is RepairClass =>
+  (REPAIR_CLASSES as readonly string[]).includes(failure);
+
 /**
- * Asks the create stage for a tool, on its route (CLI-09), and checks what comes back. A provider
- * failure is classed "provider" and never repaired, except an answer of the wrong shape, which
- * is "schema-shape" and is (GEN-09).
+ * Asks the create stage for a tool, on its route (CLI-09), and checks what comes back. A failure of
+ * the host's checks, or an answer of the wrong shape, is sent to repair on the repair route with
+ * its class's part, what the checks found and the failed answer, while that class has repairs left
+ * (GEN-09). A provider failure is classed "provider" and never repaired.
  */
 export async function createTool(
   provider: Provider,
   routes: Routes,
   input: CreateInput,
 ): Promise<CreateResult> {
+  const used: Partial<Record<RepairClass, number>> = {};
+  let repairs = 0;
+  let attempt: Extract<Creation, { outcome: "tool" }> | undefined;
+  let result = await ask(provider, routes, input, {});
+  for (;;) {
+    if (result.answer) attempt = result.answer;
+    const { outcome } = result;
+    if (outcome.kind !== "failed" || !repairable(outcome.failure)) break;
+    const failure = outcome.failure;
+    if ((used[failure] ?? 0) >= REPAIR_BUDGETS[failure]) break;
+    used[failure] = (used[failure] ?? 0) + 1;
+    repairs += 1;
+    result = await ask(provider, routes, input, {
+      failure,
+      diagnostics: outcome.findings,
+      // Only an answer of the right shape is quoted; a wrong-shape answer has none.
+      attempt: outcome.error ? undefined : attempt,
+    });
+  }
+  return repairs > 0 ? { ...result.outcome, repairs } : result.outcome;
+}
+
+type Repair = {
+  failure?: RepairClass;
+  diagnostics?: readonly string[];
+  attempt?: Extract<Creation, { outcome: "tool" }>;
+};
+
+/** One call, creation or a repair, and the host's checks on its answer. */
+async function ask(
+  provider: Provider,
+  routes: Routes,
+  input: CreateInput,
+  repair: Repair,
+): Promise<{ outcome: CreateResult; answer?: Extract<Creation, { outcome: "tool" }> }> {
+  const stage = repair.failure ? "repair" : "create";
   const prompt = assemblePrompt({
-    stage: "create",
+    stage,
     request: input.request,
     intent: input.intent,
     uiMode: "standard",
+    ...repair,
   });
   let creation: Creation;
   try {
     const result = await runStage(provider, routes, {
-      stage: "create",
+      stage,
       system: prompt.system,
       prompt: prompt.prompt,
       promptParts: prompt.parts,
       schema: creationSchema,
-      timeLimitMs: GENERATION_TIME_LIMIT_MS,
+      timeLimitMs: stage === "repair" ? REPAIR_TIME_LIMIT_MS : GENERATION_TIME_LIMIT_MS,
       signal: input.signal,
     });
     creation = result.value;
   } catch (error) {
     if (!(error instanceof ProviderError)) throw error;
     return {
-      kind: "failed",
-      failure: error.kind === "schema" ? "schema-shape" : "provider",
-      findings: [error.message],
-      error,
+      outcome: {
+        kind: "failed",
+        failure: error.kind === "schema" ? "schema-shape" : "provider",
+        findings: [error.message],
+        error,
+      },
     };
   }
-  if (creation.outcome === "cannot") return { kind: "cannot", reason: creation.reason };
-  return candidateFrom(creation);
+  if (creation.outcome === "cannot") {
+    return { outcome: { kind: "cannot", reason: creation.reason } };
+  }
+  return { outcome: candidateFrom(creation), answer: creation };
 }

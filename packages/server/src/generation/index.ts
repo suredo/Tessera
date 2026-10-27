@@ -4,6 +4,8 @@ export {
   candidateFrom,
   createTool,
   GENERATION_TIME_LIMIT_MS,
+  REPAIR_BUDGETS,
+  REPAIR_TIME_LIMIT_MS,
   startingDataOf,
   type Candidate,
   type CreateInput,

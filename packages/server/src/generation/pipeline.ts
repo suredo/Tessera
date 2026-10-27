@@ -19,7 +19,7 @@ import { createTool } from "./create.ts";
 // and starting data, ready for the host app to stage behind the smoke check (RUN-03) and activate
 // (DATA-10). Nothing is activated here. Edits and data changes come in their own stages.
 
-/** The plain sentence for a candidate that failed the host's checks; the findings go to repair. */
+/** The plain sentence for a candidate still failing the host's checks after its repairs (GEN-09). */
 const CHECKS_FAILED = "The tool Tessera made didn't pass its checks, so nothing was changed.";
 
 /** The open tool as the intent stage is told of it: its name and the lists of records it keeps. */

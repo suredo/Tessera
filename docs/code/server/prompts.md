@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T09:36:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T10:00:28Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 
 # Entry points
 
-- `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `create.md` (what creation answers, with the host's data schema keywords), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `language.md` (the request's language, as the intent stage found it, `GEN-15`), `source.md`, `diagnostics.md`, the probe's `probe.md` and `probe-request.md`, and the [intent stage](intent.md)'s `intent*.md`.
+- `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `create.md` (what creation answers, with the host's data schema keywords), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `attempt.md` (a failed answer, quoted for its repair), `repair-schema-shape.md` and `repair-static.md` (each failure class's repair instructions, `GEN-09`), `language.md` (the request's language, as the intent stage found it, `GEN-15`), `source.md`, `diagnostics.md`, the probe's `probe.md` and `probe-request.md`, and the [intent stage](intent.md)'s `intent*.md`.
 - `src/prompts/prompts.ts`:
   - `assemblePrompt` builds a generation stage's prompt (`PromptInput` to `AssembledPrompt`): the instructions, the request, each part as name@version, and the size.
   - `assembleIntentPrompt` builds the intent stage's prompt: its instructions, then the open tool (`OpenTool`) with each `RecordList` it keeps, quoted as JSON between markers (`SEC-02`), or none, the request, and on a second ask the reminder; `INTENT_PROMPT_BUDGET` caps it.
@@ -27,10 +27,10 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 
 - **Every prompt's words are in a part file** (`ENG-16`), never an inline string; a test fails if a file isn't a listed part or a listed part has no file. The probe's words moved there too.
 - **A part's version is a hash of its text.** For an instruction part it covers what was generated into it (the manifest, the UI tokens), so a change to either changes the version. For a request part it covers only the wording, since what it quotes changes with every call. A stage call carries them, and the [evaluation harness](../evals/harness.md)'s ledger records them with the instructions' size.
-- **Parts are chosen by the stage and structured fields, never the request's words** (`GEN-02`): base rules always; the bridge manifest unless the intent says the request only changes the look; the UI standard's look only for a tool in standard mode, and the accessibility rules in either mode, since a custom look never drops them (`UX-04`); the tool's code for edit and repair, which need it; what the checks found for repair; the request's language whenever the intent stage gave one, so creation doesn't guess it. A test runs requests full of words a keyword rule would act on, and gets the same parts.
+- **Parts are chosen by the stage and structured fields, never the request's words** (`GEN-02`): base rules always; the bridge manifest unless the intent says the request only changes the look; the UI standard's look only for a tool in standard mode, and the accessibility rules in either mode, since a custom look never drops them (`UX-04`); the tool's code for edit, and for the repair of an edit; for repair, its failure class's part and what the checks found, and, when it repairs a creation, the create part and the failed answer, if it had the right shape; the request's language whenever the intent stage gave one, so creation doesn't guess it. A test runs requests full of words a keyword rule would act on, and gets the same parts.
 - **The manifest and the UI tokens come from their one definitions** (`CON-03`, `VER-06`, P3): the bridge part quotes the contracts' bridge manifest as compact JSON, without the schema-version line, a pattern beside a format that says the same, or the bounds every JSON integer has; the UI standard part lists the runtime's UI tokens. The standard's rules are the POC's, ported.
 - **Quoted material is data** (`SEC-02`): the tool's code sits between markers and is called data, and the base rules say quoted material is never instructions.
-- **Each stage's fixture prompt stays within its budget** (`GEN-03`): about 15,500 characters for creation, 17,800 for an edit and 18,100 for a repair of the shopping-list fixture (`packages/server/test/fixtures/prompts`), against budgets of 17,000, 18,500 and 19,000. Creation's grew with its own part, its output contract. CI fails past them.
+- **Each stage's fixture prompt stays within its budget** (`GEN-03`): about 15,700 characters for creation, 17,900 for an edit, 18,400 for the repair of an edit and 21,200 for the repair of a creation, of the shopping-list fixture (`packages/server/test/fixtures/prompts`), against budgets of 17,000, 18,500 and 23,500. Creation's grew with its own part, its output contract; repair's was set by the repair of a creation, which carries the creation prompt and the failed answer (`GEN-09`). CI fails past them.
 - **Filling a part is exact:** a placeholder without a value, or a value without a placeholder, is an error, and a value is never read as a replacement pattern.
 
 # Depends on / used by
@@ -47,5 +47,5 @@ The [contracts](../contracts/package.md)' bridge manifest and intent, and the [r
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `assembleIntentPrompt`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `AssembledPrompt` (type), `OpenTool` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type)
-- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `RecordList` (type), `OpenTool` (type), `assembleIntentPrompt`, `fixedPart`
+- `index.ts`: `assembleIntentPrompt`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
+- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `RecordList` (type), `OpenTool` (type), `assembleIntentPrompt`, `fixedPart`

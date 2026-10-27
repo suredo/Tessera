@@ -88,6 +88,7 @@ const intentReply = (fields: Partial<Intent> & { kind: Intent["kind"] }) => ({
   value: intent(fields),
 });
 const createReply = (value: unknown) => ({ kind: "value", stage: "create", value });
+const repairReply = (value: unknown) => ({ kind: "value", stage: "repair", value });
 
 describe("carrying out a request (GEN-01, GEN-05)", () => {
   it("GEN-01, GEN-05: a new tool is stored with a workspace holding its starting data, ready to stage", async () => {
@@ -155,7 +156,8 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     for (const workspaceId of [undefined, empty.id]) {
       const reply = await generate(
         folder,
-        script(intentReply({ kind: "create" }), createReply(big)),
+        // Repaired once, as its class allows, and still too big (GEN-09).
+        script(intentReply({ kind: "create" }), createReply(big), repairReply(big)),
         DEFAULT_ROUTES,
         { request: "A note", workspaceId },
       );
@@ -233,12 +235,30 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     folder.close();
   });
 
-  it("GEN-09: a candidate that fails the host's checks stores nothing, and says so plainly", async () => {
+  it("GEN-09: a candidate repaired after failing the host's checks is stored as its repair made it", async () => {
     const folder = await newFolder();
     const failing = { ...tool, code: { html: '<iframe src="x"></iframe>', css: "", js: "" } };
     const reply = await generate(
       folder,
-      script(intentReply({ kind: "create" }), createReply(failing)),
+      script(intentReply({ kind: "create" }), createReply(failing), repairReply(tool)),
+      DEFAULT_ROUTES,
+      { request: "A shopping list" },
+    );
+    expect(reply).toMatchObject({ kind: "candidate", name: "Shopping list" });
+    if (reply.kind !== "candidate") return;
+    expect(workspaceTools(folder)(reply.mountId)?.code.html).toBe(
+      tool.outcome === "tool" && tool.code.html,
+    );
+    expect(listWorkspaces(folder)).toHaveLength(1);
+    folder.close();
+  });
+
+  it("GEN-09: a candidate that still fails the host's checks after its repair stores nothing, and says so plainly", async () => {
+    const folder = await newFolder();
+    const failing = { ...tool, code: { html: '<iframe src="x"></iframe>', css: "", js: "" } };
+    const reply = await generate(
+      folder,
+      script(intentReply({ kind: "create" }), createReply(failing), repairReply(failing)),
       DEFAULT_ROUTES,
       { request: "A shopping list" },
     );

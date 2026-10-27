@@ -3,7 +3,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_ROUTES, TOOL_DATA_LIMIT_BYTES, type Creation } from "@tessera/contracts";
 import { describe, expect, it } from "vitest";
-import { candidateFrom, createTool, startingDataOf } from "../src/generation/index.ts";
+import {
+  candidateFrom,
+  createTool,
+  REPAIR_BUDGETS,
+  REPAIR_TIME_LIMIT_MS,
+  startingDataOf,
+} from "../src/generation/index.ts";
 import { applyPatch, createDataState, revisionOf } from "../src/patches/index.ts";
 import { createScriptedProvider, type Provider, type StageSpec } from "../src/providers/index.ts";
 
@@ -356,17 +362,133 @@ describe("the create stage (CLI-09, GEN-11)", () => {
     });
   });
 
-  it("GEN-09: an answer of the wrong shape can be repaired; any other provider failure can't", async () => {
-    const wrongShape = answering({ kind: "value", stage: "create", value: { outcome: "tool" } });
-    expect(await createTool(wrongShape.provider, DEFAULT_ROUTES, { request: "x" })).toMatchObject({
-      kind: "failed",
-      failure: "schema-shape",
-    });
+  it("GEN-09: an answer of the wrong shape is repaired, from the request, as nothing of it can be quoted", async () => {
+    const { provider, calls } = answering(
+      { kind: "value", stage: "create", value: { outcome: "tool" } },
+      { kind: "value", stage: "repair", value: tool() },
+    );
+    const result = await createTool(provider, DEFAULT_ROUTES, { request: "A shopping list" });
+    expect(result).toMatchObject({ kind: "candidate", repairs: 1 });
+    expect(calls[1]!.promptParts?.map((p) => p.split("@")[0])).toEqual([
+      "base",
+      "bridge",
+      "ui-standard",
+      "accessibility",
+      "create",
+      "repair-schema-shape",
+      "request",
+      "diagnostics",
+    ]);
+  });
+
+  it("GEN-09: a provider failure is never repaired, in creation or in a repair", async () => {
     for (const error of ["usage_limit", "sign_in", "time_limit", "cancelled"] as const) {
       const failing = answering({ kind: "error", stage: "create", error });
       const result = await createTool(failing.provider, DEFAULT_ROUTES, { request: "x" });
       expect(result, error).toMatchObject({ kind: "failed", failure: "provider" });
       expect(result.kind === "failed" && result.error?.kind).toBe(error);
+      expect(failing.calls).toHaveLength(1);
     }
+    const { provider, calls } = answering(
+      {
+        kind: "value",
+        stage: "create",
+        value: tool({ data: { ...tool().data, reusableDefaults: { items: 1 } } }),
+      },
+      { kind: "error", stage: "repair", error: "usage_limit" },
+    );
+    const result = await createTool(provider, DEFAULT_ROUTES, { request: "x" });
+    expect(result).toMatchObject({ kind: "failed", failure: "provider", repairs: 1 });
+    expect(calls).toHaveLength(2);
+  });
+});
+
+describe("repair by failure class (GEN-09)", () => {
+  // The slice pilot's first live shopping list (#173): its reusable defaults lacked the list its
+  // schema requires, so the host refused it. Its repair is the same answer with that list empty.
+  const pilot = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        fixtures,
+        "..",
+        "..",
+        "..",
+        "..",
+        "..",
+        "evals",
+        "spikes",
+        "slice-pilot",
+        "replays",
+        "pilot-2026-10-27.json",
+      ),
+      "utf8",
+    ),
+  ) as { replays: { stage: string; answer: Tool }[] };
+  const live = pilot.replays.find(
+    (r) => r.stage === "create" && r.answer.name === "Shopping list",
+  )!.answer;
+  const repaired: Tool = { ...live, data: { ...live.data, reusableDefaults: { items: [] } } };
+
+  it("GEN-09: the pilot's live shopping list, refused for its defaults, is repaired once on the repair route", async () => {
+    expect(candidateFrom(live)).toMatchObject({ kind: "failed", failure: "schema-shape" });
+    const { provider, calls } = answering(
+      { kind: "value", stage: "create", value: live },
+      { kind: "value", stage: "repair", value: repaired },
+    );
+    const result = await createTool(provider, DEFAULT_ROUTES, { request: "A shopping list" });
+    expect(result).toMatchObject({ kind: "candidate", name: "Shopping list", repairs: 1 });
+    expect(calls.map((c) => c.stage)).toEqual(["create", "repair"]);
+    expect(calls[1]).toMatchObject({
+      model: DEFAULT_ROUTES.repair.model,
+      effort: DEFAULT_ROUTES.repair.effort,
+      timeLimitMs: REPAIR_TIME_LIMIT_MS,
+    });
+    // Its class's part, the failed answer quoted, and what the checks found.
+    expect(calls[1]!.promptParts?.map((p) => p.split("@")[0])).toEqual([
+      "base",
+      "bridge",
+      "ui-standard",
+      "accessibility",
+      "create",
+      "repair-schema-shape",
+      "request",
+      "attempt",
+      "diagnostics",
+    ]);
+    expect(calls[1]!.prompt).toContain(live.code.js);
+    expect(calls[1]!.prompt).toContain("- The reusable defaults: ");
+  });
+
+  it("GEN-09: each class has its own budget: a static failure after a shape repair gets its own, and a class's budget once spent stops it", async () => {
+    const frame = { ...tool().code, html: '<iframe src="x"></iframe>' };
+    const { provider, calls } = answering(
+      { kind: "value", stage: "create", value: live },
+      { kind: "value", stage: "repair", value: { ...repaired, code: frame } },
+      { kind: "value", stage: "repair", value: { ...repaired, code: frame } },
+    );
+    const result = await createTool(provider, DEFAULT_ROUTES, { request: "A shopping list" });
+    expect(REPAIR_BUDGETS).toEqual({ "schema-shape": 1, static: 1 });
+    expect(result).toMatchObject({ kind: "failed", failure: "static", repairs: 2 });
+    expect(
+      calls.map((c) => c.promptParts?.find((p) => p.startsWith("repair-"))?.split("@")[0]),
+    ).toEqual([undefined, "repair-schema-shape", "repair-static"]);
+    // The static repair quotes the answer that failed it, not the first one.
+    expect(calls[2]!.prompt).toContain('<iframe src="x"></iframe>');
+  });
+
+  it("CON-02: a repair may answer that no tool can do it, which is passed on", async () => {
+    const { provider } = answering(
+      { kind: "value", stage: "create", value: live },
+      {
+        kind: "value",
+        stage: "repair",
+        value: { outcome: "cannot", reason: "It needs the internet." },
+      },
+    );
+    expect(await createTool(provider, DEFAULT_ROUTES, { request: "x" })).toEqual({
+      kind: "cannot",
+      reason: "It needs the internet.",
+      repairs: 1,
+    });
   });
 });

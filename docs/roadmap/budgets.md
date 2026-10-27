@@ -4,7 +4,7 @@ title: "Live budget summary"
 description: "Live-call envelopes per milestone and how they are derived."
 tags: [roadmap, budgets]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T09:36:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T10:11:49Z }
 ---
 # Live budget summary
 
@@ -12,7 +12,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T09:36:03Z }
 | --- | ---: | --- |
 | M0 | ~33 | Spikes: schema acceptance, locked flags, structured output (~3); intent routing over ~30 requests (~30, Haiku) |
 | M1 | 0 | Deterministic core, fully tested offline |
-| M2 | ~35, **approved** | Pipeline reality check: 3 scenarios, a limits run, probe and image check. The owner approved this envelope on 2026-10-26; each run still gets its plan and hard cap, announced before it starts, within it (`ENG-07`). Used so far: 13 (5 for the adapter's checks, 8 for the [slice pilot](../../evals/reports/2026-10-27-slice-pilot.md)'s two runs, each capped at 6) |
+| M2 | ~35, **approved** | Pipeline reality check: 3 scenarios, a limits run, probe and image check. The owner approved this envelope on 2026-10-26; each run still gets its plan and hard cap, announced before it starts, within it (`ENG-07`). Used so far: 15 (5 for the adapter's checks, 8 for the [slice pilot](../../evals/reports/2026-10-27-slice-pilot.md)'s two runs, each capped at 6, 2 for the [repair check](../../evals/reports/2026-10-27-repair-check.md), capped at 3) |
 | M3 | ~65 | 5 scenarios and one unmatched tool with reviews, the acceptance-check experiment, the Codex probe |
 | M4 | ~140 | 12 app runs plus P1/P2 and reviews; reconcile per-stage costs before approval |
 | **Total to the first release** | **~270 provisional** | Offline replay uses no calls; changed prompts and new behavior still need approved live evidence |
