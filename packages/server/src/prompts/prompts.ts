@@ -208,14 +208,19 @@ export function assembleIntentPrompt(input: {
     return fillPart(part, values);
   };
   const system = use("intent");
-  // Each part's version covers its wording; what it quotes changes with every call.
-  const lists = (open: NonNullable<OpenTool>) =>
-    open.lists.length === 0
-      ? use("intent-no-records")
-      : open.lists.map((list) => `- ${list.name}: ${list.fields.join(", ")}`).join("\n");
-  const open = input.open
-    ? use("intent-open", { name: input.open.name, lists: lists(input.open) })
-    : use("intent-none");
+  // Each part's version covers its wording; what it quotes changes with every call. The tool's
+  // name and lists come from the tool itself, so they are quoted as JSON between markers, data
+  // and never instructions (SEC-02): a newline or an instruction in a name stays inside a string.
+  const tool = (open: NonNullable<OpenTool>) =>
+    JSON.stringify({
+      name: open.name,
+      lists: Object.fromEntries(open.lists.map((list) => [list.name, list.fields])),
+    });
+  const open = !input.open
+    ? use("intent-none")
+    : input.open.lists.length === 0
+      ? `${use("intent-open", { tool: tool(input.open) })}\n${use("intent-no-records")}`
+      : use("intent-open", { tool: tool(input.open) });
   let prompt = use("intent-request", { open, request: input.request });
   if (input.retry) prompt += `\n\n${use("intent-retry")}`;
   return { system, prompt, parts: used, size: system.length + prompt.length };

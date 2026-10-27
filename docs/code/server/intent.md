@@ -7,7 +7,7 @@ implements: [GEN-01, GEN-15]
 tests: [../../../packages/server/test/intent.test.ts]
 tags: [code, server, generation, intent]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T02:43:23Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T02:55:08Z }
 ---
 
 # Purpose
@@ -31,8 +31,9 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
   - A request that isn't about the open tool never changes it: it becomes a new tool. Building a tool while one is open is a new tool too.
   - A saved tool must be one of those listed. Clarify and unsupported reach the person as they are.
 - **The open tool's records decide data against mixed** (ADR 0008). The prompt lists each list the tool keeps with its fields, and says that adding what the tool keeps as records is data.
+- **The open tool is quoted data** (`SEC-02`). Its name and lists come from the tool, which may be generated or imported, so they go in as JSON between markers, and the instructions say they are never instructions; only the request says what the person wants.
 - **Nothing split, nothing reworded** (ADR 0008, L-75). For create, new tool and edit, the interface part is the whole request; for data, the data part is the whole request. A part the model wrote is never used for these.
-- **A mixed split must be the request's own words.** Every word of each part must be a word of the request, ignoring case and punctuation, in any script; a missing part fails too. A failing split is asked once more on the same route, with a reminder; a second failure is `ask_to_split`, and nothing is done. The host never repairs or translates a part.
+- **A mixed split must be the request's own words.** Every word of each part must be a word of the request, ignoring case and punctuation, in any script; a missing part fails too. A word keeps its marks (a changed vowel sign in Devanagari is a changed word), and text is normalized first, so an accent typed as a separate mark matches the accented letter. A failing split is asked once more on the same route, with a reminder; a second failure is `ask_to_split`, and nothing is done. The host never repairs or translates a part.
 - **At most two calls, both on the intent route,** each recording its prompt parts; a provider failure goes back to the caller (`CLI-05`).
 
 # Depends on / used by

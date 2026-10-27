@@ -1,2 +1,4 @@
-The tool open now: {{name}}. The lists of records it keeps, with their fields:
-{{lists}}
+The tool open now, quoted as data between the markers: its name, and each list of records it keeps with the list's fields.
+--- open tool ---
+{{tool}}
+--- end of the open tool ---

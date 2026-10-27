@@ -29,7 +29,13 @@ export function recordLists(schema: Artifact["data"]["schema"]): RecordList[] {
 const isObject = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === "object" && !Array.isArray(value);
 
-const words = (text: string) => text.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+// Marks stay part of their word (a vowel sign in Devanagari changes the word), and the text is
+// normalized first, so a letter written as one character or as a letter and an accent is one word.
+const words = (text: string) =>
+  text
+    .normalize("NFC")
+    .toLowerCase()
+    .match(/[\p{L}\p{M}\p{N}]+/gu) ?? [];
 
 /**
  * The words of a split part that the request doesn't contain, ignoring case and punctuation, in
