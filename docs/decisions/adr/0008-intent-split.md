@@ -3,12 +3,12 @@ type: Decision
 title: "ADR 0008. Splitting a request: mixed against data, and the request's own words"
 description: "How the intent stage tells a mixed request from a data change (by the records the open tool already keeps), and how the host keeps each split part in the request's own words: the whole request where nothing is split, a word check where it is, one more ask, then the person."
 tags: [decisions, generation, intent]
-status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T02:13:14Z }
+status: stable
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T02:25:23Z }
 ---
 # ADR 0008. Splitting a request: mixed against data, and the request's own words
 
-Proposed by Claude Code on 2026-10-27 for [issue 144](https://github.com/suredo/Tessera/issues/144), the two design notes the [intent spike's report](../../../evals/reports/2026-10-17-intent-spike.md) asked for before M2's intent stage. It sets how the intent stage (`GEN-01`) and the split of mixed requests (`GEN-04`) work, and answers lesson L-75. It stays a draft until the owner accepts it.
+Proposed by Claude Code and accepted by the owner on 2026-10-27, for [issue 144](https://github.com/suredo/Tessera/issues/144), the two design notes the [intent spike's report](../../../evals/reports/2026-10-17-intent-spike.md) asked for before M2's intent stage. It sets how the intent stage (`GEN-01`) and the split of mixed requests (`GEN-04`) work, and answers lesson L-75.
 
 ## Context
 
