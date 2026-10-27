@@ -24,6 +24,12 @@ export const PROMPT_PARTS = [
   "diagnostics",
   "probe",
   "probe-request",
+  "intent",
+  "intent-request",
+  "intent-open",
+  "intent-none",
+  "intent-no-records",
+  "intent-retry",
 ] as const;
 export type PromptPart = (typeof PROMPT_PARTS)[number];
 
@@ -172,6 +178,52 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     parts: [...system, ...request].map(([part, , version]) => `${part}@${version}`),
     size: assembled.system.length + assembled.prompt.length,
   };
+}
+
+/**
+ * The intent stage's budget, like the generation stages' (GEN-03): its fixture, a second ask in a
+ * tool with two lists, measured about 4,450 characters when set.
+ */
+export const INTENT_PROMPT_BUDGET = 4_900;
+
+/** A list of records the open tool keeps, with its fields, as its data shape declares them. */
+export type RecordList = { name: string; fields: string[] };
+
+/** What the intent stage is told about the tool open now, or null when none is (ADR 0008). */
+export type OpenTool = { name: string; lists: RecordList[] } | null;
+
+/**
+ * Builds the intent stage's prompt (GEN-01): its instructions, then the open tool with the lists
+ * of records it keeps, which decide data against mixed (ADR 0008), and the request. `retry` adds
+ * the reminder for a second ask, after a mixed answer whose parts weren't the request's words.
+ */
+export function assembleIntentPrompt(input: {
+  request: string;
+  open: OpenTool;
+  retry?: boolean;
+}): AssembledPrompt {
+  const used: string[] = [];
+  const use = (part: PromptPart, values?: Record<string, string>) => {
+    used.push(`${part}@${partVersion(partText(part))}`);
+    return fillPart(part, values);
+  };
+  const system = use("intent");
+  // Each part's version covers its wording; what it quotes changes with every call. The tool's
+  // name and lists come from the tool itself, so they are quoted as JSON between markers, data
+  // and never instructions (SEC-02): a newline or an instruction in a name stays inside a string.
+  const tool = (open: NonNullable<OpenTool>) =>
+    JSON.stringify({
+      name: open.name,
+      lists: Object.fromEntries(open.lists.map((list) => [list.name, list.fields])),
+    });
+  const open = !input.open
+    ? use("intent-none")
+    : input.open.lists.length === 0
+      ? `${use("intent-open", { tool: tool(input.open) })}\n${use("intent-no-records")}`
+      : use("intent-open", { tool: tool(input.open) });
+  let prompt = use("intent-request", { open, request: input.request });
+  if (input.retry) prompt += `\n\n${use("intent-retry")}`;
+  return { system, prompt, parts: used, size: system.length + prompt.length };
 }
 
 /** A fixed part used as it is, such as the probe's: its text and its `name@version`. */
