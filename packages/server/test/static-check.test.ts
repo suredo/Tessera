@@ -190,6 +190,18 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
     }
   });
 
+  it("ADR 0009: fails closed when the tracking can't finish: a long, reversed alias chain is refused", () => {
+    const length = 80;
+    const lines = Array.from({ length }, (_, i) => `v${i} = v${i + 1};`).reverse();
+    const js = [
+      `let ${Array.from({ length: length + 1 }, (_, i) => `v${i}`).join(", ")};`,
+      ...lines,
+      `v${length} = document.body;`,
+      "v0[key] = html;",
+    ].join("\n");
+    expect(refusedJs(js)).toBe(true);
+  });
+
   it("ADR 0009: refuses aliases of the page's methods and qualified forbidden APIs (Codex, F2)", () => {
     for (const js of [
       'const d = window.document; const make = d.createElement.bind(d); const frame = make("iframe"); frame.src = "https://leak.example"; document.body.append(frame);',

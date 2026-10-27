@@ -401,6 +401,8 @@ class PageValues {
   readonly names = new Set<string>();
   readonly returning = new Set<string>();
   thisIsPage = false;
+  /** Set when the tracking gave up: every value may then be the page's. */
+  everything = false;
   private readonly functions = new Map<string, AnyNode>();
 
   private readonly program: AnyNode;
@@ -438,12 +440,20 @@ class PageValues {
         }
       }
     });
-    for (let round = 0; round < 20 && this.round(); round += 1);
+    let rounds = 0;
+    while (this.round()) {
+      // Still finding more after many rounds: fail closed, treating every value as the page's.
+      if (++rounds >= 50) {
+        this.everything = true;
+        break;
+      }
+    }
   }
 
   /** Whether an expression may be the page or one of its elements. */
   isPage(node: AnyNode | null | undefined): boolean {
     if (!node) return false;
+    if (this.everything) return true;
     switch (node.type) {
       case "Identifier": {
         const name = node["name"] as string;

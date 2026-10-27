@@ -7,7 +7,7 @@ implements: [SBX-06, SBX-07]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T04:37:30Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T04:57:55Z }
 ---
 
 # Purpose
@@ -40,6 +40,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
   - functions called with them, and functions that return them;
   - arrays, objects and maps that hold them;
   - `this` in a class that stores them;
+  - if the tracking is still finding more after many rounds, everything, so it fails closed;
   - names the script never declares, since an element with an `id` is a global of that name.
 
   A property reached on any of these by a name made at run time is refused, and so are `Object.assign`, `keys`, `values` and `entries` on them, spreading them and `for…in` over them. Properties that only hold text, numbers or flags (`value`, `checked`, `textContent`, `dataset`, …) leave the page behind, so ordinary code isn't refused; plain data keeps its ordinary indexing (`totals[name]`, `records[i][field]`).
@@ -66,7 +67,17 @@ acorn and parse5, pinned exactly. The [export and import](archives.md) module re
 - **These are `VER-01`'s first rules, not all of them.** Undeclared bridge actions and capabilities, unknown methods, writes at startup and reading the system clock come next (#148).
 - **It runs on the server, before staging,** rather than as a staging check in the browser. It must also cover imports, which aren't staged, and code that fails never reaches the browser. #148's wording asked for the staging interface; the smoke check (#149) is the staging check.
 - **It can refuse ordinary code.** Over-approximating is the safe direction: indexing a list of elements with a variable, or a value that only might be the page, is refused, and repair rewrites it (loop with `for…of` or `forEach`, reach elements by id). The base prompt says so.
-- **A path nobody thought of keeps ADR 0006's limit open.** The rules are strict on purpose; a real tool that needs something they refuse is a reason to revisit ADR 0009, not to loosen a rule quietly.
+- **It is defence in depth, not a closure** (ADR 0009, amended). A deliberately obfuscated leak can pass. Known gaps, from Codex's review of pull request 168, recorded rather than patched one by one:
+  - properties and methods counted as plain by their name (such as `value` or `data`) whose value is an element the tool stored there;
+  - a function passed by name as a callback, or called inline, receiving the page's objects;
+  - `createElement` taken out of `document` by destructuring;
+  - `Object` reached through an alias;
+  - a name declared in one scope and used undeclared in another;
+  - an attribute's value changed through its attribute node (`a.attributes.item(0).value = …`);
+  - native copies of the page's objects (`{...document}`) read back without a computed name.
+
+  A gap is fixed when the fix is cheap and simple; the closure is at the platform.
+- **The rules are strict on purpose.** A real tool that needs something they refuse is a reason to revisit ADR 0009, not to loosen a rule quietly.
 
 # Symbols (generated)
 

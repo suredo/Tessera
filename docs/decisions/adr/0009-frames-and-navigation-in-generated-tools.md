@@ -1,10 +1,10 @@
 ---
 type: Decision
 title: "ADR 0009. Frames and navigation in generated tools"
-description: "Before generated tools run, ADR 0006's open limit is decided again: a tool steered by pasted data could leak a person's data through the names a blocked frame navigation makes the browser look up. The static check refuses frames, navigation, property names built at run time and code made at run time before any candidate or imported tool runs."
+description: "Before generated tools run, ADR 0006's open limit is decided again: a tool steered by pasted data could leak a person's data through the names a blocked frame navigation makes the browser look up. The static check refuses frames, navigation, property names built at run time and code made at run time before any candidate or imported tool runs, as defence in depth: a closure, if needed, is at the platform."
 tags: [decisions, runtime, sandbox, security, generation]
 status: stable
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T04:01:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T04:57:55Z }
 ---
 # ADR 0009. Frames and navigation in generated tools
 
@@ -35,9 +35,19 @@ The tool's CSP has no `unsafe-eval`, so `eval`, `Function` and string timers can
 
 ## Decision
 
-**Option 3**, as recommended. It stops the steered-model case where the threat is, before the code runs, and every candidate passes it anyway (`RUN-03`). The rule against names built at run time closes the obvious ways around it. Option 4's hooks add maintenance and tests for little gain: anything that gets past the check can also get past the hooks.
+**Option 3**, as recommended. It stops the steered-model case where the threat is, before the code runs, and every candidate passes it anyway (`RUN-03`). The rule against names built at run time closes the obvious ways around it. Option 4's hooks add maintenance and tests for little gain: anything that gets past the check can also get past the hooks. (Amended below: the check is defence in depth, not a closure.)
 
 What remains: the limit stays real for a tool whose source passes the check through a path nobody thought of. The threat model keeps listing it, now with this check in front of it, and the boundary suite gains cases where candidates are refused.
+
+## Amendment, 2026-10-27: defence in depth, not a closure
+
+Building the check (#148, [pull request 168](https://github.com/suredo/Tessera/pull/168)) showed what a check of JavaScript can promise. Codex's reviews found ten ways around value tracking in two rounds. They reach a property by a name made at run time, through aliases, callbacks, containers, shadowed names and reflection; and once the obvious ones were closed, through attribute nodes (`a.attributes.item(0).value = url`) and native copies (`{...document}`, then `Object.values`). A guard at run time was considered and set aside: it closes names made at run time, but not attribute nodes or native copies, and costs a compiler and a membrane.
+
+The owner decided on 2026-10-27:
+
+- **The static check is defence in depth.** It refuses every direct form and the plain ways to hide one, which covers what a model writes, even when nudged. A deliberately obfuscated leak can still pass. The limit of ADR 0006 stays open, and the threat model says so.
+- **No more patching of each bypass.** Known gaps are listed in the check's code doc. A new one is fixed when it is cheap and simple, and otherwise recorded.
+- **The closure, if one is needed, is at the platform.** Tessera needs no outside names, so a browser it controls can stop every name lookup except its own (Chrome and Edge's host-resolver rules), whatever a tool's code does. The owner plans to decide before any public release whether Tessera becomes a desktop app (Electron), a binary, or a web service. In Electron this closure comes with the app's own browser. Until then, the risk needs untrusted pasted material, a model steered into writing hidden code, and it carries only that tool's data, slowly and one way.
 
 ## Consequences
 
@@ -46,4 +56,4 @@ What remains: the limit stays real for a tool whose source passes the check thro
 - **Until #148 lands, no generated tool runs.** The first one runs in the end-to-end slice, behind these checks.
 - The threat model's entries for `SBX-06` and `SBX-07` name this ADR. ADR 0006 is marked as revisited.
 - The base prompt already tells the model that tools open no other pages. It gains no new rule unless the live pilot shows candidates refused for this.
-- **When to revisit:** if a real tool needs frames or links out; if the check is shown to be bypassed; or if the browsers stop resolving blocked navigations.
+- **When to revisit:** when the owner chooses Tessera's form (Electron, binary or web service) before a public release, to close the limit at the platform; if a real tool needs frames or links out; if outside testers will paste untrusted material into Tessera before that; or if the browsers stop resolving blocked navigations.
