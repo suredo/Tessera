@@ -2,6 +2,8 @@
 
 ## 2026-10-28
 
+* **Create**: The [smoke repair check](code/evals/smoke-repair.md) rehearses one browser case through the real repair route with a cap of three calls, explicitly approved for one run. It keeps calls capped and recorded, aborts and settles outstanding work before cleanup, and verifies the two starting entries survive activation. The free rehearsal passes; the live result follows in its report.
+
 * **Update**: The [web package](code/web/package.md) describes isolating lint-rule snippets in a small typed fixture project for [issue 177](https://github.com/suredo/Tessera/issues/177), preserving the production ESLint rules, assertions and timeout.
 
 ## 2026-10-27
