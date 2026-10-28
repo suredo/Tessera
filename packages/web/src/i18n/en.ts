@@ -12,6 +12,11 @@ export const en = {
   "request.send": "Make it",
   "request.working": "Making it. This can take a few minutes.",
   "request.made": "{name} is ready. {summary}",
+  "request.edited": "{name} was updated. {summary}",
+  "request.unchanged": "The tool wasn't changed.",
+  "request.stale":
+    "The tool or its entries changed during this request. Nothing was applied. Please ask again.",
+  "request.editCheckFailed": "The change didn't pass its checks. Your tool and entries were kept.",
   "request.checkFailed":
     "Tessera made a tool, but it didn't pass its checks, so nothing changed. Try asking again, perhaps in other words.",
   "request.refused": "The tool couldn't be put in place: {message}",
@@ -19,7 +24,8 @@ export const en = {
   "request.unsupported": "That's something a tool on this computer can't do.",
   "request.cannot": "Tessera can't make that. {reason}",
   "request.split": "Please send the change to the tool and the change to its entries separately.",
-  "request.notYet": "Changing a tool comes in a later version. For now, Tessera makes new tools.",
+  "request.notYet":
+    "Changing entries through chat isn't available yet. You can change them in the tool.",
   "request.offerSaved":
     "That sounds like your saved tool {name}. Continue where you left off, or use it again with a fresh start?",
   "request.continue": "Continue {name}",

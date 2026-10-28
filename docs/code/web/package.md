@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts, ../../../packages/web/test/generate.test.ts, ../../../packages/web/e2e/request.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-28T02:36:48Z }
+generated: { by: codex/gpt-6, at: 2026-10-28T18:03:38Z }
 ---
 
 # Purpose
@@ -39,6 +39,8 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - `e2e/shell.spec.ts` and `e2e/app.spec.ts`: the app's browser tests, run as `pnpm e2e` with the repository's `playwright.config.ts`, against a real Tessera that `e2e/support/app-host.ts` starts through the launcher on a temporary data folder, serving the built app (which Playwright's web server builds first). They open the app in the installed Chrome and Edge at 320 px and 1280 px wide and records a video into `test-output/playwright/` (`TEST-06`). `e2e/prune-runs.ts` keeps the last 3 runs there. A failed test also keeps a light trace there, with its actions and console, and the runtime's test host page logs any task that blocks it for a second or more, so a stalled page can be told from a slow browser (#83, #98). The trace has no snapshots, and so no network: Playwright takes snapshots inside every frame, which counts as the person's activation there and would let a tool write before any click (`GEN-06`). The [CI workflow](../ci/workflow.md) runs it in its Windows job on every pull request.
 
 # Invariants
+
+- **Editing keeps the current tool until a candidate activates** (`GEN-07`, `GEN-08`). `carryOut` stages create and edit candidates alike, but says updated only for an activated edit. Unchanged and stale answers never stage. A repeated smoke failure keeps the old version and entries; a successful edit refreshes the workspace so `ToolPanel` restarts on its changed version. Browser edit tests cover dark styling, a no-op, a quantity migration preserving ids/values, repeated smoke failure and successful smoke repair without creating another workspace. The host's not-yet message now refers specifically to chat data changes.
 
 - **Lint-rule snippets use a small typed project** (`ENG-20`, [issue 177](https://github.com/suredo/Tessera/issues/177)). `test/lint.test.ts` uses the repository's unchanged ESLint configuration on `test/fixtures/lint/App.tsx`, whose own tsconfig includes only the fixture and its imports. It no longer loads the real app and all browser tests for a few snippets. The original timeout and assertions remain, with an added unsafe-assignment case proving type-aware rules still run.
 

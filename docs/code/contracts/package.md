@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-28T12:59:39Z }
+generated: { by: codex/gpt-6, at: 2026-10-28T18:03:38Z }
 ---
 
 # Purpose
@@ -39,6 +39,8 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 - `scripts/generate-schemas.ts`: writes `schemas/*.schema.json` and `schemas/bridge-manifest.json`. Run it as `pnpm contracts:schemas`.
 
 # Invariants
+
+- **Candidate replies identify creation versus editing.** `generateReplySchema` carries `operation` so the host can word the verified activation result appropriately. Its answer kinds also include unchanged and stale; neither is a candidate and neither starts staging.
 
 - **Edit output is explicit and bounded by existing contracts** (`CON-02`, `GEN-07`). `editSchema` (`Edit`) is edit or cannot; an edit has a plain summary, independent unchanged/replace file modes and unchanged/migrate data modes. Migration uses the existing migration contract; code and cannot/summary fields reuse creation's definitions. Name, capabilities, pins, UI mode and session entries cannot be supplied by an edit. The committed `edit.schema.json` is generated from the same zod definition.
 

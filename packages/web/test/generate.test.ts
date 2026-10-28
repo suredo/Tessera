@@ -9,6 +9,7 @@ import { en } from "../src/i18n/en.ts";
 
 const candidate: GenerateReply = {
   kind: "candidate",
+  operation: "create",
   workspaceId: "00000000-0000-4000-8000-000000000001",
   hash: "a".repeat(64),
   mountId: `v-${"a".repeat(64)}`,
@@ -39,6 +40,23 @@ function deps(reply: GenerateReply, staged?: StagingResult) {
 }
 
 describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
+  it("GEN-07, GEN-08: an edit says updated only after activation; unchanged/stale never stage", async () => {
+    const updated = deps(
+      { ...candidate, operation: "edit" },
+      { outcome: "activated", workspace: {} as never, migrationCount: 1 },
+    );
+    expect(await carryOut("Add quantities", candidate.workspaceId, updated.fake)).toMatchObject({
+      message: "Shopping list was updated. A list to tick off at the store.",
+      openWorkspaceId: candidate.workspaceId,
+    });
+    for (const answer of ["unchanged", "stale"] as const) {
+      const untouched = deps({ kind: "answer", answer });
+      expect((await carryOut("x", null, untouched.fake)).message).toBe(
+        en[answer === "unchanged" ? "request.unchanged" : "request.stale"],
+      );
+      expect(untouched.seen.stagings).toHaveLength(0);
+    }
+  });
   it("GEN-09: stages a smoke repair once, reports its own outcome, and never repairs a cancellation or refusal", async () => {
     const { fake, seen } = deps(candidate);
     const repair = vi

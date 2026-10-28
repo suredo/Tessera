@@ -6,13 +6,16 @@ import type { Provider, Routes } from "../providers/index.ts";
 import { loadVersion, saveVersion } from "../versions/index.ts";
 import { getWorkspace, type Store } from "../workspaces/index.ts";
 import { createTool } from "./create.ts";
+import { editTool } from "./edit.ts";
 
-/** Server-owned continuation of a creation, never supplied by the browser (GEN-09). */
+/** Server-owned continuation of creation or editing, never supplied by the browser (GEN-09). */
 export type SmokeRepairContext = {
   reply: Extract<GenerateReply, { kind: "candidate" }>;
   request: string;
   intent: Intent;
   repairUsage: Partial<Record<RepairClass, number>>;
+  /** Null for creation; the still-active original version for an edit. */
+  baseVersion: string | null;
 };
 
 /** Repairs a stored candidate; its workspace's starting data is never installed again (GEN-05). */
@@ -34,7 +37,7 @@ export async function repairSmoke(
   const current = () => {
     const workspace = getWorkspace(store, input.workspaceId);
     return (
-      workspace?.currentVersion === null &&
+      workspace?.currentVersion === context.baseVersion &&
       workspace.dataRevision === context.reply.expectedDataRevision
     );
   };
@@ -42,29 +45,64 @@ export async function repairSmoke(
   const stored = loadVersion(store.db, input.hash);
   if (stored?.kind !== "ok") return failed(["The failed tool couldn't be read."]);
   const artifact = stored.artifact;
-  const repaired = await createTool(provider, routes, {
-    request: context.request,
-    intent: context.intent,
-    signal,
-    repairUsage: context.repairUsage,
-    repair: {
-      failure: "smoke",
-      diagnostics: input.findings,
-      attempt: {
-        outcome: "tool",
-        name: context.reply.name,
-        summary: context.reply.summary,
-        code: artifact.code,
-        data: {
-          schema: artifact.data.schema,
-          reusableDefaults: artifact.data.defaults,
-          initialState: {},
-        },
-        capabilities: creationSchema.options[0].shape.capabilities.parse(artifact.capabilities),
-        uiMode: artifact.ui.mode,
-      },
-    },
-  });
+  const original = context.baseVersion ? loadVersion(store.db, context.baseVersion) : undefined;
+  const workspace = getWorkspace(store, input.workspaceId);
+  if (context.baseVersion && (original?.kind !== "ok" || !workspace?.data))
+    return failed(["The original tool couldn't be read."]);
+  const repaired =
+    context.baseVersion && original?.kind === "ok" && workspace?.data
+      ? await editTool(provider, routes, {
+          request: context.request,
+          intent: context.intent,
+          signal,
+          repairUsage: context.repairUsage,
+          artifact: original.artifact,
+          data: workspace.data,
+          repair: {
+            failure: "smoke",
+            diagnostics: input.findings,
+            attempt: {
+              outcome: "edit",
+              summary: context.reply.summary,
+              files: { mode: "replace", code: artifact.code },
+              data:
+                canonicalJson(artifact.data) === canonicalJson(original.artifact.data)
+                  ? { mode: "unchanged" }
+                  : {
+                      mode: "migrate",
+                      schema: artifact.data.schema,
+                      defaults: artifact.data.defaults,
+                      migration: artifact.data.migrations.at(-1)!,
+                    },
+            },
+          },
+        })
+      : await createTool(provider, routes, {
+          request: context.request,
+          intent: context.intent,
+          signal,
+          repairUsage: context.repairUsage,
+          repair: {
+            failure: "smoke",
+            diagnostics: input.findings,
+            attempt: {
+              outcome: "tool",
+              name: context.reply.name,
+              summary: context.reply.summary,
+              code: artifact.code,
+              data: {
+                schema: artifact.data.schema,
+                reusableDefaults: artifact.data.defaults,
+                initialState: {},
+              },
+              capabilities: creationSchema.options[0].shape.capabilities.parse(
+                artifact.capabilities,
+              ),
+              uiMode: artifact.ui.mode,
+            },
+          },
+        });
+  if (repaired.kind === "unchanged") return { kind: "answer", answer: "unchanged" };
   if (repaired.kind === "cannot")
     return { kind: "answer", answer: "cannot", reason: repaired.reason };
   if (repaired.kind === "failed")
@@ -90,7 +128,7 @@ export async function repairSmoke(
     mountId: candidateMount(hash),
     capabilities: repaired.artifact.capabilities,
     syntheticData: repaired.artifact.data.defaults,
-    name: repaired.name,
+    name: context.reply.name,
     summary: repaired.summary,
   };
 }
