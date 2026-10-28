@@ -5,3 +5,4 @@
 * [Intent spike](intent-spike.md) - The M0 live spike that measures how often a draft intent stage misroutes the POC's failure cases, in several languages, with its request set, draft prompt and report.
 * [End-to-end slice pilot](slice-pilot.md) - The live pilot of the end-to-end slice: two everyday requests through the real app in Chrome, with the harness capping and recording every call, a dry run with the fake Claude Code first, and the answers kept as a replay fixture.
 * [Repair check](repair-check.md) - The live check of the repair stage's prompt parts: creations that failed the host's checks, replayed from the slice pilot at no cost, with only their repairs sent to the model through the harness's cap and ledger.
+* [Smoke repair check](smoke-repair.md) - A browser check of the smoke-repair prompt: canned intent and creation fail on an unlabelled field, only repairs use the capped provider, and activation must preserve the request's entries.

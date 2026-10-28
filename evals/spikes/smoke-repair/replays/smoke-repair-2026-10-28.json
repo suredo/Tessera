@@ -1,0 +1,47 @@
+{
+  "request": "A shopping list showing milk and eggs, with a field labelled \"New item\".",
+  "replays": [
+    {
+      "stage": "repair",
+      "answer": {
+        "outcome": "tool",
+        "name": "Shopping list",
+        "summary": "A list of what to buy.",
+        "code": {
+          "html": "\u003ch1\u003eShopping list\u003c/h1\u003e\u003cul id=\"items\"\u003e\u003c/ul\u003e\u003cp id=\"empty\" hidden\u003eThe list is empty. Add your first item below.\u003c/p\u003e\u003cdiv class=\"add\"\u003e\u003clabel for=\"new-item\"\u003eNew item\u003c/label\u003e\u003cdiv class=\"row\"\u003e\u003cinput id=\"new-item\" type=\"text\" autocomplete=\"off\"\u003e\u003cbutton id=\"add\" type=\"button\"\u003eAdd\u003c/button\u003e\u003c/div\u003e\u003c/div\u003e\u003cp id=\"msg\" role=\"status\"\u003e\u003c/p\u003e",
+          "css": "body{font-family:var(--ui-font);color:var(--ui-text);background:var(--ui-background);padding:var(--ui-padding);margin:0}h1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-3)}ul{padding-left:var(--ui-space-5);margin:0 0 var(--ui-space-3)}li{overflow-wrap:anywhere}.add label{display:block;margin-bottom:var(--ui-space-1)}.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2)}input{flex:1 1 140px;min-width:0;min-height:var(--ui-target);box-sizing:border-box;padding:0 var(--ui-space-2);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}button{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit}input:focus-visible,button:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}#msg{color:var(--ui-error);min-height:1.5em}",
+          "js": "const list = document.getElementById(\u0027items\u0027);\nconst empty = document.getElementById(\u0027empty\u0027);\nconst input = document.getElementById(\u0027new-item\u0027);\nconst msg = document.getElementById(\u0027msg\u0027);\n\nfunction render(items) {\n  list.replaceChildren();\n  for (const item of items) {\n    const row = document.createElement(\u0027li\u0027);\n    row.textContent = item.title;\n    list.append(row);\n  }\n  empty.hidden = items.length \u003e 0;\n}\n\nasync function load() {\n  const res = await tessera.call(\u0027data.read\u0027, {});\n  render(Array.isArray(res.data.items) ? res.data.items : []);\n}\n\nasync function add() {\n  const title = input.value.trim();\n  if (!title) {\n    msg.textContent = \u0027Type an item first.\u0027;\n    return;\n  }\n  try {\n    await tessera.call(\u0027data.patch\u0027, { operations: [{ op: \u0027add\u0027, collection: \u0027items\u0027, record: { title } }] });\n    input.value = \u0027\u0027;\n    msg.textContent = \u0027\u0027;\n    await load();\n  } catch (e) {\n    msg.textContent = \u0027The item could not be added. Please try again.\u0027;\n  }\n}\n\ndocument.getElementById(\u0027add\u0027).addEventListener(\u0027click\u0027, add);\ninput.addEventListener(\u0027keydown\u0027, (e) =\u003e { if (e.key === \u0027Enter\u0027) add(); });\nload().catch(() =\u003e { msg.textContent = \u0027The list could not be loaded.\u0027; });"
+        },
+        "data": {
+          "schema": {
+            "properties": {
+              "items": {
+                "items": {
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "title"],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": ["items"],
+            "type": "object"
+          },
+          "reusableDefaults": {
+            "items": []
+          },
+          "initialState": {}
+        },
+        "capabilities": [],
+        "uiMode": "standard"
+      }
+    }
+  ]
+}
