@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/pipeline.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-27T20:59:32Z }
+generated: { by: codex/gpt-6, at: 2026-10-28T12:59:39Z }
 ---
 
 # Purpose
@@ -15,6 +15,8 @@ generated: { by: codex/gpt-6, at: 2026-10-27T20:59:32Z }
 The core of generation (#146): a request's interface part becomes a candidate tool, or an honest "no tool can do this". The create stage makes a candidate; the pipeline carries a request through the intent stage and creation, and stores the candidate with its workspace and starting data, ready for the host app to stage and activate. A candidate that fails the host's checks is repaired by its failure class first, including smoke failures reported by browser staging. Edits follow.
 
 # Entry points
+
+- `src/generation/edit.ts`: `editTool` runs an edit or a per-class repair with the edit output contract; `editedCandidate` checks it without storing anything. `EditInput` carries the original artifact, workspace data for local validation only, structured intent and repair usage. The stage is available to the pipeline integration that follows; it is not yet wired to a browser request in this slice.
 
 - `src/generation/create.ts`:
   - `createTool` asks the create stage on its route (`CLI-09`), within `GENERATION_TIME_LIMIT_MS` (`GEN-11`), repairs a failure of the host's checks on the repair route, within `REPAIR_TIME_LIMIT_MS` and `REPAIR_BUDGETS`, and gives a `CreateResult`: a `Candidate`, a "cannot" with its reason, or a failure with its class and findings, each with how many repairs it took.
@@ -26,6 +28,11 @@ The core of generation (#146): a request's interface part becomes a candidate to
 - The answer's contract is the contracts' creation schema, with the failure classes beside it ([contracts](../contracts/package.md)). The stage's prompt adds the create part to the [prompt assembly](prompts.md).
 
 # Invariants
+
+- **Edits declare file and data changes separately** (`CON-02`, `GEN-07`). Files can stay unchanged or be replaced in full. Data can stay unchanged or migrate one version with the existing declarative migration contract. Thus unchanged files can still produce a real data-declaration change. The host returns `unchanged` only when the complete canonical artifact is identical; a model summary never decides whether a version changed.
+- **The host owns preserved declarations** (`GEN-13`, in part). Edit output cannot name or replace the tool's name, capabilities, pins, UI declaration or starting entries. A style-only edit must keep HTML, JavaScript and data identical. Other edits retain unrelated behavior by prompt instruction; semantic verification and narrower prompt context remain later work under #150.
+- **Edit migrations cannot lose existing values.** A data change needs the intent's `behaviorChange`, exactly the next version and a changed schema. The target schema/defaults pass the same bounded data checks as creation (`dataProblems`); both current entries and old reusable defaults migrate on copies with loss tracking. Any removed or replaced value, invalid record naming/id, incompatible result, or defaults differing from the migrated old defaults is refused. No workspace data is sent to the prompt or written here. Destructive edits and other declaration changes answer cannot or fail; confirmation flows are outside this slice.
+- **Edit repair retains the original baseline.** Each call uses the original code and declarations, with a failed edit quoted separately when its shape is valid. Edits and their schema/static/smoke repairs use the same edit contract and host checks, existing per-class counts and 180-second limits; provider failures never repair. Browser smoke-repair continuation is integrated separately.
 
 - **The answer is a discriminated union** (`CON-02`): a tool, or "cannot" with a reason. No null means two things, and capabilities are limited to the bridge's own.
 - **Defaults and the request's entries stay apart** (`GEN-05`). The artifact keeps only the reusable defaults. A new workspace starts from the defaults, with each list the request gave entries for extended by them. The request's entries never become defaults.
@@ -67,8 +74,9 @@ The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `create.ts`: `GENERATION_TIME_LIMIT_MS`, `REPAIR_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `Candidate` (type), `CreateResult` (type), `startingDataOf`, `candidateFrom`, `CreateInput` (type), `createTool`
-- `index.ts`: `candidateFrom`, `createTool`, `GENERATION_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `REPAIR_TIME_LIMIT_MS`, `startingDataOf`, `Candidate` (type), `CreateInput` (type), `CreateResult` (type), `generate`, `generationRoutes`, `GenerationOptions` (type)
+- `create.ts`: `GENERATION_TIME_LIMIT_MS`, `REPAIR_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `Candidate` (type), `CreateResult` (type), `startingDataOf`, `dataProblems`, `candidateFrom`, `CreateInput` (type), `createTool`
+- `edit.ts`: `EditInput` (type), `EditResult` (type), `editedCandidate`, `editTool`
+- `index.ts`: `candidateFrom`, `dataProblems`, `createTool`, `GENERATION_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `REPAIR_TIME_LIMIT_MS`, `startingDataOf`, `Candidate` (type), `CreateInput` (type), `CreateResult` (type), `generate`, `editedCandidate`, `editTool`, `EditInput` (type), `EditResult` (type), `generationRoutes`, `GenerationOptions` (type)
 - `pipeline.ts`: `generate`
 - `routes.ts`: `GenerationOptions` (type), `generationRoutes`
 - `smoke.ts`: `SmokeRepairContext` (type), `repairSmoke`

@@ -14,7 +14,7 @@ import {
   bridgeReplySchema,
   bridgeRequestSchema,
 } from "./bridge.ts";
-import { creationSchema } from "./generation.ts";
+import { creationSchema, editSchema } from "./generation.ts";
 import { intentSchema } from "./intent.ts";
 import { ledgerEntrySchema, requestLogEntrySchema } from "./ledger.ts";
 import { patchBatchSchema } from "./patch.ts";
@@ -28,6 +28,7 @@ export const contracts = {
   activationRequest: activationRequestSchema,
   asset: assetSchema,
   creation: creationSchema,
+  edit: editSchema,
   archiveManifest: archiveManifestSchema,
   exportRequest: exportRequestSchema,
   importReply: importReplySchema,

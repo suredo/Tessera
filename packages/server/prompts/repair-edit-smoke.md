@@ -1,0 +1,1 @@
+The edited tool failed while running at 320 px against reusable defaults. Fix the reported startup, display or accessibility problems in the failed edit. Return the edit answer again, not a creation answer. Keep its data change identical, preserve the original declarations and unrelated code, and never write data on startup.

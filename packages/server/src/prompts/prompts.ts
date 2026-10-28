@@ -5,6 +5,7 @@ import {
   bridgeManifest,
   type Artifact,
   type Creation,
+  type Edit,
   type FailureClass,
   type Intent,
   type Stage,
@@ -26,12 +27,17 @@ export const PROMPT_PARTS = [
   "base",
   "bridge",
   "ui-standard",
+  "ui-edit",
   "accessibility",
   "request",
   "source",
   "attempt",
   "diagnostics",
   "create",
+  "edit",
+  "edit-declarations",
+  "edit-attempt",
+  "repair-edit-smoke",
   "language",
   "repair-schema-shape",
   "repair-static",
@@ -142,6 +148,10 @@ export type PromptInput = {
   uiMode: Artifact["ui"]["mode"];
   /** The tool's code now: edit, and the repair of an edit, change it. */
   source?: Artifact["code"];
+  /** Original declarations for an edit; never the workspace's own records. */
+  editArtifact?: Artifact;
+  /** A failed edit answer, quoted independently of its original source. */
+  editAttempt?: Extract<Edit, { outcome: "edit" }>;
   /** The answer that failed, when repair follows creation: repair answers again in full. */
   attempt?: Extract<Creation, { outcome: "tool" }>;
   /** Why the last attempt failed: repair takes that class's part (GEN-09). */
@@ -197,7 +207,10 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     addSystem("bridge", { manifest: manifestForPrompt() });
   }
   if (input.uiMode === "standard") {
-    addSystem("ui-standard", { version: String(UI_STANDARD_VERSION), tokens: tokenLines() });
+    addSystem(input.editArtifact ? "ui-edit" : "ui-standard", {
+      version: String(UI_STANDARD_VERSION),
+      tokens: tokenLines(),
+    });
   }
   // In custom mode too: a custom look drops the standard's look, never its accessibility (UX-04).
   addSystem("accessibility");
@@ -205,7 +218,14 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   if (creating) {
     addSystem("create", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
   }
-  if (stage === "repair") addSystem(`repair-${input.failure!}`);
+  if (input.editArtifact)
+    addSystem("edit", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
+  if (stage === "repair")
+    addSystem(
+      input.editArtifact && input.failure === "smoke"
+        ? "repair-edit-smoke"
+        : `repair-${input.failure!}`,
+    );
   const request: [PromptPart, string, string][] = [];
   const addRequest = (part: PromptPart, values: Record<string, string>) =>
     request.push([part, fillPart(part, values), partVersion(partText(part))]);
@@ -214,6 +234,22 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // model guessing it (GEN-15).
   if (input.intent) addRequest("language", { language: input.intent.language });
   if (input.source) addRequest("source", { ...input.source });
+  if (input.editArtifact) {
+    const { data, capabilities, pins, ui } = input.editArtifact;
+    addRequest("edit-declarations", {
+      declarations: JSON.stringify({
+        data,
+        capabilities,
+        pins,
+        ui,
+        requestedChange: {
+          lookOnly: input.intent?.lookOnly ?? false,
+          behaviorChange: input.intent?.behaviorChange ?? false,
+        },
+      }),
+    });
+  }
+  if (input.editAttempt) addRequest("edit-attempt", { attempt: JSON.stringify(input.editAttempt) });
   if (stage === "repair" && input.attempt) {
     const { name, summary, code, data, capabilities, uiMode } = input.attempt;
     addRequest("attempt", {
