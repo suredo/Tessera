@@ -1,0 +1,96 @@
+import type { GenerateReply, Intent, SmokeRepairRequest } from "@tessera/contracts";
+import { canonicalJson, creationSchema } from "@tessera/contracts";
+import { candidateMount } from "../host/index.ts";
+import type { RepairClass } from "../prompts/index.ts";
+import type { Provider, Routes } from "../providers/index.ts";
+import { loadVersion, saveVersion } from "../versions/index.ts";
+import { getWorkspace, type Store } from "../workspaces/index.ts";
+import { createTool } from "./create.ts";
+
+/** Server-owned continuation of a creation, never supplied by the browser (GEN-09). */
+export type SmokeRepairContext = {
+  reply: Extract<GenerateReply, { kind: "candidate" }>;
+  request: string;
+  intent: Intent;
+  repairUsage: Partial<Record<RepairClass, number>>;
+};
+
+/** Repairs a stored candidate; its workspace's starting data is never installed again (GEN-05). */
+export async function repairSmoke(
+  store: Store,
+  provider: Provider,
+  routes: Routes,
+  input: SmokeRepairRequest,
+  context: SmokeRepairContext | undefined,
+  signal?: AbortSignal,
+): Promise<GenerateReply> {
+  const failed = (findings: string[]): GenerateReply => ({
+    kind: "failed",
+    failure: "smoke",
+    message: "The tool couldn't be repaired. Nothing was changed.",
+    findings,
+  });
+  if (!context) return failed(["This candidate has no smoke repair left."]);
+  const current = () => {
+    const workspace = getWorkspace(store, input.workspaceId);
+    return (
+      workspace?.currentVersion === null &&
+      workspace.dataRevision === context.reply.expectedDataRevision
+    );
+  };
+  if (!current()) return failed(["The workspace changed before repair."]);
+  const stored = loadVersion(store.db, input.hash);
+  if (stored?.kind !== "ok") return failed(["The failed tool couldn't be read."]);
+  const artifact = stored.artifact;
+  const repaired = await createTool(provider, routes, {
+    request: context.request,
+    intent: context.intent,
+    signal,
+    repairUsage: context.repairUsage,
+    repair: {
+      failure: "smoke",
+      diagnostics: input.findings,
+      attempt: {
+        outcome: "tool",
+        name: context.reply.name,
+        summary: context.reply.summary,
+        code: artifact.code,
+        data: {
+          schema: artifact.data.schema,
+          reusableDefaults: artifact.data.defaults,
+          initialState: {},
+        },
+        capabilities: creationSchema.options[0].shape.capabilities.parse(artifact.capabilities),
+        uiMode: artifact.ui.mode,
+      },
+    },
+  });
+  if (repaired.kind === "cannot")
+    return { kind: "answer", answer: "cannot", reason: repaired.reason };
+  if (repaired.kind === "failed")
+    return {
+      kind: "failed",
+      failure: repaired.failure,
+      message:
+        repaired.failure === "provider"
+          ? repaired.findings[0]!
+          : "The tool couldn't be repaired. Nothing was changed.",
+      findings: repaired.findings,
+    };
+  // Smoke repair changes code, not the data contract or the already-installed entries. Refuse
+  // a changed declaration rather than silently migrating or replacing the person's data.
+  if (canonicalJson(repaired.artifact.data) !== canonicalJson(artifact.data)) {
+    return failed(["Smoke repair changed the tool's data declaration."]);
+  }
+  if (!current()) return failed(["The workspace changed during repair."]);
+  const hash = saveVersion(store.db, repaired.artifact);
+  return {
+    ...context.reply,
+    hash,
+    mountId: candidateMount(hash),
+    capabilities: repaired.artifact.capabilities,
+    syntheticData: repaired.artifact.data.defaults,
+    name: repaired.name,
+    summary: repaired.summary,
+  };
+}

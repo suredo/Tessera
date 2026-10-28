@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T10:00:28Z }
+generated: { by: codex/gpt-6, at: 2026-10-27T20:59:32Z }
 ---
 
 # Purpose
@@ -24,6 +24,8 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
   - `fillPart`, `partText` and `partVersion` read, fill and version a part. `PROMPT_PARTS` lists them, `PROMPT_BUDGETS` caps each stage, and `manifestForPrompt` is the bridge manifest as the bridge part quotes it.
 
 # Invariants
+
+- **Smoke repair has its own part** (`GEN-09`): `repair-smoke.md` asks for startup, display and accessibility fixes at 320 px using defaults. It preserves the data declaration, requests empty initial state because starting data is already installed, and uses the creation answer contract. Its assembly and fixture size are tested alongside the existing repair parts. A live check of this new part still needs an approved budget; none has run yet.
 
 - **Every prompt's words are in a part file** (`ENG-16`), never an inline string; a test fails if a file isn't a listed part or a listed part has no file. The probe's words moved there too.
 - **A part's version is a hash of its text.** For an instruction part it covers what was generated into it (the manifest, the UI tokens), so a change to either changes the version. For a request part it covers only the wording, since what it quotes changes with every call. A stage call carries them, and the [evaluation harness](../evals/harness.md)'s ledger records them with the instructions' size.

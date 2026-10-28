@@ -35,6 +35,7 @@ export const PROMPT_PARTS = [
   "language",
   "repair-schema-shape",
   "repair-static",
+  "repair-smoke",
   "probe",
   "probe-request",
   "intent",
@@ -51,9 +52,13 @@ export type GenerationStage = Extract<Stage, "create" | "edit" | "repair">;
 
 /**
  * The failure classes repair has a prompt part for (GEN-09). A provider failure is never repaired;
- * the smoke and behavior classes get theirs with the stages that find them.
+ * behavior gets its part with the stage that finds it.
  */
-export const REPAIR_CLASSES = ["schema-shape", "static"] as const satisfies readonly FailureClass[];
+export const REPAIR_CLASSES = [
+  "schema-shape",
+  "static",
+  "smoke",
+] as const satisfies readonly FailureClass[];
 export type RepairClass = (typeof REPAIR_CLASSES)[number];
 
 /**

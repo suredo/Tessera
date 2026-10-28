@@ -304,6 +304,18 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     });
     expect(names(fixCode.parts)).toContain("repair-static");
     expect(names(fixCode.parts)).not.toContain("repair-schema-shape");
+    const smoke = assemblePrompt({
+      stage: "repair",
+      request: "A shopping list",
+      uiMode: "standard",
+      attempt,
+      failure: "smoke",
+      diagnostics: ["At 320 px wide, the tool scrolls sideways by 80 px."],
+    });
+    expect(names(smoke.parts)).toContain("repair-smoke");
+    expect(smoke.system).toContain("Return an empty initialState");
+    expect(smoke.prompt).toContain("80 px");
+    expect(smoke.size).toBeLessThanOrEqual(PROMPT_BUDGETS.repair);
     expect(() =>
       assemblePrompt({
         stage: "repair",

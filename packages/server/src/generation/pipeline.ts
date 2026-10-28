@@ -1,7 +1,7 @@
 import type { GenerateReply, GenerateRequest } from "@tessera/contracts";
 import { candidateMount } from "../host/index.ts";
 import { decideIntent, recordLists } from "../intent/index.ts";
-import type { OpenTool } from "../prompts/index.ts";
+import type { OpenTool, RepairClass } from "../prompts/index.ts";
 import { ProviderError, type Provider, type Routes } from "../providers/index.ts";
 import { saveVersion, loadVersion } from "../versions/index.ts";
 import {
@@ -13,6 +13,7 @@ import {
   type Store,
 } from "../workspaces/index.ts";
 import { createTool } from "./create.ts";
+import type { SmokeRepairContext } from "./smoke.ts";
 
 // A request, carried out as far as the server goes (GEN-01, GEN-04): the intent stage decides
 // what it is, the create stage makes a candidate, and the candidate is stored with its workspace
@@ -37,6 +38,7 @@ export async function generate(
   routes: Routes,
   input: GenerateRequest,
   signal?: AbortSignal,
+  remember?: (context: SmokeRepairContext) => void,
 ): Promise<GenerateReply> {
   const open = openTool(store, input.workspaceId);
   let decision;
@@ -64,10 +66,12 @@ export async function generate(
       // Changing an open tool comes with the edit and data stages (#146, #150).
       return { kind: "answer", answer: "not_yet" };
   }
+  const repairUsage: Partial<Record<RepairClass, number>> = {};
   const created = await createTool(provider, routes, {
     request: decision.interfacePart,
     intent: decision.intent,
     signal,
+    repairUsage,
   });
   if (created.kind === "cannot")
     return { kind: "answer", answer: "cannot", reason: created.reason };
@@ -90,8 +94,8 @@ export async function generate(
     }
     return createWorkspace(store, created.name, { data: created.startingData });
   });
-  return {
-    kind: "candidate",
+  const reply = {
+    kind: "candidate" as const,
     workspaceId: workspace.id,
     hash,
     mountId: candidateMount(hash),
@@ -101,4 +105,6 @@ export async function generate(
     name: created.name,
     summary: created.summary,
   };
+  remember?.({ reply, request: decision.interfacePart, intent: decision.intent, repairUsage });
+  return reply;
 }

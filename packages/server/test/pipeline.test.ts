@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   DEFAULT_ROUTES,
   GENERATE_ROUTE,
+  SMOKE_REPAIR_ROUTE,
   generateReplySchema,
   TOOL_DATA_LIMIT_BYTES,
   type Creation,
@@ -14,6 +15,7 @@ import {
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { generate, generationRoutes } from "../src/generation/index.ts";
+import { repairSmoke, type SmokeRepairContext } from "../src/generation/smoke.ts";
 import { workspaceTools } from "../src/host/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
@@ -25,6 +27,7 @@ import {
   createWorkspace,
   getWorkspace,
   listWorkspaces,
+  replaceData,
   saveTool,
 } from "../src/workspaces/index.ts";
 
@@ -91,6 +94,101 @@ const createReply = (value: unknown) => ({ kind: "value", stage: "create", value
 const repairReply = (value: unknown) => ({ kind: "value", stage: "repair", value });
 
 describe("carrying out a request (GEN-01, GEN-05)", () => {
+  it("GEN-09: smoke repair retains earlier class budgets and quotes the stored answer with the original language", async () => {
+    const folder = await newFolder();
+    let context: SmokeRepairContext | undefined;
+    const unsafe = { ...tool, code: { ...tool.code, html: '<iframe src="x"></iframe>' } };
+    await generate(
+      folder,
+      script(
+        intentReply({ kind: "create", language: "pt-BR" }),
+        createReply(unsafe),
+        repairReply(tool),
+      ),
+      DEFAULT_ROUTES,
+      { request: "Uma lista de compras" },
+      undefined,
+      (c) => {
+        context = c;
+      },
+    );
+    if (!context) throw new Error("Expected continuation");
+    expect(context.repairUsage).toEqual({ static: 1 });
+    let calls = 0;
+    const scripted = script(repairReply(unsafe));
+    const result = await repairSmoke(
+      folder,
+      {
+        ...scripted,
+        async run(spec) {
+          calls++;
+          expect(spec.stage).toBe("repair");
+          expect(spec.timeLimitMs).toBe(180_000);
+          expect(spec.promptParts?.some((p) => p.startsWith("repair-smoke@"))).toBe(true);
+          expect(spec.prompt).toContain("pt-BR");
+          expect(spec.prompt).toContain(tool.code.js);
+          expect(spec.prompt).toContain("The tool shows nothing.");
+          return scripted.run(spec);
+        },
+      },
+      DEFAULT_ROUTES,
+      {
+        workspaceId: context.reply.workspaceId,
+        hash: context.reply.hash,
+        findings: ["The tool shows nothing."],
+      },
+      context,
+    );
+    expect(result).toMatchObject({ kind: "failed", failure: "static" });
+    expect(calls).toBe(1);
+    folder.close();
+  });
+
+  it("GEN-09, GEN-05: changed workspaces and data declarations are refused, and provider failures get no repair", async () => {
+    for (const scenario of ["stale", "data", "provider"] as const) {
+      const folder = await newFolder();
+      let context: SmokeRepairContext | undefined;
+      await generate(
+        folder,
+        script(intentReply({ kind: "create" }), createReply(tool)),
+        DEFAULT_ROUTES,
+        { request: "A shopping list" },
+        undefined,
+        (c) => {
+          context = c;
+        },
+      );
+      if (!context) throw new Error("Expected continuation");
+      const request = {
+        workspaceId: context.reply.workspaceId,
+        hash: context.reply.hash,
+        findings: ["No label"],
+      };
+      if (scenario === "stale")
+        replaceData(folder, getWorkspace(folder, request.workspaceId)!, { items: [] });
+      const before = getWorkspace(folder, request.workspaceId);
+      const changed = {
+        ...tool,
+        data: {
+          ...tool.data,
+          reusableDefaults: { items: [{ id: "x", title: "Changed" }] },
+          initialState: {},
+        },
+      };
+      const provider =
+        scenario === "provider"
+          ? script({ kind: "error", stage: "repair", error: "time_limit" })
+          : script(repairReply(changed));
+      const result = await repairSmoke(folder, provider, DEFAULT_ROUTES, request, context);
+      expect(result).toMatchObject({
+        kind: "failed",
+        failure: scenario === "provider" ? "provider" : "smoke",
+      });
+      expect(getWorkspace(folder, request.workspaceId)).toEqual(before);
+      folder.close();
+    }
+  });
+
   it("GEN-01, GEN-05: a new tool is stored with a workspace holding its starting data, ready to stage", async () => {
     const folder = await newFolder();
     const provider = script(intentReply({ kind: "create" }), createReply(tool));
@@ -289,13 +387,18 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
 
 describe("the generate route (GEN-01, CLI-06)", () => {
   type Answer = { status: number; body: string };
-  const send = (port: number, method: string, body?: string): Promise<Answer> =>
+  const send = (
+    port: number,
+    method: string,
+    body?: string,
+    route = GENERATE_ROUTE,
+  ): Promise<Answer> =>
     new Promise((resolve, reject) => {
       const req = http.request(
         {
           host: "127.0.0.1",
           port,
-          path: GENERATE_ROUTE,
+          path: route,
           method,
           headers: { origin: `http://127.0.0.1:${port}`, "content-type": "application/json" },
         },
@@ -308,6 +411,87 @@ describe("the generate route (GEN-01, CLI-06)", () => {
       req.on("error", reject);
       req.end(body);
     });
+
+  it("GEN-09, GEN-05: smoke repair uses the stored candidate once and preserves starting data", async () => {
+    const folder = await newFolder();
+    const provider = script(
+      intentReply({ kind: "create" }),
+      createReply(tool),
+      repairReply({
+        ...tool,
+        code: { ...tool.code, html: "<h1>Repaired list</h1>" },
+        data: { ...tool.data, initialState: {} },
+      }),
+    );
+    const server = await startLocalServer({
+      port: 0,
+      routes: generationRoutes({
+        store: folder,
+        jobs: new JobQueue({ atOnce: 2 }),
+        provider: () => Promise.resolve(provider),
+        routes: () => DEFAULT_ROUTES,
+      }),
+    });
+    try {
+      const initial = generateReplySchema.parse(
+        JSON.parse(
+          (await send(server.port, "POST", JSON.stringify({ request: "A shopping list" }))).body,
+        ),
+      );
+      if (initial.kind !== "candidate") throw new Error("Expected initial candidate");
+      const before = getWorkspace(folder, initial.workspaceId)!;
+      const request = JSON.stringify({
+        workspaceId: initial.workspaceId,
+        hash: initial.hash,
+        findings: ["The tool shows nothing."],
+      });
+      const answers = await Promise.all([
+        send(server.port, "POST", request, SMOKE_REPAIR_ROUTE),
+        send(server.port, "POST", request, SMOKE_REPAIR_ROUTE),
+      ]);
+      const replies = answers.map((answer) => generateReplySchema.parse(JSON.parse(answer.body)));
+      const repaired = replies.find((reply) => reply.kind === "candidate");
+      expect(replies.filter((reply) => reply.kind === "failed")).toMatchObject([
+        { kind: "failed", failure: "smoke" },
+      ]);
+      expect(repaired).toMatchObject({
+        kind: "candidate",
+        workspaceId: initial.workspaceId,
+        expectedDataRevision: before.dataRevision,
+      });
+      expect(getWorkspace(folder, initial.workspaceId)).toEqual(before);
+      expect(listWorkspaces(folder)).toHaveLength(1);
+      if (repaired?.kind !== "candidate") throw new Error("Expected repaired candidate");
+      expect(repaired.hash).not.toBe(initial.hash);
+      expect(
+        JSON.parse((await send(server.port, "POST", request, SMOKE_REPAIR_ROUTE)).body),
+      ).toMatchObject({ kind: "failed", failure: "smoke" });
+      expect(
+        JSON.parse(
+          (
+            await send(
+              server.port,
+              "POST",
+              JSON.stringify({
+                workspaceId: repaired.workspaceId,
+                hash: repaired.hash,
+                findings: ["Still broken"],
+              }),
+              SMOKE_REPAIR_ROUTE,
+            )
+          ).body,
+        ),
+      ).toMatchObject({ kind: "failed", failure: "smoke" });
+      expect(
+        activateVersion(folder, repaired.workspaceId, repaired.hash, repaired.expectedDataRevision),
+      ).toMatchObject({ ok: true, workspace: { data: before.data } });
+      expect((await send(server.port, "POST", "{}", SMOKE_REPAIR_ROUTE)).status).toBe(400);
+      expect((await send(server.port, "GET", undefined, SMOKE_REPAIR_ROUTE)).status).toBe(405);
+    } finally {
+      await server.close();
+      folder.close();
+    }
+  });
 
   it("GEN-01: answers a request with its outcome, as a job; refuses other methods and empty requests", async () => {
     const folder = await newFolder();
