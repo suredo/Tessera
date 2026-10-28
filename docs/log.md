@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-28
+
+* **Update**: The [web package](code/web/package.md) describes isolating lint-rule snippets in a small typed fixture project for [issue 177](https://github.com/suredo/Tessera/issues/177), preserving the production ESLint rules, assertions and timeout.
+
 ## 2026-10-27
 
 * **Update**: Smoke repair for [issue 146](https://github.com/suredo/Tessera/issues/146): the [generation stages](code/server/generation.md) describe a one-use server continuation with shared class budgets and unchanged starting data; [prompt assembly](code/server/prompts.md) adds `repair-smoke`; the [contracts](code/contracts/package.md) and [web package](code/web/package.md) describe the bounded failure report and staging the repaired candidate once. Scripted browser tests cover successful repair with preserved entries and a repeated smoke failure. No live calls were made; the new prompt's live check awaits an approved budget.

@@ -3,19 +3,31 @@ import { fileURLToPath } from "node:url";
 import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 
-// Lints small components with the repository's own ESLint config, as if they were web code.
+// Lints small components with the repository's own ESLint config and type-aware rules. The
+// fixture's small TS project avoids loading App.tsx's whole application/e2e graph for each test
+// worker (#177); assertions, enabled rules and timeouts stay the same.
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const fixture = path.join(repo, "packages/web/test/fixtures/lint/App.tsx");
 const eslint = new ESLint({ cwd: repo });
 const rulesBroken = async (code: string): Promise<(string | null)[]> => {
   const [result] = await eslint.lintText(code, {
-    filePath: path.join(repo, "packages/web/src/App.tsx"),
+    filePath: fixture,
   });
   return (result?.messages ?? []).map((m) => m.ruleId);
 };
 
 describe("web lint rules", { timeout: 60_000 }, () => {
+  it("keeps type-aware rules enabled in the small fixture project (ENG-04)", async () => {
+    const code = `export function App() {
+  const value = JSON.parse("{}");
+  return <h1>{value.title}</h1>;
+}
+`;
+    expect(await rulesBroken(code)).toContain("@typescript-eslint/no-unsafe-assignment");
+  });
+
   it("passes a component whose text comes from the translation layer (UX-05)", async () => {
-    const code = `import { t } from "./i18n/translate.ts";
+    const code = `import { t } from "../../../src/i18n/translate.ts";
 export function App({ open, draft }: { open: boolean; draft: string }) {
   return (
     <form title={t("app.title")}>
