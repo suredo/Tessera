@@ -1,14 +1,32 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { DEFAULT_ROUTES } from "@tessera/contracts";
-import { ProviderError, type Provider } from "@tessera/server";
+import { DEFAULT_ROUTES, creationSchema } from "@tessera/contracts";
+import { candidateFrom, ProviderError, type Provider } from "@tessera/server";
 import { startHarness, readLedger } from "../src/index.ts";
 import { cancellableProvider } from "../spikes/smoke-repair/run.ts";
 
 describe("smoke evaluation cleanup (ENG-07)", () => {
+  it("GEN-09: the recorded live smoke repair still passes the server checks with unchanged defaults", () => {
+    const replay = JSON.parse(
+      fs.readFileSync(
+        fileURLToPath(
+          new URL("../spikes/smoke-repair/replays/smoke-repair-2026-10-28.json", import.meta.url),
+        ),
+        "utf8",
+      ),
+    ) as { replays: { answer: unknown }[] };
+    const creation = creationSchema.parse(replay.replays[0]!.answer);
+    expect(creation.outcome).toBe("tool");
+    if (creation.outcome !== "tool") throw new Error("Expected a repaired tool");
+    expect(candidateFrom(creation)).toMatchObject({ kind: "candidate", name: "Shopping list" });
+    expect(creation.data.reusableDefaults).toEqual({ items: [] });
+    expect(creation.data.initialState).toEqual({});
+  });
+
   it("ENG-07: aborts and settles a delayed call before its final cost is recorded", async () => {
     const folder = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-smoke-cleanup-"));
     let began!: () => void;

@@ -7,7 +7,7 @@ implements: [ENG-07, ENG-16]
 tests: [../../../evals/test/smoke-repair.test.ts]
 tags: [code, evals, repair, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-28T02:36:48Z }
+generated: { by: codex/gpt-6, at: 2026-10-28T03:04:52Z }
 ---
 
 # Purpose
@@ -27,7 +27,7 @@ Rehearses and checks smoke repair from [issue 146](https://github.com/suredo/Tes
 
 # Limits
 
-One successful case establishes that the new prompt can repair this failure, not its general success rate. The request and fixture are synthetic. The live check remains pending until the owner approves its cap and a run is recorded.
+The [live check](../../../evals/reports/2026-10-28-smoke-repair.md) passed in one call of the approved three; its sanitized answer is in `replays/smoke-repair-2026-10-28.json` and is replayed through the server checks in the test. One case establishes that the new prompt can repair this failure, not its general success rate. The request and fixture are synthetic; added behavior and the known tool-frame clipping remain outside this check.
 
 # Symbols (generated)
 
