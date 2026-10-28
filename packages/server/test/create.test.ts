@@ -467,7 +467,7 @@ describe("repair by failure class (GEN-09)", () => {
       { kind: "value", stage: "repair", value: { ...repaired, code: frame } },
     );
     const result = await createTool(provider, DEFAULT_ROUTES, { request: "A shopping list" });
-    expect(REPAIR_BUDGETS).toEqual({ "schema-shape": 1, static: 1 });
+    expect(REPAIR_BUDGETS).toEqual({ "schema-shape": 1, static: 1, smoke: 1 });
     expect(result).toMatchObject({ kind: "failed", failure: "static", repairs: 2 });
     expect(
       calls.map((c) => c.promptParts?.find((p) => p.startsWith("repair-"))?.split("@")[0]),

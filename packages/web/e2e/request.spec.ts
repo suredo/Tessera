@@ -91,6 +91,32 @@ const steps: Step[] = [
   // 5 and 6. A request that matches a saved tool, twice.
   { stage: "intent", value: () => ({ ...intent("open_saved"), savedToolId }) },
   { stage: "intent", value: () => ({ ...intent("open_saved"), savedToolId }) },
+  // 7. A static-safe tool fails smoke; its repair preserves the request's entries.
+  { stage: "intent", value: intent("new_tool") },
+  {
+    stage: "create",
+    value: {
+      ...shoppingList,
+      code: { ...shoppingList.code, html: '<h1>Shopping list</h1><ul id="items"></ul><input>' },
+    },
+  },
+  { stage: "repair", value: { ...shoppingList, data: { ...shoppingList.data, initialState: {} } } },
+  // 8. Another smoke failure after the one repair never activates.
+  { stage: "intent", value: intent("new_tool") },
+  {
+    stage: "create",
+    value: {
+      ...shoppingList,
+      code: { ...shoppingList.code, html: '<h1>Shopping list</h1><ul id="items"></ul><input>' },
+    },
+  },
+  {
+    stage: "repair",
+    value: {
+      ...shoppingList,
+      code: { ...shoppingList.code, html: '<h1>Shopping list</h1><ul id="items"></ul><input>' },
+    },
+  },
 ];
 let savedToolId = "";
 const provider: Provider = {
@@ -190,4 +216,27 @@ test("GEN-18: a request matching a saved tool offers Continue or Use again, and 
   await page.getByRole("button", { name: "Continue Weekly shop" }).click();
   await expect(page.getByText("Weekly shop is open again.")).toBeVisible();
   expect(listWorkspaces(app.folder)).toHaveLength(before + 1);
+});
+
+test("GEN-09, GEN-05: a smoke failure gets one repair, staged again, without losing or duplicating starting entries", async ({
+  page,
+}) => {
+  await page.goto(app.url);
+  const before = listWorkspaces(app.folder).length;
+  await ask(page, "A new shopping list with milk and eggs");
+  await expect(page.getByText("Shopping list is ready. A list of what to buy.")).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
+  expect(listWorkspaces(app.folder)).toHaveLength(before + 1);
+});
+
+test("GEN-09, GEN-08: a repeated smoke failure is never activated or called ready", async ({
+  page,
+}) => {
+  await page.goto(app.url);
+  await ask(page, "Another shopping list");
+  await expect(page.getByText(en["request.checkFailed"])).toBeVisible({ timeout: 30_000 });
+  expect(listWorkspaces(app.folder).filter((w) => w.currentVersion === null)).toHaveLength(1);
+  expect(steps).toHaveLength(0);
 });

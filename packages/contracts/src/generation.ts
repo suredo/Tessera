@@ -2,6 +2,7 @@ import { z } from "zod";
 import { UI_MODES } from "./artifact.ts";
 import { BRIDGE_CAPABILITIES } from "./bridge.ts";
 import { jsonObjectSchema } from "./json.ts";
+import { versionHashSchema } from "./workspace.ts";
 
 // What the generation stages answer, and how their failures are classed (CON-02, GEN-05, GEN-09).
 // Each answer is a discriminated union, so a field exists only where it means something, and no
@@ -80,6 +81,15 @@ export const generateRequestSchema = z
   })
   .describe("A request for Tessera to carry out (GEN-01).");
 export type GenerateRequest = z.infer<typeof generateRequestSchema>;
+
+/** The browser reports a staged candidate's smoke failure, once (GEN-09). */
+export const SMOKE_REPAIR_ROUTE = "/api/generate/repair-smoke";
+export const smokeRepairRequestSchema = z.strictObject({
+  workspaceId: z.uuid(),
+  hash: versionHashSchema,
+  findings: z.array(z.string().min(1).max(8000)).min(1).max(20),
+});
+export type SmokeRepairRequest = z.infer<typeof smokeRepairRequestSchema>;
 
 /** What the host can say instead of making a tool, for the chat to word (GEN-08). */
 export const GENERATE_ANSWERS = [

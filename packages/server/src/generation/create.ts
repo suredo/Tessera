@@ -36,6 +36,7 @@ export const REPAIR_TIME_LIMIT_MS = 180_000;
 export const REPAIR_BUDGETS: Readonly<Record<RepairClass, number>> = {
   "schema-shape": 1,
   static: 1,
+  smoke: 1,
 };
 
 type ToolData = Artifact["data"]["defaults"];
@@ -210,6 +211,10 @@ export type CreateInput = {
   request: string;
   intent?: Intent;
   signal?: AbortSignal;
+  /** Counts carried across the server checks and browser staging of this request. */
+  repairUsage?: Partial<Record<RepairClass, number>>;
+  /** Resume creation at a repair after a failure reported by browser staging. */
+  repair?: Repair;
 };
 
 const repairable = (failure: FailureClass): failure is RepairClass =>
@@ -226,10 +231,19 @@ export async function createTool(
   routes: Routes,
   input: CreateInput,
 ): Promise<CreateResult> {
-  const used: Partial<Record<RepairClass, number>> = {};
+  const used = input.repairUsage ?? {};
   let repairs = 0;
   let attempt: Extract<Creation, { outcome: "tool" }> | undefined;
-  let result = await ask(provider, routes, input, {});
+  if (input.repair?.failure) {
+    const failure = input.repair.failure;
+    if ((used[failure] ?? 0) >= REPAIR_BUDGETS[failure]) {
+      return { kind: "failed", failure, findings: [...(input.repair.diagnostics ?? [])] };
+    }
+    used[failure] = (used[failure] ?? 0) + 1;
+    repairs += 1;
+    attempt = input.repair.attempt;
+  }
+  let result = await ask(provider, routes, input, input.repair ?? {});
   for (;;) {
     if (result.answer) attempt = result.answer;
     const { outcome } = result;
@@ -266,7 +280,7 @@ async function ask(
     stage,
     request: input.request,
     intent: input.intent,
-    uiMode: "standard",
+    uiMode: repair.attempt?.uiMode ?? "standard",
     ...repair,
   });
   let creation: Creation;

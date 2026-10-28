@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts, ../../../packages/web/test/generate.test.ts, ../../../packages/web/e2e/request.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T10:07:53Z }
+generated: { by: codex/gpt-6, at: 2026-10-28T02:36:48Z }
 ---
 
 # Purpose
@@ -40,6 +40,10 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 # Invariants
 
+- **Lint-rule snippets use a small typed project** (`ENG-20`, [issue 177](https://github.com/suredo/Tessera/issues/177)). `test/lint.test.ts` uses the repository's unchanged ESLint configuration on `test/fixtures/lint/App.tsx`, whose own tsconfig includes only the fixture and its imports. It no longer loads the real app and all browser tests for a few snippets. The original timeout and assertions remain, with an added unsafe-assignment case proving type-aware rules still run.
+
+- **A smoke failure gets one repair before the final outcome** (`GEN-09`). `carryOut` sends a failed candidate's workspace, hash and complete smoke reason through `askToRepairSmoke`, then stages the repair behind the same smoke check. A startup failure can use this repair too; cancellation and activation refusal cannot. A second smoke failure ends the request. The reply's name and summary are used only after its activation; a repair failure or cannot answer is worded as that outcome. Scripted browser tests cover a repaired unlabelled field with the starting entries preserved, and a second failure that never activates.
+
 - **No host text in components** (`UX-05`). A component asks `t("key")` for every word it shows, including `aria-label`, `title`, `alt`, `placeholder`, `label`, and the `value` of a submit, button or reset input. The lint rule `tessera/no-host-text` (`scripts/eslint/no-host-text.mjs`) fails on text written in a component, also when it is reached through a condition, a fallback, a concatenation, a template or a list. It never looks inside a function call, so `t("key")` passes.
 - **Chrome and Edge are the supported browsers** (`RUN-06`): the browser tests run in both, and CI runs them. Firefox is best effort and isn't tested. Embedded browser panes that can't load nested sandboxed frames are unsupported; the Claude desktop app's built-in pane couldn't mount the POC's tools.
 - **A missing key is visible, never silent.** The translator falls back to English for a key another language lacks; a key no language has shows as the key itself. Either way it reports the gap through its `onMissing` handler, which warns in the console by default.
@@ -57,7 +61,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 - **The trash is never out of reach.** After the last workspace is deleted, the first-run screen offers the trash while it holds something, so that workspace can come back.
 - **An import says what came in, then opens it** (`APP-06`): the workspace by name, with its saved tools, and when something with the same IDs was already here, that it came in as a copy and nothing here changed. A refused file shows the server's plain reason, and nothing comes in.
 - **The host is accessible** (`APP-11`). `e2e/a11y.spec.ts` runs axe (`@axe-core/playwright`) on every host screen, form and confirmation, on the sample workspaces (the [development data](../scripts/dev-data.md)): the first-run screen, the main screen with a running tool, full screen, a restore that keeps the data and one that would lose some, a workspace's rename and save forms, my tools and its two naming forms, and the trash with its emptying confirmation. It fails on any WCAG 2.2 A or AA violation, leaving out a tool's own frame, which has its own floor (`RUN-05`). It also checks directly what a checker can't judge: on each of those screens, the first-run screen included, nothing moves when reduced motion is asked for, and the app works by keyboard alone, reaching each control with Tab and Shift+Tab, into a form and a confirmation, with the focus showing a 3 px outline on each.
-- **A request becomes a running tool only through staging.** The server makes a candidate and stores it with its workspace and starting data ([generation stages](../server/generation.md)); the app stages it behind the smoke check, and only an activated one is called ready and opens. A candidate that fails its check, or is refused, is never called ready. The server has already tried its repairs (`GEN-09`) before it answers; the scripted browser test runs a tool that fails the static check again after its repair, and the app still says plainly that nothing was made.
+- **A request becomes a running tool only through staging.** The server makes a candidate and stores it with its workspace and starting data ([generation stages](../server/generation.md)); the app stages it behind the smoke check, and only an activated one is called ready and opens. A candidate that fails its check, or is refused, is never called ready. The server tries schema and static repairs before answering; smoke repair follows browser staging (`GEN-09`). The scripted browser tests cover a static failure after repair, a successful smoke repair and a repeated smoke failure.
 - **Every outcome is said in plain words** (`GEN-08`, in part): clarify, unsupported, "cannot" with the model's reason, ask to split, "not yet" for changes to a tool, and a failure with its plain message. The full outcome messages, with verified facts, come with #150.
 - **The request box is offered only once the setup check passes** (`PLAT-03`), on the first-run screen and above the open tool. The app, not the box, knows a request is running, so leaving the screen and coming back never lets a second one in while the first runs.
 - **A saved tool a request matches is offered, never opened** (`GEN-18`): the notice names it, with Continue (its linked workspace, as it was left) and Use again (a new workspace from its starting data), and nothing opens until the person chooses.
@@ -94,7 +98,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `src/Trash.tsx`: `Trash`
 - `src/Workspaces.tsx`: `Workspaces`
 - `src/archives.ts`: `exportArchive`, `importArchive`, `saveFile`
-- `src/generate.ts`: `askToGenerate`, `RequestOutcome` (type), `RequestDeps` (type), `carryOut`
+- `src/generate.ts`: `askToGenerate`, `askToRepairSmoke`, `RequestOutcome` (type), `RequestDeps` (type), `carryOut`
 - `src/host-api.ts`: `HostError`, `Send` (type), `ask`
 - `src/i18n/en.ts`: `en`, `MessageKey` (type)
 - `src/i18n/translate.ts`: `Messages` (type), `Params` (type), `Translate` (type), `MissingHandler` (type), `createTranslator`, `t`

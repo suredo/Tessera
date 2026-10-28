@@ -7,12 +7,12 @@ implements: [GEN-05, CON-02]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/pipeline.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T10:00:28Z }
+generated: { by: codex/gpt-6, at: 2026-10-27T20:59:32Z }
 ---
 
 # Purpose
 
-The core of generation (#146): a request's interface part becomes a candidate tool, or an honest "no tool can do this". The create stage makes a candidate; the pipeline carries a request through the intent stage and creation, and stores the candidate with its workspace and starting data, ready for the host app to stage and activate. A candidate that fails the host's checks is repaired by its failure class first. Edits, and the repair of smoke failures, follow.
+The core of generation (#146): a request's interface part becomes a candidate tool, or an honest "no tool can do this". The create stage makes a candidate; the pipeline carries a request through the intent stage and creation, and stores the candidate with its workspace and starting data, ready for the host app to stage and activate. A candidate that fails the host's checks is repaired by its failure class first, including smoke failures reported by browser staging. Edits follow.
 
 # Entry points
 
@@ -22,6 +22,7 @@ The core of generation (#146): a request's interface part becomes a candidate to
   - `startingDataOf` builds a new workspace's data from the defaults and the request's entries.
 - `src/generation/pipeline.ts`: `generate` carries out a request as far as the server goes.
 - `src/generation/routes.ts`: `generationRoutes` answers the host app's requests on the generate route, each run as a job (`CLI-06`); `GenerationOptions` gives it the store, the job queue, the provider and the routes.
+- `src/generation/smoke.ts`: `repairSmoke` loads the failed stored version and repairs it using the original interface request, intent language, diagnostics and remaining class budgets. `SmokeRepairContext` is the server-owned continuation remembered by the route.
 - The answer's contract is the contracts' creation schema, with the failure classes beside it ([contracts](../contracts/package.md)). The stage's prompt adds the create part to the [prompt assembly](prompts.md).
 
 # Invariants
@@ -38,7 +39,7 @@ The core of generation (#146): a request's interface part becomes a candidate to
   - static: findings with the part and line;
   - provider: any other failure of the call (sign-in, limits, time), which is never repaired.
 
-  Smoke and behavior failures come from staging and M3.
+  Smoke failures come from browser staging; behavior failures wait for M3.
 - **A failure of the host's checks is repaired by its class** (`GEN-09`). Schema-shape and static failures go to the repair stage, on its own route (Sonnet medium, `CLI-09`), with their class's prompt part, what the checks found and the failed answer quoted, or, for an answer of the wrong shape, the request alone. The repair answers as creation does, and its answer goes through the same checks. Each class has its own budget in one request, one repair each for now, so a static failure after a shape repair still gets its own, and the result says how many repairs it took (A40). A provider failure, in creation or in a repair, is never repaired. A repair may also answer "cannot".
 - **The prompt's schema keywords are the host's own list,** the one the data shape is checked against, so the model is told exactly what passes.
 
@@ -48,7 +49,9 @@ The core of generation (#146): a request's interface part becomes a candidate to
   - A change to the open tool (edit, data, mixed) is answered "not yet" until the edit and data stages exist.
   - Create and new tool run the create stage on the interface part. A checked candidate is stored, and its workspace starts with its starting data: the open workspace if it has no tool and no data yet, or a new one, named after the tool.
   - The reply gives the candidate's mount (`v-` and its hash) and its defaults as synthetic data, for staging (`RUN-03`). The host app stages it behind the smoke check and activates it (`DATA-10`), and activation keeps the starting data.
-- **A failure stores nothing.** A candidate that still fails the host's checks after its repairs is answered with a plain sentence and its findings. A provider failure, in either stage, gives the adapter's plain message. A setup problem, or a routes file Tessera can't use, is answered in plain words before any call.
+- **A creation failure stores nothing.** A candidate that still fails the server's checks after its repairs is answered with a plain sentence and its findings. A provider failure, in either stage, gives the adapter's plain message. A setup problem, or a routes file Tessera can't use, is answered in plain words before any call. A smoke failure happens after the initial candidate and starting workspace have been stored; its repair activates nothing and changes no workspace data.
+- **Smoke repair continues the same creation** (`GEN-09`). The browser sends the workspace, candidate hash and smoke reason to `/api/generate/repair-smoke`, which answers with the generation reply contract. The route retains at most 100 continuations for seven minutes after creation, with the original request, intent and repair counts. It consumes a continuation before calling repair, so duplicate or concurrent reports cannot buy another repair; a restart or expiry loses eligibility. The repaired candidate gets no new continuation. Schema and static failures from the repair use only their remaining budgets; provider failures are never repaired.
+- **Smoke repair never reinstalls starting data** (`GEN-05`). Its quoted failed answer comes from the stored artifact, with empty initial state. Repair must keep the data declaration and defaults; changes are refused before storing the repaired version. The workspace must still have no active version and the original data revision, both before and after the call. The browser stages the repaired version against defaults and activates it against that same revision. Existing entries are kept exactly once.
 - **One request at a time** (`CLI-06`): each runs as a job in the server's job queue.
 
 # Depends on / used by
@@ -57,7 +60,7 @@ The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md
 
 # Pitfalls
 
-- **The create prompt always assembles in standard mode.** A request for its own design can still answer custom, but its prompt carried the standard's look; a custom-mode first prompt waits for the intent stage to say so.
+- **The first create prompt always assembles in standard mode.** A request for its own design can still answer custom, but its prompt carried the standard's look; a custom-mode first prompt waits for the intent stage to say so. Repair uses the failed answer's mode when it has one.
 - **"cannot" overlaps the intent stage's unsupported.** The intent stage should catch those first; the create stage's answer is the second wall, not the main one.
 
 # Symbols (generated)
@@ -68,3 +71,4 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `index.ts`: `candidateFrom`, `createTool`, `GENERATION_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `REPAIR_TIME_LIMIT_MS`, `startingDataOf`, `Candidate` (type), `CreateInput` (type), `CreateResult` (type), `generate`, `generationRoutes`, `GenerationOptions` (type)
 - `pipeline.ts`: `generate`
 - `routes.ts`: `GenerationOptions` (type), `generationRoutes`
+- `smoke.ts`: `SmokeRepairContext` (type), `repairSmoke`

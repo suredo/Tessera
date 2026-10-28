@@ -1,6 +1,6 @@
 import type { GenerateReply } from "@tessera/contracts";
 import type { StagingResult } from "@tessera/runtime";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { carryOut, type RequestDeps } from "../src/generate.ts";
 import { en } from "../src/i18n/en.ts";
 
@@ -25,6 +25,7 @@ function deps(reply: GenerateReply, staged?: StagingResult) {
     stagings: [],
   };
   const fake: RequestDeps = {
+    repairSmoke: () => Promise.resolve(reply),
     generate: (request) => {
       seen.requests.push(request);
       return Promise.resolve(reply);
@@ -38,6 +39,56 @@ function deps(reply: GenerateReply, staged?: StagingResult) {
 }
 
 describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
+  it("GEN-09: stages a smoke repair once, reports its own outcome, and never repairs a cancellation or refusal", async () => {
+    const { fake, seen } = deps(candidate);
+    const repair = vi
+      .fn()
+      .mockResolvedValue({ ...candidate, hash: "b".repeat(64), name: "Fixed list" });
+    fake.repairSmoke = repair;
+    let attempts = 0;
+    fake.stage = (options) => {
+      seen.stagings.push(options);
+      return Promise.resolve<StagingResult>(
+        ++attempts === 1
+          ? { outcome: "check-failed", check: "smoke", reason: "2 fields have no label." }
+          : { outcome: "activated", workspace: {} as never, migrationCount: 0 },
+      );
+    };
+    expect(await carryOut("A list", null, fake)).toMatchObject({
+      message: "Fixed list is ready. A list to tick off at the store.",
+    });
+    expect(repair).toHaveBeenCalledWith({
+      workspaceId: candidate.workspaceId,
+      hash: candidate.hash,
+      findings: ["2 fields have no label."],
+    });
+    expect(seen.stagings.map((s) => s.candidate.hash)).toEqual([candidate.hash, "b".repeat(64)]);
+    fake.stage = () =>
+      Promise.resolve({ outcome: "check-failed", check: "smoke", reason: "Still broken" });
+    repair.mockClear();
+    expect(await carryOut("A list", null, fake)).toEqual({ message: en["request.checkFailed"] });
+    expect(repair).toHaveBeenCalledTimes(1);
+    fake.stage = () =>
+      Promise.resolve({ outcome: "check-failed", check: "cancelled", reason: "Cancelled" });
+    repair.mockClear();
+    await carryOut("A list", null, fake);
+    expect(repair).not.toHaveBeenCalled();
+    fake.stage = () =>
+      Promise.resolve({
+        outcome: "check-failed",
+        check: "start",
+        reason: "Could not start",
+      });
+    repair.mockResolvedValue({
+      kind: "failed",
+      failure: "provider",
+      message: "The request was stopped.",
+      findings: [],
+    });
+    expect(await carryOut("A list", null, fake)).toEqual({
+      message: "That didn't work. The request was stopped.",
+    });
+  });
   it("RUN-03, VER-02: a candidate is staged behind the smoke check, and only an activated one is called ready", async () => {
     const { fake, seen } = deps(candidate, {
       outcome: "activated",
