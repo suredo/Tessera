@@ -7,7 +7,7 @@ implements: [DATA-05, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07]
 tests: [../../../packages/server/test/archives.test.ts]
 tags: [code, server, data, archives, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T04:21:07Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T20:41:27Z }
 ---
 
 # Purpose
@@ -26,6 +26,7 @@ Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), wit
 
 # Invariants
 
+- **Imported code uses its own capabilities in the static check.** Unknown bridge methods/actions, borrowed bridge access and calls needing an undeclared capability refuse the entire archive before writes. Declared clock calls remain valid. This shares the create/edit gate, including its partial `VER-01` scope.
 - **The format.** A ZIP file with `manifest.json` (format `tessera-archive`, format version 2, what was exported and when, the workspace with its history, the saved tools, and the images it names with their rows) and each tool version's canonical JSON as `versions/<hash>.json`, and each image's bytes as `assets/<id>`. Nothing else is accepted. A format 1 archive, from before images, still imports.
 - **An export carries the images what it carries names** (`DATA-11`): those named in its workspaces' data and tool versions, exactly what import checks against, so a workspace's photos travel with it and come back on import with their dates. Undo history and recovery snapshots don't travel, so neither do images only they name; the archive still imports.
 - **Exactly back.** Importing an export into an empty data folder gives the same IDs, titles, data, data revisions, version history, version bodies, saved tools and times; a test exports, deletes the whole data folder, imports and compares. What is in the [trash](trash.md) isn't exported.

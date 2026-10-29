@@ -238,11 +238,14 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
       expect(refusedJs(js), js).toBe(true);
     }
     // Together with the accepted HTML: the pair is refused, through its JavaScript.
-    const pair = staticCheck({
-      html: '<a id="go">Go</a>',
-      css: "",
-      js: 'const a = document.getElementById("go"); a.href = "https://leak.example"; a.click();',
-    });
+    const pair = staticCheck(
+      {
+        html: '<a id="go">Go</a>',
+        css: "",
+        js: 'const a = document.getElementById("go"); a.href = "https://leak.example"; a.click();',
+      },
+      [],
+    );
     expect(pair.ok).toBe(false);
   });
 
@@ -336,12 +339,39 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
   });
 });
 
+describe("bridge static checks (VER-01, CAP-01)", () => {
+  const fixtures = JSON.parse(
+    fs.readFileSync(new URL("./fixtures/static-bridge.json", import.meta.url), "utf8"),
+  ) as { passing: string[]; failing: string[] };
+  it("VER-01: direct declared API and unrelated local objects pass", () => {
+    for (const js of fixtures.passing) expect(checkJs(js, ["clock"]), js).toEqual([]);
+  });
+  it("VER-01: unknown methods/actions and hidden bridge access fail closed", () => {
+    for (const js of fixtures.failing) {
+      const findings = checkJs(js, ["clock"]);
+      expect(findings.length, js).toBeGreaterThan(0);
+      expect(
+        findings.every((f) => f.message.length > 30),
+        js,
+      ).toBe(true);
+    }
+  });
+  it("VER-01, CAP-01: the actual artifact capabilities decide whether an action passes", () => {
+    const code = { html: "<p>Clock</p>", css: "", js: "\ntessera.call('clock.now');" };
+    expect(staticCheck(code, [])).toMatchObject({
+      ok: false,
+      findings: [{ part: "js", line: 2, message: expect.stringContaining('"clock" capability') }],
+    });
+    expect(staticCheck(code, ["clock"])).toEqual({ ok: true });
+  });
+});
+
 describe("real tools (VER-01)", () => {
   it("VER-01: the prompt fixture's shopping list and every development sample pass", async () => {
     const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "prompts");
     const part = (name: string) =>
       fs.readFileSync(path.join(fixtures, `shopping-list.${name}.txt`), "utf8");
-    expect(staticCheck({ html: part("html"), css: part("css"), js: part("js") })).toEqual({
+    expect(staticCheck({ html: part("html"), css: part("css"), js: part("js") }, [])).toEqual({
       ok: true,
     });
 
@@ -357,7 +387,10 @@ describe("real tools (VER-01)", () => {
         if (!workspace.currentVersion) continue;
         const version = loadVersion(folder.db, workspace.currentVersion);
         if (version?.kind !== "ok") throw new Error(`${workspace.title} has no readable version`);
-        expect(staticCheck(version.artifact.code), workspace.title).toEqual({ ok: true });
+        expect(
+          staticCheck(version.artifact.code, version.artifact.capabilities),
+          workspace.title,
+        ).toEqual({ ok: true });
       }
     } finally {
       folder.close();
@@ -365,11 +398,14 @@ describe("real tools (VER-01)", () => {
   });
 
   it("VER-01: a tool with problems in both parts gets every finding", () => {
-    const result = staticCheck({
-      html: '<iframe src="x"></iframe>',
-      css: "",
-      js: 'location.href = "x"',
-    });
+    const result = staticCheck(
+      {
+        html: '<iframe src="x"></iframe>',
+        css: "",
+        js: 'location.href = "x"',
+      },
+      [],
+    );
     expect(result.ok).toBe(false);
     expect(!result.ok && [...new Set(result.findings.map((f) => f.part))]).toEqual(["html", "js"]);
   });

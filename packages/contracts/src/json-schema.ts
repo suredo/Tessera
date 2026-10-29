@@ -8,6 +8,7 @@ import {
   BRIDGE_ACTIONS,
   BRIDGE_CAPABILITIES,
   BRIDGE_MANIFEST_VERSION,
+  BRIDGE_METHODS,
   BRIDGE_MAX_DEPTH,
   BRIDGE_REQUEST_LIMIT_BYTES,
   bridgeDataRequestSchema,
@@ -74,6 +75,8 @@ export const bridgeManifest = () => ({
   manifestVersion: BRIDGE_MANIFEST_VERSION,
   requestLimitBytes: BRIDGE_REQUEST_LIMIT_BYTES,
   maxDepthCount: BRIDGE_MAX_DEPTH,
+  methods: BRIDGE_METHODS,
+  methodUsage: "Direct tessera.method(...) calls only.",
   capabilities: Object.entries(BRIDGE_CAPABILITIES).map(([name, description]) => ({
     name,
     description,

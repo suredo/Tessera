@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Intent } from "@tessera/contracts";
+import { bridgeManifest, type Intent } from "@tessera/contracts";
+import { Ajv } from "ajv";
 import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
 import { describe, expect, it } from "vitest";
 import {
@@ -127,6 +128,48 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(text).not.toContain(String(Number.MAX_SAFE_INTEGER));
     // A pattern stays where nothing else says it, as on record IDs.
     expect(text).toContain("^(?!__proto__$)[A-Za-z0-9_-]{1,64}$");
+  });
+
+  it("CON-03, GEN-03: compact bridge context preserves method signatures and empty-object/key constraints", () => {
+    const original = bridgeManifest();
+    const quoted = JSON.parse(manifestForPrompt()) as Omit<typeof original, "methods"> & {
+      methods: Record<string, string>;
+    };
+    expect(quoted.methods).toEqual(
+      Object.fromEntries(
+        Object.entries(original.methods).map(([name, method]) => [name, method.argument]),
+      ),
+    );
+    expect(quoted.methodUsage).toBe(original.methodUsage);
+    const ajv = new Ajv({ strict: false });
+    for (const [index, action] of original.actions.entries()) {
+      const compact = quoted.actions[index]!;
+      expect({ ...compact, args: null, result: null }).toEqual({
+        ...action,
+        args: null,
+        result: null,
+      });
+      const fullArgs = ajv.compile(action.args);
+      const shortArgs = ajv.compile(compact.args);
+      for (const value of [
+        null,
+        [],
+        {},
+        { extra: true },
+        ...action.examples.map((example) => example.args),
+      ]) {
+        expect(shortArgs(value), `${action.name}: ${JSON.stringify(value)}`).toBe(fullArgs(value));
+      }
+    }
+    const read = original.actions.find((action) => action.name === "data.read")!;
+    const compactRead = quoted.actions.find((action) => action.name === "data.read")!;
+    for (const value of [
+      { data: { items: [] }, revisions: { items: { "i-1": 1 } } },
+      { data: JSON.parse('{"__proto__":1}') as unknown, revisions: {} },
+      { data: {}, revisions: { items: { "bad id": 1 } } },
+    ]) {
+      expect(ajv.compile(compactRead.result)(value)).toBe(ajv.compile(read.result)(value));
+    }
   });
 
   it("GEN-02: parts follow the intent's structured fields and the tool's mode, never the request's words", () => {

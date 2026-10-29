@@ -1,13 +1,13 @@
 ---
 type: Code Module
 title: "Static check"
-description: "Every candidate's and imported tool's code, read with real parsers before it can run: no frames, navigation, HTML or code made at run time, or names built at run time on the page's objects (ADR 0009); the first rules of VER-01."
+description: "Every candidate's and imported tool's code, parsed before it runs: sandbox rules and direct bridge methods, actions and declared capabilities (ADR 0009); part of VER-01."
 resource: ../../../packages/server/src/checks/
 implements: [SBX-06, SBX-07]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T08:54:46Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T20:41:27Z }
 ---
 
 # Purpose
@@ -16,11 +16,13 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 
 # Entry points
 
-- `src/checks/static-check.ts`: `staticCheck` checks a tool's code and gives a `StaticCheckResult`. On failure it lists each `StaticFinding`: the part, the line, and a message saying what to do instead, for repair (`GEN-09`). `checkHtml` and `checkJs` check one part, and the HTML rules live here.
+- `src/checks/static-check.ts`: `staticCheck` checks a tool's code with its actual artifact capabilities and gives a `StaticCheckResult`. On failure it lists each `StaticFinding`: the part, the line, and a message saying what to do instead, for repair (`GEN-09`). `checkHtml` and `checkJs` check one part, and the HTML rules live here.
 - `src/checks/js-check.ts`: the JavaScript rules, with the tracking of which values may be the page or its elements.
 
 # Invariants
 
+- **Bridge calls use the shared manifest** (`VER-01`, in part). Only direct `tessera.method(...)` calls with a written-out method name are accepted. Methods come from contracts' `BRIDGE_METHODS`; action names and capability requirements come from `BRIDGE_ACTIONS`. `call` needs fixed action text, and its action must exist and have its capability declared. `assetUrl` accepts a computed image ID and checks its fixed underlying action; `send` takes a message and `onMessage` a listener, without treating either as an action name. Create, edit and import pass the artifact's actual capabilities before storage/staging.
+- **Borrowed bridge access fails at its source.** Storing, passing, returning, destructuring or computing `tessera` or its methods is refused with repair guidance, including `bind`, `call` and `apply`. Reaching it through a page object is refused too. Existing shadowing/write guards remain. This is restricted syntax, not complete JavaScript alias analysis: normal local objects may still have methods such as `call` or a `tessera` property. Existing prompt fixtures, development samples and sanitized live replays use direct calls; they provide no evidence that bridge aliases need support. These checks reuse the existing parsed tree walk without another convergence pass or dependency.
 - **No frames, embedded objects or script tags** (`SBX-06`): `<iframe>`, `<frame>`, `<object>`, `<embed>`, `<script>` (in SVG too), `<base>` and `<meta>`, in the HTML, in fixed HTML text written from the JavaScript, and created with `createElement`.
 - **No navigation** (`SBX-07`):
   - links whose address isn't `#` or empty;
@@ -66,8 +68,8 @@ acorn and parse5, pinned exactly. The [export and import](archives.md) module re
 
 # Pitfalls
 
-- **These are `VER-01`'s first rules, not all of them.** Undeclared bridge actions and capabilities, unknown methods, writes at startup and reading the system clock come next (#148).
-- **It runs on the server, before staging,** rather than as a staging check in the browser. It must also cover imports, which aren't staged, and code that fails never reaches the browser. #148's wording asked for the staging interface; the smoke check (#149) is the staging check.
+- **This is part of `VER-01`.** Writes at startup and reading the system clock remain follow-up work under #148; these bridge checks do not establish general JavaScript safety.
+- **It runs on the server, before staging,** rather than as a staging check in the browser. It must also cover imports, which aren't staged, and code that fails never reaches the browser. #148's original staging-interface criterion was corrected to this existing ADR 0009 gate; the smoke check (#149) keeps the browser staging interface.
 - **It can refuse ordinary code.** Over-approximating is the safe direction: indexing a list of elements with a variable, or a value that only might be the page, is refused, and repair rewrites it (loop with `for…of` or `forEach`, reach elements by id). The base prompt says so.
 - **It is defence in depth, not a closure** (ADR 0009, amended). A deliberately obfuscated leak can pass. Known gaps, from Codex's review of pull request 168, recorded rather than patched one by one:
   - properties and methods counted as plain by their name (such as `value` or `data`) whose value is an element the tool stored there;
