@@ -16,6 +16,8 @@ export type SmokeRepairContext = {
   repairUsage: Partial<Record<RepairClass, number>>;
   /** Null for creation; the still-active original version for an edit. */
   baseVersion: string | null;
+  /** Isolated from the edit stage; only planned after this candidate activates. */
+  dataPart?: string;
 };
 
 /** Repairs a stored candidate; its workspace's starting data is never installed again (GEN-05). */

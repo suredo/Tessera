@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts, ../../../packages/web/test/generate.test.ts, ../../../packages/web/e2e/request.spec.ts, ../../../packages/web/test/data-offer.test.tsx, ../../../packages/web/e2e/chat-data.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T09:56:33Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T10:18:00Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 # Entry points
 
-- `src/DataChangeOffer.tsx` shows complete before/after facts for entry changes in a named workspace, preserving nested values and distinguishing empty text/list/object/null. Only host stable IDs are hidden. Apply/Cancel submits the opaque one-use token; neither choice resends a patch. `generate.ts` distinguishes committed data facts from review/unchanged/cancelled/refused outcomes. `App` refreshes lists/history and remounts the same tool after a successful data transaction so its initial data read sees the new entries. Mixed-request sequencing follows separately.
+- `src/DataChangeOffer.tsx` shows complete before/after facts for entry changes in a named workspace, preserving nested values and distinguishing empty text/list/object/null. Only host stable IDs are hidden. Apply/Cancel submits the opaque one-use token; neither choice resends a patch. `generate.ts` distinguishes committed data facts from review/unchanged/cancelled/refused outcomes. `App` refreshes lists/history and remounts the same tool after a successful data transaction so its initial data read sees the new entries.
 - `src/App.tsx`: `App`, the main screen: it loads the workspaces and the library through the host API, keeps which workspace is open for the tab, and shows `EmptyState`, the first-run screen, while there are none, with the trash notice when the last one was just deleted, a way to the trash while it holds something, and importing from a file. The workspaces come most recently used first when the app opens, and keep their places after that.
 - `src/Workspaces.tsx`: the workspaces list, each with its name, when it was last used and whether it is saved, with opening, renaming, saving to my tools under a name, and moving to the trash (`APP-03`).
 - `src/Library.tsx`: my tools, the saved-tools library (`APP-04`): each saved tool with its name, when it was last updated (the entry or the workspace it follows, whichever changed later, A32) and the workspace Continue opens, searchable by name, with Continue, Use again (`DATA-07`), Save as a new tool, renaming and moving to the trash.
@@ -41,7 +41,8 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 # Invariants
 
-- **Editing keeps the current tool until a candidate activates** (`GEN-07`, `GEN-08`). `carryOut` stages create and edit candidates alike, but says updated only for an activated edit. Unchanged and stale answers never stage. A repeated smoke failure keeps the old version and entries; a successful edit refreshes the workspace so `ToolPanel` restarts on its changed version. Browser edit tests cover dark styling, a no-op, a quantity migration preserving ids/values, repeated smoke failure and successful smoke repair without creating another workspace. The host's not-yet message currently refers to mixed requests; data-only requests are supported.
+- **Editing keeps the current tool until a candidate activates** (`GEN-07`, `GEN-08`). `carryOut` stages create and edit candidates alike, but says updated only for an activated edit. Unchanged and stale answers never stage. A repeated smoke failure keeps the old version and entries; a successful edit refreshes the workspace so `ToolPanel` restarts on its changed version. Browser edit tests cover dark styling, a no-op, a quantity migration preserving ids/values, repeated smoke failure and successful smoke repair without creating another workspace.
+- **Mixed outcomes keep both facts** (`GEN-04`, `GEN-08`). After activation, `carryOut` refreshes the displayed interface before asking for the pending data plan. `askToFinishData` accepts only data replies. `withInterfaceOutcome` preserves the verified interface result through data review, cancellation, refusal and failure. A lost response says the entry result is unknown and reloads entries/history; it cannot claim nothing applied. An unchanged interface still permits the separate data plan. The serial mixed browser scenario covers delayed data planning after visible activation, cancellation, provider failure and repeated interface smoke failure with no data call.
 - **Review must distinguish the stored values.** Text is labelled and quoted, numbers are labelled, and null/booleans/empty structures have distinct descriptions. A literal string such as "None" cannot look like null. Text and field labels preserve whitespace, so newlines/spaces remain visible. Before/after facts include nested fields; only each record's host ID is hidden.
 - **The chat-data browser scenario is serial** ([#186](https://github.com/suredo/Tessera/issues/186)). Its steps share a workspace and reply sequence; later steps must be skipped after a failure rather than run against a restarted empty worker. Assertions after confirmation/undo wait for the host's completion notice and the replacement runtime's running control before reading nested frames. No retry or timeout increase hides a frame-replacement race.
 
@@ -104,7 +105,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `src/Trash.tsx`: `Trash`
 - `src/Workspaces.tsx`: `Workspaces`
 - `src/archives.ts`: `exportArchive`, `importArchive`, `saveFile`
-- `src/generate.ts`: `askToGenerate`, `askToRepairSmoke`, `askToConfirmData`, `RequestOutcome` (type), `dataOutcome`, `RequestDeps` (type), `carryOut`
+- `src/generate.ts`: `askToGenerate`, `askToRepairSmoke`, `askToConfirmData`, `askToFinishData`, `RequestOutcome` (type), `withInterfaceOutcome`, `dataOutcome`, `RequestDeps` (type), `carryOut`
 - `src/host-api.ts`: `HostError`, `Send` (type), `ask`
 - `src/i18n/en.ts`: `en`, `MessageKey` (type)
 - `src/i18n/translate.ts`: `Messages` (type), `Params` (type), `Translate` (type), `MissingHandler` (type), `createTranslator`, `t`

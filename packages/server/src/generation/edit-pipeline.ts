@@ -18,6 +18,7 @@ export async function generateEdit(
   signal?: AbortSignal,
   remember?: (context: SmokeRepairContext) => void,
   beforeStore: () => void = () => signal?.throwIfAborted(),
+  repairUsage: Partial<Record<RepairClass, number>> = {},
 ): Promise<GenerateReply> {
   const stale = { kind: "answer", answer: "stale" } as const;
   if (!baseline?.currentVersion || baseline.data === null) return stale;
@@ -30,7 +31,6 @@ export async function generateEdit(
   if (!current()) return stale;
   const original = loadVersion(store.db, baseline.currentVersion);
   if (original?.kind !== "ok") return stale;
-  const repairUsage: Partial<Record<RepairClass, number>> = {};
   const result = await editTool(provider, routes, {
     request,
     intent,

@@ -10,7 +10,13 @@ export const en = {
   "request.label": "What do you need?",
   "request.placeholder": "A shopping list I can tick off at the store",
   "request.send": "Make it",
-  "request.working": "Making it. This can take a few minutes.",
+  "request.working": "Working on your request. This can take a few minutes.",
+  "request.mixedEntryFailed": "The entry changes weren't applied. {reason}",
+  "request.mixedKept": "Your tool and entries weren't changed.",
+  "request.mixedUnknown":
+    "{interfaceMessage} The entry result couldn't be confirmed. Check the entries before asking again.",
+  "request.dataUnknown":
+    "The entry result couldn't be confirmed. Check the entries before asking again.",
   "request.made": "{name} is ready. {summary}",
   "request.edited": "{name} was updated. {summary}",
   "request.unchanged": "The tool wasn't changed.",
