@@ -141,12 +141,12 @@ describe("mixed request sequencing", () => {
     const first = await f.ask();
     if (first.kind !== "candidate") throw new Error("Expected candidate");
     const before = getWorkspace(f.store, f.id);
-    expect(
-      await f.post(GENERATE_ROUTE, {
-        workspaceId: f.id,
-        request: "Make it dark and Add Cheese",
-      }),
-    ).toMatchObject({ kind: "failed", message: expect.stringContaining("Another request") });
+    const refused = await f.post(GENERATE_ROUTE, {
+      workspaceId: f.id,
+      request: "Make it dark and Add Cheese",
+    });
+    if (refused.kind !== "failed") throw new Error("Expected competing request refusal");
+    expect(refused.message).toContain("Another request");
     expect(getWorkspace(f.store, f.id)).toEqual(before);
     expect(activateVersion(f.store, f.id, first.hash, first.expectedDataRevision).ok).toBe(true);
     expect(await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: first.hash })).toMatchObject({
