@@ -7,7 +7,7 @@ implements: [ENG-07, ENG-16, ENG-19, GEN-07, DATA-03]
 tests: [../../../evals/test/bridge-edit-check.test.ts]
 tags: [code, evals, edit, bridge]
 status: draft
-generated: { by: codex/gpt-6.1-sol, at: 2026-10-29T20:45:03Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-29T20:50:34Z }
 ---
 
 # Purpose
@@ -18,7 +18,7 @@ Prepares the static bridge prompt slice for [issue 148](https://github.com/sured
 
 - `run.ts`: `PLAN` freezes the one-case denominator, proposed cap two (one expected Sonnet low edit plus one shared schema/static/smoke repair reserve), zero reviewer calls and original seven-minute request budget. `REPLY` supplies the white canned answer for the exact fake CLI rehearsal. `editOnlyProvider` guards model delegation; `runBridgeEditCheck` drives the host request through smoke and activation. After integrating the bridge slice and building, rehearse with `node evals/spikes/bridge-edit-check/run.ts --dry-run`. A live invocation requires fresh explicit owner approval of the proposed cap first.
 
-The source plan starts at `33dc0d751eb66b0a5e1dc567d4fad294048fb878` in isolated branch `test/static-bridge-eval`; the final static-bridge author head must be integrated before rehearsal. Reports record the actual integrated head and whether the source tree is dirty.
+The source plan starts at `33dc0d751eb66b0a5e1dc567d4fad294048fb878` in isolated branch `test/static-bridge-eval`; static-bridge author head `01d10fad6933e95ebed892d79864c51ac6be1184` is integrated at merge `020c9e2780ab01c49db7f75258cab0f69f3da85b` before rehearsal. Reports record the actual integrated head and whether the source tree is dirty.
 
 | Stage | Expected calls | Reserve | Route |
 | --- | ---: | ---: | --- |
@@ -41,7 +41,7 @@ Reuses the [evaluation harness](harness.md), fake CLI adapter and [smoke repair 
 
 # Pitfalls
 
-The changed bridge implementation must be integrated before the exact free browser rehearsal. Heavy unit/browser/lint phases must be coordinated across worktrees. The free answer checks runner behavior, not model quality. Conservatively propose 10,000 to 25,000 input and 2,000 to 6,000 output tokens total under cap two, including CLI overhead and one repair; these are estimates, not token limits or authorization. Measure actual prompt and schema sizes from the free CLI capture before seeking approval. No live or browser result is claimed yet.
+The changed bridge implementation is integrated; the exact free browser rehearsal still awaits phase coordination. Heavy unit/browser/lint phases must be coordinated across worktrees. The free answer checks runner behavior, not model quality. Conservatively propose 10,000 to 25,000 input and 2,000 to 6,000 output tokens total under cap two, including CLI overhead and one repair; these are estimates, not token limits or authorization. Measure actual prompt and schema sizes from the free CLI capture before seeking approval. No live or browser result is claimed yet.
 
 # Symbols (generated)
 

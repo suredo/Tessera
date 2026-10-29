@@ -70,7 +70,9 @@ describe("frozen bridge edit evaluation", () => {
       behaviorChange: true,
       lookOnly: false,
     });
-    await expect(run.intent()).rejects.toThrow("frozen intent");
+    const duplicate = setup();
+    await duplicate.intent();
+    await expect(duplicate.intent()).rejects.toThrow("frozen intent");
     await expect(
       run.provider.run({ ...spec(), stage: "create", schema: creationSchema }),
     ).rejects.toThrow("edit contract");
