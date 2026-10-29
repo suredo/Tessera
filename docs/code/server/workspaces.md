@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-07, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06
 tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts, ../../../packages/server/test/activation-route.test.ts, ../../../packages/server/test/undo.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T06:39:39Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T06:51:03Z }
 ---
 
 # Purpose
@@ -58,7 +58,7 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 
 # Pitfalls
 
-- **Two ways to change data.** `patchWorkspaceData` is for a tool's or chat's changes, checked per record. `saveWorkspaceData` replaces the data whole, checked only against the workspace's revision, for defaults and restores (#50). Neither checks the data against the tool's schema yet (#50).
+- **Two ways to change data.** `patchWorkspaceData` is for a tool's or chat's changes, checked per record; chat installs its optional final-data validator inside that transaction. Bridge callers do not install it yet. `saveWorkspaceData` replaces the data whole, checked against the workspace's revision; callers such as activation/restore own their shape validation. Neither low-level function automatically loads a tool schema.
 - **Removed records' rows stay.** They are small and go with their workspace; a workspace whose tool adds and removes many records over years keeps one row for each. Pruning them would let a revision be reused.
 - **Recovery snapshots don't travel in archives,** and nothing removes them while their workspace lasts; a retention limit, and assets kept by snapshots (`DATA-11`), come with the asset store (#49).
 - **Restore's and undo's types are the contracts'.** The plan, its losses, the result, the recovery snapshot, the undo entry and their refusals are defined in the [contracts](../contracts/package.md) (`CON-01`), since the host app reads them through the [host API](host-api.md); a refusal this module can give must be listed there, or it doesn't compile.
