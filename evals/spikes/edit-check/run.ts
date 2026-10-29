@@ -20,11 +20,7 @@ import {
   workspaceVersions,
   type Provider,
 } from "@tessera/server";
-import {
-  editFixture,
-  styleEdit,
-  quantityEdit,
-} from "../../../packages/server/test/fixtures/edit-tool.ts";
+import { editFixture } from "../../../packages/server/test/fixtures/edit-tool.ts";
 import { startHarness, type RunMode } from "../../src/index.ts";
 import {
   fakeClaudeProvider,
@@ -70,7 +66,10 @@ const envelope = (answer: unknown) => ({
 async function providerFor(mode: RunMode, folder: string): Promise<Provider> {
   if (mode === "live") return (await liveClaudeProvider()).provider;
   const replies = path.join(folder, "replies.json");
-  fs.writeFileSync(replies, JSON.stringify([envelope(styleEdit), envelope(quantityEdit)]));
+  const replay = JSON.parse(
+    fs.readFileSync(path.join(here, "replays/edit-check-2026-10-29.json"), "utf8"),
+  ) as { replays: { answer: unknown }[] };
+  fs.writeFileSync(replies, JSON.stringify(replay.replays.map((step) => envelope(step.answer))));
   return fakeClaudeProvider(replies, path.join(folder, "calls"));
 }
 
@@ -223,7 +222,13 @@ export async function runEditCheck(mode: RunMode): Promise<string> {
             .toBe(true);
         }
       }
-      await page.screenshot({ path: path.join(folder, `${scenario.name}.png`), fullPage: true });
+      await expect(frame.getByRole("listitem").first()).toBeVisible();
+      await expect(frame.getByRole("listitem").last()).toBeVisible();
+      await page.screenshot({ path: path.join(folder, `${scenario.name}.png`) });
+      await page.screenshot({
+        path: path.join(folder, `${scenario.name}-full.png`),
+        fullPage: true,
+      });
       reports[index++] = {
         name: scenario.name,
         outcome: "passed",

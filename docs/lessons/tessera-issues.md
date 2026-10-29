@@ -4,7 +4,7 @@ title: "Tessera issues"
 description: "Issues found while building Tessera, from L-70 on: what happened, the cause, the mitigation and where it was found."
 tags: [lessons, issues]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T02:13:25Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T04:06:00Z }
 ---
 # Tessera issues
 
@@ -12,6 +12,7 @@ Every defect a live run finds gets an entry here, a replay test and a fix (`ENG-
 
 | ID | What happened | Root cause | Mitigation | Status | Found in |
 | --- | --- | --- | --- | --- | --- |
+| L-76 | The edit check passed DOM text/computed-style assertions but its intermediate full-page screenshot showed a blank panel. A free replay captured the expected list in a viewport image while the immediately following full-page image was blank. | Text/styles do not prove visibility; full-page capture can omit this nested-frame content even when rows are visible | ENG-07, ENG-13 (wait for visible rows, keep viewport and full-page images, replay recorded answers free and retain the original live visual limitation) | R | [Live edit check](../../evals/reports/2026-10-29-edit-check.md) |
 | L-70 | Claude Code refused the intent contract's JSON Schema before calling a model: it checks `--json-schema` with a draft-07 validator, and the contracts generated draft 2020-12. The dry run had passed. | The CLI's schema dialect was untested, and the fake CLI didn't check schemas | CON-01, ENG-13 (draft-07 from `jsonSchemaOf`; the fake checks like the CLI) | D | CLI contract spike, run 1 ([ADR 0002](../decisions/adr/0002-claude-code-cli-contract.md)) |
 | L-71 | A live call was spent on a CLI that wasn't signed in. The desktop app's sign-in doesn't reach a CLI started from a clean environment, and the failure said `subtype: success` with `is_error: true`. | No free sign-in check before calls; the result's `subtype` doesn't mean success | CLI-02, CLI-05 | D | CLI contract spike, run 2 |
 | L-72 | The API refused the intent contract as a tool's input schema, which must be an object at the top level; the contract is a union (`CON-02`). | The CLI passes `--json-schema` to the API as a tool's input schema | CLI-03 (every contract travels wrapped as `{ answer: <contract> }`), ENG-13 | D | CLI contract spike, run 3 |
