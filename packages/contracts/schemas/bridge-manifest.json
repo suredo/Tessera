@@ -2,6 +2,29 @@
   "manifestVersion": 1,
   "requestLimitBytes": 263168,
   "maxDepthCount": 64,
+  "methods": {
+    "call": {
+      "action": "argument",
+      "argument": "fixed action",
+      "copiesData": true
+    },
+    "assetUrl": {
+      "action": "asset.read",
+      "argument": "id",
+      "copiesData": true
+    },
+    "send": {
+      "action": null,
+      "argument": "message",
+      "copiesData": true
+    },
+    "onMessage": {
+      "action": null,
+      "argument": "listener",
+      "copiesData": false
+    }
+  },
+  "methodUsage": "Direct tessera.method(...) calls only.",
   "capabilities": [
     {
       "name": "clock",

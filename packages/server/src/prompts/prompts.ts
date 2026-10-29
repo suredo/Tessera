@@ -123,18 +123,46 @@ function plainSchema(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(schema)
       .filter(([key, item]) => {
+        // A strict empty object already says that an action takes no arguments.
+        if (
+          schema["type"] === "object" &&
+          schema["additionalProperties"] === false &&
+          typeof schema["properties"] === "object" &&
+          schema["properties"] !== null &&
+          Object.keys(schema["properties"]).length === 0 &&
+          (key === "properties" || key === "description")
+        )
+          return false;
         if (key === "$schema") return false;
         if (key === "pattern" && "format" in schema) return false;
         if (key === "minimum" && item === Number.MIN_SAFE_INTEGER) return false;
         if (key === "maximum" && item === Number.MAX_SAFE_INTEGER) return false;
         return true;
       })
-      .map(([key, item]) => [key, plainSchema(item)]),
+      .map(([key, item]) => {
+        // JSON object keys are always strings; propertyNames cannot see another type.
+        if (key === "propertyNames" && item !== null && typeof item === "object") {
+          const { type, ...constraints } = item as Record<string, unknown>;
+          if (type === "string") return [key, plainSchema(constraints)];
+        }
+        return [key, plainSchema(item)];
+      }),
   );
 }
 
 /** The bridge manifest (CON-03) as the bridge part quotes it: compact JSON, without the noise. */
-export const manifestForPrompt = (): string => JSON.stringify(plainSchema(bridgeManifest()));
+export const manifestForPrompt = (): string => {
+  const manifest = bridgeManifest();
+  // The host's page-isolation metadata is not an instruction to the model.
+  return JSON.stringify(
+    plainSchema({
+      ...manifest,
+      methods: Object.fromEntries(
+        Object.entries(manifest.methods).map(([name, method]) => [name, method.argument]),
+      ),
+    }),
+  );
+};
 
 /** The UI standard's variables, one per line, from the one definition of its tokens (VER-06). */
 const tokenLines = () =>

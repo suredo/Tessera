@@ -378,6 +378,34 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", () => {
     await refused(pack(withMigration, files), /don't fit Tessera's format/);
   });
 
+  it("VER-01, CAP-01, IMP-04: import checks bridge calls with the archived capabilities before writing", async () => {
+    for (const [js, capabilities, accepted] of [
+      ["tessera.unknown();", [], false],
+      ["tessera.call('unknown.action');", [], false],
+      ["const {call} = tessera; call('data.read');", [], false],
+      ["tessera.call('clock.now');", [], false],
+      ["tessera.call('clock.now');", ["clock"], true],
+    ] as const) {
+      const source = await openDataFolder(newFolder());
+      const workspace = createWorkspace(source, "Clock");
+      const tool = artifact("<p>Clock</p>");
+      tool.code.js = js;
+      tool.capabilities = [...capabilities];
+      addWorkspaceVersion(source, workspace.id, saveVersion(source.db, tool));
+      const bytes = exportWorkspace(source, workspace.id);
+      source.close();
+      if (!accepted) await refused(bytes, /does something Tessera doesn't let tools do/);
+      else {
+        const target = await openDataFolder(newFolder());
+        try {
+          expect((await importArchive(target, bytes)).workspaces).toHaveLength(1);
+        } finally {
+          target.close();
+        }
+      }
+    }
+  });
+
   it("IMP-06: never overwrites or changes existing work; it comes in as a copy", async () => {
     const clock = testClock();
     const folder = await openDataFolder(newFolder(), { now: clock.now });
