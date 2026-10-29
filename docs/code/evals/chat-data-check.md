@@ -7,7 +7,7 @@ implements: [ENG-07, ENG-19, GEN-04, DATA-02, DATA-03]
 tests: [../../../evals/test/chat-data-check.test.ts]
 tags: [code, evals, data, generation]
 status: draft
-generated: { by: codex/gpt-6.1-sol, at: 2026-10-29T10:31:50Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T10:35:00Z }
 ---
 
 # Purpose
@@ -30,11 +30,10 @@ Uses the product pipeline, the [evaluation harness](harness.md), fake CLI adapte
 
 # Pitfalls
 
-This is a narrow integration check, not an intent accuracy or interface generation evaluation. Free canned responses establish runner behavior without measuring model quality. The free rehearsal captured 1,100 system characters per call, request prompts of 774 and 865 characters, and a 3,882-character wrapped schema per call: 11,603 characters total. At about four characters per token this is roughly 2,901 input tokens before CLI/provider overhead. For approval, conservatively estimate 10,000?25,000 input and 1,000?4,000 output tokens total under cap three, including one repair and CLI/provider overhead. These are estimates, not token limits or approved costs. Both data calls route to claude-haiku-5-5. No live cost estimate has yet been approved. The final free rehearsal passed both cases and both viewport images visibly preserve all entries; its actual review shows Milk changing from 1 to 2. Full-page images can shrink, clip or omit nested runtime content despite passing row visibility assertions (L-76). Viewport captures are authoritative runtime evidence; full-page captures are supplementary and must not be described as visually verified. The JSON report records this limit. Run outputs stay under ignored `test-output/evals/`.
+This is a narrow integration check, not an intent accuracy or interface generation evaluation. Free canned responses establish runner behavior without measuring model quality. The free rehearsal captured 1,100 system characters per call, request prompts of 774 and 865 characters, and a 3,882-character wrapped schema per call: 11,603 characters total. At about four characters per token this is roughly 2,901 input tokens before CLI/provider overhead. For approval, conservatively estimate 10,000 to 25,000 input and 1,000 to 4,000 output tokens total under cap three, including one repair and CLI/provider overhead. These are estimates, not token limits or approved costs. Both data calls route to claude-haiku-5-5. No live cost estimate has yet been approved. The final free rehearsal passed both cases and both viewport images visibly preserve all entries; its actual review shows Milk changing from 1 to 2. Full-page images can shrink, clip or omit nested runtime content despite passing row visibility assertions (L-76). Viewport captures are authoritative runtime evidence; full-page captures are supplementary and must not be described as visually verified. The JSON report records this limit. Run outputs stay under ignored `test-output/evals/`.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `run.ts`: `PLAN`, `SHOPPING`, `REPLIES`, `dataOnlyProvider`, `runChatDataCheck`
-
