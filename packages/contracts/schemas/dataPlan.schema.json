@@ -1,0 +1,243 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "const": "patch"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "description": "What the tool does, in one or two plain sentences for the person."
+        },
+        "patch": {
+          "description": "Changes applied in order, all or nothing (DATA-02).",
+          "type": "object",
+          "properties": {
+            "operations": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "add"
+                      },
+                      "collection": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+                        "description": "The top-level list the record is in, such as `tasks`."
+                      },
+                      "record": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$",
+                          "description": "A field of a record; never `id`, which only the host sets."
+                        },
+                        "additionalProperties": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema0"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "collection",
+                      "record"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Adds a record; the host gives it its ID. Adds never conflict."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "replace"
+                      },
+                      "collection": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+                        "description": "The top-level list the record is in, such as `tasks`."
+                      },
+                      "id": {
+                        "type": "string",
+                        "pattern": "^(?!__proto__$)[A-Za-z0-9_-]{1,64}$",
+                        "description": "A record's stable ID, given by the host when it was added."
+                      },
+                      "revisionCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "The record's revision count when this change was planned; the whole batch is refused if it has changed since (DATA-02)."
+                      },
+                      "fields": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string",
+                          "pattern": "^(?!id$)[A-Za-z][A-Za-z0-9_]{0,63}$",
+                          "description": "A field of a record; never `id`, which only the host sets."
+                        },
+                        "additionalProperties": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/__schema0"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "collection",
+                      "id",
+                      "revisionCount",
+                      "fields"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Sets the named fields of one record and keeps the rest: never a whole record."
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "op": {
+                        "type": "string",
+                        "const": "remove"
+                      },
+                      "collection": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$",
+                        "description": "The top-level list the record is in, such as `tasks`."
+                      },
+                      "id": {
+                        "type": "string",
+                        "pattern": "^(?!__proto__$)[A-Za-z0-9_-]{1,64}$",
+                        "description": "A record's stable ID, given by the host when it was added."
+                      },
+                      "revisionCount": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991,
+                        "description": "The record's revision count when this change was planned; the whole batch is refused if it has changed since (DATA-02)."
+                      }
+                    },
+                    "required": [
+                      "op",
+                      "collection",
+                      "id",
+                      "revisionCount"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Removes one record."
+                  }
+                ],
+                "description": "One change to a tool's data (DATA-02)."
+              }
+            }
+          },
+          "required": [
+            "operations"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "outcome",
+        "summary",
+        "patch"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "const": "unchanged"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "const": "clarify"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "const": "cannot"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400,
+          "description": "Why no tool here can do this, in plain words for the person."
+        }
+      },
+      "required": [
+        "outcome",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "definitions": {
+    "__schema0": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/__schema0"
+          }
+        },
+        {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^(?!__proto__$)"
+          },
+          "additionalProperties": {
+            "$ref": "#/definitions/__schema0"
+          }
+        }
+      ]
+    }
+  }
+}

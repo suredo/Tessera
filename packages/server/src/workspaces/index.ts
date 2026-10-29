@@ -53,4 +53,5 @@ export {
   type Store,
   type WorkspaceData,
   type WorkspacePatchResult,
+  type WorkspacePatchOptions,
 } from "./workspaces.ts";
