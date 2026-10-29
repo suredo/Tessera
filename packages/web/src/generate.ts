@@ -2,11 +2,15 @@ import {
   GENERATE_ROUTE,
   SMOKE_REPAIR_ROUTE,
   CONFIRM_DATA_ROUTE,
+  FINISH_DATA_ROUTE,
+  dataReplySchema,
   generateReplySchema,
   type GenerateReply,
   type GenerateRequest,
   type SmokeRepairRequest,
   type ConfirmDataRequest,
+  type FinishDataRequest,
+  type DataReply,
 } from "@tessera/contracts";
 import { smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
 import { HostError, type Send } from "./host-api.ts";
@@ -39,9 +43,20 @@ export const askToConfirmData = (
 ): Promise<GenerateReply> =>
   askForCandidate(CONFIRM_DATA_ROUTE, request, send ?? ((url, init) => fetch(url, init)));
 
+export async function askToFinishData(request: FinishDataRequest, send?: Send): Promise<DataReply> {
+  const reply = await askForCandidate(
+    FINISH_DATA_ROUTE,
+    request,
+    send ?? ((url, init) => fetch(url, init)),
+  );
+  const checked = dataReplySchema.safeParse(reply);
+  if (!checked.success) throw new HostError(t("app.unreadable"));
+  return checked.data;
+}
+
 async function askForCandidate(
   route: string,
-  request: GenerateRequest | SmokeRepairRequest | ConfirmDataRequest,
+  request: GenerateRequest | SmokeRepairRequest | ConfirmDataRequest | FinishDataRequest,
   send: Send,
 ): Promise<GenerateReply> {
   const response = await send(route, {
@@ -66,11 +81,40 @@ export type RequestOutcome = {
   /** A saved tool the request asked for: the person chooses Continue or Use again (GEN-18). */
   savedToolId?: string;
   dataChanged?: boolean;
-  dataOffer?: Extract<GenerateReply, { kind: "data_confirmation" }>;
+  reloadData?: boolean;
+  dataOffer?: Extract<GenerateReply, { kind: "data_confirmation" }> & { interfaceMessage?: string };
 };
+
+/** Keep verified interface facts when later entries are refused, cancelled or uncertain. */
+export function withInterfaceOutcome(
+  interfaceMessage: string | undefined,
+  outcome: RequestOutcome,
+  failure?: string,
+): RequestOutcome {
+  if (!interfaceMessage) return outcome;
+  return {
+    ...outcome,
+    message: `${interfaceMessage} ${failure ? t("request.mixedEntryFailed", { reason: failure }) : outcome.message}`,
+    ...(outcome.dataOffer ? { dataOffer: { ...outcome.dataOffer, interfaceMessage } } : {}),
+  };
+}
 
 /** Data success is reported only after its transaction, never for a proposed patch. */
 export function dataOutcome(reply: GenerateReply): RequestOutcome {
+  if (reply.kind === "mixed_data") {
+    const message =
+      reply.interface.outcome === "updated"
+        ? t("request.edited", { name: reply.name, summary: reply.interface.summary })
+        : t("request.unchanged");
+    return {
+      ...withInterfaceOutcome(
+        message,
+        dataOutcome(reply.data),
+        reply.data.kind === "failed" ? reply.data.message : undefined,
+      ),
+      openWorkspaceId: reply.workspaceId,
+    };
+  }
   if (reply.kind === "data_changed")
     return {
       message: t(reply.count === 1 ? "request.dataChangedOne" : "request.dataChanged", {
@@ -108,12 +152,14 @@ export function dataOutcome(reply: GenerateReply): RequestOutcome {
 export type RequestDeps = {
   generate: (request: GenerateRequest) => Promise<GenerateReply>;
   repairSmoke: (request: SmokeRepairRequest) => Promise<GenerateReply>;
+  finishData: (request: FinishDataRequest) => Promise<DataReply>;
   stage: (options: Parameters<typeof stageCandidate>[0]) => Promise<StagingResult>;
 };
 
 const defaultDeps: RequestDeps = {
   generate: (r) => askToGenerate(r),
   repairSmoke: (r) => askToRepairSmoke(r),
+  finishData: (r) => askToFinishData(r),
   stage: stageCandidate,
 };
 
@@ -122,15 +168,19 @@ export async function carryOut(
   request: string,
   workspaceId: string | null,
   deps: RequestDeps = defaultDeps,
+  onInterfaceApplied?: (workspaceId: string) => Promise<void>,
 ): Promise<RequestOutcome> {
   let reply = await deps.generate({ request, ...(workspaceId ? { workspaceId } : {}) });
   let repaired = false;
+  let mixed = false;
   for (;;) {
     switch (reply.kind) {
       case "data_changed":
       case "data_confirmation":
+      case "mixed_data":
         return dataOutcome(reply);
       case "candidate": {
+        mixed ||= reply.dataPending === true;
         const staged = await deps.stage({
           candidate: {
             mountId: reply.mountId,
@@ -143,6 +193,28 @@ export async function carryOut(
           checks: [smokeCheck()],
         });
         if (staged.outcome === "activated") {
+          if (reply.dataPending) {
+            const interfaceMessage = t("request.edited", {
+              name: reply.name,
+              summary: reply.summary,
+            });
+            try {
+              await onInterfaceApplied?.(reply.workspaceId);
+              return dataOutcome({
+                kind: "mixed_data",
+                workspaceId: reply.workspaceId,
+                name: reply.name,
+                interface: { outcome: "updated", summary: reply.summary },
+                data: await deps.finishData({ workspaceId: reply.workspaceId, hash: reply.hash }),
+              });
+            } catch {
+              return {
+                message: t("request.mixedUnknown", { interfaceMessage }),
+                openWorkspaceId: reply.workspaceId,
+                reloadData: true,
+              };
+            }
+          }
           return {
             message: t(reply.operation === "edit" ? "request.edited" : "request.made", {
               name: reply.name,
@@ -182,7 +254,7 @@ export async function carryOut(
           case "not_yet":
             return { message: t("request.notYet") };
           case "unchanged":
-            return { message: t("request.unchanged") };
+            return { message: t(mixed ? "request.mixedKept" : "request.unchanged") };
           case "stale":
             return { message: t("request.stale") };
           case "data_unchanged":

@@ -8,7 +8,13 @@ import { ImportFile } from "./ImportFile.tsx";
 import { Library } from "./Library.tsx";
 import { checkSetup, runProbe } from "./setup.ts";
 import { SetupNotice, Status } from "./Status.tsx";
-import { carryOut, askToConfirmData, dataOutcome, type RequestOutcome } from "./generate.ts";
+import {
+  carryOut,
+  askToConfirmData,
+  dataOutcome,
+  withInterfaceOutcome,
+  type RequestOutcome,
+} from "./generate.ts";
 import { DataChangeOffer } from "./DataChangeOffer.tsx";
 import { RequestBox } from "./RequestBox.tsx";
 import { ToolPanel } from "./ToolPanel.tsx";
@@ -247,7 +253,11 @@ export function App() {
     setOffer(null);
     setDataOffer(undefined);
     try {
-      const outcome = await carryOut(text, openId);
+      const outcome = await carryOut(text, openId, undefined, async (id) => {
+        await refresh();
+        open(id);
+        setView("workspaces");
+      });
       setDataOffer(outcome.dataOffer);
       const { savedTools: saved } = await refresh().then(() => ask("library.list", {}));
       if (outcome.savedToolId) {
@@ -262,7 +272,7 @@ export function App() {
         open(outcome.openWorkspaceId);
         setView("workspaces");
       }
-      if (outcome.dataChanged) {
+      if (outcome.dataChanged || outcome.reloadData) {
         setReloads((n) => n + 1);
         setToolChanges((n) => n + 1);
       }
@@ -297,9 +307,15 @@ export function App() {
     if (!dataOffer || requesting) return;
     setRequesting(true);
     const token = dataOffer.token;
+    const interfaceMessage = dataOffer.interfaceMessage;
     setDataOffer(undefined);
     try {
-      const outcome = dataOutcome(await askToConfirmData({ token, approve }));
+      const reply = await askToConfirmData({ token, approve });
+      const outcome = withInterfaceOutcome(
+        interfaceMessage,
+        dataOutcome(reply),
+        reply.kind === "failed" ? reply.message : undefined,
+      );
       await refresh();
       if (outcome.openWorkspaceId) {
         open(outcome.openWorkspaceId);
@@ -310,8 +326,15 @@ export function App() {
         setToolChanges((n) => n + 1);
       }
       setNotice(outcome.message);
-    } catch (error) {
-      say(error);
+    } catch {
+      await refresh().catch(report);
+      setReloads((n) => n + 1);
+      setToolChanges((n) => n + 1);
+      setNotice(
+        interfaceMessage
+          ? t("request.mixedUnknown", { interfaceMessage })
+          : t("request.dataUnknown"),
+      );
     } finally {
       setRequesting(false);
     }

@@ -1,4 +1,5 @@
-import type { Artifact, GenerateReply } from "@tessera/contracts";
+import type { Artifact, DataReply } from "@tessera/contracts";
+import type { RepairClass } from "../prompts/index.ts";
 import type { Provider, Routes } from "../providers/index.ts";
 import { loadVersion } from "../versions/index.ts";
 import { getWorkspace, readWorkspaceData, type Store } from "../workspaces/index.ts";
@@ -13,11 +14,7 @@ export type DataOffer = {
 };
 export type OfferData = (offer: DataOffer) => string;
 
-export function applyDataOffer(
-  store: Store,
-  offer: DataOffer,
-  beforeStore: () => void,
-): GenerateReply {
+export function applyDataOffer(store: Store, offer: DataOffer, beforeStore: () => void): DataReply {
   const result = commitDataPlan(
     store,
     offer.workspaceId,
@@ -57,7 +54,8 @@ export async function changeData(
   signal: AbortSignal | undefined,
   beforeStore: () => void,
   offerData?: OfferData,
-): Promise<GenerateReply> {
+  repairUsage?: Partial<Record<RepairClass, number>>,
+): Promise<DataReply> {
   const workspace = workspaceId ? getWorkspace(store, workspaceId) : undefined;
   const hash = workspace?.currentVersion;
   if (!workspace || !hash) return { kind: "answer", answer: "data_stale" };
@@ -69,6 +67,7 @@ export async function changeData(
     artifact: version.artifact,
     snapshot: readWorkspaceData(store, workspace.id),
     signal,
+    repairUsage,
   });
   if (result.kind === "failed")
     return {

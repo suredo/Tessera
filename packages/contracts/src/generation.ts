@@ -142,6 +142,53 @@ export const CONFIRM_DATA_ROUTE = "/api/generate/confirm-data";
 export const confirmDataRequestSchema = z.strictObject({ token: z.uuid(), approve: z.boolean() });
 export type ConfirmDataRequest = z.infer<typeof confirmDataRequestSchema>;
 
+export const FINISH_DATA_ROUTE = "/api/generate/finish-data";
+export const finishDataRequestSchema = z.strictObject({
+  workspaceId: z.uuid(),
+  hash: versionHashSchema,
+});
+export type FinishDataRequest = z.infer<typeof finishDataRequestSchema>;
+
+const DATA_ANSWERS = [
+  "data_unchanged",
+  "data_cancelled",
+  "data_stale",
+  "data_clarify",
+  "data_cannot",
+] as const;
+const generationFailureSchema = z.strictObject({
+  kind: z.literal("failed"),
+  failure: z.enum(FAILURE_CLASSES),
+  message: z.string().min(1).describe("Plain words for the person."),
+  findings: z.array(z.string()).describe("For repair and the details view (GEN-10)."),
+});
+
+/** Data results also compose with verified interface facts, without duplicating contracts. */
+export const dataReplySchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("data_changed"),
+    workspaceId: z.uuid(),
+    name: z.string().min(1),
+    count: z.int().positive(),
+    summary: creationSchema.options[0].shape.summary,
+  }),
+  z.strictObject({
+    kind: z.literal("data_confirmation"),
+    workspaceId: z.uuid(),
+    name: z.string().min(1),
+    token: z.uuid(),
+    summary: creationSchema.options[0].shape.summary,
+    changes: z.array(dataChangePreviewSchema).min(1).max(100),
+  }),
+  z.strictObject({
+    kind: z.literal("answer"),
+    answer: z.enum(DATA_ANSWERS),
+    reason: z.string().optional(),
+  }),
+  generationFailureSchema,
+]);
+export type DataReply = z.infer<typeof dataReplySchema>;
+
 /** What the host can say instead of making a tool, for the chat to word (GEN-08). */
 export const GENERATE_ANSWERS = [
   "clarify",
@@ -151,29 +198,25 @@ export const GENERATE_ANSWERS = [
   "not_yet",
   "unchanged",
   "stale",
-  "data_unchanged",
-  "data_cancelled",
-  "data_stale",
-  "data_clarify",
-  "data_cannot",
+  ...DATA_ANSWERS,
 ] as const;
 
 export const generateReplySchema = z
   .discriminatedUnion("kind", [
+    dataReplySchema.options[0],
+    dataReplySchema.options[1],
     z.strictObject({
-      kind: z.literal("data_changed"),
+      kind: z.literal("mixed_data"),
       workspaceId: z.uuid(),
       name: z.string().min(1),
-      count: z.int().positive(),
-      summary: creationSchema.options[0].shape.summary,
-    }),
-    z.strictObject({
-      kind: z.literal("data_confirmation"),
-      workspaceId: z.uuid(),
-      name: z.string().min(1),
-      token: z.uuid(),
-      summary: creationSchema.options[0].shape.summary,
-      changes: z.array(dataChangePreviewSchema).min(1).max(100),
+      interface: z.discriminatedUnion("outcome", [
+        z.strictObject({
+          outcome: z.literal("updated"),
+          summary: creationSchema.options[0].shape.summary,
+        }),
+        z.strictObject({ outcome: z.literal("unchanged") }),
+      ]),
+      data: dataReplySchema,
     }),
     z.strictObject({
       kind: z.literal("candidate"),
@@ -186,6 +229,10 @@ export const generateReplySchema = z
       expectedDataRevision: z.int().nonnegative(),
       name: z.string().min(1),
       summary: z.string().min(1),
+      dataPending: z
+        .boolean()
+        .optional()
+        .describe("The server retains a data-only continuation until this candidate activates."),
     }),
     z.strictObject({
       kind: z.literal("answer"),
@@ -193,12 +240,7 @@ export const generateReplySchema = z
       reason: z.string().optional().describe("The model's own plain reason, for cannot."),
     }),
     z.strictObject({ kind: z.literal("open_saved"), savedToolId: z.string().min(1) }),
-    z.strictObject({
-      kind: z.literal("failed"),
-      failure: z.enum(FAILURE_CLASSES),
-      message: z.string().min(1).describe("Plain words for the person."),
-      findings: z.array(z.string()).describe("For repair and the details view (GEN-10)."),
-    }),
+    generationFailureSchema,
   ])
   .describe("What came of a request: a candidate to stage, an answer, a saved tool, or a failure.");
 export type GenerateReply = z.infer<typeof generateReplySchema>;
