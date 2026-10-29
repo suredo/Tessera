@@ -230,6 +230,18 @@ button.primary {
 .tool-status {
   margin: 0;
 }
+.data-review {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.data-review dl,
+.data-review dd {
+  margin-inline: 0;
+}
+.data-review .review-value,
+.data-review dt {
+  white-space: pre-wrap;
+}
 .tool-frame {
   border: 1px solid var(--ui-divider);
   border-radius: var(--ui-radius-panel);

@@ -15,6 +15,7 @@ import {
 import { createTool } from "./create.ts";
 import { generateEdit } from "./edit-pipeline.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
+import { changeData, type OfferData } from "./data-action.ts";
 
 // A request, carried out as far as the server goes (GEN-01, GEN-04): the intent stage decides
 // what it is, the create stage makes a candidate, and the candidate is stored with its workspace
@@ -41,6 +42,7 @@ export async function generate(
   signal?: AbortSignal,
   remember?: (context: SmokeRepairContext) => void,
   beforeStore: () => void = () => signal?.throwIfAborted(),
+  offerData?: OfferData,
 ): Promise<GenerateReply> {
   const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
@@ -76,8 +78,19 @@ export async function generate(
         beforeStore,
       );
     case "data":
+      return changeData(
+        store,
+        provider,
+        routes,
+        input.workspaceId,
+        decision.dataPart,
+        decision.intent.language,
+        signal,
+        beforeStore,
+        offerData,
+      );
     case "mixed":
-      // Chat data actions and mixed requests follow this interface-edit slice (#146).
+      // Mixed sequencing follows the data-only confirmation slice (#146).
       return { kind: "answer", answer: "not_yet" };
   }
   const repairUsage: Partial<Record<RepairClass, number>> = {};

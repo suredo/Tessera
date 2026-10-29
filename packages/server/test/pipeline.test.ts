@@ -350,7 +350,7 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     folder.close();
   });
 
-  it("GEN-01: a chat data change isn't carried out yet, and changes nothing", async () => {
+  it("GEN-01: a mixed request waits for sequencing and changes nothing", async () => {
     const folder = await newFolder();
     const workspace = createWorkspace(folder, "Shopping list");
     const hash = saveVersion(folder.db, {
@@ -362,9 +362,11 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
       ui: { standardVersion: 1, mode: "standard" },
     });
     expect(activateVersion(folder, workspace.id, hash, 0).ok).toBe(true);
-    const provider = script(intentReply({ kind: "data", dataPart: "Add milk" }));
+    const provider = script(
+      intentReply({ kind: "mixed", interfacePart: "Make it calmer", dataPart: "Add milk" }),
+    );
     const reply = await generate(folder, provider, DEFAULT_ROUTES, {
-      request: "Make it calmer",
+      request: "Make it calmer and add milk",
       workspaceId: workspace.id,
     });
     expect(reply).toEqual({ kind: "answer", answer: "not_yet" });
