@@ -17,6 +17,7 @@ export async function generateEdit(
   intent: Intent,
   signal?: AbortSignal,
   remember?: (context: SmokeRepairContext) => void,
+  beforeStore: () => void = () => signal?.throwIfAborted(),
 ): Promise<GenerateReply> {
   const stale = { kind: "answer", answer: "stale" } as const;
   if (!baseline?.currentVersion || baseline.data === null) return stale;
@@ -51,6 +52,7 @@ export async function generateEdit(
           : "The change didn't pass its checks. Your tool and entries were kept.",
       findings: result.findings,
     };
+  beforeStore();
   const hash = saveVersion(store.db, result.artifact);
   const reply = {
     kind: "candidate" as const,

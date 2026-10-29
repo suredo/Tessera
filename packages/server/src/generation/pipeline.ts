@@ -40,6 +40,7 @@ export async function generate(
   input: GenerateRequest,
   signal?: AbortSignal,
   remember?: (context: SmokeRepairContext) => void,
+  beforeStore: () => void = () => signal?.throwIfAborted(),
 ): Promise<GenerateReply> {
   const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
@@ -72,6 +73,7 @@ export async function generate(
         decision.intent,
         signal,
         remember,
+        beforeStore,
       );
     case "data":
     case "mixed":
@@ -96,6 +98,7 @@ export async function generate(
     };
   }
   // A workspace the person opened that has no tool yet becomes this tool's; otherwise a new one.
+  beforeStore();
   const hash = saveVersion(store.db, created.artifact);
   const empty = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const workspace = store.db.transaction(() => {

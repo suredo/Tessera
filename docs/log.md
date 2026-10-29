@@ -2,6 +2,8 @@
 
 ## 2026-10-29
 
+* **Update**: [Generation stages](code/server/generation.md) share a configurable seven-minute server-stage budget from queued job start through intent, create/edit, schema/static repairs and later smoke repair. Smoke continuations retain the original expiry instead of starting another window; active calls are aborted, late answers cannot be stored and queue slots remain held until providers settle. Deterministic deadline and route tests cover reduced stage budgets, provider stop/late completion, cancellation, unchanged stored entries and no automatic repair. Fresh-agent review found a commit-boundary error: a successful synchronous store begun within budget now keeps its result if the clock crosses expiry during the commit, with a real-storage regression. Browser-wide cancellation/activation expiry remain under #146; no live call was made.
+
 * **Update**: The rehearsed and independently reviewed [live edit check](../evals/reports/2026-10-29-edit-check.md) passed both original DOM/data checks in two of four approved calls: darken a saved list, then add quantities while preserving entries and colors. The intermediate screenshot was blank, so its live visual confirmation is inconclusive: [L-76](lessons/tessera-issues.md) records the evidence limit and a visible-row wait, replayed free from the recorded answers. The [runner doc](code/evals/edit-check.md) links the evidence and sequential sanitized replay; [prompt evidence](code/server/prompts.md) and the [budget summary](roadmap/budgets.md) now record the result and 18 M2 calls used. No repair or extra live call was needed.
 
 ## 2026-10-28

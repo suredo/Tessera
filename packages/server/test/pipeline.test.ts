@@ -12,14 +12,15 @@ import {
   type Creation,
   type Intent,
 } from "@tessera/contracts";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { generate, generationRoutes } from "../src/generation/index.ts";
 import { repairSmoke, type SmokeRepairContext } from "../src/generation/smoke.ts";
+import { withinRequestDeadline } from "../src/generation/deadline.ts";
 import { workspaceTools } from "../src/host/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
-import { createScriptedProvider, RoutesError } from "../src/providers/index.ts";
+import { createScriptedProvider, RoutesError, type Provider } from "../src/providers/index.ts";
 import { openDataFolder } from "../src/storage/index.ts";
 import { loadVersion, saveVersion } from "../src/versions/index.ts";
 import {
@@ -94,6 +95,44 @@ const createReply = (value: unknown) => ({ kind: "value", stage: "create", value
 const repairReply = (value: unknown) => ({ kind: "value", stage: "repair", value });
 
 describe("carrying out a request (GEN-01, GEN-05)", () => {
+  it("GEN-11 GEN-08: a synchronous commit begun within budget keeps its candidate when the clock crosses expiry", async () => {
+    const folder = await newFolder();
+    let now = Date.now();
+    const expires = now + 100_000;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+    const database = { ...folder.db };
+    folder.db.transaction = (work) => {
+      const result = database.transaction(work);
+      now = expires + 1;
+      return result;
+    };
+    try {
+      const reply = await withinRequestDeadline(
+        script(intentReply({ kind: "create" }), createReply(tool)),
+        expires,
+        (bounded, signal, beforeStore) =>
+          generate(
+            folder,
+            bounded,
+            DEFAULT_ROUTES,
+            { request: "A list" },
+            signal,
+            undefined,
+            beforeStore,
+          ),
+        new AbortController().signal,
+      );
+      expect(reply.kind).toBe("candidate");
+      if (reply.kind !== "candidate") throw new Error("Expected committed candidate");
+      expect(listWorkspaces(folder)).toMatchObject([
+        { id: reply.workspaceId, data: tool.data.initialState },
+      ]);
+    } finally {
+      clock.mockRestore();
+      folder.close();
+    }
+  });
+
   it("GEN-09: smoke repair retains earlier class budgets and quotes the stored answer with the original language", async () => {
     const folder = await newFolder();
     let context: SmokeRepairContext | undefined;
@@ -411,6 +450,83 @@ describe("the generate route (GEN-01, CLI-06)", () => {
       req.on("error", reject);
       req.end(body);
     });
+
+  it.each([false, true])(
+    "GEN-11: shared deadline stops %s smoke repair or static repair without storing a late answer",
+    async (smoke) => {
+      const folder = await newFolder();
+      let now = Date.now();
+      const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+      const unsafe = { ...tool, code: { ...tool.code, html: '<iframe src="x"></iframe>' } };
+      const scripted = script(
+        intentReply({ kind: "create" }),
+        createReply(smoke ? tool : unsafe),
+        repairReply(
+          smoke
+            ? {
+                ...tool,
+                code: { ...tool.code, html: "<h1>Fixed</h1>" },
+                data: { ...tool.data, initialState: {} },
+              }
+            : tool,
+        ),
+      );
+      const limits: number[] = [];
+      const provider: Provider = {
+        name: "clocked",
+        live: false,
+        async run(spec) {
+          limits.push(spec.timeLimitMs);
+          const answer = await scripted.run(spec);
+          now += spec.stage === "repair" ? 21_000 : 40_000;
+          return answer;
+        },
+      };
+      const server = await startLocalServer({
+        port: 0,
+        routes: generationRoutes({
+          store: folder,
+          jobs: new JobQueue(),
+          provider: () => Promise.resolve(provider),
+          routes: () => DEFAULT_ROUTES,
+          requestTimeLimitMs: 100_000,
+        }),
+      });
+      try {
+        let reply = generateReplySchema.parse(
+          JSON.parse((await send(server.port, "POST", JSON.stringify({ request: "A list" }))).body),
+        );
+        if (smoke) {
+          const initial = generateReplySchema.parse(reply);
+          if (initial.kind !== "candidate") throw new Error("Expected candidate");
+          const before = getWorkspace(folder, initial.workspaceId);
+          now += 5_000; // Time spent staging consumes the same request budget.
+          const repair = JSON.stringify({
+            workspaceId: initial.workspaceId,
+            hash: initial.hash,
+            findings: ["Blank"],
+          });
+          reply = generateReplySchema.parse(
+            JSON.parse((await send(server.port, "POST", repair, SMOKE_REPAIR_ROUTE)).body),
+          );
+          expect(getWorkspace(folder, initial.workspaceId)).toEqual(before);
+          expect(
+            JSON.parse((await send(server.port, "POST", repair, SMOKE_REPAIR_ROUTE)).body),
+          ).toMatchObject({ kind: "failed", failure: "smoke" });
+        } else expect(listWorkspaces(folder)).toEqual([]);
+        expect(reply).toMatchObject({
+          kind: "failed",
+          failure: "provider",
+          message: "The request took too long. Please try again.",
+        });
+        expect(limits).toEqual([60_000, 60_000, smoke ? 15_000 : 20_000]);
+      } finally {
+        clock.mockRestore();
+        await server.close();
+        folder.close();
+      }
+    },
+  );
 
   it("GEN-09, GEN-05: smoke repair uses the stored candidate once and preserves starting data", async () => {
     const folder = await newFolder();

@@ -13,5 +13,6 @@ export {
   type CreateResult,
 } from "./create.ts";
 export { generate } from "./pipeline.ts";
+export { REQUEST_TIME_LIMIT_MS } from "./deadline.ts";
 export { editedCandidate, editTool, type EditInput, type EditResult } from "./edit.ts";
 export { generationRoutes, type GenerationOptions } from "./routes.ts";
