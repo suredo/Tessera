@@ -1,6 +1,12 @@
 # Documentation log
 
+## 2026-10-29
+
+* **Update**: The rehearsed and independently reviewed [live edit check](../evals/reports/2026-10-29-edit-check.md) passed both original DOM/data checks in two of four approved calls: darken a saved list, then add quantities while preserving entries and colors. The intermediate screenshot was blank, so its live visual confirmation is inconclusive: [L-76](lessons/tessera-issues.md) records the evidence limit and a visible-row wait, replayed free from the recorded answers. The [runner doc](code/evals/edit-check.md) links the evidence and sequential sanitized replay; [prompt evidence](code/server/prompts.md) and the [budget summary](roadmap/budgets.md) now record the result and 18 M2 calls used. No repair or extra live call was needed.
+
 ## 2026-10-28
+
+* **Create**: The [edit check](code/evals/edit-check.md) defines the approved four-call, two-case live run for [issue 146](https://github.com/suredo/Tessera/issues/146): darken a saved list and add quantities while preserving entries, current workspace and dark styling. Intent and initial data are canned, only edits/repairs reach the capped harness, and pending calls settle before final recording. Free rehearsal precedes the approved live run.
 
 * **Update**: Edit pipeline integration for [issue 146](https://github.com/suredo/Tessera/issues/146): [generation](code/server/generation.md) keeps the active version and entries until activation, rejects stale snapshots, and returns unchanged without staging/history. [Contracts](code/contracts/package.md) distinguish create/edit candidates and unchanged/stale answers; the [web app](code/web/package.md) gives honest edited outcomes and reloads the new version. Edit smoke repair uses the original active baseline and must preserve the failed candidate's migration. Scripted browser tests cover style, no-op, quantity migration and both repair outcomes.
 

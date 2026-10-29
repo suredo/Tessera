@@ -1,0 +1,86 @@
+{
+  "replays": [
+    {
+      "name": "darken",
+      "request": "Make the background #111111 and the text #eeeeee. Keep the layout and entries.",
+      "lookOnly": true,
+      "answer": {
+        "outcome": "edit",
+        "summary": "Shopping list now has a #111111 background with #eeeeee text. Layout and entries are unchanged.",
+        "files": {
+          "mode": "replace",
+          "code": {
+            "html": "\u003ch1\u003eShopping list\u003c/h1\u003e\u003cul id=\"items\"\u003e\u003c/ul\u003e",
+            "css": "body{background:#111111;color:#eeeeee}",
+            "js": "tessera.call(\"data.read\").then(({ data }) =\u003e {\n  for (const item of data.items) {\n    const row = document.createElement(\"li\");\n    row.textContent = item.title;\n    document.getElementById(\"items\").append(row);\n  }\n});"
+          }
+        },
+        "data": {
+          "mode": "unchanged"
+        }
+      }
+    },
+    {
+      "name": "quantities",
+      "request": "Add a numeric quantity to every item, starting at 1, and show the quantity beside each item. Keep the dark colors and all entries.",
+      "lookOnly": false,
+      "answer": {
+        "outcome": "edit",
+        "summary": "Every item in the shopping list now has a quantity, starting at 1, shown beside its name. Existing entries and the dark colors are kept.",
+        "files": {
+          "mode": "replace",
+          "code": {
+            "html": "\u003ch1\u003eShopping list\u003c/h1\u003e\u003cul id=\"items\"\u003e\u003c/ul\u003e",
+            "css": "body{background:#111111;color:#eeeeee}",
+            "js": "tessera.call(\"data.read\").then(({ data }) =\u003e {\n  for (const item of data.items) {\n    const row = document.createElement(\"li\");\n    const qty = typeof item.quantity === \"number\" ? item.quantity : 1;\n    row.textContent = item.title + \" — Quantity: \" + qty;\n    document.getElementById(\"items\").append(row);\n  }\n});"
+          }
+        },
+        "data": {
+          "mode": "migrate",
+          "schema": {
+            "additionalProperties": false,
+            "properties": {
+              "items": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "number"
+                    }
+                  },
+                  "required": ["id", "title", "quantity"],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": ["items"],
+            "type": "object"
+          },
+          "defaults": {
+            "items": []
+          },
+          "migration": {
+            "fromVersion": 1,
+            "toVersion": 2,
+            "operations": [
+              {
+                "op": "addField",
+                "collection": "items",
+                "fields": {
+                  "quantity": 1
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
