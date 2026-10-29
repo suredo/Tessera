@@ -168,6 +168,8 @@ export {
 } from "./routes.ts";
 export {
   creationSchema,
+  editSchema,
+  type Edit,
   FAILURE_CLASSES,
   GENERATE_ANSWERS,
   GENERATE_ROUTE,

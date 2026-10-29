@@ -145,11 +145,13 @@ function recordProblems(schema: object, data: ToolData, what: string): string[] 
  * The host's checks on a created tool, before anything is stored or run: its data shape, its
  * defaults and starting data against it, the artifact contract, then the static check (VER-01).
  */
-export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>): CreateResult {
-  const { schema, reusableDefaults, initialState } = creation.data;
+export function dataProblems(
+  schema: object,
+  reusableDefaults: ToolData,
+  startingData: ToolData,
+): string[] {
   const shape: string[] = [];
   const compiled = compileToolSchema(schema);
-  const startingData = startingDataOf(reusableDefaults, initialState);
   if (!compiled.ok) {
     shape.push(compiled.reason);
   } else {
@@ -169,6 +171,14 @@ export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>):
       shape.push(...recordProblems(schema, data, what));
     }
   }
+  return shape;
+}
+
+/** Builds a creation only after the shared data checks, artifact validation and static check. */
+export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>): CreateResult {
+  const { schema, reusableDefaults, initialState } = creation.data;
+  const startingData = startingDataOf(reusableDefaults, initialState);
+  const shape = dataProblems(schema, reusableDefaults, startingData);
   const built = {
     contractVersion: ARTIFACT_CONTRACT_VERSION,
     code: creation.code,

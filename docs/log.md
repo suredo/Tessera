@@ -2,6 +2,8 @@
 
 ## 2026-10-28
 
+* **Create**: The edit stage for [issue 146](https://github.com/suredo/Tessera/issues/146): [contracts](code/contracts/package.md) define independent file/data change modes, and [generation stages](code/server/generation.md) check edits and lossless one-version migrations against the original artifact and entries on copies. The [prompt assembly](code/server/prompts.md) adds versioned edit/declaration/attempt parts and an edit-specific style guide using the same runtime tokens within the unchanged budgets. Per-class repair and no-change detection are scripted; browser integration follows in a separate PR. The owner approved a four-call cap for a rehearsed two-case live edit check; no calls have been spent on it yet.
+
 * **Create**: The [smoke repair check](code/evals/smoke-repair.md) runs one browser case through the real repair route with a cap of three calls, explicitly approved for one run. It keeps calls capped and recorded, aborts and settles outstanding work before cleanup, and verifies the two starting entries survive activation. The rehearsed [live run](../evals/reports/2026-10-28-smoke-repair.md) passed in one call (8,857 input and 1,564 output tokens, 10.16 seconds of model time); the [budget summary](roadmap/budgets.md) now records 16 M2 calls used. The repair answer is kept as a sanitized replay fixture; the [prompt doc](code/server/prompts.md) links the evidence.
 
 * **Update**: The [web package](code/web/package.md) describes isolating lint-rule snippets in a small typed fixture project for [issue 177](https://github.com/suredo/Tessera/issues/177), preserving the production ESLint rules, assertions and timeout.

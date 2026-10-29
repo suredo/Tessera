@@ -3,6 +3,7 @@ import { UI_MODES } from "./artifact.ts";
 import { BRIDGE_CAPABILITIES } from "./bridge.ts";
 import { jsonObjectSchema } from "./json.ts";
 import { versionHashSchema } from "./workspace.ts";
+import { migrationSchema } from "./migration.ts";
 
 // What the generation stages answer, and how their failures are classed (CON-02, GEN-05, GEN-09).
 // Each answer is a discriminated union, so a field exists only where it means something, and no
@@ -67,6 +68,29 @@ export const creationSchema = z
   ])
   .describe("The create stage's answer: a new tool, or why none can be made (CON-02, GEN-05).");
 export type Creation = z.infer<typeof creationSchema>;
+
+/** Edits declare changes explicitly; the host owns the name and unchanged declarations (CON-02). */
+export const editSchema = z.discriminatedUnion("outcome", [
+  z.strictObject({
+    outcome: z.literal("edit"),
+    summary: creationSchema.options[0].shape.summary,
+    files: z.discriminatedUnion("mode", [
+      z.strictObject({ mode: z.literal("unchanged") }),
+      z.strictObject({ mode: z.literal("replace"), code }),
+    ]),
+    data: z.discriminatedUnion("mode", [
+      z.strictObject({ mode: z.literal("unchanged") }),
+      z.strictObject({
+        mode: z.literal("migrate"),
+        schema: jsonObjectSchema,
+        defaults: jsonObjectSchema,
+        migration: migrationSchema,
+      }),
+    ]),
+  }),
+  creationSchema.options[1],
+]);
+export type Edit = z.infer<typeof editSchema>;
 
 /** The host app asks for a request to be carried out here (GEN-01, GEN-04). */
 export const GENERATE_ROUTE = "/api/generate";

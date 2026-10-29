@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-28T03:04:52Z }
+generated: { by: codex/gpt-6, at: 2026-10-28T12:59:39Z }
 ---
 
 # Purpose
@@ -24,6 +24,8 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
   - `fillPart`, `partText` and `partVersion` read, fill and version a part. `PROMPT_PARTS` lists them, `PROMPT_BUDGETS` caps each stage, and `manifestForPrompt` is the bridge manifest as the bridge part quotes it.
 
 # Invariants
+
+- **The edit stage receives original code and declarations, never workspace entries.** `edit.md` describes explicit file/data modes and preservation; `edit-declarations.md` quotes original data shape/defaults, capabilities, pins, UI and structured change flags. `edit-attempt.md` quotes a failed edit separately. `repair-edit-smoke.md` requires an edit answer, keeping the failed candidate's data change, rather than using creation's smoke part. Edits and edit repairs in standard mode use `ui-edit.md`, a concise preservation guide with the same complete runtime token list; base sandbox rules and the full accessibility part remain. Real edit and repair fixture prompts stay inside the existing 18,500 / 23,500 budgets. The two-case live edit check has an approved cap of four calls and is pending integration/rehearsal.
 
 - **Smoke repair has its own part** (`GEN-09`): `repair-smoke.md` asks for startup, display and accessibility fixes at 320 px using defaults. It preserves the data declaration, requests empty initial state because starting data is already installed, and uses the creation answer contract. Its assembly and fixture size are tested alongside the existing repair parts. The [budgeted live check](../../../evals/reports/2026-10-28-smoke-repair.md) repaired one missing label in one call, staged it again and preserved the request's entries.
 
