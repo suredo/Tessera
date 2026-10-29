@@ -4,7 +4,7 @@ title: "Testing"
 description: "The five-layer test pyramid and test rules (ENG-11, ENG-13, ENG-14, ENG-17, ENG-20, ENG-31)."
 tags: [practices, testing]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T04:46:39Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T10:25:56Z }
 ---
 # Testing
 
@@ -43,6 +43,8 @@ How `ENG-31` chooses and reports local checks. It applies to the author before s
 **Broaden when the impact is wide or unclear.** Run the full suite, or every layer the change can reach, when it touches a shared contract (`packages/contracts` and its generated schemas), shared infrastructure (storage and migrations, the local server and its guard, the runtime's wrapper and preamble, the browser test host and other test support), dependencies or the lockfile, test or tool configuration (Vitest, Playwright, TypeScript, ESLint, Prettier), or when you can't tell what it reaches. When in doubt, broaden.
 
 **A full local run** is allowed when it is justified, such as for a change that reaches most of the code, a failure whose cause isn't clear, or closing a milestone, but it is never the default.
+
+**Sequence heavyweight local phases.** Run the full unit suite, browser tests (including browser rehearsals), and lint as separate phases on the same machine, including across worktrees and assistant sessions. Wait for one phase to finish before starting another. Vitest caps unit workers at four in `vitest.config.ts` to bound subprocess and filesystem contention. In [issue 188](https://github.com/suredo/Tessera/issues/188), unrestricted unit workers overlapping six browser workers and other checks exceeded unchanged subprocess-test timeouts. Preserve test inclusion, assertions, timeouts, provider/stage limits and the no-retry rule; record failures instead of rerunning unchanged orchestration. CI still runs every required check.
 
 **Say why the checks are enough.** Each report names what the change can reach and why the checks run cover it.
 
