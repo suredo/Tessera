@@ -58,7 +58,15 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   const key = (workspaceId: string, hash: string) => `${workspaceId}:${hash}`;
   const available = (context: SmokeRepairContext) => {
     const id = key(context.reply.workspaceId, context.reply.hash);
-    if ([pending.get(id), waitingData.get(id)].some((entry) => entry && entry.expires > Date.now()))
+    const repair = pending.get(id);
+    const workspace = getWorkspace(options.store, context.reply.workspaceId);
+    const eligibleRepair =
+      repair &&
+      workspace?.currentVersion === repair.context.baseVersion &&
+      workspace.dataRevision === repair.context.reply.expectedDataRevision
+        ? repair
+        : undefined;
+    if ([eligibleRepair, waitingData.get(id)].some((entry) => entry && entry.expires > Date.now()))
       throw new ProviderError(
         "cancelled",
         "Another request is still checking this tool. Finish it before asking again.",

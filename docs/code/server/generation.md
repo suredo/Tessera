@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T10:18:00Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T10:28:02Z }
 ---
 
 # Purpose

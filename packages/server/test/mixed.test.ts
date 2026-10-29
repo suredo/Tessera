@@ -125,6 +125,50 @@ const setQuantity = {
 };
 
 describe("mixed request sequencing", () => {
+  it("GEN-07 GEN-09: completed edits do not block returning to an earlier candidate hash", async () => {
+    if (styleEdit.files.mode !== "replace") throw new Error("Expected style fixture");
+    const editing: Intent = {
+      ...intent,
+      kind: "edit",
+      dataPart: null,
+      behaviorChange: false,
+      lookOnly: true,
+    };
+    const blue = {
+      ...styleEdit,
+      files: {
+        mode: "replace",
+        code: { ...styleEdit.files.code, css: "body{background:#ddeeff;color:#111}" },
+      },
+    };
+    const f = await fixture(
+      [
+        { stage: "edit", value: styleEdit },
+        { stage: "intent", value: editing },
+        { stage: "edit", value: blue },
+        { stage: "intent", value: editing },
+        { stage: "edit", value: styleEdit },
+      ],
+      editing,
+    );
+    const hashes: string[] = [];
+    for (const request of ["Make it dark", "Make it blue", "Make it dark"]) {
+      const reply = await f.post(GENERATE_ROUTE, { workspaceId: f.id, request });
+      if (reply.kind !== "candidate") throw new Error("Expected edit candidate");
+      hashes.push(reply.hash);
+      expect(activateVersion(f.store, f.id, reply.hash, reply.expectedDataRevision).ok).toBe(true);
+    }
+    expect(hashes[0]).toBe(hashes[2]);
+    expect(hashes[0]).not.toBe(hashes[1]);
+    expect(f.calls.map((call) => call.stage)).toEqual([
+      "intent",
+      "edit",
+      "intent",
+      "edit",
+      "intent",
+      "edit",
+    ]);
+  });
   it("GEN-04 DATA-02: equal candidate hashes cannot replace another request's data instructions", async () => {
     const f = await fixture(
       [
