@@ -4,7 +4,11 @@ import {
   generateReplySchema,
   generateRequestSchema,
   smokeRepairRequestSchema,
+  CONFIRM_DATA_ROUTE,
+  confirmDataRequestSchema,
+  type GenerateReply,
 } from "@tessera/contracts";
+import { randomUUID } from "node:crypto";
 import { json, readJson, text } from "../http/body.ts";
 import type { Handler } from "../http/server.ts";
 import type { JobQueue } from "../jobs/index.ts";
@@ -13,6 +17,7 @@ import type { Store } from "../workspaces/index.ts";
 import { generate } from "./pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
 import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
+import { applyDataOffer, type DataOffer } from "./data-action.ts";
 
 // The host app's route for a request (GEN-01): it runs as a job, one at a time (CLI-06), and
 // answers with what came of it, checked against the contract (CON-01). The local server's guard
@@ -38,6 +43,14 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   // Short-lived continuations, bounded in memory and consumed before a repair call. Restarting
   // loses eligibility, never resets it; a replay or a parallel POST cannot spend another call.
   const pending = new Map<string, { context: SmokeRepairContext; expires: number }>();
+  const offers = new Map<string, { offer: DataOffer; expires: number }>();
+  const offerData = (offer: DataOffer, expires: number) => {
+    for (const [token, value] of offers) if (value.expires <= Date.now()) offers.delete(token);
+    if (offers.size >= 100) offers.delete(offers.keys().next().value!);
+    const token = randomUUID();
+    offers.set(token, { offer, expires });
+    return token;
+  };
   const key = (workspaceId: string, hash: string) => `${workspaceId}:${hash}`;
   const remember = (context: SmokeRepairContext, expires: number) => {
     for (const [id, entry] of pending) if (entry.expires <= Date.now()) pending.delete(id);
@@ -99,6 +112,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   stopped,
                   (context) => remember(context, expires),
                   check,
+                  (offer) => offerData(offer, expires),
                 ),
               signal,
             );
@@ -133,5 +147,57 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
         }),
       );
     };
-  return { [GENERATE_ROUTE]: handle(false), [SMOKE_REPAIR_ROUTE]: handle(true) };
+  const confirm: Handler = async (req, res) => {
+    if (req.method !== "POST") return text(res, 405, "Send a confirmation with POST.");
+    const body = await readJson(req, REQUEST_LIMIT_BYTES);
+    if (body === "too-large") return text(res, 413, "The confirmation is too long.");
+    const checked = body === "invalid" ? undefined : confirmDataRequestSchema.safeParse(body.json);
+    if (!checked?.success) return text(res, 400, "Choose whether to apply the proposed changes.");
+    const entry = offers.get(checked.data.token);
+    offers.delete(checked.data.token); // Consume before any queued work, including cancellation.
+    if (!checked.data.approve) return json(res, { kind: "answer", answer: "data_cancelled" });
+    const { outcome } = options.jobs.submit(
+      "Apply reviewed entry changes",
+      (signal): Promise<GenerateReply> => {
+        if (!entry)
+          return Promise.resolve({
+            kind: "failed",
+            failure: "provider",
+            message: "This review expired. Please ask for the change again.",
+            findings: [],
+          });
+        const check = () => {
+          signal.throwIfAborted();
+          if (Date.now() >= entry.expires)
+            throw new ProviderError(
+              "time_limit",
+              "This review expired. Please ask for the change again.",
+            );
+        };
+        return Promise.resolve(applyDataOffer(options.store, entry.offer, check));
+      },
+    );
+    const ended = await outcome;
+    return json(
+      res,
+      generateReplySchema.parse(
+        ended.state === "done"
+          ? ended.value
+          : {
+              kind: "failed",
+              failure: "provider",
+              message:
+                ended.state === "failed" && ended.error instanceof ProviderError
+                  ? ended.error.message
+                  : FAILED,
+              findings: [],
+            },
+      ),
+    );
+  };
+  return {
+    [GENERATE_ROUTE]: handle(false),
+    [SMOKE_REPAIR_ROUTE]: handle(true),
+    [CONFIRM_DATA_ROUTE]: confirm,
+  };
 }

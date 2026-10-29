@@ -8,7 +8,8 @@ import { ImportFile } from "./ImportFile.tsx";
 import { Library } from "./Library.tsx";
 import { checkSetup, runProbe } from "./setup.ts";
 import { SetupNotice, Status } from "./Status.tsx";
-import { carryOut } from "./generate.ts";
+import { carryOut, askToConfirmData, dataOutcome, type RequestOutcome } from "./generate.ts";
+import { DataChangeOffer } from "./DataChangeOffer.tsx";
 import { RequestBox } from "./RequestBox.tsx";
 import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
@@ -112,6 +113,7 @@ export function App() {
   // A request running, and a saved tool a request matched, waiting for the person's choice.
   const [requesting, setRequesting] = useState(false);
   const [offer, setOffer] = useState<{ id: string; name: string } | null>(null);
+  const [dataOffer, setDataOffer] = useState<RequestOutcome["dataOffer"]>();
   // Why the last check couldn't be made, such as the server not answering; "" when it was.
   const [setupProblem, setSetupProblem] = useState("");
   const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -243,8 +245,10 @@ export function App() {
     if (requesting) return;
     setRequesting(true);
     setOffer(null);
+    setDataOffer(undefined);
     try {
       const outcome = await carryOut(text, openId);
+      setDataOffer(outcome.dataOffer);
       const { savedTools: saved } = await refresh().then(() => ask("library.list", {}));
       if (outcome.savedToolId) {
         const tool = saved.find((s) => s.id === outcome.savedToolId);
@@ -257,6 +261,10 @@ export function App() {
       if (outcome.openWorkspaceId) {
         open(outcome.openWorkspaceId);
         setView("workspaces");
+      }
+      if (outcome.dataChanged) {
+        setReloads((n) => n + 1);
+        setToolChanges((n) => n + 1);
       }
       setNotice(outcome.message || t("request.failedPlain"));
     } catch (error) {
@@ -283,6 +291,29 @@ export function App() {
       );
     } catch (error) {
       say(error);
+    }
+  };
+  const takeDataOffer = async (approve: boolean) => {
+    if (!dataOffer || requesting) return;
+    setRequesting(true);
+    const token = dataOffer.token;
+    setDataOffer(undefined);
+    try {
+      const outcome = dataOutcome(await askToConfirmData({ token, approve }));
+      await refresh();
+      if (outcome.openWorkspaceId) {
+        open(outcome.openWorkspaceId);
+        setView("workspaces");
+      }
+      if (outcome.dataChanged) {
+        setReloads((n) => n + 1);
+        setToolChanges((n) => n + 1);
+      }
+      setNotice(outcome.message);
+    } catch (error) {
+      say(error);
+    } finally {
+      setRequesting(false);
     }
   };
 
@@ -524,6 +555,9 @@ export function App() {
       )}
       <div className="notice">
         <p role="status">{notice}</p>
+        {dataOffer && (
+          <DataChangeOffer offer={dataOffer} working={requesting} onChoose={takeDataOffer} />
+        )}
         {/* A saved tool the request matched: the person chooses (GEN-18). */}
         {offer && (
           <p className="offer">

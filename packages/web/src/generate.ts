@@ -1,10 +1,12 @@
 import {
   GENERATE_ROUTE,
   SMOKE_REPAIR_ROUTE,
+  CONFIRM_DATA_ROUTE,
   generateReplySchema,
   type GenerateReply,
   type GenerateRequest,
   type SmokeRepairRequest,
+  type ConfirmDataRequest,
 } from "@tessera/contracts";
 import { smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
 import { HostError, type Send } from "./host-api.ts";
@@ -31,9 +33,15 @@ export async function askToRepairSmoke(
   return askForCandidate(SMOKE_REPAIR_ROUTE, request, send);
 }
 
+export const askToConfirmData = (
+  request: ConfirmDataRequest,
+  send?: Send,
+): Promise<GenerateReply> =>
+  askForCandidate(CONFIRM_DATA_ROUTE, request, send ?? ((url, init) => fetch(url, init)));
+
 async function askForCandidate(
   route: string,
-  request: GenerateRequest | SmokeRepairRequest,
+  request: GenerateRequest | SmokeRepairRequest | ConfirmDataRequest,
   send: Send,
 ): Promise<GenerateReply> {
   const response = await send(route, {
@@ -57,7 +65,45 @@ export type RequestOutcome = {
   openWorkspaceId?: string;
   /** A saved tool the request asked for: the person chooses Continue or Use again (GEN-18). */
   savedToolId?: string;
+  dataChanged?: boolean;
+  dataOffer?: Extract<GenerateReply, { kind: "data_confirmation" }>;
 };
+
+/** Data success is reported only after its transaction, never for a proposed patch. */
+export function dataOutcome(reply: GenerateReply): RequestOutcome {
+  if (reply.kind === "data_changed")
+    return {
+      message: t(reply.count === 1 ? "request.dataChangedOne" : "request.dataChanged", {
+        name: reply.name,
+        count: reply.count,
+        summary: reply.summary,
+      }),
+      openWorkspaceId: reply.workspaceId,
+      dataChanged: true,
+    };
+  if (reply.kind === "data_confirmation")
+    return { message: t("request.dataReview"), dataOffer: reply };
+  if (reply.kind === "answer") {
+    switch (reply.answer) {
+      case "data_unchanged":
+        return { message: t("request.dataUnchanged") };
+      case "data_cancelled":
+        return { message: t("request.dataCancelled") };
+      case "data_stale":
+        return { message: t("request.dataStale") };
+      case "data_clarify":
+        return { message: t("request.dataClarify") };
+      case "data_cannot":
+        return { message: t("request.dataCannot", { reason: reply.reason ?? "" }) };
+    }
+  }
+  return {
+    message:
+      reply.kind === "failed"
+        ? t("request.failed", { message: reply.message })
+        : t("request.failedPlain"),
+  };
+}
 
 export type RequestDeps = {
   generate: (request: GenerateRequest) => Promise<GenerateReply>;
@@ -81,6 +127,9 @@ export async function carryOut(
   let repaired = false;
   for (;;) {
     switch (reply.kind) {
+      case "data_changed":
+      case "data_confirmation":
+        return dataOutcome(reply);
       case "candidate": {
         const staged = await deps.stage({
           candidate: {
@@ -136,6 +185,12 @@ export async function carryOut(
             return { message: t("request.unchanged") };
           case "stale":
             return { message: t("request.stale") };
+          case "data_unchanged":
+          case "data_cancelled":
+          case "data_stale":
+          case "data_clarify":
+          case "data_cannot":
+            return dataOutcome(reply);
         }
         break;
       case "open_saved":

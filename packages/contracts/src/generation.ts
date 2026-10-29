@@ -138,6 +138,10 @@ export const smokeRepairRequestSchema = z.strictObject({
 });
 export type SmokeRepairRequest = z.infer<typeof smokeRepairRequestSchema>;
 
+export const CONFIRM_DATA_ROUTE = "/api/generate/confirm-data";
+export const confirmDataRequestSchema = z.strictObject({ token: z.uuid(), approve: z.boolean() });
+export type ConfirmDataRequest = z.infer<typeof confirmDataRequestSchema>;
+
 /** What the host can say instead of making a tool, for the chat to word (GEN-08). */
 export const GENERATE_ANSWERS = [
   "clarify",
@@ -147,10 +151,30 @@ export const GENERATE_ANSWERS = [
   "not_yet",
   "unchanged",
   "stale",
+  "data_unchanged",
+  "data_cancelled",
+  "data_stale",
+  "data_clarify",
+  "data_cannot",
 ] as const;
 
 export const generateReplySchema = z
   .discriminatedUnion("kind", [
+    z.strictObject({
+      kind: z.literal("data_changed"),
+      workspaceId: z.uuid(),
+      name: z.string().min(1),
+      count: z.int().positive(),
+      summary: creationSchema.options[0].shape.summary,
+    }),
+    z.strictObject({
+      kind: z.literal("data_confirmation"),
+      workspaceId: z.uuid(),
+      name: z.string().min(1),
+      token: z.uuid(),
+      summary: creationSchema.options[0].shape.summary,
+      changes: z.array(dataChangePreviewSchema).min(1).max(100),
+    }),
     z.strictObject({
       kind: z.literal("candidate"),
       operation: z.enum(["create", "edit"]),
