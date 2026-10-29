@@ -9,7 +9,7 @@ const TIMED_OUT = "The request took too long. Please try again.";
 export async function withinRequestDeadline<T>(
   provider: Provider,
   expires: number,
-  work: (bounded: Provider, signal: AbortSignal, check: () => void) => Promise<T>,
+  work: (bounded: Provider, signal: AbortSignal, beforeStore: () => void) => Promise<T>,
   parent: AbortSignal,
 ): Promise<T> {
   const controller = new AbortController();
@@ -21,6 +21,12 @@ export async function withinRequestDeadline<T>(
   };
   check();
   const timer = setTimeout(() => controller.abort(), expires - Date.now());
+  let storing = false;
+  const beforeStore = () => {
+    check();
+    // A synchronous commit accepted within budget must keep its completed outcome (GEN-08).
+    storing = true;
+  };
   const bounded: Provider = {
     name: provider.name,
     live: provider.live,
@@ -39,8 +45,8 @@ export async function withinRequestDeadline<T>(
     },
   };
   try {
-    const result = await work(bounded, signal, check);
-    check();
+    const result = await work(bounded, signal, beforeStore);
+    if (!storing) check();
     return result;
   } catch (error) {
     if (controller.signal.aborted || Date.now() >= expires) {

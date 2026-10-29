@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T05:08:00Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T05:16:00Z }
 ---
 
 # Purpose
@@ -64,6 +64,7 @@ The core of generation (#146): a request's interface part creates or edits a can
 - **One request at a time** (`CLI-06`): each runs as a job in the server's job queue.
 - **Server stages share a request deadline** (`GEN-11`, in part). The clock starts when the queued generation job starts, after provider discovery. `GenerationOptions.requestTimeLimitMs` configures its positive timer-sized budget (seven minutes by default). Intent, creation/edit and their repairs share it. Time between candidate generation and smoke repair counts too; queuing a repair cannot reset expiry. Calls receive the remaining budget and a combined cancellation signal. Expiry is a plain provider failure, never repaired. Late answers are discarded, and synchronous validation is followed by a clock/signal check immediately before storing a version or new workspace. The queue waits for an aborted provider to settle before starting the next job; no timed-out result becomes a candidate.
 - **This is a server-stage bound, not full browser cancellation.** Browser staging/activation and setup discovery have their existing limits; this change does not add a browser-wide deadline, activation-expiry guard, progress UI or cancellation endpoint. Direct calls to `generate`/`repairSmoke` outside `generationRoutes` keep their stage limits and supplied signal; the route installs the shared wrapper. Full request-lifecycle deadline closure remains under #146, and the implementation list does not newly claim all of GEN-11.
+- **A completed synchronous store keeps its result** (`GEN-08`). The pre-store check accepts the storage boundary only while the request is live. Once that synchronous work finishes successfully, a clock crossing during its commit cannot turn it into a timeout with hidden saved work. A store that throws still fails; non-storing outcomes still get a final deadline check. Provider calls remain bounded even after that boundary.
 
 # Depends on / used by
 

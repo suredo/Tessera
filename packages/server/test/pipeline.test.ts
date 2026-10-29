@@ -16,6 +16,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { generate, generationRoutes } from "../src/generation/index.ts";
 import { repairSmoke, type SmokeRepairContext } from "../src/generation/smoke.ts";
+import { withinRequestDeadline } from "../src/generation/deadline.ts";
 import { workspaceTools } from "../src/host/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
@@ -94,6 +95,44 @@ const createReply = (value: unknown) => ({ kind: "value", stage: "create", value
 const repairReply = (value: unknown) => ({ kind: "value", stage: "repair", value });
 
 describe("carrying out a request (GEN-01, GEN-05)", () => {
+  it("GEN-11 GEN-08: a synchronous commit begun within budget keeps its candidate when the clock crosses expiry", async () => {
+    const folder = await newFolder();
+    let now = Date.now();
+    const expires = now + 100_000;
+    const clock = vi.spyOn(Date, "now").mockImplementation(() => now);
+    const database = { ...folder.db };
+    folder.db.transaction = (work) => {
+      const result = database.transaction(work);
+      now = expires + 1;
+      return result;
+    };
+    try {
+      const reply = await withinRequestDeadline(
+        script(intentReply({ kind: "create" }), createReply(tool)),
+        expires,
+        (bounded, signal, beforeStore) =>
+          generate(
+            folder,
+            bounded,
+            DEFAULT_ROUTES,
+            { request: "A list" },
+            signal,
+            undefined,
+            beforeStore,
+          ),
+        new AbortController().signal,
+      );
+      expect(reply.kind).toBe("candidate");
+      if (reply.kind !== "candidate") throw new Error("Expected committed candidate");
+      expect(listWorkspaces(folder)).toMatchObject([
+        { id: reply.workspaceId, data: tool.data.initialState },
+      ]);
+    } finally {
+      clock.mockRestore();
+      folder.close();
+    }
+  });
+
   it("GEN-09: smoke repair retains earlier class budgets and quotes the stored answer with the original language", async () => {
     const folder = await newFolder();
     let context: SmokeRepairContext | undefined;
