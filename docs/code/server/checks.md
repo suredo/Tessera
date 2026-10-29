@@ -7,7 +7,7 @@ implements: [SBX-06, SBX-07]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T20:41:27Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T20:59:16Z }
 ---
 
 # Purpose
@@ -21,8 +21,8 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 
 # Invariants
 
-- **Bridge calls use the shared manifest** (`VER-01`, in part). Only direct `tessera.method(...)` calls with a written-out method name are accepted. Methods come from contracts' `BRIDGE_METHODS`; action names and capability requirements come from `BRIDGE_ACTIONS`. `call` needs fixed action text, and its action must exist and have its capability declared. `assetUrl` accepts a computed image ID and checks its fixed underlying action; `send` takes a message and `onMessage` a listener, without treating either as an action name. Create, edit and import pass the artifact's actual capabilities before storage/staging.
-- **Borrowed bridge access fails at its source.** Storing, passing, returning, destructuring or computing `tessera` or its methods is refused with repair guidance, including `bind`, `call` and `apply`. Reaching it through a page object is refused too. Existing shadowing/write guards remain. This is restricted syntax, not complete JavaScript alias analysis: normal local objects may still have methods such as `call` or a `tessera` property. Existing prompt fixtures, development samples and sanitized live replays use direct calls; they provide no evidence that bridge aliases need support. These checks reuse the existing parsed tree walk without another convergence pass or dependency.
+- **Recognized bridge calls use the shared manifest** (`VER-01`, in part). For references recognized as the host's bridge, the accepted form is a direct `tessera.method(...)` call with a written-out method name. Methods come from contracts' `BRIDGE_METHODS`; action names and capability requirements come from `BRIDGE_ACTIONS`. `call` needs fixed action text, and its action must exist and have its capability declared. `assetUrl` accepts a computed image ID and checks its fixed underlying action; `send` takes a message and `onMessage` a listener, without treating either as an action name. Create, edit and import pass the artifact's actual capabilities before storage/staging.
+- **Direct bridge aliases fail at their source.** Storing, passing, returning, destructuring or computing the global `tessera` reference or its methods is refused with repair guidance, including `bind`, `call` and `apply`. Access through a recognized page-object path is refused too. Existing shadowing/write guards remain. This is restricted syntax, not complete JavaScript alias analysis: normal local objects may still have methods such as `call` or a `tessera` property, and the inherited page-tracking gaps below can conceal indirect bridge access. Existing prompt fixtures, development samples and sanitized live replays use direct calls; they provide no evidence that bridge aliases need support. These checks reuse the existing parsed tree walk without another convergence pass or dependency.
 - **No frames, embedded objects or script tags** (`SBX-06`): `<iframe>`, `<frame>`, `<object>`, `<embed>`, `<script>` (in SVG too), `<base>` and `<meta>`, in the HTML, in fixed HTML text written from the JavaScript, and created with `createElement`.
 - **No navigation** (`SBX-07`):
   - links whose address isn't `#` or empty;
@@ -81,6 +81,7 @@ acorn and parse5, pinned exactly. The [export and import](archives.md) module re
   - native copies of the page's objects (`{...document}`) read back without a computed name.
 
   A gap is fixed when the fix is cheap and simple; the closure is at the platform.
+- **The same page-tracking gaps can hide bridge checks.** A local parser probe confirmed that `const box = {value: window.valueOf()}; box.value.tessera.call('unknown.action');` produces no static finding: the inherited plain-property classification loses the global object at `.value`. Direct `window.valueOf().tessera` is recognized and refused. This records a known deliberate-obfuscation limit, not supported bridge syntax or a guarantee that the example will keep passing. The independent runtime bridge action/capability guards still reject unknown actions and undeclared capabilities; this static slice does not replace them.
 - **The rules are strict on purpose.** A real tool that needs something they refuse is a reason to revisit ADR 0009, not to loosen a rule quietly.
 
 # Symbols (generated)
