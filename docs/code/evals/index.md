@@ -7,3 +7,4 @@
 * [Repair check](repair-check.md) - The live check of the repair stage's prompt parts: creations that failed the host's checks, replayed from the slice pilot at no cost, with only their repairs sent to the model through the harness's cap and ledger.
 * [Smoke repair check](smoke-repair.md) - A browser check of the smoke-repair prompt: canned intent and creation fail on an unlabelled field, only repairs use the capped provider, and activation must preserve the request's entries.
 * [Edit check](edit-check.md) - Two browser edits of a saved shopping list, with canned intent, capped real edits/repairs, a free rehearsal and preserved entries checked after each activation.
+* [Chat data check](chat-data-check.md) - Two frozen browser data cases with scripted intent/style, actual replacement approval, capped data calls, and a free rehearsal.
