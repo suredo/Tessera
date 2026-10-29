@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T02:26:15Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T06:39:39Z }
 ---
 
 # Purpose
@@ -16,6 +16,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 
 # Entry points
 
+- `assembleDataPrompt` builds the isolated data stage from `data-plan`, `data-context`, request and language; a shape repair adds `repair-data-plan`, diagnostics and a quoted `data-attempt`. It includes the declared data shape and actual entries/revisions, never tool code or an interface instruction. `DATA_PROMPT_BUDGET` bounds the actual assembled context before spending a call; the integrated live check follows after rehearsal and explicit approval.
 - `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `create.md` (what creation answers, with the host's data schema keywords), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `attempt.md` (a failed answer, quoted for its repair), `repair-schema-shape.md` and `repair-static.md` (each failure class's repair instructions, `GEN-09`), `language.md` (the request's language, as the intent stage found it, `GEN-15`), `source.md`, `diagnostics.md`, the probe's `probe.md` and `probe-request.md`, and the [intent stage](intent.md)'s `intent*.md`.
 - `src/prompts/prompts.ts`:
   - `assemblePrompt` builds a generation stage's prompt (`PromptInput` to `AssembledPrompt`): the instructions, the request, each part as name@version, and the size.
@@ -45,11 +46,11 @@ The [contracts](../contracts/package.md)' bridge manifest and intent, and the [r
 
 - **The replay suite doesn't exist yet** (`TEST-04`, #156). `ENG-16` asks every prompt change to pass it; until it exists, a change to a part is reviewed and its tests run, and one that changes behavior gets a small budgeted live check.
 - **The bridge manifest is most of the instructions,** about 7,000 characters, and grows with every action. The budgets will say when it needs a shorter form.
-- **Create, edit, repair and intent are assembled so far.** Data actions, research, review and acceptance get their parts with their stages.
+- **Create, edit, repair, intent and data plans are assembled so far.** Data-plan routing/confirmation follow in a separate slice. Research, review and acceptance get their parts with their stages.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `assembleIntentPrompt`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
-- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `RecordList` (type), `OpenTool` (type), `assembleIntentPrompt`, `fixedPart`
+- `index.ts`: `assembleIntentPrompt`, `assembleDataPrompt`, `DATA_PROMPT_BUDGET`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
+- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `DATA_PROMPT_BUDGET`, `assembleDataPrompt`, `RecordList` (type), `OpenTool` (type), `assembleIntentPrompt`, `fixedPart`

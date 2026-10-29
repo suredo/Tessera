@@ -6,6 +6,7 @@ import {
   type SavedTool,
   type Workspace,
   type WorkspaceVersion,
+  canonicalJson,
 } from "@tessera/contracts";
 import { z } from "zod";
 import {
@@ -381,8 +382,15 @@ export function readWorkspaceData(store: Store, id: string): WorkspaceData {
 }
 
 export type WorkspacePatchResult =
-  | { ok: true; addedIds: string[]; workspace: Workspace }
+  | { ok: true; changed: boolean; addedIds: string[]; workspace: Workspace }
   | { ok: false; reason: PatchRefusal; message: string };
+
+/** Extra host checks for a chat patch, run inside the same data transaction (DATA-02/03). */
+export type WorkspacePatchOptions = PatchOptions & {
+  expectedVersion?: string;
+  validate?: (data: ToolData) => boolean;
+  skipUnchanged?: boolean;
+};
 
 /**
  * Applies a batch of changes to a workspace's data (DATA-02), against the records' saved
@@ -394,13 +402,30 @@ export function patchWorkspaceData(
   store: Store,
   id: string,
   batch: unknown,
-  options: PatchOptions = {},
+  options: WorkspacePatchOptions = {},
 ): WorkspacePatchResult {
   return store.db.transaction(() => {
     const workspace = existingWorkspace(store, id);
+    if (
+      options.expectedVersion !== undefined &&
+      workspace.currentVersion !== options.expectedVersion
+    )
+      return {
+        ok: false,
+        reason: "stale",
+        message: "Your tool changed while this was being prepared. Your entries were kept.",
+      };
     const before = savedState(store, id, workspace.data ?? {});
     const result = applyPatch(before, batch, options);
     if (!result.ok) return { ok: false, reason: result.reason, message: result.message };
+    if (options.validate && !options.validate(result.state.data))
+      return {
+        ok: false,
+        reason: "invalid",
+        message: "The change doesn't fit this tool. Your entries were kept.",
+      };
+    if (options.skipUnchanged && canonicalJson(before.data) === canonicalJson(result.state.data))
+      return { ok: true, changed: false, addedIds: [], workspace };
     store.db.run(
       "UPDATE workspaces SET data = ?, data_revision = data_revision + 1, updated_at = ? WHERE id = ?",
       JSON.stringify(result.state.data),
@@ -410,7 +435,12 @@ export function patchWorkspaceData(
     saveRevisions(store, id, result.state.revisions, before.revisions);
     const change = changeOfPatch(before, result.state);
     if (change) keepUndo(store, id, change, workspace.dataRevision + 1);
-    return { ok: true, addedIds: result.addedIds, workspace: existingWorkspace(store, id) };
+    return {
+      ok: true,
+      changed: true,
+      addedIds: result.addedIds,
+      workspace: existingWorkspace(store, id),
+    };
   });
 }
 

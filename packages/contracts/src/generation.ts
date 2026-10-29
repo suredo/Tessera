@@ -4,6 +4,7 @@ import { BRIDGE_CAPABILITIES } from "./bridge.ts";
 import { jsonObjectSchema } from "./json.ts";
 import { versionHashSchema } from "./workspace.ts";
 import { migrationSchema } from "./migration.ts";
+import { patchBatchSchema, collectionName, recordIdSchema } from "./patch.ts";
 
 // What the generation stages answer, and how their failures are classed (CON-02, GEN-05, GEN-09).
 // Each answer is a discriminated union, so a field exists only where it means something, and no
@@ -91,6 +92,28 @@ export const editSchema = z.discriminatedUnion("outcome", [
   creationSchema.options[1],
 ]);
 export type Edit = z.infer<typeof editSchema>;
+
+/** Chat plans reuse record patches; the host binds revisions to the planning snapshot (DATA-02). */
+export const dataPlanSchema = z.discriminatedUnion("outcome", [
+  z.strictObject({
+    outcome: z.literal("patch"),
+    summary: creationSchema.options[0].shape.summary,
+    patch: patchBatchSchema,
+  }),
+  z.strictObject({ outcome: z.literal("unchanged") }),
+  z.strictObject({ outcome: z.literal("clarify") }),
+  creationSchema.options[1],
+]);
+export type DataPlan = z.infer<typeof dataPlanSchema>;
+
+/** Host-made before/after facts, shown before an existing entry is changed or removed. */
+export const dataChangePreviewSchema = z.strictObject({
+  collection: collectionName,
+  id: recordIdSchema,
+  before: jsonObjectSchema.nullable(),
+  after: jsonObjectSchema.nullable(),
+});
+export type DataChangePreview = z.infer<typeof dataChangePreviewSchema>;
 
 /** The host app asks for a request to be carried out here (GEN-01, GEN-04). */
 export const GENERATE_ROUTE = "/api/generate";

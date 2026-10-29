@@ -1,0 +1,1 @@
+The proposed data change failed the host's checks. Answer again with the data-plan contract using the original snapshot and request. Fix only the listed problems. Do not invent entries, IDs, fields, or a new request. A provider failure is never repaired here.

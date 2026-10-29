@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-07, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06
 tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts, ../../../packages/server/test/activation-route.test.ts, ../../../packages/server/test/undo.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T07:17:25Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T06:51:03Z }
 ---
 
 # Purpose
@@ -32,6 +32,7 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
 
 # Invariants
 
+- **Chat can add transaction-local guards.** `WorkspacePatchOptions` extends the existing engine options with an expected active version, a final-data validator and no-op skipping. Those checks run against the live working copy before any data, revision or undo row is saved. `WorkspacePatchResult.changed` distinguishes a committed change from a skipped no-op. Existing bridge callers retain their earlier behavior; schema validation is installed by the chat helper, not silently claimed for every bridge patch.
 - **Saved as it happens.** Each function commits its change before it returns; a test changes everything, restarts, and finds it all, both through `openDataFolder` and through a full launch and stop.
 - **Rows are checked by their contracts when read** (`CON-01`): each row is turned into its contract's shape and parsed, so a stored record that breaks its contract is never handed on.
 - **The history only grows** (`DATA-04`). A workspace's current version is the last entry of its history; going back to an older version adds a new entry, so the newer one stays restorable. A trigger refuses any change to an entry, and an entry must name a stored version (a foreign key).
@@ -57,7 +58,7 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 
 # Pitfalls
 
-- **Two ways to change data.** `patchWorkspaceData` is for a tool's or chat's changes, checked per record. `saveWorkspaceData` replaces the data whole, checked only against the workspace's revision, for defaults and restores (#50). Neither checks the data against the tool's schema yet (#50).
+- **Two ways to change data.** `patchWorkspaceData` is for a tool's or chat's changes, checked per record; chat installs its optional final-data validator inside that transaction. Bridge callers do not install it yet. `saveWorkspaceData` replaces the data whole, checked against the workspace's revision; callers such as activation/restore own their shape validation. Neither low-level function automatically loads a tool schema.
 - **Removed records' rows stay.** They are small and go with their workspace; a workspace whose tool adds and removes many records over years keeps one row for each. Pruning them would let a revision be reused.
 - **Recovery snapshots don't travel in archives,** and nothing removes them while their workspace lasts; a retention limit, and assets kept by snapshots (`DATA-11`), come with the asset store (#49).
 - **Restore's and undo's types are the contracts'.** The plan, its losses, the result, the recovery snapshot, the undo entry and their refusals are defined in the [contracts](../contracts/package.md) (`CON-01`), since the host app reads them through the [host API](host-api.md); a refusal this module can give must be listed there, or it doesn't compile.
@@ -73,10 +74,10 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `activation.ts`: `ActivationRefusal` (type), `ActivationResult` (type), `ActivationOptions` (type), `defaultsProblem`, `UsableVersion` (type), `usableVersion`, `activateVersion`
-- `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `activationRoutes`, `listUndo`, `undoDataChange`, `UndoEntry` (type), `UndoRefusal` (type), `UndoResult` (type), `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `getWorkspace`, `lastUsed`, `recordUse`, `listSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `renameSavedTool`, `renameWorkspace`, `replaceData`, `saveTool`, `saveWorkspaceData`, `UNDO_LIMIT`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type)
+- `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `activationRoutes`, `listUndo`, `undoDataChange`, `UndoEntry` (type), `UndoRefusal` (type), `UndoResult` (type), `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `getWorkspace`, `lastUsed`, `recordUse`, `listSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `renameSavedTool`, `renameWorkspace`, `replaceData`, `saveTool`, `saveWorkspaceData`, `UNDO_LIMIT`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type), `WorkspacePatchOptions` (type)
 - `restore.ts`: `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `planRestore`, `restoreVersion`, `RecoverySnapshot` (type), `listRecoverySnapshots`, `restoreRecoverySnapshot`
 - `reuse.ts`: `ContinueTarget` (type), `continueSavedTool`, `UseAgainRefusal` (type), `UseAgainResult` (type), `UseAgainOptions` (type), `useAgain`
 - `routes.ts`: `activationRoutes`
 - `undo-entries.ts`: `undoChangeSchema`, `UndoChange` (type), `changeOfPatch`, `Undone` (type), `undoRecords`
 - `undo.ts`: `UndoEntry` (type), `UndoRefusal` (type), `UndoResult` (type), `listUndo`, `undoDataChange`
-- `workspaces.ts`: `Store` (type), `getWorkspace`, `existingWorkspace`, `recordUse`, `lastUsed`, `listWorkspaces`, `createWorkspace`, `renameWorkspace`, `addWorkspaceVersion`, `appendVersion`, `workspaceVersions`, `saveWorkspaceData`, `UNDO_LIMIT`, `keepUndo`, `replaceData`, `savedRows`, `savedState`, `saveRevisions`, `WorkspaceData` (type), `readWorkspaceData`, `WorkspacePatchResult` (type), `patchWorkspaceData`, `getSavedTool`, `existingSavedTool`, `listSavedTools`, `saveTool`, `renameSavedTool`
+- `workspaces.ts`: `Store` (type), `getWorkspace`, `existingWorkspace`, `recordUse`, `lastUsed`, `listWorkspaces`, `createWorkspace`, `renameWorkspace`, `addWorkspaceVersion`, `appendVersion`, `workspaceVersions`, `saveWorkspaceData`, `UNDO_LIMIT`, `keepUndo`, `replaceData`, `savedRows`, `savedState`, `saveRevisions`, `WorkspaceData` (type), `readWorkspaceData`, `WorkspacePatchResult` (type), `WorkspacePatchOptions` (type), `patchWorkspaceData`, `getSavedTool`, `existingSavedTool`, `listSavedTools`, `saveTool`, `renameSavedTool`

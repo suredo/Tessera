@@ -4,10 +4,10 @@ title: "Generation stages"
 description: "A request becomes a checked candidate tool: the create stage's answer, a discriminated union, with the tool's data shape, reusable defaults and the request's own entries apart, checked by the host before anything is stored or run, every failure classed, and a failure of the host's checks repaired by its class within its budget; and the pipeline that carries a request through intent and creation to a stored candidate with its workspace, ready to stage."
 resource: ../../../packages/server/src/generation/
 implements: [GEN-05, CON-02, GEN-07]
-tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts]
+tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T05:16:00Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T06:39:39Z }
 ---
 
 # Purpose
@@ -16,6 +16,7 @@ The core of generation (#146): a request's interface part creates or edits a can
 
 # Entry points
 
+- `src/generation/data.ts`: `planDataChange` asks for a record patch on the data route (60 seconds), with one existing schema/shape repair allowance. `checkedDataPlan` binds revisions to the original host snapshot, simulates the entire batch on a copy, validates the target shape and builds before/after facts with host-generated add IDs. `commitDataPlan` applies the frozen plan with version, live shape and per-record revision checks inside the workspace transaction. The route and confirmation UI follow in a separate slice; these helpers alone do not authorize destructive changes.
 - `src/generation/edit.ts`: `editTool` runs an edit or a per-class repair with the edit output contract; `editedCandidate` checks it without storing anything. `EditInput` carries the original artifact, workspace data for local validation only, structured intent and repair usage.
 - `src/generation/edit-pipeline.ts`: `generateEdit` retains the workspace/version/revision captured before intent, checks it again before and after editing, and stores only a changed candidate. An identical result returns unchanged without staging or a history entry; a concurrent workspace change returns stale without applying the edit. Actual data migration remains activation's transaction.
 
@@ -31,6 +32,8 @@ The core of generation (#146): a request's interface part creates or edits a can
 
 # Invariants
 
+- **Data planning sees entries, not interface instructions or code.** Its separate prompt quotes only the declared data shape, snapshot and record revisions, plus the data request/language. Actual context is capped at 12,000 characters before calling a model; at most 100 operations and 64 KiB of preview are accepted. Provider errors stop; schema/shape errors get at most one repair against the same original snapshot. No stage or repair budget is increased. New prompt live evidence is pending an approved, rehearsed integrated run.
+- **The host owns data-plan safety facts.** Guessed model revisions are replaced by the planning snapshot's counts, then live counts are checked on commit. Adds use frozen host IDs. Unrelated live record changes survive; a changed target or tool version refuses the whole batch. The resulting live data must fit the original active tool's schema. Identical data does not create history. Existing-entry changes/removals are marked for explicit before/after confirmation; upcoming routes must enforce that requirement and one-use plans.
 - **Edits declare file and data changes separately** (`CON-02`, `GEN-07`). Files can stay unchanged or be replaced in full. Data can stay unchanged or migrate one version with the existing declarative migration contract. Thus unchanged files can still produce a real data-declaration change. The host returns `unchanged` only when the complete canonical artifact is identical; a model summary never decides whether a version changed.
 - **The host owns preserved declarations** (`GEN-13`, in part). Edit output cannot name or replace the tool's name, capabilities, pins, UI declaration or starting entries. A style-only edit must keep HTML, JavaScript and data identical. Other edits retain unrelated behavior by prompt instruction; semantic verification and narrower prompt context remain later work under #150.
 - **Edit migrations cannot lose existing values.** A data change needs the intent's `behaviorChange`, exactly the next version and a changed schema. The target schema/defaults pass the same bounded data checks as creation (`dataProblems`); both current entries and old reusable defaults migrate on copies with loss tracking. Any removed or replaced value, invalid record naming/id, incompatible result, or defaults differing from the migrated old defaults is refused. No workspace data is sent to the prompt or written here. Destructive edits and other declaration changes answer cannot or fail; confirmation flows are outside this slice.
@@ -80,10 +83,11 @@ The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `create.ts`: `GENERATION_TIME_LIMIT_MS`, `REPAIR_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `Candidate` (type), `CreateResult` (type), `startingDataOf`, `dataProblems`, `candidateFrom`, `CreateInput` (type), `createTool`
+- `data.ts`: `DATA_TIME_LIMIT_MS`, `CHAT_DATA_MAX_OPERATIONS`, `PlannedData` (type), `DataPlanResult` (type), `checkedDataPlan`, `planDataChange`, `commitDataPlan`
 - `deadline.ts`: `REQUEST_TIME_LIMIT_MS`, `withinRequestDeadline`
 - `edit-pipeline.ts`: `generateEdit`
 - `edit.ts`: `EditInput` (type), `EditResult` (type), `editedCandidate`, `editTool`
-- `index.ts`: `candidateFrom`, `dataProblems`, `createTool`, `GENERATION_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `REPAIR_TIME_LIMIT_MS`, `startingDataOf`, `Candidate` (type), `CreateInput` (type), `CreateResult` (type), `generate`, `REQUEST_TIME_LIMIT_MS`, `editedCandidate`, `editTool`, `EditInput` (type), `EditResult` (type), `generationRoutes`, `GenerationOptions` (type)
+- `index.ts`: `candidateFrom`, `dataProblems`, `createTool`, `GENERATION_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `REPAIR_TIME_LIMIT_MS`, `startingDataOf`, `Candidate` (type), `CreateInput` (type), `CreateResult` (type), `generate`, `planDataChange`, `checkedDataPlan`, `commitDataPlan`, `DATA_TIME_LIMIT_MS`, `CHAT_DATA_MAX_OPERATIONS`, `PlannedData` (type), `DataPlanResult` (type), `REQUEST_TIME_LIMIT_MS`, `editedCandidate`, `editTool`, `EditInput` (type), `EditResult` (type), `generationRoutes`, `GenerationOptions` (type)
 - `pipeline.ts`: `generate`
 - `routes.ts`: `GenerationOptions` (type), `generationRoutes`
 - `smoke.ts`: `SmokeRepairContext` (type), `repairSmoke`

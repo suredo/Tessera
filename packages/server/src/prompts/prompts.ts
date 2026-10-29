@@ -50,6 +50,10 @@ export const PROMPT_PARTS = [
   "intent-none",
   "intent-no-records",
   "intent-retry",
+  "data-plan",
+  "data-context",
+  "repair-data-plan",
+  "data-attempt",
 ] as const;
 export type PromptPart = (typeof PROMPT_PARTS)[number];
 
@@ -280,6 +284,46 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
  * tool with two lists, measured about 4,450 characters when set.
  */
 export const INTENT_PROMPT_BUDGET = 4_900;
+
+/** Includes the actual entries: oversized contexts are refused before spending a call. */
+export const DATA_PROMPT_BUDGET = 12_000;
+
+/** Builds the isolated data stage; no source code or interface instruction is included (GEN-04). */
+export function assembleDataPrompt(input: {
+  request: string;
+  language: string;
+  schema: Artifact["data"]["schema"];
+  data: Artifact["data"]["defaults"];
+  revisions: Record<string, Record<string, number>>;
+  diagnostics?: readonly string[];
+  attempt?: unknown;
+}): AssembledPrompt {
+  const parts: string[] = [];
+  const use = (part: PromptPart, values?: Record<string, string>) => {
+    const filled = fillPart(part, values);
+    parts.push(`${part}@${partVersion(partText(part))}`);
+    return filled;
+  };
+  const system = [use("data-plan"), ...(input.diagnostics ? [use("repair-data-plan")] : [])].join(
+    "\n\n",
+  );
+  const prompt = [
+    use("request", { request: input.request }),
+    use("language", { language: input.language }),
+    use("data-context", {
+      context: JSON.stringify({
+        schema: input.schema,
+        data: input.data,
+        revisions: input.revisions,
+      }),
+    }),
+    ...(input.diagnostics
+      ? [use("diagnostics", { diagnostics: input.diagnostics.join("\n") })]
+      : []),
+    ...(input.attempt ? [use("data-attempt", { attempt: JSON.stringify(input.attempt) })] : []),
+  ].join("\n\n");
+  return { system, prompt, parts, size: system.length + prompt.length };
+}
 
 /** A list of records the open tool keeps, with its fields, as its data shape declares them. */
 export type RecordList = { name: string; fields: string[] };
