@@ -95,7 +95,10 @@ export async function carryOut(
         });
         if (staged.outcome === "activated") {
           return {
-            message: t("request.made", { name: reply.name, summary: reply.summary }),
+            message: t(reply.operation === "edit" ? "request.edited" : "request.made", {
+              name: reply.name,
+              summary: reply.summary,
+            }),
             openWorkspaceId: reply.workspaceId,
           };
         }
@@ -109,7 +112,11 @@ export async function carryOut(
             });
             continue;
           }
-          return { message: t("request.checkFailed") };
+          return {
+            message: t(
+              reply.operation === "edit" ? "request.editCheckFailed" : "request.checkFailed",
+            ),
+          };
         }
         return { message: t("request.refused", { message: staged.message }) };
       }
@@ -125,6 +132,10 @@ export async function carryOut(
             return { message: t("request.split") };
           case "not_yet":
             return { message: t("request.notYet") };
+          case "unchanged":
+            return { message: t("request.unchanged") };
+          case "stale":
+            return { message: t("request.stale") };
         }
         break;
       case "open_saved":

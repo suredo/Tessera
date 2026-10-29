@@ -13,12 +13,13 @@ import {
   type Store,
 } from "../workspaces/index.ts";
 import { createTool } from "./create.ts";
+import { generateEdit } from "./edit-pipeline.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
 
 // A request, carried out as far as the server goes (GEN-01, GEN-04): the intent stage decides
 // what it is, the create stage makes a candidate, and the candidate is stored with its workspace
 // and starting data, ready for the host app to stage behind the smoke check (RUN-03) and activate
-// (DATA-10). Nothing is activated here. Edits and data changes come in their own stages.
+// (DATA-10). Nothing is activated here. Edits retain the current workspace; data actions follow.
 
 /** The plain sentence for a candidate still failing the host's checks after its repairs (GEN-09). */
 const CHECKS_FAILED = "The tool Tessera made didn't pass its checks, so nothing was changed.";
@@ -40,6 +41,7 @@ export async function generate(
   signal?: AbortSignal,
   remember?: (context: SmokeRepairContext) => void,
 ): Promise<GenerateReply> {
+  const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
   let decision;
   try {
@@ -61,9 +63,19 @@ export async function generate(
     case "ask_to_split":
       return { kind: "answer", answer: decision.action };
     case "edit":
+      return generateEdit(
+        store,
+        provider,
+        routes,
+        baseline,
+        decision.interfacePart,
+        decision.intent,
+        signal,
+        remember,
+      );
     case "data":
     case "mixed":
-      // Changing an open tool comes with the edit and data stages (#146, #150).
+      // Chat data actions and mixed requests follow this interface-edit slice (#146).
       return { kind: "answer", answer: "not_yet" };
   }
   const repairUsage: Partial<Record<RepairClass, number>> = {};
@@ -96,6 +108,7 @@ export async function generate(
   });
   const reply = {
     kind: "candidate" as const,
+    operation: "create" as const,
     workspaceId: workspace.id,
     hash,
     mountId: candidateMount(hash),
@@ -105,6 +118,12 @@ export async function generate(
     name: created.name,
     summary: created.summary,
   };
-  remember?.({ reply, request: decision.interfacePart, intent: decision.intent, repairUsage });
+  remember?.({
+    reply,
+    request: decision.interfacePart,
+    intent: decision.intent,
+    repairUsage,
+    baseVersion: null,
+  });
   return reply;
 }

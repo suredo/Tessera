@@ -122,12 +122,15 @@ export const GENERATE_ANSWERS = [
   "cannot",
   "ask_to_split",
   "not_yet",
+  "unchanged",
+  "stale",
 ] as const;
 
 export const generateReplySchema = z
   .discriminatedUnion("kind", [
     z.strictObject({
       kind: z.literal("candidate"),
+      operation: z.enum(["create", "edit"]),
       workspaceId: z.uuid(),
       hash: z.string().regex(/^[0-9a-f]{64}$/),
       mountId: z.string().min(1).describe("Where the candidate is served for staging (RUN-03)."),
