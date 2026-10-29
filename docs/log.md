@@ -2,6 +2,8 @@
 
 ## 2026-10-29
 
+* **Create**: The [chat data check](code/evals/chat-data-check.md) prepares two frozen browser cases for [#146](https://github.com/suredo/Tessera/issues/146): add Bread, then change style and approve Milk quantity 2 while preserving all entries. Intent and style are scripted; only data planning and one shared shape repair can reach the proposed three-call cap. Free rehearsal uses the exact runner and isolated evaluation data. Live execution remains unapproved.
+
 * **Update**: Mixed requests now send only interface instructions to [editing](code/server/generation.md), stage/activate first, then plan the separate data instruction against the installed shape. Continuations share the original deadline and repair counts; equal candidate hashes cannot replace another request's instructions. [Contracts](code/contracts/package.md) reuse data results inside mixed outcomes, and the [web app](code/web/package.md) preserves verified interface facts when entries need review, are cancelled/refused, or their result is unknown. Scripted HTTP/client/browser scenarios cover sequencing and partial outcomes; live data-prompt evidence remains pending a separately approved run.
 
 * **Correct**: Bound Vitest unit workers to four and document [separate heavyweight local phases](practices/testing.md#targeted-local-checks) across worktrees for [#188](https://github.com/suredo/Tessera/issues/188). The [CI code doc](code/ci/workflow.md) records the shared cap; assertions, timeouts, test inclusion, provider/stage limits and required CI checks remain unchanged.
