@@ -31,6 +31,8 @@ export const en = {
   "request.reviewEmpty": "No entry",
   "request.reviewNone": "None",
   "request.reviewEmptyText": "Empty text",
+  "request.reviewText": "Text: “{value}”",
+  "request.reviewNumber": "Number: {value}",
   "request.reviewEmptyList": "Empty list",
   "request.reviewEmptyObject": "No fields",
   "request.reviewYes": "Yes",

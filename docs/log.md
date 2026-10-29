@@ -2,6 +2,8 @@
 
 ## 2026-10-29
 
+* **Correct**: Independent review of the [chat confirmation UI](code/web/package.md) found that text/numeric/sentinel values could look identical and whitespace collapsed. Text now has explicit quoted labels, numbers have labels, and text/field whitespace is preserved; regression pairs and browser CSS checks cover it. The same review corrected stale wording about unsupported data-only requests. The changed browser run exposed an intermittent assertion during undo's runtime replacement ([#186](https://github.com/suredo/Tessera/issues/186)); the shared scenario is now explicitly serial and waits for host completion/new-runtime readiness. The corrected run passed all 24 Chrome/Edge checks without retries or increased timeouts.
+
 * **Update**: Chat data-only requests now use the [planner](code/server/generation.md) through the real route. Adds commit validated patches; existing-entry changes return a concrete before/after review and a server-owned one-use token. Approve/Cancel rechecks conflicts, shape, tool version and the original deadline without another model call. [Contracts](code/contracts/package.md) distinguish committed facts from proposals; the [web app](code/web/package.md) displays full values and refreshes the same tool/history after a data change. HTTP and Chrome/Edge tests cover adds, review cancellation, approval/undo, replay, conflicts and expiry. Mixed requests and live prompt evidence follow separately.
 
 * **Correct**: Fresh-agent review of chat-data planning found that the [workspace pitfalls](code/server/workspaces.md) still denied the new optional final-data validation. It now distinguishes chat's transaction-local validator, current bridge behavior and low-level whole-data writes.

@@ -11,6 +11,9 @@ import { editFixture } from "../../server/test/fixtures/edit-tool.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, type AppHost } from "./support/app-host.ts";
 
+// This file is one shared scenario; a failed step must not restart later steps from creation.
+test.describe.configure({ mode: "serial" });
+
 const intent = (kind: "create" | "data"): Intent => ({
   kind,
   interfacePart: null,
@@ -107,6 +110,10 @@ test("GEN-01 DATA-02: review exact before/after facts and cancel without a write
   const review = page.getByRole("region", { name: en["request.dataReview"] });
   await expect(review).toContainText("Milk");
   await expect(review).toContainText("Oat milk");
+  await expect(review.getByText("Text: “Milk”", { exact: true })).toHaveCSS(
+    "white-space",
+    "pre-wrap",
+  );
   expect(workspace()).toEqual(before);
   await page.getByRole("button", { name: en["request.reviewCancel"] }).click();
   await expect(page.getByText(en["request.dataCancelled"])).toBeVisible();
@@ -116,8 +123,14 @@ test("DATA-02 DATA-04: confirm the host plan and undo its one data change", asyn
   await page.goto(app.url);
   await ask(page, "Rename Milk to Oat milk");
   await page.getByRole("button", { name: en["request.reviewApply"] }).click();
+  await expect(
+    page.getByText("Changed one entry in Shopping list. Prepared the entry change."),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: en["tool.minimize"], exact: true })).toBeVisible();
   await expect(frame(page).getByRole("listitem")).toHaveText(["Oat milk", "Eggs", "Bread"]);
   await page.getByRole("button", { name: en["history.undo"] }).click();
+  await expect(page.getByText(en["history.undone"], { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: en["tool.minimize"], exact: true })).toBeVisible();
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs", "Bread"]);
 });
 test("DATA-02 GEN-08: a newer target edit wins over a reviewed removal", async ({ page }) => {

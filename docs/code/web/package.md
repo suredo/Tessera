@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts, ../../../packages/web/test/generate.test.ts, ../../../packages/web/e2e/request.spec.ts, ../../../packages/web/test/data-offer.test.tsx, ../../../packages/web/e2e/chat-data.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T07:04:00Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T09:56:33Z }
 ---
 
 # Purpose
@@ -41,7 +41,9 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 # Invariants
 
-- **Editing keeps the current tool until a candidate activates** (`GEN-07`, `GEN-08`). `carryOut` stages create and edit candidates alike, but says updated only for an activated edit. Unchanged and stale answers never stage. A repeated smoke failure keeps the old version and entries; a successful edit refreshes the workspace so `ToolPanel` restarts on its changed version. Browser edit tests cover dark styling, a no-op, a quantity migration preserving ids/values, repeated smoke failure and successful smoke repair without creating another workspace. The host's not-yet message now refers specifically to chat data changes.
+- **Editing keeps the current tool until a candidate activates** (`GEN-07`, `GEN-08`). `carryOut` stages create and edit candidates alike, but says updated only for an activated edit. Unchanged and stale answers never stage. A repeated smoke failure keeps the old version and entries; a successful edit refreshes the workspace so `ToolPanel` restarts on its changed version. Browser edit tests cover dark styling, a no-op, a quantity migration preserving ids/values, repeated smoke failure and successful smoke repair without creating another workspace. The host's not-yet message currently refers to mixed requests; data-only requests are supported.
+- **Review must distinguish the stored values.** Text is labelled and quoted, numbers are labelled, and null/booleans/empty structures have distinct descriptions. A literal string such as "None" cannot look like null. Text and field labels preserve whitespace, so newlines/spaces remain visible. Before/after facts include nested fields; only each record's host ID is hidden.
+- **The chat-data browser scenario is serial** ([#186](https://github.com/suredo/Tessera/issues/186)). Its steps share a workspace and reply sequence; later steps must be skipped after a failure rather than run against a restarted empty worker. Assertions after confirmation/undo wait for the host's completion notice and the replacement runtime's running control before reading nested frames. No retry or timeout increase hides a frame-replacement race.
 
 - **Lint-rule snippets use a small typed project** (`ENG-20`, [issue 177](https://github.com/suredo/Tessera/issues/177)). `test/lint.test.ts` uses the repository's unchanged ESLint configuration on `test/fixtures/lint/App.tsx`, whose own tsconfig includes only the fixture and its imports. It no longer loads the real app and all browser tests for a few snippets. The original timeout and assertions remain, with an added unsafe-assignment case proving type-aware rules still run.
 

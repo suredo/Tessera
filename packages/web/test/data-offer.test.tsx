@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";
-import type { GenerateReply } from "@tessera/contracts";
+import type { GenerateReply, JsonValue } from "@tessera/contracts";
 import { DataChangeOffer } from "../src/DataChangeOffer.tsx";
 import { dataOutcome } from "../src/generate.ts";
 
@@ -54,4 +54,39 @@ it("GEN-01 GEN-08: confirmation displays complete target facts, never claims a p
     dataChanged: true,
   });
   expect(dataOutcome({ kind: "answer", answer: "data_cancelled" }).message).toContain("cancelled");
+});
+
+it("GEN-01 DATA-02: review values distinguish types, sentinel text and whitespace", () => {
+  const pairs: [JsonValue, JsonValue][] = [
+    [1, "1"],
+    [null, "None"],
+    [true, "Yes"],
+    [false, "No"],
+    ["", "Empty text"],
+    [[], "Empty list"],
+    [{}, "No fields"],
+    ["a\nb", "a b"],
+  ];
+  for (const [before, after] of pairs) {
+    const html = renderToStaticMarkup(
+      <DataChangeOffer
+        offer={{
+          ...offer,
+          changes: [
+            {
+              collection: "items",
+              id: "target",
+              before: { id: "target", value: before },
+              after: { id: "target", value: after },
+            },
+          ],
+        }}
+        working={false}
+        onChoose={() => Promise.resolve()}
+      />,
+    );
+    const sections = /<h4>Before<\/h4>([\s\S]*?)<h4>After<\/h4>([\s\S]*?)<\/section>/.exec(html);
+    expect(sections).not.toBeNull();
+    expect(sections![1]).not.toBe(sections![2]);
+  }
 });

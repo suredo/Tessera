@@ -6,8 +6,13 @@ function Value({ value }: { value: JsonValue }) {
   if (value === null) return <span>{t("request.reviewNone")}</span>;
   if (typeof value === "boolean")
     return <span>{t(value ? "request.reviewYes" : "request.reviewNo")}</span>;
-  if (typeof value !== "object")
-    return <span>{value === "" ? t("request.reviewEmptyText") : String(value)}</span>;
+  if (typeof value === "string")
+    return (
+      <span className="review-value">
+        {value === "" ? t("request.reviewEmptyText") : t("request.reviewText", { value })}
+      </span>
+    );
+  if (typeof value === "number") return <span>{t("request.reviewNumber", { value })}</span>;
   if (Array.isArray(value))
     return value.length === 0 ? (
       <span>{t("request.reviewEmptyList")}</span>
