@@ -1,7 +1,7 @@
 import type { GenerateReply } from "@tessera/contracts";
 import type { StagingResult } from "@tessera/runtime";
 import { describe, expect, it, vi } from "vitest";
-import { carryOut, type RequestDeps } from "../src/generate.ts";
+import { carryOut, dataOutcome, withInterfaceOutcome, type RequestDeps } from "../src/generate.ts";
 import { en } from "../src/i18n/en.ts";
 
 // The host app's side of a request (GEN-01, GEN-08): a candidate is staged behind the smoke check
@@ -26,6 +26,7 @@ function deps(reply: GenerateReply, staged?: StagingResult) {
     stagings: [],
   };
   const fake: RequestDeps = {
+    finishData: () => Promise.resolve({ kind: "answer", answer: "data_unchanged" }),
     repairSmoke: () => Promise.resolve(reply),
     generate: (request) => {
       seen.requests.push(request);
@@ -40,6 +41,83 @@ function deps(reply: GenerateReply, staged?: StagingResult) {
 }
 
 describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
+  it("GEN-04 GEN-08: mixed data is asked only after activation/refresh, and a failed second part keeps the interface fact", async () => {
+    const order: string[] = [];
+    const mixed = deps(
+      { ...candidate, operation: "edit", dataPending: true },
+      { outcome: "activated", workspace: {} as never, migrationCount: 0 },
+    );
+    mixed.fake.stage = () => {
+      order.push("activate");
+      return Promise.resolve({ outcome: "activated", workspace: {} as never, migrationCount: 0 });
+    };
+    mixed.fake.finishData = () => {
+      order.push("data");
+      return Promise.resolve({
+        kind: "failed",
+        failure: "provider",
+        message: "Usage limit reached.",
+        findings: [],
+      });
+    };
+    const result = await carryOut(
+      "Make it dark and add Bread",
+      candidate.workspaceId,
+      mixed.fake,
+      () => {
+        order.push("refresh");
+        return Promise.resolve();
+      },
+    );
+    expect(order).toEqual(["activate", "refresh", "data"]);
+    expect(result.message).toContain("Shopping list was updated.");
+    expect(result.message).toContain("The entry changes weren't applied. Usage limit reached.");
+    expect(result.openWorkspaceId).toBe(candidate.workspaceId);
+    const finish = vi.fn(mixed.fake.finishData);
+    mixed.fake.finishData = finish;
+    mixed.fake.stage = () =>
+      Promise.resolve({ outcome: "check-failed", check: "cancelled", reason: "Stopped" });
+    await carryOut("mixed", candidate.workspaceId, mixed.fake);
+    expect(finish).not.toHaveBeenCalled();
+  });
+  it("GEN-04 GEN-08: confirmation retains partial facts, and a lost data response is uncertain rather than falsely unapplied", async () => {
+    const mixed = deps(
+      { ...candidate, operation: "edit", dataPending: true },
+      { outcome: "activated", workspace: {} as never, migrationCount: 0 },
+    );
+    mixed.fake.finishData = () =>
+      Promise.resolve({
+        kind: "data_confirmation",
+        workspaceId: candidate.workspaceId,
+        name: "Shopping list",
+        token: "00000000-0000-4000-8000-000000000003",
+        summary: "Rename Milk.",
+        changes: [
+          {
+            collection: "items",
+            id: "i-1",
+            before: { title: "Milk" },
+            after: { title: "Oat milk" },
+          },
+        ],
+      });
+    const result = await carryOut("mixed", candidate.workspaceId, mixed.fake);
+    expect(result.dataOffer?.interfaceMessage).toContain("was updated");
+    expect(
+      withInterfaceOutcome(
+        result.dataOffer?.interfaceMessage,
+        dataOutcome({ kind: "answer", answer: "data_cancelled" }),
+      ).message,
+    ).toContain(
+      "was updated. A list to tick off at the store. The proposed changes were cancelled.",
+    );
+    mixed.fake.finishData = () => Promise.reject(new Error("Lost response"));
+    const uncertain = await carryOut("mixed", candidate.workspaceId, mixed.fake);
+    expect(uncertain.reloadData).toBe(true);
+    expect(uncertain.message).toContain("was updated");
+    expect(uncertain.message).toContain("couldn't be confirmed");
+    expect(uncertain.message).not.toContain("weren't applied");
+  });
   it("GEN-07, GEN-08: an edit says updated only after activation; unchanged/stale never stage", async () => {
     const updated = deps(
       { ...candidate, operation: "edit" },

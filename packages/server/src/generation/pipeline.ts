@@ -89,9 +89,46 @@ export async function generate(
         beforeStore,
         offerData,
       );
-    case "mixed":
-      // Mixed sequencing follows the data-only confirmation slice (#146).
-      return { kind: "answer", answer: "not_yet" };
+    case "mixed": {
+      const repairUsage: Partial<Record<RepairClass, number>> = {};
+      const edited = await generateEdit(
+        store,
+        provider,
+        routes,
+        baseline,
+        decision.interfacePart,
+        decision.intent,
+        signal,
+        (context) =>
+          remember?.({
+            ...context,
+            dataPart: decision.dataPart,
+            reply: { ...context.reply, dataPending: true },
+          }),
+        beforeStore,
+        repairUsage,
+      );
+      if (edited.kind === "candidate") return { ...edited, dataPending: true };
+      if (edited.kind !== "answer" || edited.answer !== "unchanged") return edited;
+      return {
+        kind: "mixed_data",
+        workspaceId: baseline!.id,
+        name: baseline!.title,
+        interface: { outcome: "unchanged" },
+        data: await changeData(
+          store,
+          provider,
+          routes,
+          baseline!.id,
+          decision.dataPart,
+          decision.intent.language,
+          signal,
+          beforeStore,
+          offerData,
+          repairUsage,
+        ),
+      };
+    }
   }
   const repairUsage: Partial<Record<RepairClass, number>> = {};
   const created = await createTool(provider, routes, {

@@ -10,7 +10,7 @@ import {
 } from "@tessera/contracts";
 import { checkToolData } from "../data-shape/index.ts";
 import { applyPatch, recordKey } from "../patches/index.ts";
-import { assembleDataPrompt, DATA_PROMPT_BUDGET } from "../prompts/index.ts";
+import { assembleDataPrompt, DATA_PROMPT_BUDGET, type RepairClass } from "../prompts/index.ts";
 import { ProviderError, runStage, type Provider, type Routes } from "../providers/index.ts";
 import { patchWorkspaceData, type Store, type WorkspaceData } from "../workspaces/index.ts";
 import { REPAIR_BUDGETS } from "./create.ts";
@@ -36,6 +36,7 @@ type Input = {
   artifact: Artifact;
   snapshot: WorkspaceData;
   signal?: AbortSignal;
+  repairUsage?: Partial<Record<RepairClass, number>>;
 };
 const failed = (reason: string): DataPlanResult => ({
   kind: "failed",
@@ -136,6 +137,7 @@ export async function planDataChange(
   routes: Routes,
   input: Input,
 ): Promise<DataPlanResult> {
+  const used = input.repairUsage ?? {};
   let diagnostics: string[] | undefined;
   let attempt: unknown;
   for (let repair = 0; ; repair++) {
@@ -179,9 +181,10 @@ export async function planDataChange(
     if (
       result.kind !== "failed" ||
       result.failure === "provider" ||
-      repair >= REPAIR_BUDGETS["schema-shape"]
+      (used["schema-shape"] ?? 0) >= REPAIR_BUDGETS["schema-shape"]
     )
       return result;
+    used["schema-shape"] = (used["schema-shape"] ?? 0) + 1;
     diagnostics = result.findings;
   }
 }

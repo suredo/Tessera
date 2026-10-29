@@ -350,7 +350,7 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     folder.close();
   });
 
-  it("GEN-01: a mixed request waits for sequencing and changes nothing", async () => {
+  it("GEN-01 GEN-04: an unchanged mixed request keeps both the tool and entries", async () => {
     const folder = await newFolder();
     const workspace = createWorkspace(folder, "Shopping list");
     const hash = saveVersion(folder.db, {
@@ -364,12 +364,27 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     expect(activateVersion(folder, workspace.id, hash, 0).ok).toBe(true);
     const provider = script(
       intentReply({ kind: "mixed", interfacePart: "Make it calmer", dataPart: "Add milk" }),
+      {
+        kind: "value",
+        stage: "edit",
+        value: {
+          outcome: "edit",
+          summary: "Kept it.",
+          files: { mode: "unchanged" },
+          data: { mode: "unchanged" },
+        },
+      },
+      { kind: "value", stage: "data", value: { outcome: "unchanged" } },
     );
     const reply = await generate(folder, provider, DEFAULT_ROUTES, {
       request: "Make it calmer and add milk",
       workspaceId: workspace.id,
     });
-    expect(reply).toEqual({ kind: "answer", answer: "not_yet" });
+    expect(reply).toMatchObject({
+      kind: "mixed_data",
+      interface: { outcome: "unchanged" },
+      data: { kind: "answer", answer: "data_unchanged" },
+    });
     expect(getWorkspace(folder, workspace.id)?.currentVersion).toBe(hash);
     folder.close();
   });

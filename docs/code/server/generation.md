@@ -3,16 +3,16 @@ type: Code Module
 title: "Generation stages"
 description: "A request becomes a checked candidate tool: the create stage's answer, a discriminated union, with the tool's data shape, reusable defaults and the request's own entries apart, checked by the host before anything is stored or run, every failure classed, and a failure of the host's checks repaired by its class within its budget; and the pipeline that carries a request through intent and creation to a stored candidate with its workspace, ready to stage."
 resource: ../../../packages/server/src/generation/
-implements: [GEN-05, CON-02, GEN-07]
-tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts]
+implements: [GEN-05, CON-02, GEN-07, GEN-04]
+tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T07:04:00Z }
+generated: { by: codex/gpt-6, at: 2026-10-29T10:18:00Z }
 ---
 
 # Purpose
 
-The core of generation (#146): interface requests create or edit a candidate tool; data requests plan validated record patches. Creation stores a candidate with starting data; editing keeps the active tool and entries until activation. Failed checks are repaired by class. Adds can commit after validation; existing-entry changes wait for explicit review. Mixed requests follow separately.
+The core of generation (#146): interface requests create or edit a candidate tool; data requests plan validated record patches. Creation stores a candidate with starting data; editing keeps the active tool and entries until activation. Failed checks are repaired by class. Adds can commit after validation; existing-entry changes wait for explicit review. Mixed requests edit first, then plan the separate data instruction against the activated tool.
 
 # Entry points
 
@@ -56,10 +56,10 @@ The core of generation (#146): interface requests create or edit a candidate too
 - **A failure of the host's checks is repaired by its class** (`GEN-09`). Schema-shape and static failures go to the repair stage, on its own route (Sonnet medium, `CLI-09`), with their class's prompt part, what the checks found and the failed answer quoted, or, for an answer of the wrong shape, the request alone. The repair answers as creation does, and its answer goes through the same checks. Each class has its own budget in one request, one repair each for now, so a static failure after a shape repair still gets its own, and the result says how many repairs it took (A40). A provider failure, in creation or in a repair, is never repaired. A repair may also answer "cannot".
 - **The prompt's schema keywords are the host's own list,** the one the data shape is checked against, so the model is told exactly what passes.
 
-- **It doesn't carry out a mixed request yet.** `GEN-04` asks that the interface part goes to generation and the data part is applied after, as a validated patch batch; until the edit and data stages exist, a mixed request is answered "not yet", and `GEN-04` isn't claimed.
+- **Mixed instructions stay apart** (`GEN-04`). Only the interface instruction reaches editing and its repairs. A server-owned continuation retains the data instruction, language, original expiry and shared per-class repair counts. After browser staging/activation, the finish-data route consumes it and checks that the expected version is active before planning against its new shape. Identical interfaces still run the separate data part; failed interfaces never do. Smoke repair moves only the remaining data continuation to the repaired candidate, without granting another smoke repair. Equal workspace/candidate hashes from different outstanding requests are refused before either continuation can be replaced, including repaired hashes. Continuations are bounded to 100 and disappear on restart/expiry. Missing, premature and replayed follow-ups spend no model call or write.
 - **The pipeline carries a request as far as the server goes, and activates nothing.** The intent stage decides, with the open tool and its lists, and the saved tools' IDs.
   - Clarify, unsupported and ask-to-split are answered as they are, and a listed saved tool is offered to open.
-  - An interface edit runs `generateEdit` against the open tool. Data requests run `changeData`; mixed requests still answer "not yet" until sequencing follows.
+  - An interface edit runs `generateEdit` against the open tool. Data requests run `changeData`; mixed requests edit first and retain their data part for the activated version. An unchanged edit plans data immediately and returns both facts.
   - Create and new tool run the create stage on the interface part. A checked candidate is stored, and its workspace starts with its starting data: the open workspace if it has no tool and no data yet, or a new one, named after the tool.
   - The reply gives the candidate's mount (`v-` and its hash) and its defaults as synthetic data, for staging (`RUN-03`). The host app stages it behind the smoke check and activates it (`DATA-10`), and activation keeps the starting data.
 - **A creation failure stores nothing.** A candidate that still fails the server's checks after its repairs is answered with a plain sentence and its findings. A provider failure, in either stage, gives the adapter's plain message. A setup problem, or a routes file Tessera can't use, is answered in plain words before any call. A smoke failure happens after the initial candidate and starting workspace have been stored; its repair activates nothing and changes no workspace data.
@@ -72,7 +72,7 @@ The core of generation (#146): interface requests create or edit a candidate too
 
 # Depends on / used by
 
-The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md), the [data shape](data-shape.md) checks, the [static check](checks.md), and the contracts. The pipeline (#146) will run the [intent stage](intent.md), then this stage, then staging and activation, then the data part of a mixed request.
+The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md), the [data shape](data-shape.md) checks, the [static check](checks.md), and the contracts. The pipeline runs the [intent stage](intent.md), then generation, browser staging/activation and the separate data part of a mixed request.
 
 # Pitfalls
 

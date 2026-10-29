@@ -7,17 +7,19 @@ import {
   CONFIRM_DATA_ROUTE,
   confirmDataRequestSchema,
   type GenerateReply,
+  FINISH_DATA_ROUTE,
+  finishDataRequestSchema,
 } from "@tessera/contracts";
 import { randomUUID } from "node:crypto";
 import { json, readJson, text } from "../http/body.ts";
 import type { Handler } from "../http/server.ts";
 import type { JobQueue } from "../jobs/index.ts";
 import { ProviderError, RoutesError, type Provider, type Routes } from "../providers/index.ts";
-import type { Store } from "../workspaces/index.ts";
+import { getWorkspace, type Store } from "../workspaces/index.ts";
 import { generate } from "./pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
 import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
-import { applyDataOffer, type DataOffer } from "./data-action.ts";
+import { applyDataOffer, changeData, type DataOffer } from "./data-action.ts";
 
 // The host app's route for a request (GEN-01): it runs as a job, one at a time (CLI-06), and
 // answers with what came of it, checked against the contract (CON-01). The local server's guard
@@ -25,6 +27,7 @@ import { applyDataOffer, type DataOffer } from "./data-action.ts";
 
 const REQUEST_LIMIT_BYTES = 16 * 1024;
 const FAILED = "Tessera couldn't carry out that request. Nothing was changed.";
+const MAX_PENDING = 100;
 
 export type GenerationOptions = {
   store: Store;
@@ -43,25 +46,37 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   // Short-lived continuations, bounded in memory and consumed before a repair call. Restarting
   // loses eligibility, never resets it; a replay or a parallel POST cannot spend another call.
   const pending = new Map<string, { context: SmokeRepairContext; expires: number }>();
+  const waitingData = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const offers = new Map<string, { offer: DataOffer; expires: number }>();
   const offerData = (offer: DataOffer, expires: number) => {
     for (const [token, value] of offers) if (value.expires <= Date.now()) offers.delete(token);
-    if (offers.size >= 100) offers.delete(offers.keys().next().value!);
+    if (offers.size >= MAX_PENDING) offers.delete(offers.keys().next().value!);
     const token = randomUUID();
     offers.set(token, { offer, expires });
     return token;
   };
   const key = (workspaceId: string, hash: string) => `${workspaceId}:${hash}`;
+  const available = (context: SmokeRepairContext) => {
+    const id = key(context.reply.workspaceId, context.reply.hash);
+    if ([pending.get(id), waitingData.get(id)].some((entry) => entry && entry.expires > Date.now()))
+      throw new ProviderError(
+        "cancelled",
+        "Another request is still checking this tool. Finish it before asking again.",
+      );
+  };
+  const retain = (map: typeof pending, context: SmokeRepairContext, expires: number) => {
+    for (const [id, entry] of map) if (entry.expires <= Date.now()) map.delete(id);
+    if (map.size >= MAX_PENDING) map.delete(map.keys().next().value!);
+    map.set(key(context.reply.workspaceId, context.reply.hash), { context, expires });
+  };
   const remember = (context: SmokeRepairContext, expires: number) => {
-    for (const [id, entry] of pending) if (entry.expires <= Date.now()) pending.delete(id);
-    if (pending.size >= 100) pending.delete(pending.keys().next().value!);
-    pending.set(key(context.reply.workspaceId, context.reply.hash), {
-      context,
-      expires,
-    });
+    // Equal code hashes can belong to different requests. Never replace their instructions.
+    available(context);
+    retain(pending, context, expires);
+    if (context.dataPart) retain(waitingData, context, expires);
   };
   const handle =
-    (repair: boolean): Handler =>
+    (mode: "generate" | "smoke" | "data"): Handler =>
     async (req, res) => {
       if (req.method !== "POST") return text(res, 405, "Send a request with POST.");
       const body = await readJson(req, REQUEST_LIMIT_BYTES);
@@ -69,7 +84,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       const request =
         body === "invalid"
           ? undefined
-          : (repair ? smokeRepairRequestSchema : generateRequestSchema).safeParse(body.json);
+          : (mode === "smoke"
+              ? smokeRepairRequestSchema
+              : mode === "data"
+                ? finishDataRequestSchema
+                : generateRequestSchema
+            ).safeParse(body.json);
       if (!request?.success) return text(res, 400, "Say what you need, in a few words.");
       const provider = await options.provider();
       if ("problem" in provider) {
@@ -96,9 +116,9 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       }
       const input = request.data;
       const { outcome } = options.jobs.submit(
-        "findings" in input ? "Repair tool" : input.request,
+        "request" in input ? input.request : "findings" in input ? "Repair tool" : "Change entries",
         (signal) => {
-          if (!("findings" in input)) {
+          if ("request" in input) {
             const expires = Date.now() + limit;
             return withinRequestDeadline(
               provider,
@@ -118,14 +138,64 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
             );
           }
           const id = key(input.workspaceId, input.hash);
+          if (!("findings" in input)) {
+            const entry = waitingData.get(id);
+            waitingData.delete(id);
+            pending.delete(id);
+            if (!entry?.context.dataPart)
+              return Promise.resolve<GenerateReply>({
+                kind: "failed",
+                failure: "provider",
+                message: "The entry changes weren't applied. Please ask for them again.",
+                findings: [],
+              });
+            return withinRequestDeadline(
+              provider,
+              entry.expires,
+              (bounded, stopped, check) => {
+                if (getWorkspace(options.store, input.workspaceId)?.currentVersion !== input.hash)
+                  return Promise.resolve<GenerateReply>({ kind: "answer", answer: "data_stale" });
+                return changeData(
+                  options.store,
+                  bounded,
+                  routes,
+                  input.workspaceId,
+                  entry.context.dataPart!,
+                  entry.context.intent.language,
+                  stopped,
+                  check,
+                  (offer) => offerData(offer, entry.expires),
+                  entry.context.repairUsage,
+                );
+              },
+              signal,
+            );
+          }
+          const smokeInput = smokeRepairRequestSchema.parse(input);
           const entry = pending.get(id);
           pending.delete(id);
-          if (!entry) return repairSmoke(options.store, provider, routes, input, undefined, signal);
+          waitingData.delete(id);
+          if (!entry)
+            return repairSmoke(options.store, provider, routes, smokeInput, undefined, signal);
           return withinRequestDeadline(
             provider,
             entry.expires,
-            (bounded, stopped, check) =>
-              repairSmoke(options.store, bounded, routes, input, entry.context, stopped, check),
+            async (bounded, stopped, check) => {
+              const repaired = await repairSmoke(
+                options.store,
+                bounded,
+                routes,
+                smokeInput,
+                entry.context,
+                stopped,
+                check,
+              );
+              if (repaired.kind === "candidate" && entry.context.dataPart) {
+                available({ ...entry.context, reply: repaired });
+                retain(waitingData, { ...entry.context, reply: repaired }, entry.expires);
+              }
+              return repaired;
+            },
             signal,
           );
         },
@@ -142,7 +212,9 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
               ? "The request was stopped."
               : ended.state === "failed" && ended.error instanceof ProviderError
                 ? ended.error.message
-                : FAILED,
+                : mode === "data"
+                  ? "The entry changes weren't applied."
+                  : FAILED,
           findings: [],
         }),
       );
@@ -196,8 +268,9 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     );
   };
   return {
-    [GENERATE_ROUTE]: handle(false),
-    [SMOKE_REPAIR_ROUTE]: handle(true),
+    [GENERATE_ROUTE]: handle("generate"),
+    [SMOKE_REPAIR_ROUTE]: handle("smoke"),
+    [FINISH_DATA_ROUTE]: handle("data"),
     [CONFIRM_DATA_ROUTE]: confirm,
   };
 }
