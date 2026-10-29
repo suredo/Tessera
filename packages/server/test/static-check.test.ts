@@ -358,10 +358,12 @@ describe("bridge static checks (VER-01, CAP-01)", () => {
   });
   it("VER-01, CAP-01: the actual artifact capabilities decide whether an action passes", () => {
     const code = { html: "<p>Clock</p>", css: "", js: "\ntessera.call('clock.now');" };
-    expect(staticCheck(code, [])).toMatchObject({
-      ok: false,
-      findings: [{ part: "js", line: 2, message: expect.stringContaining('"clock" capability') }],
-    });
+    const result = staticCheck(code, []);
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("The undeclared clock must fail");
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]).toMatchObject({ part: "js", line: 2 });
+    expect(result.findings[0]!.message).toContain('"clock" capability');
     expect(staticCheck(code, ["clock"])).toEqual({ ok: true });
   });
 });
