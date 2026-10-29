@@ -8,10 +8,11 @@ import {
 import { json, readJson, text } from "../http/body.ts";
 import type { Handler } from "../http/server.ts";
 import type { JobQueue } from "../jobs/index.ts";
-import { RoutesError, type Provider, type Routes } from "../providers/index.ts";
+import { ProviderError, RoutesError, type Provider, type Routes } from "../providers/index.ts";
 import type { Store } from "../workspaces/index.ts";
 import { generate } from "./pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
+import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
 
 // The host app's route for a request (GEN-01): it runs as a job, one at a time (CLI-06), and
 // answers with what came of it, checked against the contract (CON-01). The local server's guard
@@ -26,19 +27,24 @@ export type GenerationOptions = {
   /** The provider to call, found when a request comes: the setup check may have changed since. */
   provider: () => Promise<Provider | { problem: string }>;
   routes: () => Routes;
+  /** Total stage time after a queued request starts, including later smoke repair (GEN-11). */
+  requestTimeLimitMs?: number;
 };
 
 export function generationRoutes(options: GenerationOptions): Record<string, Handler> {
+  const limit = options.requestTimeLimitMs ?? REQUEST_TIME_LIMIT_MS;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2_147_483_647)
+    throw new RangeError("requestTimeLimitMs must be a positive timer-sized integer.");
   // Short-lived continuations, bounded in memory and consumed before a repair call. Restarting
   // loses eligibility, never resets it; a replay or a parallel POST cannot spend another call.
   const pending = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const key = (workspaceId: string, hash: string) => `${workspaceId}:${hash}`;
-  const remember = (context: SmokeRepairContext) => {
+  const remember = (context: SmokeRepairContext, expires: number) => {
     for (const [id, entry] of pending) if (entry.expires <= Date.now()) pending.delete(id);
     if (pending.size >= 100) pending.delete(pending.keys().next().value!);
     pending.set(key(context.reply.workspaceId, context.reply.hash), {
       context,
-      expires: Date.now() + 7 * 60_000,
+      expires,
     });
   };
   const handle =
@@ -79,17 +85,33 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       const { outcome } = options.jobs.submit(
         "findings" in input ? "Repair tool" : input.request,
         (signal) => {
-          if (!("findings" in input))
-            return generate(options.store, provider, routes, input, signal, remember);
+          if (!("findings" in input)) {
+            const expires = Date.now() + limit;
+            return withinRequestDeadline(
+              provider,
+              expires,
+              (bounded, stopped, check) =>
+                generate(
+                  options.store,
+                  bounded,
+                  routes,
+                  input,
+                  stopped,
+                  (context) => remember(context, expires),
+                  check,
+                ),
+              signal,
+            );
+          }
           const id = key(input.workspaceId, input.hash);
           const entry = pending.get(id);
           pending.delete(id);
-          return repairSmoke(
-            options.store,
+          if (!entry) return repairSmoke(options.store, provider, routes, input, undefined, signal);
+          return withinRequestDeadline(
             provider,
-            routes,
-            input,
-            entry && entry.expires > Date.now() ? entry.context : undefined,
+            entry.expires,
+            (bounded, stopped, check) =>
+              repairSmoke(options.store, bounded, routes, input, entry.context, stopped, check),
             signal,
           );
         },
@@ -101,7 +123,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
         generateReplySchema.parse({
           kind: "failed",
           failure: "provider",
-          message: ended.state === "cancelled" ? "The request was stopped." : FAILED,
+          message:
+            ended.state === "cancelled"
+              ? "The request was stopped."
+              : ended.state === "failed" && ended.error instanceof ProviderError
+                ? ended.error.message
+                : FAILED,
           findings: [],
         }),
       );

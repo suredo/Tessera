@@ -26,6 +26,7 @@ export async function repairSmoke(
   input: SmokeRepairRequest,
   context: SmokeRepairContext | undefined,
   signal?: AbortSignal,
+  beforeStore: () => void = () => signal?.throwIfAborted(),
 ): Promise<GenerateReply> {
   const failed = (findings: string[]): GenerateReply => ({
     kind: "failed",
@@ -121,6 +122,7 @@ export async function repairSmoke(
     return failed(["Smoke repair changed the tool's data declaration."]);
   }
   if (!current()) return failed(["The workspace changed during repair."]);
+  beforeStore();
   const hash = saveVersion(store.db, repaired.artifact);
   return {
     ...context.reply,
