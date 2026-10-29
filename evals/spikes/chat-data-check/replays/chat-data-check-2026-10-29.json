@@ -1,0 +1,50 @@
+{
+  "sourceRun": "chat-data-check-live-2026-10-29T10-54-23-743Z",
+  "head": "8e30cd466feab17bf92e9b52b442f22616fe2960",
+  "replays": [
+    {
+      "name": "add-bread",
+      "request": "Add Bread with quantity 1 to the shopping list.",
+      "callIndex": 0,
+      "answer": {
+        "outcome": "patch",
+        "summary": "Adds a new shopping list item titled Bread with quantity 1. Existing items (Milk and Eggs) stay unchanged.",
+        "patch": {
+          "operations": [
+            {
+              "op": "add",
+              "collection": "items",
+              "record": {
+                "title": "Bread",
+                "quantity": 1
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "darken-and-set-milk",
+      "request": "Make the background #111111 and the text #eeeeee, and set Milk quantity to 2.",
+      "dataPart": "set Milk quantity to 2",
+      "callIndex": 1,
+      "answer": {
+        "outcome": "patch",
+        "summary": "Set the quantity of Milk from 1 to 2.",
+        "patch": {
+          "operations": [
+            {
+              "op": "replace",
+              "collection": "items",
+              "id": "i-1",
+              "revisionCount": 3,
+              "fields": {
+                "quantity": 2
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

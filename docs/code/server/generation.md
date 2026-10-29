@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T10:28:02Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-29T10:58:36Z }
 ---
 
 # Purpose
@@ -33,7 +33,7 @@ The core of generation (#146): interface requests create or edit a candidate too
 
 # Invariants
 
-- **Data planning sees entries, not interface instructions or code.** Its separate prompt quotes only the declared data shape, snapshot and record revisions, plus the data request/language. Actual context is capped at 12,000 characters before calling a model; at most 100 operations and 64 KiB of preview are accepted. Provider errors stop; schema/shape errors get at most one repair against the same original snapshot. No stage or repair budget is increased. New prompt live evidence is pending an approved, rehearsed integrated run.
+- **Data planning sees entries, not interface instructions or code.** Its separate prompt quotes only the declared data shape, snapshot and record revisions, plus the data request/language. Actual context is capped at 12,000 characters before calling a model; at most 100 operations and 64 KiB of preview are accepted. Provider errors stop; schema/shape errors get at most one repair against the same original snapshot. No stage or repair budget is increased. The approved [live chat-data check](../../../evals/reports/2026-10-29-chat-data-check.md) passed an add and a mixed style/replacement case in two calls, with scripted intent/style and actual host approval. Its deterministic replay checks planning, activation and storage preservation; no repair ran live.
 - **The host owns data-plan safety facts.** Guessed model revisions are replaced by the planning snapshot's counts, then live counts are checked on commit. Adds use frozen host IDs. Unrelated live record changes survive; a changed target or tool version refuses the whole batch. The resulting live data must fit the original active tool's schema. Identical data does not create history. Any batch containing a replace/remove waits for the person's explicit before/after confirmation; until then its entire batch stays unapplied. Confirmation rechecks expiry/cancellation immediately before the synchronous transaction and cannot accept a client-supplied patch.
 - **Edits declare file and data changes separately** (`CON-02`, `GEN-07`). Files can stay unchanged or be replaced in full. Data can stay unchanged or migrate one version with the existing declarative migration contract. Thus unchanged files can still produce a real data-declaration change. The host returns `unchanged` only when the complete canonical artifact is identical; a model summary never decides whether a version changed.
 - **The host owns preserved declarations** (`GEN-13`, in part). Edit output cannot name or replace the tool's name, capabilities, pins, UI declaration or starting entries. A style-only edit must keep HTML, JavaScript and data identical. Other edits retain unrelated behavior by prompt instruction; semantic verification and narrower prompt context remain later work under #150.

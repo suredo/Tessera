@@ -7,12 +7,12 @@ implements: [ENG-07, ENG-19, GEN-04, DATA-02, DATA-03]
 tests: [../../../evals/test/chat-data-check.test.ts]
 tags: [code, evals, data, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T10:35:00Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-29T10:58:36Z }
 ---
 
 # Purpose
 
-Prepares issue [146](https://github.com/suredo/Tessera/issues/146)'s integrated chat-data check. The proposed hard cap is three calls: two expected data plans plus one shared schema/shape repair reserve, no reviewer calls. This proposal does not authorize a live run. The [M2 envelope](../../roadmap/m2-generation-pipeline.md) remains about 35 calls; the owner must reconcile prior spending and explicitly approve this run's cap under the [live evaluation protocol](../../practices/live-evaluation.md).
+Implements issue [146](https://github.com/suredo/Tessera/issues/146)'s integrated chat-data check. The owner approved one run capped at three calls: two expected data plans and one shared schema/shape repair reserve, no reviewer calls. The [live report](../../../evals/reports/2026-10-29-chat-data-check.md) records both cases passing in two calls, with no repairs. The unused reserve does not authorize a repeat. M2 has used 20 of its approved envelope of about 35 calls.
 
 # Entry points
 
@@ -30,7 +30,7 @@ Uses the product pipeline, the [evaluation harness](harness.md), fake CLI adapte
 
 # Pitfalls
 
-This is a narrow integration check, not an intent accuracy or interface generation evaluation. Free canned responses establish runner behavior without measuring model quality. The free rehearsal captured 1,100 system characters per call, request prompts of 774 and 865 characters, and a 3,882-character wrapped schema per call: 11,603 characters total. At about four characters per token this is roughly 2,901 input tokens before CLI/provider overhead. For approval, conservatively estimate 10,000 to 25,000 input and 1,000 to 4,000 output tokens total under cap three, including one repair and CLI/provider overhead. These are estimates, not token limits or approved costs. Both data calls route to claude-haiku-5-5. No live cost estimate has yet been approved. The final free rehearsal passed both cases and both viewport images visibly preserve all entries; its actual review shows Milk changing from 1 to 2. Full-page images can shrink, clip or omit nested runtime content despite passing row visibility assertions (L-76). Viewport captures are authoritative runtime evidence; full-page captures are supplementary and must not be described as visually verified. The JSON report records this limit. Run outputs stay under ignored `test-output/evals/`.
+This is a narrow integration check, not an intent accuracy or interface generation evaluation. Free canned responses establish runner behavior without measuring model quality. The free rehearsal captured 1,100 system characters per call, request prompts of 774 and 865 characters, and a 3,882-character wrapped schema per call: 11,603 characters total. At about four characters per token this is roughly 2,901 input tokens before CLI/provider overhead. For approval, conservatively estimate 10,000 to 25,000 input and 1,000 to 4,000 output tokens total under cap three, including one repair and CLI/provider overhead. These are estimates, not token limits or approved costs. Both data calls route to claude-haiku-5-5. The owner approved this cap after the exact free rehearsal; actual live usage and limits are in the report. The final free rehearsal passed both cases and both viewport images visibly preserve all entries; its actual review shows Milk changing from 1 to 2. Full-page images can shrink, clip or omit nested runtime content despite passing row visibility assertions (L-76). Viewport captures are authoritative runtime evidence; full-page captures are supplementary and must not be described as visually verified. The JSON report records this limit. Raw run outputs stay under ignored `test-output/evals/`. The live report cites three inspected viewport images and an allowlisted ledger. The portable replay contains only the two structured answers and provenance; the deterministic test sequentially plans/commits the add, activates the style, checks unchanged entries during replacement review, then explicitly commits and verifies all IDs, titles and quantities. It uses temporary storage and no provider calls.
 
 # Symbols (generated)
 

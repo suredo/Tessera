@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T06:39:39Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-29T10:58:36Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 
 # Entry points
 
-- `assembleDataPrompt` builds the isolated data stage from `data-plan`, `data-context`, request and language; a shape repair adds `repair-data-plan`, diagnostics and a quoted `data-attempt`. It includes the declared data shape and actual entries/revisions, never tool code or an interface instruction. `DATA_PROMPT_BUDGET` bounds the actual assembled context before spending a call; the integrated live check follows after rehearsal and explicit approval.
+- `assembleDataPrompt` builds the isolated data stage from `data-plan`, `data-context`, request and language; a shape repair adds `repair-data-plan`, diagnostics and a quoted `data-attempt`. It includes the declared data shape and actual entries/revisions, never tool code or an interface instruction. `DATA_PROMPT_BUDGET` bounds the actual assembled context before spending a call; the approved [live chat-data check](../../../evals/reports/2026-10-29-chat-data-check.md) passed add and mixed replacement cases in two calls, with scripted intent/style and explicit host approval. Its recorded answers have a deterministic storage-backed replay; no repair ran live.
 - `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `create.md` (what creation answers, with the host's data schema keywords), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `attempt.md` (a failed answer, quoted for its repair), `repair-schema-shape.md` and `repair-static.md` (each failure class's repair instructions, `GEN-09`), `language.md` (the request's language, as the intent stage found it, `GEN-15`), `source.md`, `diagnostics.md`, the probe's `probe.md` and `probe-request.md`, and the [intent stage](intent.md)'s `intent*.md`.
 - `src/prompts/prompts.ts`:
   - `assemblePrompt` builds a generation stage's prompt (`PromptInput` to `AssembledPrompt`): the instructions, the request, each part as name@version, and the size.
