@@ -22,6 +22,8 @@ export type { ActivationRefusal };
 export type ActivationResult = ActivationReply;
 
 export type ActivationOptions = {
+  /** Recheck request authority after migration/validation, immediately before the first write. */
+  beforeWrites?: () => void;
   /** Called inside the transaction after every write; a test throws here to stand for a crash. */
   afterWrites?: () => void;
 };
@@ -118,6 +120,7 @@ export function activateVersion(
       migrationCount = migrated.steps;
     }
 
+    options.beforeWrites?.();
     replaceData(store, workspace, data);
     appendVersion(store, id, hash);
     options.afterWrites?.();

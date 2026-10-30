@@ -7,7 +7,12 @@ import { serverActivation, stubCheck, type CheckContext, type Send } from "../sr
 // against the real route.
 
 const WORKSPACE = "6f1c2a52-8f0e-4c55-9a43-9d8f2c1b7e10";
-const request = { workspaceId: WORKSPACE, hash: "a".repeat(64), expectedDataRevision: 3 };
+const request = {
+  workspaceId: WORKSPACE,
+  hash: "a".repeat(64),
+  expectedDataRevision: 3,
+  token: WORKSPACE,
+};
 const workspace = {
   id: WORKSPACE,
   title: "Errands",

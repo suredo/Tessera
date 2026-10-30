@@ -115,7 +115,14 @@ export async function startSandboxHost(
     webRoot,
     routes: {
       ...runtimeRoutes((id) => (tools[id] ? asTool(tools[id]) : undefined)),
-      ...(folder ? { ...bridgeRoutes(folder), ...activationRoutes(folder) } : {}),
+      ...(folder
+        ? {
+            ...bridgeRoutes(folder),
+            ...activationRoutes(folder, (request) =>
+              request.token === "00000000-0000-4000-8000-000000000001" ? () => true : undefined,
+            ),
+          }
+        : {}),
     },
   });
 

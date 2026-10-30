@@ -7,10 +7,12 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T07:17:25Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T11:16:48Z }
 ---
 
 # Purpose
+
+The launcher registers candidate activation through the [generation routes](generation.md), which own the request's one-use authority and deadline. It does not mount an unguarded activation handler.
 
 Starts Tessera with one double-click (`PLAT-02`): it opens the data folder ([storage](storage.md)), starts the [local server](local-server.md), which finds a free port if the default is taken, never lets a second copy run, opens the browser at Tessera, and stops the server cleanly when its window closes. The installer and the other platforms come in M6.
 

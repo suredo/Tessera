@@ -7,10 +7,12 @@ implements: [RUN-01, RUN-02, RUN-03, RUN-05, RUN-07, GEN-06, SEC-05, VER-02, SBX
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/runtime/test/bridge.test.ts, ../../../packages/runtime/test/server-data.test.ts, ../../../packages/runtime/test/staging.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/bridge.spec.ts, ../../../packages/web/e2e/bridge-data.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts, ../../../packages/web/e2e/staging.spec.ts, ../../../packages/web/e2e/styles.spec.ts, ../../../packages/web/e2e/assets.spec.ts, ../../../packages/web/e2e/smoke.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T20:41:27Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T11:16:48Z }
 ---
 
 # Purpose
+
+Generated staging receives the candidate's required one-use activation token (`StagingOptions.activationToken`) from the [browser request](../web/package.md). Its deadline signal stops mounting/checks and removes the panel before activation. Once activation has been asked, staging retains the actual server response, since a synchronous commit may have completed (`GEN-08`, `DATA-10`); server authority independently enforces expiry before writes.
 
 Runs a tool's code where it can't reach anything but the host's bridge (`RUN-01`). The host app (127.0.0.1) frames a wrapper on the opposite loopback name (localhost); the wrapper frames, for each page of the tool, a blank `srcdoc` page frame of its own origin, and in it the tool in a `sandbox="allow-scripts"` frame whose document is served with a strict CSP, so its origin is opaque and it can load nothing but blob: images and media. The tool talks to the host only through one fresh MessageChannel port, bound to its frame and its mount's instance. Framework-free: tools are plain HTML, CSS and JS. The server serves the documents ([runtime routes](../server/runtime-routes.md)).
 

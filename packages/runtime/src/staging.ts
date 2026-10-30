@@ -26,6 +26,8 @@ export type StagingOptions = {
   workspaceId: string;
   /** The data revision the activation is planned against (MIG-06). */
   expectedDataRevision: number;
+  /** One-use server authority tied to this request's original deadline. */
+  activationToken: string;
   /** Run in order; the first to fail ends staging. */
   checks: readonly VerificationCheck[];
   /** How to activate; the server's activation route by default. */
@@ -184,6 +186,7 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
     workspaceId: options.workspaceId,
     hash: candidate.hash,
     expectedDataRevision: options.expectedDataRevision,
+    token: options.activationToken,
   });
   return reply.ok
     ? { outcome: "activated", workspace: reply.workspace, migrationCount: reply.migrationCount }

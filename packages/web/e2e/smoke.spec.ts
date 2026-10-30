@@ -112,6 +112,7 @@ async function smoke(page: Page, mountId: string): Promise<Result> {
       },
       workspaceId: "00000000-0000-4000-8000-000000000000",
       expectedDataRevision: 0,
+      activationToken: "00000000-0000-4000-8000-000000000001",
       checks: [w.smokeCheck()],
       // Reached only when every check passed; refusing keeps the test off the server.
       activate: () =>

@@ -65,6 +65,9 @@ export const en = {
   "request.continued": "{name} is open again.",
   "request.failed": "That didn't work. {message}",
   "request.failedPlain": "Tessera couldn't carry out that request. Nothing was changed.",
+  "request.timedOut": "The request took too long. Please try again.",
+  "request.activationUnknown":
+    "Tessera couldn't confirm whether the tool was put in place. Check the workspace before asking again.",
   "home.trash": "Open the trash",
   "workspaces.heading": "Workspaces",
   "workspaces.lastUsed": "Last used {when}",

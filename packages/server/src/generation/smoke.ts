@@ -1,4 +1,5 @@
-import type { GenerateReply, Intent, SmokeRepairRequest } from "@tessera/contracts";
+import type { Intent, SmokeRepairRequest } from "@tessera/contracts";
+import type { GenerationResult } from "./result.ts";
 import { canonicalJson, creationSchema } from "@tessera/contracts";
 import { candidateMount } from "../host/index.ts";
 import type { RepairClass } from "../prompts/index.ts";
@@ -10,7 +11,7 @@ import { editTool } from "./edit.ts";
 
 /** Server-owned continuation of creation or editing, never supplied by the browser (GEN-09). */
 export type SmokeRepairContext = {
-  reply: Extract<GenerateReply, { kind: "candidate" }>;
+  reply: Extract<GenerationResult, { kind: "candidate" }>;
   request: string;
   intent: Intent;
   repairUsage: Partial<Record<RepairClass, number>>;
@@ -29,8 +30,8 @@ export async function repairSmoke(
   context: SmokeRepairContext | undefined,
   signal?: AbortSignal,
   beforeStore: () => void = () => signal?.throwIfAborted(),
-): Promise<GenerateReply> {
-  const failed = (findings: string[]): GenerateReply => ({
+): Promise<GenerationResult> {
+  const failed = (findings: string[]): GenerationResult => ({
     kind: "failed",
     failure: "smoke",
     message: "The tool couldn't be repaired. Nothing was changed.",

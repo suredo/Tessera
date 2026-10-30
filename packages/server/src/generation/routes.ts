@@ -7,6 +7,7 @@ import {
   CONFIRM_DATA_ROUTE,
   confirmDataRequestSchema,
   type GenerateReply,
+  type ActivationRequest,
   FINISH_DATA_ROUTE,
   finishDataRequestSchema,
 } from "@tessera/contracts";
@@ -15,7 +16,8 @@ import { json, readJson, text } from "../http/body.ts";
 import type { Handler } from "../http/server.ts";
 import type { JobQueue } from "../jobs/index.ts";
 import { ProviderError, RoutesError, type Provider, type Routes } from "../providers/index.ts";
-import { getWorkspace, type Store } from "../workspaces/index.ts";
+import { activationRoutes, getWorkspace, type Store } from "../workspaces/index.ts";
+import type { GenerationResult } from "./result.ts";
 import { generate } from "./pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
 import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
@@ -48,6 +50,34 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   const pending = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const waitingData = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const offers = new Map<string, { offer: DataOffer; expires: number }>();
+  const activations = new Map<string, Omit<ActivationRequest, "token"> & { expires: number }>();
+  const grant = (reply: GenerationResult, expires: number): GenerateReply => {
+    if (reply.kind !== "candidate") return reply;
+    for (const [token, entry] of activations)
+      if (entry.expires <= Date.now()) activations.delete(token);
+    if (activations.size >= MAX_PENDING) activations.delete(activations.keys().next().value!);
+    const token = randomUUID();
+    activations.set(token, {
+      workspaceId: reply.workspaceId,
+      hash: reply.hash,
+      expectedDataRevision: reply.expectedDataRevision,
+      expires,
+    });
+    return { ...reply, activation: { token, expiresAt: expires } };
+  };
+  const activate = activationRoutes(options.store, (request) => {
+    const entry = activations.get(request.token);
+    if (
+      !entry ||
+      entry.workspaceId !== request.workspaceId ||
+      entry.hash !== request.hash ||
+      entry.expectedDataRevision !== request.expectedDataRevision
+    )
+      return undefined;
+    // Consume before validation/migration; a refusal or concurrent replay cannot reuse authority.
+    activations.delete(request.token);
+    return () => Date.now() < entry.expires;
+  });
   const offerData = (offer: DataOffer, expires: number) => {
     for (const [token, value] of offers) if (value.expires <= Date.now()) offers.delete(token);
     if (offers.size >= MAX_PENDING) offers.delete(offers.keys().next().value!);
@@ -123,11 +153,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
         );
       }
       const input = request.data;
+      let expires = 0;
       const { outcome } = options.jobs.submit(
         "request" in input ? input.request : "findings" in input ? "Repair tool" : "Change entries",
         (signal) => {
           if ("request" in input) {
-            const expires = Date.now() + limit;
+            expires = Date.now() + limit;
             return withinRequestDeadline(
               provider,
               expires,
@@ -183,8 +214,11 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
           const entry = pending.get(id);
           pending.delete(id);
           waitingData.delete(id);
+          for (const [token, activation] of activations)
+            if (key(activation.workspaceId, activation.hash) === id) activations.delete(token);
           if (!entry)
             return repairSmoke(options.store, provider, routes, smokeInput, undefined, signal);
+          expires = entry.expires;
           return withinRequestDeadline(
             provider,
             entry.expires,
@@ -209,7 +243,8 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
         },
       );
       const ended = await outcome;
-      if (ended.state === "done") return json(res, generateReplySchema.parse(ended.value));
+      if (ended.state === "done")
+        return json(res, generateReplySchema.parse(grant(ended.value, expires)));
       return json(
         res,
         generateReplySchema.parse({
@@ -276,6 +311,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     );
   };
   return {
+    ...activate,
     [GENERATE_ROUTE]: handle("generate"),
     [SMOKE_REPAIR_ROUTE]: handle("smoke"),
     [FINISH_DATA_ROUTE]: handle("data"),

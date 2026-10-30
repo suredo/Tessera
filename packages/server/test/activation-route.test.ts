@@ -28,6 +28,7 @@ import { post } from "./support/http.ts";
 // nothing. Every data folder is a new temporary one, never the real one (ENG-19).
 
 const temps: string[] = [];
+const TOKEN = "00000000-0000-4000-8000-000000000001";
 afterAll(() => temps.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 const newFolder = () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-activation-route-"));
@@ -73,7 +74,7 @@ const version = (html: string, data: Partial<Artifact["data"]>): Artifact => ({
 });
 
 /** A workspace running version 1 with one task, version 2 saved, and the route served. */
-async function served() {
+async function served(allowed = () => true) {
   const folder = await openDataFolder(newFolder());
   const { id } = createWorkspace(folder, "Errands");
   const first = saveVersion(
@@ -85,9 +86,17 @@ async function served() {
     version("<p>2</p>", { schemaVersion: 2, schema: schema(["title"]), migrations: [toV2] }),
   );
   expect(activateVersion(folder, id, first, 0).ok).toBe(true);
-  const server = await startLocalServer({ port: 0, routes: activationRoutes(folder) });
+  const server = await startLocalServer({
+    port: 0,
+    routes: activationRoutes(folder, (request) => (request.token === TOKEN ? allowed : undefined)),
+  });
   const activate = (body: unknown, headers?: Record<string, string>) =>
-    post(server.port, ACTIVATION_ROUTE, JSON.stringify(body), headers);
+    post(
+      server.port,
+      ACTIVATION_ROUTE,
+      JSON.stringify({ token: TOKEN, ...(body as object) }),
+      headers,
+    );
   const close = async () => {
     await server.close();
     folder.close();
@@ -103,6 +112,35 @@ const unit = (folder: DataFolder, id: string) => ({
 });
 
 describe("the activation route (RUN-03, DATA-10)", () => {
+  it("GEN-11 DATA-10: expiry after migration validation refuses before the first write", async () => {
+    let checks = 0;
+    const { folder, id, second, activate, close } = await served(() => ++checks === 1);
+    const before = unit(folder, id);
+    const reply = await activate({ workspaceId: id, hash: second, expectedDataRevision: 1 });
+    expect(activationReplySchema.parse(JSON.parse(reply.body))).toMatchObject({
+      ok: false,
+      reason: "expired",
+    });
+    expect(checks).toBe(2);
+    expect(unit(folder, id)).toEqual(before);
+    await close();
+  });
+  it("GEN-11 GEN-08: expiry after the writes begin keeps the confirmed atomic activation", async () => {
+    const { folder, id, second, close } = await served();
+    let live = true;
+    const reply = activateVersion(folder, id, second, 1, {
+      beforeWrites: () => {
+        if (!live) throw new Error("Expired");
+      },
+      afterWrites: () => {
+        live = false;
+      },
+    });
+    expect(reply).toMatchObject({ ok: true, workspace: { currentVersion: second } });
+    expect(live).toBe(false);
+    expect(getWorkspace(folder, id)?.currentVersion).toBe(second);
+    await close();
+  });
   it("DATA-10: activates a version that passed its checks, migrating the data, and answers with the workspace", async () => {
     const { folder, id, first, second, activate, close } = await served();
     const reply = await activate({ workspaceId: id, hash: second, expectedDataRevision: 1 });

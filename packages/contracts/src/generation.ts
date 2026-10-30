@@ -227,6 +227,7 @@ export const generateReplySchema = z
       capabilities: z.array(z.string()),
       syntheticData: jsonObjectSchema.describe("What staging runs it against: its defaults."),
       expectedDataRevision: z.int().nonnegative(),
+      activation: z.strictObject({ token: z.uuid(), expiresAt: z.int().nonnegative() }),
       name: z.string().min(1),
       summary: z.string().min(1),
       dataPending: z

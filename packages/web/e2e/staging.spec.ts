@@ -143,6 +143,7 @@ async function stage(
         candidate: { mountId: "candidate", hash, capabilities: [], syntheticData: synthetic },
         workspaceId,
         expectedDataRevision,
+        activationToken: "00000000-0000-4000-8000-000000000001",
         checks: [sees, w.stubCheck(stub)],
       });
       return {
@@ -261,6 +262,7 @@ async function stageBroken(
         candidate: { mountId: "candidate", hash, capabilities: [], syntheticData: synthetic },
         workspaceId,
         expectedDataRevision: 1,
+        activationToken: "00000000-0000-4000-8000-000000000001",
         checks: [check],
         signal: controller.signal,
       });
