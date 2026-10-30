@@ -10,6 +10,10 @@ import {
   type ActivationRequest,
   FINISH_DATA_ROUTE,
   finishDataRequestSchema,
+  REGISTER_REQUEST_ROUTE,
+  CANCEL_REQUEST_ROUTE,
+  requestControlSchema,
+  cancelRequestReplySchema,
 } from "@tessera/contracts";
 import { randomUUID } from "node:crypto";
 import { json, readJson, text } from "../http/body.ts";
@@ -22,6 +26,7 @@ import { generate } from "./pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
 import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
 import { applyDataOffer, changeData, type DataOffer } from "./data-action.ts";
+import { RequestControls } from "./control.ts";
 
 // The host app's route for a request (GEN-01): it runs as a job, one at a time (CLI-06), and
 // answers with what came of it, checked against the contract (CON-01). The local server's guard
@@ -51,6 +56,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   const waitingData = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const offers = new Map<string, { offer: DataOffer; expires: number }>();
   const activations = new Map<string, Omit<ActivationRequest, "token"> & { expires: number }>();
+  const controls = new RequestControls(options.jobs, (token) => {
+    pending.delete(token);
+    waitingData.delete(token);
+    offers.delete(token);
+    activations.delete(token);
+  });
   const grant = (reply: GenerationResult, expires: number, token: string): GenerateReply => {
     if (reply.kind !== "candidate") return reply;
     for (const [token, entry] of activations)
@@ -75,12 +86,18 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       return undefined;
     // Consume before validation/migration; a refusal or concurrent replay cannot reuse authority.
     activations.delete(request.token);
-    return () => Date.now() < entry.expires;
+    const control = controls.owner(request.token);
+    return () => Date.now() < entry.expires && (!control || !control.controller.signal.aborted);
   });
-  const offerData = (offer: DataOffer, expires: number) => {
+  const offerData = (
+    offer: DataOffer,
+    expires: number,
+    control?: ReturnType<RequestControls["owner"]>,
+  ) => {
     for (const [token, value] of offers) if (value.expires <= Date.now()) offers.delete(token);
     if (offers.size >= MAX_PENDING) offers.delete(offers.keys().next().value!);
     const token = randomUUID();
+    controls.bind(control, token);
     offers.set(token, { offer, expires });
     return token;
   };
@@ -133,6 +150,19 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                 : generateRequestSchema
             ).safeParse(body.json);
       if (!request?.success) return text(res, 400, "Say what you need, in a few words.");
+      const input = request.data;
+      let control: ReturnType<RequestControls["owner"]>;
+      try {
+        control =
+          "request" in input
+            ? input.controlToken
+              ? controls.claim(input.controlToken)
+              : undefined
+            : controls.owner(input.token);
+        if (control) controls.check(control);
+      } catch {
+        return text(res, 409, "The request was stopped or expired. Please ask again.");
+      }
       const provider = await options.provider();
       if ("problem" in provider) {
         return json(
@@ -156,14 +186,27 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
           generateReplySchema.parse({ kind: "failed", failure: "provider", message, findings: [] }),
         );
       }
-      const input = request.data;
+      // Cancellation during asynchronous discovery must win before a job can be submitted.
+      if (control) {
+        try {
+          controls.check(control);
+        } catch {
+          return text(res, 409, "The request was stopped or expired. Please ask again.");
+        }
+        if ("request" in input) control.expires = Infinity; // Queue waiting precedes the deadline.
+      }
       const nextToken = randomUUID();
       let expires = 0;
-      const { outcome } = options.jobs.submit(
+      const { job, outcome } = options.jobs.submit(
         "request" in input ? input.request : "findings" in input ? "Repair tool" : "Change entries",
-        (signal) => {
+        (jobSignal) => {
+          const signal = control
+            ? AbortSignal.any([jobSignal, control.controller.signal])
+            : jobSignal;
+          if (control) controls.check(control);
           if ("request" in input) {
             expires = Date.now() + limit;
+            if (control) control.expires = expires;
             return withinRequestDeadline(
               provider,
               expires,
@@ -174,9 +217,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   routes,
                   input,
                   stopped,
-                  (context) => remember(nextToken, context, expires),
+                  (context) => {
+                    controls.bind(control, nextToken);
+                    remember(nextToken, context, expires);
+                  },
                   check,
-                  (offer) => offerData(offer, expires),
+                  (offer) => offerData(offer, expires, control),
                 ),
               signal,
             );
@@ -211,7 +257,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   entry.context.intent.language,
                   stopped,
                   check,
-                  (offer) => offerData(offer, entry.expires),
+                  (offer) => offerData(offer, entry.expires, control),
                   entry.context.repairUsage,
                 );
               },
@@ -239,6 +285,8 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                 stopped,
                 check,
               );
+              if (control?.controller.signal.aborted) return repaired;
+              if (repaired.kind === "candidate") controls.bind(control, nextToken);
               if (repaired.kind === "candidate" && entry.context.dataPart) {
                 available({ ...entry.context, reply: repaired });
                 retain(
@@ -254,9 +302,25 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
           );
         },
       );
+      control?.jobs.add(job.id);
       const ended = await outcome;
-      if (ended.state === "done")
-        return json(res, generateReplySchema.parse(grant(ended.value, expires, nextToken)));
+      control?.jobs.delete(job.id);
+      if (control && control.expires === Infinity) control.expires = Date.now() + limit;
+      if (ended.state === "done") {
+        // Committed data facts stand. Cancelled candidates must never regain activation authority.
+        if (ended.value.kind === "candidate" && !control?.controller.signal.aborted)
+          controls.bind(control, nextToken);
+        const reply =
+          ended.value.kind === "candidate" && control?.controller.signal.aborted
+            ? {
+                kind: "failed",
+                failure: "provider",
+                message: "The request was stopped.",
+                findings: [],
+              }
+            : grant(ended.value, expires, nextToken);
+        return json(res, generateReplySchema.parse(reply));
+      }
       return json(
         res,
         generateReplySchema.parse({
@@ -281,9 +345,10 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     const checked = body === "invalid" ? undefined : confirmDataRequestSchema.safeParse(body.json);
     if (!checked?.success) return text(res, 400, "Choose whether to apply the proposed changes.");
     const entry = offers.get(checked.data.token);
+    const control = controls.owner(checked.data.token);
     offers.delete(checked.data.token); // Consume before any queued work, including cancellation.
     if (!checked.data.approve) return json(res, { kind: "answer", answer: "data_cancelled" });
-    const { outcome } = options.jobs.submit(
+    const { job, outcome } = options.jobs.submit(
       "Apply reviewed entry changes",
       (signal): Promise<GenerateReply> => {
         if (!entry)
@@ -295,6 +360,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
           });
         const check = () => {
           signal.throwIfAborted();
+          if (control) controls.check(control);
           if (Date.now() >= entry.expires)
             throw new ProviderError(
               "time_limit",
@@ -304,7 +370,9 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
         return Promise.resolve(applyDataOffer(options.store, entry.offer, check));
       },
     );
+    control?.jobs.add(job.id);
     const ended = await outcome;
+    control?.jobs.delete(job.id);
     return json(
       res,
       generateReplySchema.parse(
@@ -322,11 +390,30 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       ),
     );
   };
+  const register: Handler = (req, res) => {
+    if (req.method !== "POST") return text(res, 405, "Send a request with POST.");
+    const token = controls.register();
+    if (!token) return text(res, 409, "Too many requests are waiting. Please try again later.");
+    return json(res, requestControlSchema.parse({ token }));
+  };
+  const cancel: Handler = async (req, res) => {
+    if (req.method !== "POST") return text(res, 405, "Send a request with POST.");
+    const body = await readJson(req, REQUEST_LIMIT_BYTES);
+    const checked =
+      typeof body === "string" ? undefined : requestControlSchema.safeParse(body.json);
+    if (!checked?.success) return text(res, 400, "Choose the request to stop.");
+    return json(
+      res,
+      cancelRequestReplySchema.parse({ cancelled: controls.cancel(checked.data.token) }),
+    );
+  };
   return {
     ...activate,
     [GENERATE_ROUTE]: handle("generate"),
     [SMOKE_REPAIR_ROUTE]: handle("smoke"),
     [FINISH_DATA_ROUTE]: handle("data"),
     [CONFIRM_DATA_ROUTE]: confirm,
+    [REGISTER_REQUEST_ROUTE]: register,
+    [CANCEL_REQUEST_ROUTE]: cancel,
   };
 }

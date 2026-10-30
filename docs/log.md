@@ -2,6 +2,8 @@
 
 ## 2026-10-30
 
+* **Update**: [Generation](code/server/generation.md) adds bounded opt-in registered cancellation before setup and through queued/running jobs, candidate activation, smoke repair, mixed-data continuations and reviews. [Contracts](code/contracts/package.md) keep capability ownership on the server; completed commits stand. Browser Cancel and progress remain open in [#152](https://github.com/suredo/Tessera/issues/152). [ADR 0010](decisions/adr/0010-generation-progress.md) records the owner's D7 choice of stage names and elapsed time; [provider requirements](spec/providers.md) reflect it. Streaming remains future work; no live call was made. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T12:29:00Z.
+
 * **Update**: The [activation route](code/server/workspaces.md) uses an error object to signal expiry before writes, preserving its plain refusal and atomic transaction behavior while satisfying the throwing rule. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T11:33:12Z.
 
 * **Update**: [Generation](code/server/generation.md) carries the original request expiry through browser staging and [activation](code/server/workspaces.md). Required one-use authority binds workspace, candidate and revision; expired, replayed, evicted and restart-lost tokens fail closed. Smoke and mixed-data continuations use the same opaque identity so an old equal-hash request cannot borrow later instructions or budget. Activation rechecks after migration before writing and preserves confirmed commits. The [browser](code/web/package.md) cancels expired staging and reports lost activation responses as uncertain. No prompts, dependencies or live calls changed. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T11:27:04Z.

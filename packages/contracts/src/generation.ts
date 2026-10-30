@@ -118,8 +118,15 @@ export type DataChangePreview = z.infer<typeof dataChangePreviewSchema>;
 /** The host app asks for a request to be carried out here (GEN-01, GEN-04). */
 export const GENERATE_ROUTE = "/api/generate";
 
+/** Register before sending a cancellable request; the opaque capability survives setup/queueing. */
+export const REGISTER_REQUEST_ROUTE = "/api/generate/register";
+export const CANCEL_REQUEST_ROUTE = "/api/generate/cancel";
+export const requestControlSchema = z.strictObject({ token: z.uuid() });
+export const cancelRequestReplySchema = z.strictObject({ cancelled: z.boolean() });
+
 export const generateRequestSchema = z
   .strictObject({
+    controlToken: z.uuid().optional(),
     request: z.string().trim().min(1).max(4000).describe("What the person asked, in their words."),
     workspaceId: z
       .uuid()
