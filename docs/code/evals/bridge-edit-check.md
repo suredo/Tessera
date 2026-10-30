@@ -7,7 +7,7 @@ implements: [ENG-07, ENG-16, ENG-19, GEN-07, DATA-03]
 tests: [../../../evals/test/bridge-edit-check.test.ts]
 tags: [code, evals, edit, bridge]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-30T02:40:48Z }
+generated: { by: codex/gpt-6, at: 2026-10-30T02:51:09Z }
 ---
 
 # Purpose
@@ -41,7 +41,7 @@ Reuses the [evaluation harness](harness.md), fake CLI adapter and [smoke repair 
 
 # Pitfalls
 
-The changed bridge implementation is integrated; the exact free browser rehearsal still awaits phase coordination. Heavy unit/browser/lint phases must be coordinated across worktrees. The free answer checks runner behavior, not model quality. Conservatively propose 10,000 to 25,000 input and 2,000 to 6,000 output tokens total under cap two, including CLI overhead and one repair; these are estimates, not token limits or authorization. Measure actual prompt and schema sizes from the free CLI capture before seeking approval. No live or browser result is claimed yet.
+The exact free rehearsal passed its one required case with one fake edit call at `b60ba875f2c912d695adfb9a34469c42d3a4370e`, with a clean source tree. Evidence stays under ignored `test-output/evals/bridge-edit-check-dry-run-2026-10-30T02-46-45-134Z/` in the evaluation checkout. The inspected viewport shows Milk and Eggs with quantity 1; the stored IDs/titles, white colors and list layout were preserved. The call exercised `bridge@63eefdc4fb28`: 13,677 system characters, 1,477 request characters and 6,512 wrapped-schema characters, or 21,666 total before CLI overhead. This establishes runner behavior, not model quality. Conservatively propose 10,000 to 25,000 input and 2,000 to 6,000 output tokens total under cap two, including CLI overhead and one repair; these are estimates, not token limits or authorization. No live call has been approved or made. Heavy local phases remain serial across worktrees; full-page captures remain supplementary under L-76.
 
 # Symbols (generated)
 
