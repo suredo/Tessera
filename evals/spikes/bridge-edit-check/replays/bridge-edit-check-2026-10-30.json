@@ -1,0 +1,69 @@
+{
+  "sourceRun": "bridge-edit-check-live-2026-10-30T02-59-59-384Z",
+  "head": "d900a427ddf4bbd7fb234b2ab69b0645dc765b09",
+  "replays": [
+    {
+      "name": "quantities",
+      "request": "Add a numeric quantity to every item, starting at 1, and show the quantity beside each item. Keep the current white colors, title, list layout and all entries.",
+      "callIndex": 0,
+      "answer": {
+        "outcome": "edit",
+        "summary": "Every item in the shopping list now has a quantity, starting at 1, shown beside its name. All existing entries are kept.",
+        "files": {
+          "mode": "replace",
+          "code": {
+            "html": "<h1>Shopping list</h1><ul id=\"items\"></ul>",
+            "css": "body{background:#fff;color:#111}",
+            "js": "tessera.call(\"data.read\").then(({ data }) => {\n  for (const item of data.items) {\n    const row = document.createElement(\"li\");\n    const qty = typeof item.quantity === \"number\" ? item.quantity : 1;\n    row.textContent = item.title + \" — Quantity: \" + qty;\n    document.getElementById(\"items\").append(row);\n  }\n});"
+          }
+        },
+        "data": {
+          "mode": "migrate",
+          "schema": {
+            "additionalProperties": false,
+            "properties": {
+              "items": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "quantity": {
+                      "type": "number",
+                      "default": 1
+                    }
+                  },
+                  "required": ["id", "title", "quantity"],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": ["items"],
+            "type": "object"
+          },
+          "defaults": {
+            "items": []
+          },
+          "migration": {
+            "fromVersion": 1,
+            "toVersion": 2,
+            "operations": [
+              {
+                "op": "addField",
+                "collection": "items",
+                "fields": {
+                  "quantity": 1
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
