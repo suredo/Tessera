@@ -34,14 +34,14 @@ function setup(failure?: ProviderError) {
   const underlying: Provider = {
     name: "offline",
     live: false,
-    async run(call) {
+    run(call) {
       calls++;
-      if (failure && calls === 1) throw failure;
-      return {
+      if (failure && calls === 1) return Promise.reject(failure);
+      return Promise.resolve({
         value: call.schema.parse(REPLY),
         raw: JSON.stringify(REPLY),
         usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, durationMs: 0 },
-      };
+      });
     },
   };
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-bridge-eval-"));
