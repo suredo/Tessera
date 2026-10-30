@@ -2,6 +2,8 @@
 
 ## 2026-10-30
 
+* **Update**: The [static gate](code/server/checks.md) rejects direct system-clock reads through recognized Date access for RUN-07, including constructor aliases and possibly-empty spread construction. Explicit-input dates and local properties remain available; create/edit repair and import regression cases cover the shared gate. VER-01 remains partial: startup writes and inherited tracking gaps stay open under [#148](https://github.com/suredo/Tessera/issues/148). No prompt, contract, runtime or live budget changes. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T03:41:32Z.
+
 * **Record**: The owner-approved [bridge edit check](../evals/reports/2026-10-30-bridge-edit-check.md) passed one required quantity edit in one of two approved calls at clean `d900a427ddf4bbd7fb234b2ab69b0645dc765b09`. The [runner](code/evals/bridge-edit-check.md) and [prompt](code/server/prompts.md) docs now link the unchanged inspected viewport, allowlisted ledger and deterministic replay through the actual edit guard and lossless migration. The [budget](roadmap/budgets.md) records 21 M2 calls used; no repeat is authorized. Negative bridge errors and broad VER-01 follow-ups remain outside this live evidence. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T03:04:13Z.
 
 * **Correct**: The [library browser checks](code/web/package.md) now wait for the selected workspace's named tool panel to be in view and running before reading nested-frame text ([#194](https://github.com/suredo/Tessera/issues/194)). The earlier full run had 547 passes and one unresolved/empty Continue assertion; it is not reported as a pass. Exact text, workspace/data assertions and all numeric timeouts remain unchanged, with no retries or product changes.

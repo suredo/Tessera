@@ -830,9 +830,30 @@ export function checkJs(
     }
   };
 
+  // Refuse hidden constructor access at its source instead of adding alias analysis.
+  const isDate = (node: AnyNode): boolean =>
+    (node.type === "Identifier" && node["name"] === "Date") ||
+    (node.type === "MemberExpression" &&
+      propertyName(node) === "Date" &&
+      page.isPage(node["object"] as AnyNode));
+
+  const checkDate = (node: AnyNode, parent: AnyNode | null) => {
+    if (parent?.type === "MemberExpression" && parent["object"] === node) {
+      if (["parse", "UTC"].includes(propertyName(parent) ?? "")) return;
+    } else if (parent?.type === "NewExpression" && parent["callee"] === node) {
+      // A spread alone may be empty. A written argument guarantees an explicit input.
+      if ((parent["arguments"] as AnyNode[]).some((arg) => arg.type !== "SpreadElement")) return;
+    }
+    found(
+      node,
+      `The JavaScript reads the system clock or hides access to Date. Use tessera.call("clock.now") with the "${BRIDGE_ACTIONS["clock.now"].capability}" capability for current time, or new Date(explicitInput) for a supplied date. Don't call Date(), borrow Date, or compute its methods.`,
+    );
+  };
+
   const checkIdentifier = (node: AnyNode, parent: AnyNode | null) => {
     const name = node["name"] as string;
     if (parent && isNameNotReference(node, parent)) return;
+    if (name === "Date") checkDate(node, parent);
     if (FORBIDDEN_GLOBALS.has(name)) {
       found(node, `The JavaScript uses ${name}, which a tool can't use.`);
       return;
@@ -860,6 +881,7 @@ export function checkJs(
   const checkMember = (node: AnyNode, parent: AnyNode | null) => {
     const name = propertyName(node);
     const object = node["object"] as AnyNode;
+    if (isDate(node)) checkDate(node, parent);
     if (name === "tessera" && page.isPage(object)) {
       found(
         node,

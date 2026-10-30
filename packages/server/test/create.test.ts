@@ -404,8 +404,10 @@ describe("the create stage (CLI-09, GEN-11)", () => {
 });
 
 describe("repair by failure class (GEN-09)", () => {
-  it("GEN-09, VER-01, CAP-01: bridge failures repair once with actionable diagnostics and the actual capabilities", async () => {
+  it("GEN-09, VER-01, CAP-01: bridge and clock failures repair once with actionable diagnostics and the actual capabilities", async () => {
     for (const js of [
+      "Date.now();",
+      "new Date();",
       "tessera.missing();",
       "tessera.call('unknown.action');",
       "tessera.call('clock.now');",
@@ -422,7 +424,7 @@ describe("repair by failure class (GEN-09)", () => {
       ).toMatchObject({ kind: "candidate", repairs: 1 });
       expect(calls.map((c) => c.stage)).toEqual(["create", "repair"]);
       expect(calls[1]!.prompt).toContain(js);
-      expect(calls[1]!.prompt).toMatch(/bridge|capability/);
+      expect(calls[1]!.prompt).toMatch(/bridge|capability|clock/);
     }
     expect(
       candidateFrom(

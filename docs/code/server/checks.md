@@ -3,11 +3,11 @@ type: Code Module
 title: "Static check"
 description: "Every candidate's and imported tool's code, parsed before it runs: sandbox rules and direct bridge methods, actions and declared capabilities (ADR 0009); part of VER-01."
 resource: ../../../packages/server/src/checks/
-implements: [SBX-06, SBX-07]
+implements: [SBX-06, SBX-07, RUN-07]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T20:59:16Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T03:41:32Z }
 ---
 
 # Purpose
@@ -23,6 +23,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 
 - **Recognized bridge calls use the shared manifest** (`VER-01`, in part). For references recognized as the host's bridge, the accepted form is a direct `tessera.method(...)` call with a written-out method name. Methods come from contracts' `BRIDGE_METHODS`; action names and capability requirements come from `BRIDGE_ACTIONS`. `call` needs fixed action text, and its action must exist and have its capability declared. `assetUrl` accepts a computed image ID and checks its fixed underlying action; `send` takes a message and `onMessage` a listener, without treating either as an action name. Create, edit and import pass the artifact's actual capabilities before storage/staging.
 - **Direct bridge aliases fail at their source.** Storing, passing, returning, destructuring or computing the global `tessera` reference or its methods is refused with repair guidance, including `bind`, `call` and `apply`. Access through a recognized page-object path is refused too. Existing shadowing/write guards remain. This is restricted syntax, not complete JavaScript alias analysis: normal local objects may still have methods such as `call` or a `tessera` property, and the inherited page-tracking gaps below can conceal indirect bridge access. Existing prompt fixtures, development samples and sanitized live replays use direct calls; they provide no evidence that bridge aliases need support. These checks reuse the existing parsed tree walk without another convergence pass or dependency.
+- **Current time comes from the host** (`RUN-07`). Bare `Date` and `.Date` reached through recognized page values may only construct a date with an explicit input, or reach fixed `parse`/`UTC` methods. `Date.now` references (including computed keys and borrowing), `Date()` calls even with arguments, zero-argument construction, and constructor aliases fail at their source. A constructor needs at least one non-spread argument because spreads alone may be empty. The repair diagnostic points to `tessera.call("clock.now")` and its capability from `BRIDGE_ACTIONS`; explicit-input construction, arithmetic and instance formatting remain available. Unrelated local `.Date` and `.now` properties pass. This reuses the parsed walk and page tracking without another analysis pass. Bare `Date` is treated conservatively across scopes, including shadowed names; local constructor aliases are deliberately unsupported.
 - **No frames, embedded objects or script tags** (`SBX-06`): `<iframe>`, `<frame>`, `<object>`, `<embed>`, `<script>` (in SVG too), `<base>` and `<meta>`, in the HTML, in fixed HTML text written from the JavaScript, and created with `createElement`.
 - **No navigation** (`SBX-07`):
   - links whose address isn't `#` or empty;
@@ -68,7 +69,7 @@ acorn and parse5, pinned exactly. The [export and import](archives.md) module re
 
 # Pitfalls
 
-- **This is part of `VER-01`.** Writes at startup and reading the system clock remain follow-up work under #148; these bridge checks do not establish general JavaScript safety.
+- **This is part of `VER-01`.** Writes at startup remain follow-up work under #148; these bridge and Date checks do not establish general JavaScript safety. Only the recognized Date namespace is covered: this slice does not extend to performance, Intl or Temporal APIs.
 - **It runs on the server, before staging,** rather than as a staging check in the browser. It must also cover imports, which aren't staged, and code that fails never reaches the browser. #148's original staging-interface criterion was corrected to this existing ADR 0009 gate; the smoke check (#149) keeps the browser staging interface.
 - **It can refuse ordinary code.** Over-approximating is the safe direction: indexing a list of elements with a variable, or a value that only might be the page, is refused, and repair rewrites it (loop with `for…of` or `forEach`, reach elements by id). The base prompt says so.
 - **It is defence in depth, not a closure** (ADR 0009, amended). A deliberately obfuscated leak can pass. Known gaps, from Codex's review of pull request 168, recorded rather than patched one by one:
@@ -81,7 +82,7 @@ acorn and parse5, pinned exactly. The [export and import](archives.md) module re
   - native copies of the page's objects (`{...document}`) read back without a computed name.
 
   A gap is fixed when the fix is cheap and simple; the closure is at the platform.
-- **The same page-tracking gaps can hide bridge checks.** A local parser probe confirmed that `const box = {value: window.valueOf()}; box.value.tessera.call('unknown.action');` produces no static finding: the inherited plain-property classification loses the global object at `.value`. Direct `window.valueOf().tessera` is recognized and refused. This records a known deliberate-obfuscation limit, not supported bridge syntax or a guarantee that the example will keep passing. The independent runtime bridge action/capability guards still reject unknown actions and undeclared capabilities; this static slice does not replace them.
+- **The same page-tracking gaps can hide bridge and Date checks.** A local parser probe confirmed that `const box = {value: window.valueOf()}; box.value.tessera.call('unknown.action');` produces no static finding: the inherited plain-property classification loses the global object at `.value`. Direct `window.valueOf().tessera` and `window.valueOf().Date.now()` are recognized and refused; hiding Date behind the same plain-property gap remains a deliberate-obfuscation limit. This records a known deliberate-obfuscation limit, not supported bridge syntax or a guarantee that the example will keep passing. The independent runtime bridge action/capability guards still reject unknown actions and undeclared capabilities; this static slice does not replace them.
 - **The rules are strict on purpose.** A real tool that needs something they refuse is a reason to revisit ADR 0009, not to loosen a rule quietly.
 
 # Symbols (generated)

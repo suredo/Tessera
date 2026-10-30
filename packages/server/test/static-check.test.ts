@@ -289,7 +289,7 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
           const text = form.item.value.trim();
           save([{ title: text, count: Number(input.value) }]);
         }
-        class Timer { start() { this.at = Date.now(); } }
+        class Timer { start() { this.at = 0; } }
         setTimeout(() => draw(), 100);
         const url = URL.createObjectURL(blob);
         img.src = url;
@@ -336,6 +336,33 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
     expect(checkJs("function (")).toEqual([
       { part: "js", message: expect.stringMatching(/^The JavaScript can't be read: /) as unknown },
     ]);
+  });
+});
+
+describe("host clock static checks (RUN-07, VER-01)", () => {
+  const fixtures = JSON.parse(
+    fs.readFileSync(new URL("./fixtures/static-clock.json", import.meta.url), "utf8"),
+  ) as { passing: string[]; failing: string[] };
+  it("RUN-07: explicit dates and unrelated local objects pass", () => {
+    for (const js of fixtures.passing) expect(checkJs(js, ["clock"]), js).toEqual([]);
+  });
+  it("RUN-07: direct system-clock reads and hidden constructor access fail", () => {
+    for (const js of fixtures.failing) {
+      expect(
+        checkJs(js, ["clock"]).some((f) => f.message.includes("clock.now")),
+        js,
+      ).toBe(true);
+    }
+  });
+  it("RUN-07: the existing page guard also refuses destructuring Date from a global", () => {
+    expect(refusedJs("const {Date: D} = window; new D()")).toBe(true);
+  });
+  it("RUN-07, GEN-09: diagnostics name the source line and host alternative", () => {
+    expect(checkJs("\nDate.now()", [])).toContainEqual({
+      part: "js",
+      line: 2,
+      message: expect.stringContaining('"clock" capability') as unknown,
+    });
   });
 });
 
