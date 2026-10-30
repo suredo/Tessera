@@ -652,6 +652,173 @@ function isFunction(node: AnyNode | null | undefined): boolean {
   );
 }
 
+/**
+ * Calls reachable while starting, including async continuations. Names are deliberately merged
+ * across scopes and objects: ambiguity can refuse more code, never choose a convenient target.
+ * This is bounded syntax analysis, not an interpreter or a proof of JavaScript execution.
+ */
+function startupCalls(program: AnyNode): Set<AnyNode> {
+  const bindings = new Map<string, Set<AnyNode>>();
+  const functions = new Set<AnyNode>();
+  const accessors = new Set<AnyNode>();
+  const listeners = new Set<AnyNode>();
+  const allCalls = new Set<AnyNode>();
+  const calls = new Set<AnyNode>();
+  const executed = new Set<AnyNode>();
+  const pending: AnyNode[] = [program];
+  // Analyzer policy: only these listener registrations defer their callback until interaction.
+  const interaction = new Set([
+    "click",
+    "dblclick",
+    "input",
+    "change",
+    "submit",
+    "keydown",
+    "keyup",
+    "pointerdown",
+    "pointerup",
+    "mousedown",
+    "mouseup",
+    "touchstart",
+    "touchend",
+  ]);
+  const bind = (name: string, value: AnyNode) => {
+    if (!bindings.has(name)) bindings.set(name, new Set());
+    bindings.get(name)!.add(value);
+  };
+  const listener = (node: AnyNode) => {
+    const callee = node["callee"] as AnyNode;
+    const args = node["arguments"] as AnyNode[];
+    return (
+      node.type === "CallExpression" &&
+      callee.type === "MemberExpression" &&
+      !callee["computed"] &&
+      propertyName(callee) === "addEventListener" &&
+      interaction.has(fixedText(args[0]) ?? "")
+    );
+  };
+  const collect = (node: AnyNode) => {
+    if (node.type === "CallExpression" || node.type === "NewExpression") allCalls.add(node);
+    if (["get", "set"].includes(node["kind"] as string) && isNode(node["value"]))
+      accessors.add(node["value"]);
+    if (isFunction(node)) {
+      functions.add(node);
+      if (node["id"]) bind((node["id"] as AnyNode)["name"] as string, node);
+    }
+    if (node.type === "ClassDeclaration" && node["id"])
+      bind((node["id"] as AnyNode)["name"] as string, node);
+    if (["VariableDeclarator", "AssignmentExpression", "AssignmentPattern"].includes(node.type)) {
+      const target = (node["id"] ?? node["left"]) as AnyNode;
+      const value = (node["init"] ?? node["right"]) as AnyNode | undefined;
+      if (value) {
+        for (const name of boundNames(target)) bind(name, value);
+        if (target.type === "MemberExpression" && propertyName(target))
+          bind(propertyName(target)!, value);
+      }
+    }
+    if (["Property", "MethodDefinition", "PropertyDefinition"].includes(node.type)) {
+      const key = node["key"] as AnyNode;
+      const name = node["computed"]
+        ? fixedText(key)
+        : ((key["name"] as string | undefined) ?? fixedText(key));
+      if (name && isNode(node["value"])) bind(name, node["value"]);
+    }
+    if (node.type === "CallExpression" && listener(node))
+      listeners.add((node["arguments"] as AnyNode[])[1]!);
+    children(node).forEach(collect);
+  };
+  collect(program);
+
+  const resolve = (node: AnyNode | undefined, seen = new Set<AnyNode>()): Set<AnyNode> => {
+    if (!node || seen.has(node)) return new Set();
+    seen.add(node);
+    if (isFunction(node) || node.type === "ClassDeclaration" || node.type === "ClassExpression")
+      return new Set([node]);
+    let values: AnyNode[] = [];
+    if (node.type === "Identifier") values = [...(bindings.get(node["name"] as string) ?? [])];
+    else if (node.type === "MemberExpression") {
+      const name = propertyName(node);
+      values = name === undefined ? [...functions] : [...(bindings.get(name) ?? [])];
+      if (["call", "apply", "bind"].includes(name ?? "")) values.push(node["object"] as AnyNode);
+    } else if (node.type === "ChainExpression" || node.type === "AwaitExpression")
+      values = [(node["expression"] ?? node["argument"]) as AnyNode];
+    else if (node.type === "ConditionalExpression")
+      values = [node["consequent"] as AnyNode, node["alternate"] as AnyNode];
+    else if (node.type === "LogicalExpression" || node.type === "AssignmentExpression")
+      values = [node["left"] as AnyNode, node["right"] as AnyNode];
+    else if (node.type === "SequenceExpression")
+      values = (node["expressions"] as AnyNode[]).slice(-1);
+    else if (node.type === "ArrayExpression" || node.type === "ObjectExpression")
+      values = children(node);
+    else if (node.type === "Property" || node.type === "SpreadElement")
+      values = [(node["value"] ?? node["argument"]) as AnyNode];
+    else if (node.type === "CallExpression") {
+      const callee = node["callee"] as AnyNode;
+      if (callee.type === "MemberExpression" && propertyName(callee) === "bind")
+        values = [callee["object"] as AnyNode];
+    }
+    return new Set(values.flatMap((value) => [...resolve(value, seen)]));
+  };
+  const invoke = (value: AnyNode | undefined) => {
+    for (const fn of resolve(value)) {
+      if (executed.has(fn)) continue;
+      executed.add(fn);
+      if (isFunction(fn)) pending.push(...children(fn));
+      else {
+        // Both default derived constructors and explicit super() can execute the base constructor.
+        invoke(fn["superClass"] as AnyNode | undefined);
+        // Instance fields are conservatively visited even before construction; constructors run here.
+        const body = fn["body"] as AnyNode;
+        for (const method of body["body"] as AnyNode[])
+          if (method.type === "MethodDefinition" && method["kind"] === "constructor")
+            invoke(method["value"] as AnyNode);
+      }
+    }
+  };
+  const visit = (node: AnyNode) => {
+    if (++visits > 50_000) {
+      exhausted = true;
+      return;
+    }
+    if (isFunction(node)) return;
+    if (node.type === "CallExpression" || node.type === "NewExpression") {
+      calls.add(node);
+      const callee = node["callee"] as AnyNode;
+      const args = node["arguments"] as AnyNode[];
+      for (const fn of resolve(callee)) {
+        // Follow callback parameters as well as named helpers, without relying on scope identity.
+        for (const [i, param] of ((fn["params"] as AnyNode[] | undefined) ?? []).entries())
+          if (args[i]) for (const name of boundNames(param)) bind(name, args[i]);
+      }
+      invoke(callee);
+      args.forEach((arg, i) => {
+        if (!(listener(node) && i === 1)) invoke(arg);
+      });
+      if (
+        callee.type === "MemberExpression" &&
+        ["click", "dispatchEvent", "requestSubmit"].includes(propertyName(callee) ?? "")
+      )
+        listeners.forEach(invoke);
+    }
+    children(node).forEach(visit);
+  };
+  // A later call may add a parameter alias to a function already visited. Repeat to a fixed point.
+  let previous = -1;
+  let rounds = 0;
+  let visits = 0;
+  let exhausted = false;
+  while (previous !== calls.size + [...bindings.values()].reduce((n, set) => n + set.size, 0)) {
+    // Keep pathological alias graphs bounded. Giving up makes every write a startup write.
+    if (++rounds > 50 || exhausted) return allCalls;
+    previous = calls.size + [...bindings.values()].reduce((n, set) => n + set.size, 0);
+    executed.clear();
+    accessors.forEach(invoke);
+    pending.push(program);
+    while (pending.length && !exhausted) visit(pending.pop()!);
+  }
+  return exhausted ? allCalls : calls;
+}
+
 /** Whether `node` is written to: an assignment's target, updated, or a pattern's target. */
 function isWritten(node: AnyNode, parent: AnyNode | null): boolean {
   if (!parent) return false;
@@ -690,6 +857,7 @@ export function checkJs(
     return [{ message: `The JavaScript can't be read: ${(error as Error).message}.` }];
   }
   const page = new PageValues(program);
+  const starting = startupCalls(program);
   const findings: JsFinding[] = [];
   // The bridge's values count as plain data only because `tessera` is the host's: a tool may not
   // declare a name of its own that hides it.
@@ -992,6 +1160,12 @@ export function checkJs(
       return;
     }
     const capability = BRIDGE_ACTIONS[action as BridgeActionName].capability;
+    if (BRIDGE_ACTIONS[action as BridgeActionName].writes && starting.has(parent)) {
+      found(
+        node,
+        `The bridge action "${action}" writes data during startup. Read data to render the tool; move this write to a user action. Starting entries belong in initialState or reusableDefaults, installed by the host.`,
+      );
+    }
     if (capability && !capabilities.includes(capability)) {
       found(
         node,

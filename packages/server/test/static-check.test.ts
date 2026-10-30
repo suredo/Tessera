@@ -395,6 +395,37 @@ describe("bridge static checks (VER-01, CAP-01)", () => {
   });
 });
 
+describe("startup data writes (VER-01, GEN-06)", () => {
+  const fixtures = JSON.parse(
+    fs.readFileSync(new URL("./fixtures/static-startup.json", import.meta.url), "utf8"),
+  ) as { passing: string[]; failing: string[] };
+  it("VER-01, GEN-06: startup reads and writes deferred to user handlers pass", () => {
+    for (const js of fixtures.passing) expect(checkJs(js, ["clock"]), js).toEqual([]);
+  });
+  it("VER-01, GEN-06: startup helpers, callbacks and synthetic interactions expose data writes", () => {
+    for (const js of fixtures.failing)
+      expect(
+        checkJs(js).some((f) => f.message.includes('"data.patch" writes data during startup')),
+        js,
+      ).toBe(true);
+  });
+  it("VER-01, GEN-09: repair gets the write line and host-owned starting-data alternatives", () => {
+    expect(checkJs("\ntessera.call('data.patch', {});")).toContainEqual({
+      part: "js",
+      line: 2,
+      message: expect.stringMatching(
+        /data.patch.*startup.*user action.*initialState.*reusableDefaults/,
+      ) as unknown,
+    });
+  });
+  it("VER-01: exhausted startup analysis fails closed, including otherwise deferred handlers", () => {
+    const js =
+      "0;".repeat(26_000) +
+      "button.addEventListener('click', () => tessera.call('data.patch', {}));";
+    expect(checkJs(js).some((f) => f.message.includes("writes data during startup"))).toBe(true);
+  });
+});
+
 describe("real tools (VER-01)", () => {
   it("VER-01: the prompt fixture's shopping list and every development sample pass", async () => {
     const fixtures = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "prompts");
