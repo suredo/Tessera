@@ -19,12 +19,22 @@ test.beforeAll(async () => {
 test.afterAll(() => app.close());
 
 const unique = () => Math.random().toString(36).slice(2, 7);
-const toolText = (page: Page) =>
-  page
-    .frameLocator(".tool-frame iframe")
-    .frameLocator("iframe")
-    .frameLocator("iframe")
-    .locator("#text");
+async function expectToolText(page: Page, workspace: string, text: string) {
+  const panel = page.getByRole("region", {
+    name: en["tool.label"].replace("{name}", workspace),
+    exact: true,
+  });
+  // Selection changes before the replacement runtime finishes starting.
+  await panel.scrollIntoViewIfNeeded();
+  await expect(panel.getByRole("button", { name: en["tool.minimize"], exact: true })).toBeVisible();
+  await expect(
+    panel
+      .frameLocator(".tool-frame iframe")
+      .frameLocator("iframe")
+      .frameLocator("iframe")
+      .locator("#text"),
+  ).toHaveText(text);
+}
 const library = (page: Page) => page.getByRole("region", { name: en["library.heading"] });
 const entry = (page: Page, name: string) =>
   library(page)
@@ -106,7 +116,7 @@ test("APP-04, DATA-07: Continue opens the linked workspace, and says which befor
     .getByRole("button", { name: `Continue ${name}, in ${workspace}` })
     .click();
   await expect(openWorkspace(page, workspace)).toBeVisible();
-  await expect(toolText(page)).toHaveText(`Errands tool ${id}`);
+  await expectToolText(page, workspace, `Errands tool ${id}`);
 });
 
 test("DATA-07: Use again opens a new workspace with fresh data, and Continue still opens the first", async ({
@@ -123,7 +133,7 @@ test("DATA-07: Use again opens a new workspace with fresh data, and Continue sti
   ).toBeVisible();
   // The new workspace is named after the entry, runs the same tool, and is open.
   await expect(openWorkspace(page, name)).toBeVisible();
-  await expect(toolText(page)).toHaveText(`Errands tool ${id}`);
+  await expectToolText(page, name, `Errands tool ${id}`);
   // The library entry still continues its own workspace.
   await toLibrary(page);
   await expect(entry(page, name)).toContainText(`Continue opens ${workspace}`);
