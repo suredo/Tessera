@@ -765,6 +765,8 @@ function startupCalls(program: AnyNode): Set<AnyNode> {
       executed.add(fn);
       if (isFunction(fn)) pending.push(...children(fn));
       else {
+        // Both default derived constructors and explicit super() can execute the base constructor.
+        invoke(fn["superClass"] as AnyNode | undefined);
         // Instance fields are conservatively visited even before construction; constructors run here.
         const body = fn["body"] as AnyNode;
         for (const method of body["body"] as AnyNode[])

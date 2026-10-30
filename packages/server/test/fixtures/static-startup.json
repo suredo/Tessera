@@ -37,6 +37,8 @@
     "const emitter = { addEventListener(name, callback) { callback(); } }; emitter.addEventListener('click', () => tessera.call('data.patch', {}));",
     "const object = { get value() { return tessera.call('data.patch', {}); } }; object.value;",
     "const object = { set value(input) { tessera.call('data.patch', {}); } }; object.value = 1;",
-    "const object = { 'save'() { tessera.call('data.patch', {}); } }; object.save();"
+    "const object = { 'save'() { tessera.call('data.patch', {}); } }; object.save();",
+    "class Base { constructor() { tessera.call('data.patch', {}); } } class Child extends Base {} new Child();",
+    "class Base { constructor() { tessera.call('data.patch', {}); } } class Child extends Base { constructor() { super(); } } new Child();"
   ]
 }
