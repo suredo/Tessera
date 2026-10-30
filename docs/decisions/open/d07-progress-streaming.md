@@ -1,12 +1,14 @@
 ---
 type: Open Decision
 title: "D7. Progress streaming"
-description: "Whether Claude Code's streaming output can show real progress (decide with a spike in M2)."
+description: "Decided on 2026-10-30 by ADR 0010: M2 shows stage names and elapsed time; streaming remains future work."
 tags: [decisions, progress-streaming]
-status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+status: deprecated
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T12:29:00Z }
 ---
 # D7. Progress streaming
+
+> **Decided** by the owner on 2026-10-30 in [ADR 0010](../adr/0010-generation-progress.md): stage names and elapsed time for M2; streaming is future work. No streaming spike or live call was run. What follows is the original question.
 
 Requirements: `CLI-07`, `GEN-16`.
 
