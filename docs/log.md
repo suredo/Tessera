@@ -2,6 +2,8 @@
 
 ## 2026-10-30
 
+* **Update**: The [activation route](code/server/workspaces.md) uses an error object to signal expiry before writes, preserving its plain refusal and atomic transaction behavior while satisfying the throwing rule. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T11:33:12Z.
+
 * **Update**: [Generation](code/server/generation.md) carries the original request expiry through browser staging and [activation](code/server/workspaces.md). Required one-use authority binds workspace, candidate and revision; expired, replayed, evicted and restart-lost tokens fail closed. Smoke and mixed-data continuations use the same opaque identity so an old equal-hash request cannot borrow later instructions or budget. Activation rechecks after migration before writing and preserves confirmed commits. The [browser](code/web/package.md) cancels expired staging and reports lost activation responses as uncertain. No prompts, dependencies or live calls changed. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T11:27:04Z.
 
 * **Update**: The [static gate](code/server/checks.md) detects writes during startup from the shared bridge manifest, following local helpers and callbacks, while deferring interaction listeners. Synthetic startup dispatch, accessors, inherited constructors and analysis-budget exhaustion are conservative failures. [Creation/edit repair](code/server/generation.md) and [import](code/server/archives.md) share this gate; named fixtures and sanitized replay consumers cover the bounded policy. Dynamic invocation and inherited tracking gaps remain explicit limits of bounded VER-01 coverage; its code-doc traceability now includes VER-01. No prompts, contracts, runtime or live calls changed. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T04:21:46Z.

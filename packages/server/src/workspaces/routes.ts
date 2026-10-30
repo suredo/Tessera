@@ -14,7 +14,7 @@ import { existingWorkspace, getWorkspace, type Store } from "./workspaces.ts";
 
 // The request is four short fields; anything much larger isn't one.
 const LIMIT_BYTES = 4096;
-const EXPIRED = Symbol("request expired");
+const EXPIRED = new Error("The request expired.");
 
 // Why a workspace that isn't there can't be activated: missing, or in the trash.
 function missingMessage(store: Store, id: string): string {
