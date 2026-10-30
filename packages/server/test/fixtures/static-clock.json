@@ -1,0 +1,42 @@
+{
+  "passing": [
+    "new Date(0).getTime()",
+    "new Date(undefined)",
+    "new Date(hostTimestamp).toISOString()",
+    "new Date(2026, 9, 30)",
+    "new Date(0, ...parts)",
+    "Date.parse(\"2026-10-30\")",
+    "Date[\"UTC\"](2026, 9, 30)",
+    "new window.Date(0)",
+    "const local = { Date: () => 0, now: () => 0 }; local.Date(); local.now();",
+    "const now = () => 0; now();",
+    "const {Date: make} = local; make();",
+    "tessera.call(\"clock.now\").then(r => new Date(r.now))"
+  ],
+  "failing": [
+    "Date.now()",
+    "Date.now",
+    "Date[\"now\"]()",
+    "Date[`now`]()",
+    "Date[method]()",
+    "Date[\"n\" + \"ow\"]()",
+    "Date.now.call(null)",
+    "const now = Date.now; now()",
+    "const {now} = Date; now()",
+    "const D = Date; new D()",
+    "function f(D) {} f(Date)",
+    "new Date()",
+    "new Date(...parts)",
+    "new Date(...[])",
+    "Date()",
+    "Date(0)",
+    "Date.call(null, 0)",
+    "Date.bind(null)",
+    "new window.Date()",
+    "self.Date.now()",
+    "globalThis[\"Date\"].now()",
+    "window.valueOf().Date.now()",
+    "const w = window; w.Date.now()",
+    "[Date][0]()"
+  ]
+}

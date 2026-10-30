@@ -378,8 +378,11 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", () => {
     await refused(pack(withMigration, files), /don't fit Tessera's format/);
   });
 
-  it("VER-01, CAP-01, IMP-04: import checks bridge calls with the archived capabilities before writing", async () => {
+  it("VER-01, CAP-01, IMP-04: import checks bridge and clock calls with the archived capabilities before writing", async () => {
     for (const [js, capabilities, accepted] of [
+      ["Date.now();", ["clock"], false],
+      ["new Date();", [], false],
+      ["new Date(0);", [], true],
       ["tessera.unknown();", [], false],
       ["tessera.call('unknown.action');", [], false],
       ["const {call} = tessera; call('data.read');", [], false],
