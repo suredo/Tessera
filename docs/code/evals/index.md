@@ -8,3 +8,5 @@
 * [Smoke repair check](smoke-repair.md) - A browser check of the smoke-repair prompt: canned intent and creation fail on an unlabelled field, only repairs use the capped provider, and activation must preserve the request's entries.
 * [Edit check](edit-check.md) - Two browser edits of a saved shopping list, with canned intent, capped real edits/repairs, a free rehearsal and preserved entries checked after each activation.
 * [Chat data check](chat-data-check.md) - Two frozen browser data cases with scripted intent/style, actual replacement approval, capped data calls, and a free rehearsal.
+
+* [Bridge edit check](bridge-edit-check.md) - One frozen behavioral edit of a saved shopping list, exercising bridge prompt context with a fake CLI rehearsal and proposed two-call cap.
