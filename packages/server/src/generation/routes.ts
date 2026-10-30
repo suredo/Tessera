@@ -51,12 +51,11 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   const waitingData = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const offers = new Map<string, { offer: DataOffer; expires: number }>();
   const activations = new Map<string, Omit<ActivationRequest, "token"> & { expires: number }>();
-  const grant = (reply: GenerationResult, expires: number): GenerateReply => {
+  const grant = (reply: GenerationResult, expires: number, token: string): GenerateReply => {
     if (reply.kind !== "candidate") return reply;
     for (const [token, entry] of activations)
       if (entry.expires <= Date.now()) activations.delete(token);
     if (activations.size >= MAX_PENDING) activations.delete(activations.keys().next().value!);
-    const token = randomUUID();
     activations.set(token, {
       workspaceId: reply.workspaceId,
       hash: reply.hash,
@@ -85,33 +84,38 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     offers.set(token, { offer, expires });
     return token;
   };
-  const key = (workspaceId: string, hash: string) => `${workspaceId}:${hash}`;
   const available = (context: SmokeRepairContext) => {
-    const id = key(context.reply.workspaceId, context.reply.hash);
-    const repair = pending.get(id);
     const workspace = getWorkspace(options.store, context.reply.workspaceId);
-    const eligibleRepair =
-      repair &&
-      workspace?.currentVersion === repair.context.baseVersion &&
-      workspace.dataRevision === repair.context.reply.expectedDataRevision
-        ? repair
-        : undefined;
-    if ([eligibleRepair, waitingData.get(id)].some((entry) => entry && entry.expires > Date.now()))
-      throw new ProviderError(
-        "cancelled",
-        "Another request is still checking this tool. Finish it before asking again.",
-      );
+    for (const [token, entry] of [...pending, ...waitingData]) {
+      if (
+        entry.context.reply.workspaceId === context.reply.workspaceId &&
+        entry.context.reply.hash === context.reply.hash &&
+        entry.expires > Date.now() &&
+        (waitingData.has(token) ||
+          (workspace?.currentVersion === entry.context.baseVersion &&
+            workspace.dataRevision === entry.context.reply.expectedDataRevision))
+      )
+        throw new ProviderError(
+          "cancelled",
+          "Another request is still checking this tool. Finish it before asking again.",
+        );
+    }
   };
-  const retain = (map: typeof pending, context: SmokeRepairContext, expires: number) => {
+  const retain = (
+    map: typeof pending,
+    token: string,
+    context: SmokeRepairContext,
+    expires: number,
+  ) => {
     for (const [id, entry] of map) if (entry.expires <= Date.now()) map.delete(id);
     if (map.size >= MAX_PENDING) map.delete(map.keys().next().value!);
-    map.set(key(context.reply.workspaceId, context.reply.hash), { context, expires });
+    map.set(token, { context, expires });
   };
-  const remember = (context: SmokeRepairContext, expires: number) => {
+  const remember = (token: string, context: SmokeRepairContext, expires: number) => {
     // Equal code hashes can belong to different requests. Never replace their instructions.
     available(context);
-    retain(pending, context, expires);
-    if (context.dataPart) retain(waitingData, context, expires);
+    retain(pending, token, context, expires);
+    if (context.dataPart) retain(waitingData, token, context, expires);
   };
   const handle =
     (mode: "generate" | "smoke" | "data"): Handler =>
@@ -153,6 +157,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
         );
       }
       const input = request.data;
+      const nextToken = randomUUID();
       let expires = 0;
       const { outcome } = options.jobs.submit(
         "request" in input ? input.request : "findings" in input ? "Repair tool" : "Change entries",
@@ -169,25 +174,28 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   routes,
                   input,
                   stopped,
-                  (context) => remember(context, expires),
+                  (context) => remember(nextToken, context, expires),
                   check,
                   (offer) => offerData(offer, expires),
                 ),
               signal,
             );
           }
-          const id = key(input.workspaceId, input.hash);
+          const id = input.token;
+          const matches = (entry: { context: SmokeRepairContext } | undefined) =>
+            entry?.context.reply.workspaceId === input.workspaceId &&
+            entry.context.reply.hash === input.hash;
           if (!("findings" in input)) {
             const entry = waitingData.get(id);
-            waitingData.delete(id);
-            pending.delete(id);
-            if (!entry?.context.dataPart)
+            if (!entry?.context.dataPart || !matches(entry))
               return Promise.resolve<GenerateReply>({
                 kind: "failed",
                 failure: "provider",
                 message: "The entry changes weren't applied. Please ask for them again.",
                 findings: [],
               });
+            waitingData.delete(id);
+            pending.delete(id);
             return withinRequestDeadline(
               provider,
               entry.expires,
@@ -212,12 +220,11 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
           }
           const smokeInput = smokeRepairRequestSchema.parse(input);
           const entry = pending.get(id);
+          if (!entry || !matches(entry))
+            return repairSmoke(options.store, provider, routes, smokeInput, undefined, signal);
           pending.delete(id);
           waitingData.delete(id);
-          for (const [token, activation] of activations)
-            if (key(activation.workspaceId, activation.hash) === id) activations.delete(token);
-          if (!entry)
-            return repairSmoke(options.store, provider, routes, smokeInput, undefined, signal);
+          activations.delete(id);
           expires = entry.expires;
           return withinRequestDeadline(
             provider,
@@ -234,7 +241,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
               );
               if (repaired.kind === "candidate" && entry.context.dataPart) {
                 available({ ...entry.context, reply: repaired });
-                retain(waitingData, { ...entry.context, reply: repaired }, entry.expires);
+                retain(
+                  waitingData,
+                  nextToken,
+                  { ...entry.context, reply: repaired },
+                  entry.expires,
+                );
               }
               return repaired;
             },
@@ -244,7 +256,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       );
       const ended = await outcome;
       if (ended.state === "done")
-        return json(res, generateReplySchema.parse(grant(ended.value, expires)));
+        return json(res, generateReplySchema.parse(grant(ended.value, expires, nextToken)));
       return json(
         res,
         generateReplySchema.parse({

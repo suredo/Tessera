@@ -132,6 +132,7 @@ export type GenerateRequest = z.infer<typeof generateRequestSchema>;
 /** The browser reports a staged candidate's smoke failure, once (GEN-09). */
 export const SMOKE_REPAIR_ROUTE = "/api/generate/repair-smoke";
 export const smokeRepairRequestSchema = z.strictObject({
+  token: z.uuid(),
   workspaceId: z.uuid(),
   hash: versionHashSchema,
   findings: z.array(z.string().min(1).max(8000)).min(1).max(20),
@@ -144,6 +145,7 @@ export type ConfirmDataRequest = z.infer<typeof confirmDataRequestSchema>;
 
 export const FINISH_DATA_ROUTE = "/api/generate/finish-data";
 export const finishDataRequestSchema = z.strictObject({
+  token: z.uuid(),
   workspaceId: z.uuid(),
   hash: versionHashSchema,
 });

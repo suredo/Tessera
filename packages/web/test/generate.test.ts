@@ -220,6 +220,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
     expect(repair).toHaveBeenCalledWith({
       workspaceId: candidate.workspaceId,
       hash: candidate.hash,
+      token: candidate.activation.token,
       findings: ["2 fields have no label."],
     });
     expect(seen.stagings.map((s) => s.candidate.hash)).toEqual([candidate.hash, "b".repeat(64)]);

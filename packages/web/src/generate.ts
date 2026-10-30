@@ -230,7 +230,11 @@ export async function carryOut(
                 workspaceId: reply.workspaceId,
                 name: reply.name,
                 interface: { outcome: "updated", summary: reply.summary },
-                data: await deps.finishData({ workspaceId: reply.workspaceId, hash: reply.hash }),
+                data: await deps.finishData({
+                  workspaceId: reply.workspaceId,
+                  hash: reply.hash,
+                  token: reply.activation.token,
+                }),
               });
             } catch {
               return {
@@ -255,6 +259,7 @@ export async function carryOut(
             reply = await deps.repairSmoke({
               workspaceId: reply.workspaceId,
               hash: reply.hash,
+              token: reply.activation.token,
               findings: [staged.reason],
             });
             continue;

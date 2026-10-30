@@ -7,7 +7,7 @@ implements: [RUN-01, RUN-02, RUN-03, RUN-05, RUN-07, GEN-06, SEC-05, VER-02, SBX
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/runtime/test/bridge.test.ts, ../../../packages/runtime/test/server-data.test.ts, ../../../packages/runtime/test/staging.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/bridge.spec.ts, ../../../packages/web/e2e/bridge-data.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts, ../../../packages/web/e2e/staging.spec.ts, ../../../packages/web/e2e/styles.spec.ts, ../../../packages/web/e2e/assets.spec.ts, ../../../packages/web/e2e/smoke.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T11:16:48Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T11:27:04Z }
 ---
 
 # Purpose

@@ -6,6 +6,7 @@ import {
   ACTIVATION_ROUTE,
   DEFAULT_ROUTES,
   GENERATE_ROUTE,
+  FINISH_DATA_ROUTE,
   SMOKE_REPAIR_ROUTE,
   activationReplySchema,
   generateReplySchema,
@@ -106,6 +107,17 @@ async function fixture(copies = 1) {
   return { generated, activation, post, unit, routes, options };
 }
 describe("request lifecycle authority", () => {
+  it("GEN-11 CON-01: continuation routes reject missing request identity before spending or consuming authority", async () => {
+    const f = await fixture();
+    const before = f.unit();
+    const pair = { workspaceId: f.generated.workspaceId, hash: f.generated.hash };
+    expect((await f.post(SMOKE_REPAIR_ROUTE, { ...pair, findings: ["Failed"] })).status).toBe(400);
+    expect((await f.post(FINISH_DATA_ROUTE, pair)).status).toBe(400);
+    expect(f.unit()).toEqual(before);
+    expect(
+      activationReplySchema.parse((await f.post(ACTIVATION_ROUTE, f.activation())).body),
+    ).toMatchObject({ ok: true });
+  });
   it("GEN-11 DATA-10: expired candidates cannot activate, and missing authority never falls back", async () => {
     const f = await fixture();
     const before = f.unit();
@@ -155,6 +167,7 @@ describe("request lifecycle authority", () => {
         await f.post(SMOKE_REPAIR_ROUTE, {
           workspaceId: f.generated.workspaceId,
           hash: f.generated.hash,
+          token: f.generated.activation.token,
           findings: ["The smoke check failed"],
         })
       ).body,

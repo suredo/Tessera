@@ -26,7 +26,7 @@ export async function repairSmoke(
   store: Store,
   provider: Provider,
   routes: Routes,
-  input: SmokeRepairRequest,
+  input: Omit<SmokeRepairRequest, "token">,
   context: SmokeRepairContext | undefined,
   signal?: AbortSignal,
   beforeStore: () => void = () => signal?.throwIfAborted(),

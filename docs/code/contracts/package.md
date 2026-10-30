@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T11:16:48Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T11:27:04Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 
 # Entry points
 
-- `dataReplySchema` (`DataReply`) defines data results once, also used inside mixed replies alongside verified interface facts. A candidate's optional data-pending flag asks the browser to finish only after activation. `FINISH_DATA_ROUTE` accepts `finishDataRequestSchema` (`FinishDataRequest`): workspace and candidate hash only; instructions and repair counts remain on the server.
+- `dataReplySchema` (`DataReply`) defines data results once, also used inside mixed replies alongside verified interface facts. A candidate's optional data-pending flag asks the browser to finish only after activation. `FINISH_DATA_ROUTE` accepts `finishDataRequestSchema` (`FinishDataRequest`): workspace, candidate hash and the required opaque request token; smoke repair requires the same identity. Instructions, original expiry and repair counts remain on the server. Equal code hashes cannot identify another request's continuation.
 - Generation replies now distinguish committed data-change facts from pending confirmation, which contains only an opaque host token, workspace name and before/after preview. `CONFIRM_DATA_ROUTE` accepts only that token and an explicit approve/cancel choice; patch operations and revisions never travel back from the browser. Dedicated data unchanged/cancelled/stale/clarify/cannot answers keep host outcomes truthful.
 - Chat data planning uses `dataPlanSchema` (`DataPlan`): an existing patch batch and summary, unchanged, clarify, or cannot. It reuses `patchBatchSchema`, so a model cannot supply add IDs or replace whole data. `dataChangePreviewSchema` describes host-made before/after records for the upcoming confirmation flow; it is not model output.
 - `src/index.ts`: everything the package exports.
