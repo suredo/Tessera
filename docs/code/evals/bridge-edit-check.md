@@ -7,7 +7,7 @@ implements: [ENG-07, ENG-16, ENG-19, GEN-07, DATA-03]
 tests: [../../../evals/test/bridge-edit-check.test.ts]
 tags: [code, evals, edit, bridge]
 status: draft
-generated: { by: codex/gpt-6.1-sol, at: 2026-10-29T20:50:34Z }
+generated: { by: codex/gpt-6, at: 2026-10-30T02:40:48Z }
 ---
 
 # Purpose
@@ -18,7 +18,7 @@ Prepares the static bridge prompt slice for [issue 148](https://github.com/sured
 
 - `run.ts`: `PLAN` freezes the one-case denominator, proposed cap two (one expected Sonnet low edit plus one shared schema/static/smoke repair reserve), zero reviewer calls and original seven-minute request budget. `REPLY` supplies the white canned answer for the exact fake CLI rehearsal. `editOnlyProvider` guards model delegation; `runBridgeEditCheck` drives the host request through smoke and activation. After integrating the bridge slice and building, rehearse with `node evals/spikes/bridge-edit-check/run.ts --dry-run`. A live invocation requires fresh explicit owner approval of the proposed cap first.
 
-The source plan starts at `33dc0d751eb66b0a5e1dc567d4fad294048fb878` in isolated branch `test/static-bridge-eval`; static-bridge author head `01d10fad6933e95ebed892d79864c51ac6be1184` is integrated at merge `020c9e2780ab01c49db7f75258cab0f69f3da85b` before rehearsal. Reports record the actual integrated head and whether the source tree is dirty.
+The runner includes the merged static-bridge implementation. Each report records the exact source head and whether the source tree is dirty; the CLI requires an explicit run mode and, for live mode, the matching approved cap.
 
 | Stage | Expected calls | Reserve | Route |
 | --- | ---: | ---: | --- |
