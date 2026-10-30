@@ -1,0 +1,42 @@
+{
+  "passing": [
+    "tessera.call('data.read').then(({data}) => { const key='items'; console.log(data[key]); });",
+    "tessera.call('data.patch', {operations: []});",
+    "tessera.call(`clock.now`);",
+    "const id = 'a'.repeat(64); tessera.assetUrl(id).then(url => console.log(url));",
+    "tessera.send({action: 'not.a.bridge.action'}); tessera.onMessage(message => console.log(message));",
+    "const local = { tessera: { unknown() {} }, call(action) { return action; } }; local.tessera.unknown(); local.call('unknown.action');",
+    "const local = {call() { return {}; }}; const fn = local.call; fn('clock.now');",
+    "const values = {call: 1, clock: 2}; const key = 'call'; console.log(values[key]);"
+  ],
+  "failing": [
+    "tessera.unknown();",
+    "tessera.call('unknown.action');",
+    "tessera.call('__proto__');",
+    "tessera.call();",
+    "const action = 'data.read'; tessera.call(action);",
+    "tessera.call('data.' + 'read');",
+    "const name = 'read'; tessera.call(`data.${name}`);",
+    "const args = ['data.read']; tessera.call(...args);",
+    "tessera['call']('data.read');",
+    "const method = 'call'; tessera[method]('data.read');",
+    "const bridge = tessera; bridge.call('unknown.action');",
+    "const call = tessera.call; call('unknown.action');",
+    "const {call} = tessera; call('unknown.action');",
+    "let call; ({call} = tessera); call('unknown.action');",
+    "const container = {bridge: tessera}; container.bridge.call('unknown.action');",
+    "const calls = [tessera.call]; calls[0]('unknown.action');",
+    "function run(fn) { fn('unknown.action'); } run(tessera.call);",
+    "tessera.call.bind(null)('unknown.action');",
+    "tessera.call.call(null, 'unknown.action');",
+    "tessera.call.apply(null, ['unknown.action']);",
+    "function bridge() { return tessera; } bridge().call('unknown.action');",
+    "window.tessera.call('unknown.action');",
+    "globalThis['tessera'].call('unknown.action');",
+    "const {tessera: bridge} = window; bridge.call('unknown.action');",
+    "function f(tessera) { tessera.call('data.read'); }",
+    "{ const tessera = {call() {}}; tessera.call('data.read'); }",
+    "tessera.call = () => {};",
+    "new tessera.call('data.read');"
+  ]
+}

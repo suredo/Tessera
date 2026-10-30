@@ -74,6 +74,8 @@ export {
 } from "./artifact.ts";
 export {
   BRIDGE_ACTIONS,
+  BRIDGE_METHODS,
+  type BridgeMethodName,
   BRIDGE_CAPABILITIES,
   BRIDGE_ERROR_CODES,
   BRIDGE_MANIFEST_VERSION,

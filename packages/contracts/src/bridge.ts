@@ -139,6 +139,19 @@ export const BRIDGE_ACTIONS = {
   },
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
+
+/** Public methods on the tool's tessera object (CON-03), shared with static checks and prompts. */
+export const BRIDGE_METHODS = {
+  call: { action: "argument", argument: "fixed action", copiesData: true },
+  assetUrl: { action: "asset.read", argument: "id", copiesData: true },
+  send: { action: null, argument: "message", copiesData: true },
+  onMessage: { action: null, argument: "listener", copiesData: false },
+} as const satisfies Record<
+  string,
+  { action: "argument" | BridgeActionName | null; argument: string; copiesData: boolean }
+>;
+export type BridgeMethodName = keyof typeof BRIDGE_METHODS;
+
 /** An action's arguments, once checked. */
 export type BridgeArgs<A extends BridgeActionName> = z.infer<(typeof BRIDGE_ACTIONS)[A]["args"]>;
 /** What an action answers. */

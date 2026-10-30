@@ -1,7 +1,9 @@
+import type { BridgeMethodName } from "@tessera/contracts";
+
 // Runs first in the tool's document, before the tool's own code (RUN-01). It says hello to the
 // wrapper as the page loads, takes the one port the wrapper hands over in answer, and gives the tool
 // `tessera`, its only way to talk to the host. The server inlines it, so it is a plain script: no
-// imports, and the protocol names repeat src/protocol.ts.
+// runtime imports, and the protocol names repeat src/protocol.ts.
 (() => {
   const HELLO_MESSAGE = "tessera:hello";
   const PORT_MESSAGE = "tessera:port";
@@ -219,7 +221,7 @@
         for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i);
         return URL.createObjectURL(new Blob([bytes], { type }));
       },
-    }),
+    } satisfies Record<BridgeMethodName, unknown>),
     enumerable: true,
   });
 

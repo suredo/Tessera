@@ -4,6 +4,7 @@ import {
   BRIDGE_ACTIONS,
   BRIDGE_CAPABILITIES,
   BRIDGE_MAX_DEPTH,
+  BRIDGE_METHODS,
   BRIDGE_REQUEST_LIMIT_BYTES,
   bridgeManifest,
   bridgeReplySchema,
@@ -35,6 +36,16 @@ const refusal = (result: ReturnType<typeof call>): BridgeErrorCode | "accepted" 
 
 describe("the bridge manifest (CON-03, CAP-01)", () => {
   const manifest = bridgeManifest();
+
+  it("CON-03, VER-01: public methods and direct-call policy are in the generated manifest", () => {
+    expect(manifest.methods).toEqual(BRIDGE_METHODS);
+    expect(manifest.methodUsage).toContain("Direct tessera.method");
+    for (const method of Object.values(BRIDGE_METHODS)) {
+      if (method.action !== null && method.action !== "argument") {
+        expect(Object.hasOwn(BRIDGE_ACTIONS, method.action)).toBe(true);
+      }
+    }
+  });
 
   it("lists every action with a description, its arguments, result, limit and examples", () => {
     expect(manifest.actions.map((a) => a.name).sort()).toEqual(Object.keys(BRIDGE_ACTIONS).sort());

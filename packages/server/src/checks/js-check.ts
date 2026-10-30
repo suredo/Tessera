@@ -1,4 +1,10 @@
 import { parse, type Node as JsNode } from "acorn";
+import {
+  BRIDGE_ACTIONS,
+  BRIDGE_METHODS,
+  type BridgeActionName,
+  type BridgeMethodName,
+} from "@tessera/contracts";
 
 // The static check's JavaScript rules (VER-01, ADR 0009). A tool may not navigate, make frames or
 // scripts, or write HTML or code at run time; and since JavaScript can reach a property by a name
@@ -626,14 +632,14 @@ class PageValues {
  * name written out: only these copy what they are given and give back plain data. Anything else
  * reached through `tessera` is no different from any other value.
  */
-const BRIDGE_METHODS = new Set(["call", "send", "assetUrl"]);
 function isBridgeCall(callee: AnyNode): boolean {
   if (callee.type !== "MemberExpression" || callee["computed"]) return false;
   const object = callee["object"] as AnyNode;
   return (
     object.type === "Identifier" &&
     object["name"] === "tessera" &&
-    BRIDGE_METHODS.has((callee["property"] as AnyNode)["name"] as string)
+    Object.hasOwn(BRIDGE_METHODS, (callee["property"] as AnyNode)["name"] as string) &&
+    BRIDGE_METHODS[(callee["property"] as AnyNode)["name"] as BridgeMethodName].copiesData
   );
 }
 
@@ -671,6 +677,7 @@ function isWritten(node: AnyNode, parent: AnyNode | null): boolean {
 export function checkJs(
   js: string,
   checkHtml: (html: string) => { message: string }[],
+  capabilities: readonly string[] = [],
 ): JsFinding[] {
   let program: AnyNode;
   try {
@@ -830,6 +837,15 @@ export function checkJs(
       found(node, `The JavaScript uses ${name}, which a tool can't use.`);
       return;
     }
+    if (name === "tessera") {
+      if (!(parent?.type === "MemberExpression" && parent["object"] === node)) {
+        found(
+          node,
+          "Call tessera.method(...) directly. Don't store, pass or destructure the host's bridge.",
+        );
+      }
+      return;
+    }
     if (!PAGE_GLOBALS.has(name)) return;
     const usedAsObject =
       parent?.type === "MemberExpression" && parent["object"] === node && !parent["computed"];
@@ -844,6 +860,15 @@ export function checkJs(
   const checkMember = (node: AnyNode, parent: AnyNode | null) => {
     const name = propertyName(node);
     const object = node["object"] as AnyNode;
+    if (name === "tessera" && page.isPage(object)) {
+      found(
+        node,
+        "Use tessera.method(...) directly, without reaching tessera through the page or another object.",
+      );
+    }
+    if (object.type === "Identifier" && object["name"] === "tessera") {
+      checkBridgeMember(node, parent);
+    }
     if (name === undefined) {
       const key = node["property"] as AnyNode;
       if (!isNumberKey(key) && page.isPage(object)) {
@@ -905,6 +930,51 @@ export function checkJs(
           );
         }
       }
+    }
+  };
+
+  // Do not infer aliases or evaluate action expressions: refusing the source reference closes
+  // borrowing, containers, destructuring and callbacks without pretending to resolve all JS.
+  const checkBridgeMember = (node: AnyNode, parent: AnyNode | null) => {
+    const method = propertyName(node);
+    if (node["computed"] || parent?.type !== "CallExpression" || parent["callee"] !== node) {
+      found(
+        node,
+        "Call tessera.method(...) directly, with the method name written out. Don't borrow or compute bridge methods.",
+      );
+      return;
+    }
+    if (method === undefined || !Object.hasOwn(BRIDGE_METHODS, method)) {
+      found(
+        node,
+        `The bridge has no method called "${method ?? ""}". Use a method from the bridge manifest.`,
+      );
+      return;
+    }
+    const definition = BRIDGE_METHODS[method as BridgeMethodName];
+    if (definition.action === null) return;
+    const args = parent["arguments"] as AnyNode[];
+    const action = definition.action === "argument" ? fixedText(args[0]) : definition.action;
+    if (action === undefined) {
+      found(
+        node,
+        "Write the bridge action name as fixed text in the first argument, so it can be checked before the tool runs.",
+      );
+      return;
+    }
+    if (!Object.hasOwn(BRIDGE_ACTIONS, action)) {
+      found(
+        node,
+        `The bridge has no action called "${action}". Use an action from the bridge manifest.`,
+      );
+      return;
+    }
+    const capability = BRIDGE_ACTIONS[action as BridgeActionName].capability;
+    if (capability && !capabilities.includes(capability)) {
+      found(
+        node,
+        `The bridge action "${action}" needs the "${capability}" capability. Declare it or remove this call.`,
+      );
     }
   };
 

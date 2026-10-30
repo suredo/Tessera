@@ -302,7 +302,7 @@ function checkedVersions(hashes: Set<string>, files: Map<string, Uint8Array>) {
     }
     // An imported tool is code from an unknown author: it is checked as a generated candidate is,
     // before it can run (ADR 0009, VER-01).
-    if (!staticCheck(reading.artifact.code).ok) {
+    if (!staticCheck(reading.artifact.code, reading.artifact.capabilities).ok) {
       throw new ArchiveError(
         "A tool in this archive does something Tessera doesn't let tools do, such as opening other pages, so nothing was imported.",
       );

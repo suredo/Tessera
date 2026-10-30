@@ -404,6 +404,36 @@ describe("the create stage (CLI-09, GEN-11)", () => {
 });
 
 describe("repair by failure class (GEN-09)", () => {
+  it("GEN-09, VER-01, CAP-01: bridge failures repair once with actionable diagnostics and the actual capabilities", async () => {
+    for (const js of [
+      "tessera.missing();",
+      "tessera.call('unknown.action');",
+      "tessera.call('clock.now');",
+      "const call = tessera.call; call('data.read');",
+    ]) {
+      const bad = tool({ code: { ...tool().code, js } });
+      expect(candidateFrom(bad)).toMatchObject({ kind: "failed", failure: "static" });
+      const { provider, calls } = answering(
+        { kind: "value", stage: "create", value: bad },
+        { kind: "value", stage: "repair", value: tool() },
+      );
+      expect(
+        await createTool(provider, DEFAULT_ROUTES, { request: "A shopping list" }),
+      ).toMatchObject({ kind: "candidate", repairs: 1 });
+      expect(calls.map((c) => c.stage)).toEqual(["create", "repair"]);
+      expect(calls[1]!.prompt).toContain(js);
+      expect(calls[1]!.prompt).toMatch(/bridge|capability/);
+    }
+    expect(
+      candidateFrom(
+        tool({
+          code: { ...tool().code, js: "tessera.call('clock.now');" },
+          capabilities: ["clock"],
+        }),
+      ),
+    ).toMatchObject({ kind: "candidate" });
+  });
+
   // The slice pilot's first live shopping list (#173): its reusable defaults lacked the list its
   // schema requires, so the host refused it. Its repair is the same answer with that list empty.
   const pilot = JSON.parse(

@@ -196,7 +196,7 @@ export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>):
   if (shape.length > 0 || !artifact.success) {
     return { kind: "failed", failure: "schema-shape", findings: shape };
   }
-  const checked = staticCheck(artifact.data.code);
+  const checked = staticCheck(artifact.data.code, artifact.data.capabilities);
   if (!checked.ok) {
     return {
       kind: "failed",

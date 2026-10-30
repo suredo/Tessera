@@ -248,6 +248,34 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
 });
 
 describe("editing and repair (GEN-09)", () => {
+  it("GEN-09, VER-01, CAP-01: edits check retained capabilities and repair hidden bridge access before staging", async () => {
+    const clockEdit: Answer = {
+      ...unchanged,
+      files: { mode: "replace", code: { ...artifact.code, js: "tessera.call('clock.now');" } },
+    };
+    expect(editedCandidate(input, clockEdit)).toMatchObject({ kind: "failed", failure: "static" });
+    expect(
+      editedCandidate({ ...input, artifact: { ...artifact, capabilities: ["clock"] } }, clockEdit),
+    ).toMatchObject({ kind: "candidate" });
+    const borrowed: Answer = {
+      ...unchanged,
+      files: {
+        mode: "replace",
+        code: { ...artifact.code, js: "const call = tessera.call; call('unknown.action');" },
+      },
+    };
+    const { provider, calls } = scripted(
+      { kind: "value", stage: "edit", value: borrowed },
+      { kind: "value", stage: "repair", value: style },
+    );
+    expect(await editTool(provider, DEFAULT_ROUTES, input)).toMatchObject({
+      kind: "candidate",
+      repairs: 1,
+    });
+    expect(calls.map((c) => c.stage)).toEqual(["edit", "repair"]);
+    expect(calls[1]!.prompt).toContain("Don't borrow or compute bridge methods.");
+  });
+
   it("GEN-09, GEN-15: repairs wrong-shape and static failures once each, on repair route, retaining original source/language", async () => {
     const unsafe = {
       ...style,
