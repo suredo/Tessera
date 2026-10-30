@@ -4,7 +4,7 @@ title: "Bridge edit: live check"
 description: "One quantity edit passed with the new bridge prompt context in one of two approved calls."
 tags: [reports, edit, bridge, generation]
 status: stable
-generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T03:04:13Z }
+generated: { by: codex/gpt-6, at: 2026-10-30T03:11:36Z }
 ---
 
 # Bridge edit: live check, 2026-10-30
@@ -29,4 +29,4 @@ The [portable replay](../spikes/bridge-edit-check/replays/bridge-edit-check-2026
 
 # Limits
 
-Full-page captures are supplementary under L-76 and were not used to claim visual success. No generated controls were operated. Live intent, creation, repairs and negative bridge-error cases were not exercised; static/unit, smoke and migration evidence cover separate parts of the behavior. This run does not sign off broad VER-01: startup writes, system-clock checks and the inherited obfuscated global-object alias gap remain explicit follow-ups in the [static-check doc](../../docs/code/server/checks.md). No new defect was found, no guard was weakened and no additional live call was made.
+Full-page captures are supplementary under L-76 and were not used to claim visual success. No generated controls were operated. Live intent, creation, repairs and negative bridge-error cases were not exercised; static/unit, smoke and migration evidence cover separate parts of the behavior. This run does not sign off broad VER-01: startup writes and system-clock checks remain follow-up work, while the inherited obfuscated global-object alias gap remains an accepted defence-in-depth limit in the [static-check doc](../../docs/code/server/checks.md). No new defect was found, no guard was weakened and no additional live call was made.

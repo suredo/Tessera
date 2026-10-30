@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts, ../../../packages/web/test/generate.test.ts, ../../../packages/web/e2e/request.spec.ts, ../../../packages/web/test/data-offer.test.tsx, ../../../packages/web/e2e/chat-data.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T10:18:00Z }
+generated: { by: codex/gpt-6, at: 2026-10-30T02:45:41Z }
 ---
 
 # Purpose
@@ -41,6 +41,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 # Invariants
 
+- **Library frame assertions wait for the named tool to run** ([#194](https://github.com/suredo/Tessera/issues/194)). Continue and Use again first verify the selected workspace, scroll its named tool panel into view and wait for its running-only Minimize control before reading nested-frame text. A selected sidebar card alone does not establish runtime readiness. Exact text/data checks and existing timeouts remain; no retry hides the earlier unresolved-frame failure.
 - **Editing keeps the current tool until a candidate activates** (`GEN-07`, `GEN-08`). `carryOut` stages create and edit candidates alike, but says updated only for an activated edit. Unchanged and stale answers never stage. A repeated smoke failure keeps the old version and entries; a successful edit refreshes the workspace so `ToolPanel` restarts on its changed version. Browser edit tests cover dark styling, a no-op, a quantity migration preserving ids/values, repeated smoke failure and successful smoke repair without creating another workspace.
 - **Mixed outcomes keep both facts** (`GEN-04`, `GEN-08`). After activation, `carryOut` refreshes the displayed interface before asking for the pending data plan. `askToFinishData` accepts only data replies. `withInterfaceOutcome` preserves the verified interface result through data review, cancellation, refusal and failure. A lost response says the entry result is unknown and reloads entries/history; it cannot claim nothing applied. An unchanged interface still permits the separate data plan. The serial mixed browser scenario covers delayed data planning after visible activation, cancellation, provider failure and repeated interface smoke failure with no data call.
 - **Review must distinguish the stored values.** Text is labelled and quoted, numbers are labelled, and null/booleans/empty structures have distinct descriptions. A literal string such as "None" cannot look like null. Text and field labels preserve whitespace, so newlines/spaces remain visible. Before/after facts include nested fields; only each record's host ID is hidden.
