@@ -10,6 +10,13 @@ export const en = {
   "request.label": "What do you need?",
   "request.placeholder": "A shopping list I can tick off at the store",
   "request.send": "Make it",
+  "request.cancel": "Cancel request",
+  "request.stopping": "Stopping the request...",
+  "request.stopped": "The request was stopped. Changes already saved remain.",
+  "request.cancelUnknown":
+    "Tessera couldn't confirm that the request stopped. It may still finish. Check the result before asking again.",
+  "request.requestUnknown":
+    "Tessera couldn't confirm the result. Changes may have been saved. Check the tool and its history before asking again.",
   "request.working": "Working on your request. This can take a few minutes.",
   "request.mixedEntryFailed": "The entry changes weren't applied. {reason}",
   "request.mixedKept": "Your tool and entries weren't changed.",
