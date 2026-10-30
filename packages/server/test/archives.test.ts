@@ -388,6 +388,8 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", () => {
       ["const {call} = tessera; call('data.read');", [], false],
       ["tessera.call('clock.now');", [], false],
       ["tessera.call('clock.now');", ["clock"], true],
+      ["tessera.call('data.patch', {});", [], false],
+      ["button.addEventListener('click', () => tessera.call('data.patch', {}));", [], true],
     ] as const) {
       const source = await openDataFolder(newFolder());
       const workspace = createWorkspace(source, "Clock");

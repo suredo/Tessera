@@ -1,7 +1,7 @@
 {
   "passing": [
     "tessera.call('data.read').then(({data}) => { const key='items'; console.log(data[key]); });",
-    "tessera.call('data.patch', {operations: []});",
+    "button.addEventListener('click', () => tessera.call('data.patch', {operations: []}));",
     "tessera.call(`clock.now`);",
     "const id = 'a'.repeat(64); tessera.assetUrl(id).then(url => console.log(url));",
     "tessera.send({action: 'not.a.bridge.action'}); tessera.onMessage(message => console.log(message));",

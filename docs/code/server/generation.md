@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T20:41:27Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T04:14:19Z }
 ---
 
 # Purpose
@@ -46,7 +46,7 @@ The core of generation (#146): interface requests create or edit a candidate too
   - the declared data shape must be one Tessera can check (`DATA-03`);
   - the defaults and the starting data must fit it, within the most data a tool may hold (`DATA-06`), and every record must be one the patch engine can change (`DATA-02`): its list's name, its id and its field names must be ones the patch contract accepts (one definition, the contract's own), and its id unique in its list. As the patch engine counts a list as records only when every item is one, a list holding any object must hold only records, and an empty list is held to the name rule unless the schema declares it a list of other values (an item type that rules out objects, written as one name or a list of them);
   - the artifact must match its contract (`CON-04`);
-  - the static check must pass with the artifact's actual capabilities (`VER-01`, in part, [static check](checks.md)): sandbox rules, known direct bridge methods/actions and declared action capabilities. Bridge findings use the existing static repair budget; edits check the retained capabilities too.
+  - the static check must pass with the artifact's actual capabilities (`VER-01`, in part, [static check](checks.md)): sandbox rules, known direct bridge methods/actions, declared action capabilities, host-clock rules and bounded startup-write detection. These findings use the existing static repair budget; edits check the retained capabilities too. Starting entries belong in host-installed output, with tool writes deferred to user actions.
 - **Every failure is classed** (`GEN-09`):
   - schema-shape: a data shape, data or answer that doesn't fit, which repair can fix;
   - static: findings with the part and line;

@@ -276,23 +276,28 @@ describe("editing and repair (GEN-09)", () => {
     expect(calls[1]!.prompt).toContain("Don't borrow or compute bridge methods.");
   });
 
-  it("RUN-07, GEN-09: editing repairs a system-clock read before staging", async () => {
-    const unsafe: Answer = {
-      ...unchanged,
-      files: { mode: "replace", code: { ...artifact.code, js: "new Date();" } },
-    };
-    expect(editedCandidate(input, unsafe)).toMatchObject({ kind: "failed", failure: "static" });
-    const { provider, calls } = scripted(
-      { kind: "value", stage: "edit", value: unsafe },
-      { kind: "value", stage: "repair", value: style },
-    );
-    expect(await editTool(provider, DEFAULT_ROUTES, input)).toMatchObject({
-      kind: "candidate",
-      repairs: 1,
-    });
-    expect(calls.map((c) => c.stage)).toEqual(["edit", "repair"]);
-    expect(calls[1]!.prompt).toContain('tessera.call("clock.now")');
-  });
+  it.each(["new Date();", "tessera.call('data.patch', {});"])(
+    "VER-01, GEN-09: editing repairs a clock/startup failure before staging: %s",
+    async (js) => {
+      const unsafe: Answer = {
+        ...unchanged,
+        files: { mode: "replace", code: { ...artifact.code, js } },
+      };
+      expect(editedCandidate(input, unsafe)).toMatchObject({ kind: "failed", failure: "static" });
+      const { provider, calls } = scripted(
+        { kind: "value", stage: "edit", value: unsafe },
+        { kind: "value", stage: "repair", value: style },
+      );
+      expect(await editTool(provider, DEFAULT_ROUTES, input)).toMatchObject({
+        kind: "candidate",
+        repairs: 1,
+      });
+      expect(calls.map((c) => c.stage)).toEqual(["edit", "repair"]);
+      expect(calls[1]!.prompt).toContain(
+        js.includes("Date") ? 'tessera.call("clock.now")' : "writes data during startup",
+      );
+    },
+  );
 
   it("GEN-09, GEN-15: repairs wrong-shape and static failures once each, on repair route, retaining original source/language", async () => {
     const unsafe = {
