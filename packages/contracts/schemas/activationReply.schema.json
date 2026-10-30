@@ -115,7 +115,8 @@
             "failed",
             "not-repeatable",
             "too-large",
-            "invalid"
+            "invalid",
+            "expired"
           ]
         },
         "message": {

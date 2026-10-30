@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-07, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06
 tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts, ../../../packages/server/test/activation-route.test.ts, ../../../packages/server/test/undo.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T06:51:03Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T11:33:12Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ Keeps what a person makes always saved (`DATA-08`): each workspace, the history 
 - `src/workspaces/restore.ts`: `planRestore` says what restoring a version would do without doing it (`RestorePlan`: it keeps the data, or it loses exactly these values, with a confirmation), and `restoreVersion` does it; `listRecoverySnapshots` and `restoreRecoverySnapshot` bring back the unit a lossy restore replaced (`DATA-10`).
 - `src/workspaces/undo.ts`: data undo (`DATA-04`). `listUndo` lists the changes a workspace can undo (`UndoEntry`), newest first, and `undoDataChange` undoes one, or returns why not (`UndoResult`). `UNDO_LIMIT` is how many it keeps. `src/workspaces/undo-entries.ts` works out, without touching storage, what a change touched and what undoing it gives.
 - `src/workspaces/reuse.ts`: opening a saved tool (`DATA-07`). `continueSavedTool` gives the entry and its linked workspace with its current data (`ContinueTarget`); `useAgain` makes a new workspace from the tool's current version and its reusable defaults, or returns why not (`UseAgainResult`).
-- `src/workspaces/routes.ts`: `activationRoutes`, the route at `POST /api/activate` (the activation route of the [contracts](../contracts/package.md)) through which the host page activates a candidate that passed its checks (`RUN-03`). It answers with `activateVersion`'s result, which is the contract's activation reply; a malformed request gets a plain 400, a missing or trashed workspace a plain 404, and a server error a plain 500, none of them changing anything. The [launcher](launcher.md) mounts it.
+- `src/workspaces/routes.ts`: `activationRoutes`, `POST /api/activate`, defaults to refusing activation without authority. The [generation routes](generation.md) supply a one-use token checker bound to the original request deadline (`GEN-11`). It runs before validation and again through `ActivationOptions.beforeWrites` after migration, immediately before the first write. Missing or expired authority returns a plain expired refusal. Malformed requests get 400, missing/trashed workspaces 404, and storage failures 500, with nothing changed. Once writes finish, the real atomic result stands (`GEN-08`, `DATA-10`). Restore and undo use their independent host actions.
 - `src/workspaces/activation.ts`: `activateVersion` makes a stored tool version the workspace's current one, with its data brought to the version's shape, in one transaction (`DATA-10`), or returns why not (`ActivationResult`).
   - `readWorkspaceData` gives the data as the bridge does (`WorkspaceData`): the data, and each record's revision count by collection and ID. Data the tool hasn't filled yet reads as empty.
   - `patchWorkspaceData` applies a batch of changes through the [patch engine](patches.md), against the records' saved revisions, and returns `{ ok: true, addedIds, workspace }` or the engine's refusal (`WorkspacePatchResult`).

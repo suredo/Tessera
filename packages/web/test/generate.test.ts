@@ -16,6 +16,7 @@ const candidate: GenerateReply = {
   capabilities: [],
   syntheticData: { items: [] },
   expectedDataRevision: 1,
+  activation: { token: "00000000-0000-4000-8000-000000000002", expiresAt: Date.now() + 420_000 },
   name: "Shopping list",
   summary: "A list to tick off at the store.",
 };
@@ -41,6 +42,69 @@ function deps(reply: GenerateReply, staged?: StagingResult) {
 }
 
 describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
+  it("GEN-11: aborts staging at the original deadline without asking for a smoke repair", async () => {
+    vi.useFakeTimers();
+    try {
+      const reply = {
+        ...candidate,
+        activation: { ...candidate.activation, expiresAt: Date.now() + 100 },
+      };
+      const { fake, seen } = deps(reply);
+      const repair = vi.fn(fake.repairSmoke);
+      fake.repairSmoke = repair;
+      fake.stage = (options) => {
+        seen.stagings.push(options);
+        return new Promise((resolve) =>
+          options.signal?.addEventListener(
+            "abort",
+            () =>
+              resolve({
+                outcome: "check-failed",
+                check: "cancelled",
+                reason: "Stopped",
+              }),
+            { once: true },
+          ),
+        );
+      };
+      const pending = carryOut("A list", null, fake);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(await pending).toEqual({ message: en["request.timedOut"] });
+      expect(seen.stagings[0]?.signal?.aborted).toBe(true);
+      expect(seen.stagings[0]?.activationToken).toBe(reply.activation.token);
+      expect(repair).not.toHaveBeenCalled();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("GEN-11 GEN-08: a confirmed activation remains applied when its response arrives after expiry", async () => {
+    const reply = {
+      ...candidate,
+      activation: { ...candidate.activation, expiresAt: Date.now() + 100 },
+    };
+    const { fake } = deps(reply);
+    const clock = vi.spyOn(Date, "now");
+    try {
+      fake.stage = () => {
+        clock.mockReturnValue(reply.activation.expiresAt + 1);
+        return Promise.resolve({ outcome: "activated", workspace: {} as never, migrationCount: 0 });
+      };
+      expect(await carryOut("A list", null, fake)).toMatchObject({
+        openWorkspaceId: candidate.workspaceId,
+      });
+    } finally {
+      clock.mockRestore();
+    }
+  });
+  it("GEN-08 DATA-10: a lost activation answer is uncertain and refreshes the workspace", async () => {
+    const { fake } = deps(candidate);
+    fake.stage = () => Promise.reject(new Error("Response lost after commit"));
+    expect(await carryOut("A list", null, fake)).toEqual({
+      message: en["request.activationUnknown"],
+      reloadData: true,
+    });
+  });
   it("GEN-04 GEN-08: mixed data is asked only after activation/refresh, and a failed second part keeps the interface fact", async () => {
     const order: string[] = [];
     const mixed = deps(
@@ -156,6 +220,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
     expect(repair).toHaveBeenCalledWith({
       workspaceId: candidate.workspaceId,
       hash: candidate.hash,
+      token: candidate.activation.token,
       findings: ["2 fields have no label."],
     });
     expect(seen.stagings.map((s) => s.candidate.hash)).toEqual([candidate.hash, "b".repeat(64)]);

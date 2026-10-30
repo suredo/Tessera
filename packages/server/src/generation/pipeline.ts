@@ -1,4 +1,5 @@
-import type { GenerateReply, GenerateRequest } from "@tessera/contracts";
+import type { GenerateRequest } from "@tessera/contracts";
+import type { GenerationResult } from "./result.ts";
 import { candidateMount } from "../host/index.ts";
 import { decideIntent, recordLists } from "../intent/index.ts";
 import type { OpenTool, RepairClass } from "../prompts/index.ts";
@@ -43,7 +44,7 @@ export async function generate(
   remember?: (context: SmokeRepairContext) => void,
   beforeStore: () => void = () => signal?.throwIfAborted(),
   offerData?: OfferData,
-): Promise<GenerateReply> {
+): Promise<GenerationResult> {
   const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
   let decision;

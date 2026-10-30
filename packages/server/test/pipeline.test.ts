@@ -519,6 +519,7 @@ describe("the generate route (GEN-01, CLI-06)", () => {
           const before = getWorkspace(folder, initial.workspaceId);
           now += 5_000; // Time spent staging consumes the same request budget.
           const repair = JSON.stringify({
+            token: initial.activation.token,
             workspaceId: initial.workspaceId,
             hash: initial.hash,
             findings: ["Blank"],
@@ -575,6 +576,7 @@ describe("the generate route (GEN-01, CLI-06)", () => {
       const before = getWorkspace(folder, initial.workspaceId)!;
       const request = JSON.stringify({
         workspaceId: initial.workspaceId,
+        token: initial.activation.token,
         hash: initial.hash,
         findings: ["The tool shows nothing."],
       });
@@ -607,6 +609,7 @@ describe("the generate route (GEN-01, CLI-06)", () => {
               "POST",
               JSON.stringify({
                 workspaceId: repaired.workspaceId,
+                token: repaired.activation.token,
                 hash: repaired.hash,
                 findings: ["Still broken"],
               }),

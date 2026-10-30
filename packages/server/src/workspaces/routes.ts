@@ -1,4 +1,8 @@
-import { ACTIVATION_ROUTE, activationRequestSchema } from "@tessera/contracts";
+import {
+  ACTIVATION_ROUTE,
+  activationRequestSchema,
+  type ActivationRequest,
+} from "@tessera/contracts";
 import { json, readJson, text, type Handler } from "../http/index.ts";
 import { activateVersion } from "./activation.ts";
 import { existingWorkspace, getWorkspace, type Store } from "./workspaces.ts";
@@ -8,8 +12,9 @@ import { existingWorkspace, getWorkspace, type Store } from "./workspaces.ts";
 // it atomically, checked against the stored version and the planned data revision (DATA-10,
 // MIG-06), and answers with the workspace or a plain refusal. A refusal changes nothing.
 
-// The request is three short fields; anything much larger isn't one.
+// The request is four short fields; anything much larger isn't one.
 const LIMIT_BYTES = 4096;
+const EXPIRED = new Error("The request expired.");
 
 // Why a workspace that isn't there can't be activated: missing, or in the trash.
 function missingMessage(store: Store, id: string): string {
@@ -22,7 +27,10 @@ function missingMessage(store: Store, id: string): string {
 }
 
 /** The activation route for the local server, answering from `store`. */
-export function activationRoutes(store: Store): Record<string, Handler> {
+export function activationRoutes(
+  store: Store,
+  authorize: (request: ActivationRequest) => (() => boolean) | undefined = () => undefined,
+): Record<string, Handler> {
   return {
     [ACTIVATION_ROUTE]: async (req, res) => {
       if (req.method !== "POST") return text(res, 405, "Send an activation with POST.");
@@ -35,13 +43,29 @@ export function activationRoutes(store: Store): Record<string, Handler> {
         return text(res, 400, "Send a workspace, a tool version and the data revision, as JSON.");
       }
       const { workspaceId, hash, expectedDataRevision } = request.data;
+      const allowed = authorize(request.data);
+      const expired = () =>
+        json(res, {
+          ok: false,
+          reason: "expired",
+          message: "The request expired. Please ask for the change again.",
+        });
+      if (!allowed) return expired();
+      const beforeWrites = () => {
+        if (!allowed()) throw EXPIRED;
+      };
       try {
+        beforeWrites();
         if (!getWorkspace(store, workspaceId)) {
           // Missing, or in the trash: the workspaces module's error says which, plainly.
           return text(res, 404, missingMessage(store, workspaceId));
         }
-        json(res, activateVersion(store, workspaceId, hash, expectedDataRevision));
-      } catch {
+        json(
+          res,
+          activateVersion(store, workspaceId, hash, expectedDataRevision, { beforeWrites }),
+        );
+      } catch (error) {
+        if (error === EXPIRED) return expired();
         // Such as a busy database. The activation is one transaction, so nothing was changed.
         text(res, 500, "The host couldn't do that. Nothing was changed.");
       }

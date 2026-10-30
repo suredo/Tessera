@@ -125,6 +125,77 @@ const setQuantity = {
 };
 
 describe("mixed request sequencing", () => {
+  it("GEN-11 GEN-04 GEN-09: expired follow-ups cannot borrow a later equal-hash request's instructions or deadline", async () => {
+    let now = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const secondIntent = { ...intent, interfacePart: "Make it dark", dataPart: "Add Cheese" };
+    const f = await fixture(
+      [
+        { stage: "edit", value: styleEdit },
+        { stage: "intent", value: secondIntent },
+        { stage: "edit", value: styleEdit },
+        {
+          stage: "data",
+          value: {
+            ...add,
+            patch: {
+              operations: [{ op: "add", collection: "items", record: { title: "Cheese" } }],
+            },
+          },
+        },
+      ],
+      { interfacePart: "Make it dark", dataPart: "Add Bread" },
+      10_000,
+    );
+    const first = await f.ask();
+    if (first.kind !== "candidate") throw new Error("Expected candidate");
+    now = first.activation.expiresAt + 1;
+    const second = await f.post(GENERATE_ROUTE, {
+      workspaceId: f.id,
+      request: "Make it dark and add Cheese",
+    });
+    if (second.kind !== "candidate") throw new Error("Expected candidate");
+    expect(second.hash).toBe(first.hash);
+    expect(second.workspaceId).toBe(first.workspaceId);
+    expect(second.activation.token).not.toBe(first.activation.token);
+    const before = getWorkspace(f.store, f.id);
+    const old = { workspaceId: f.id, hash: first.hash, token: first.activation.token };
+    expect(await f.post(SMOKE_REPAIR_ROUTE, { ...old, findings: ["Old failure"] })).toMatchObject({
+      kind: "failed",
+      failure: "smoke",
+    });
+    expect(await f.post(FINISH_DATA_ROUTE, old)).toMatchObject({ kind: "failed" });
+    expect(f.calls).toHaveLength(4);
+    expect(getWorkspace(f.store, f.id)).toEqual(before);
+    expect(activateVersion(f.store, f.id, second.hash, second.expectedDataRevision).ok).toBe(true);
+    const current = { workspaceId: f.id, hash: second.hash, token: second.activation.token };
+    expect(await f.post(FINISH_DATA_ROUTE, current)).toMatchObject({ kind: "data_changed" });
+    expect(f.calls.at(-1)?.prompt).toContain("Add Cheese");
+    expect(f.calls.at(-1)?.prompt).not.toContain("Add Bread");
+  });
+  it("GEN-04 GEN-09: mismatched continuation fields cannot consume valid repair or data authority", async () => {
+    const f = await fixture(
+      [
+        { stage: "edit", value: styleEdit },
+        { stage: "data", value: add },
+      ],
+      {
+        interfacePart: "Make it dark",
+        dataPart: "Add Bread",
+      },
+    );
+    const reply = await f.ask();
+    if (reply.kind !== "candidate") throw new Error("Expected candidate");
+    const current = { workspaceId: f.id, hash: reply.hash, token: reply.activation.token };
+    const wrong = { ...current, hash: "0".repeat(64) };
+    expect(await f.post(SMOKE_REPAIR_ROUTE, { ...wrong, findings: ["Wrong tool"] })).toMatchObject({
+      kind: "failed",
+    });
+    expect(await f.post(FINISH_DATA_ROUTE, wrong)).toMatchObject({ kind: "failed" });
+    expect(f.calls).toHaveLength(2);
+    expect(activateVersion(f.store, f.id, reply.hash, reply.expectedDataRevision).ok).toBe(true);
+    expect(await f.post(FINISH_DATA_ROUTE, current)).toMatchObject({ kind: "data_changed" });
+  });
   it("GEN-07 GEN-09: completed edits do not block returning to an earlier candidate hash", async () => {
     if (styleEdit.files.mode !== "replace") throw new Error("Expected style fixture");
     const editing: Intent = {
@@ -193,7 +264,13 @@ describe("mixed request sequencing", () => {
     expect(refused.message).toContain("Another request");
     expect(getWorkspace(f.store, f.id)).toEqual(before);
     expect(activateVersion(f.store, f.id, first.hash, first.expectedDataRevision).ok).toBe(true);
-    expect(await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: first.hash })).toMatchObject({
+    expect(
+      await f.post(FINISH_DATA_ROUTE, {
+        workspaceId: f.id,
+        hash: first.hash,
+        token: first.activation.token,
+      }),
+    ).toMatchObject({
       kind: "data_changed",
     });
     expect(f.calls.at(-1)!.prompt).toContain("Add Bread");
@@ -215,7 +292,11 @@ describe("mixed request sequencing", () => {
       true,
     );
     const activated = getWorkspace(f.store, f.id)!;
-    const plan = await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: generated.hash });
+    const plan = await f.post(FINISH_DATA_ROUTE, {
+      workspaceId: f.id,
+      hash: generated.hash,
+      token: generated.activation.token,
+    });
     if (plan.kind !== "data_confirmation") throw new Error("Expected data review");
     expect(f.calls[2]!.prompt).toContain("Set Milk quantity to 2");
     expect(f.calls[2]!.prompt).not.toContain("Show quantities");
@@ -231,7 +312,11 @@ describe("mixed request sequencing", () => {
       { id: "i-2", title: "Eggs", quantity: 1 },
     ]);
     expect(
-      await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: generated.hash }),
+      await f.post(FINISH_DATA_ROUTE, {
+        workspaceId: f.id,
+        hash: generated.hash,
+        token: generated.activation.token,
+      }),
     ).toMatchObject({ kind: "failed" });
     expect(f.calls.map((c) => c.stage)).toEqual(["intent", "edit", "data"]);
   });
@@ -240,7 +325,13 @@ describe("mixed request sequencing", () => {
     const generated = await f.ask();
     if (generated.kind !== "candidate") throw new Error("Expected candidate");
     const before = getWorkspace(f.store, f.id);
-    expect(await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: generated.hash })).toEqual({
+    expect(
+      await f.post(FINISH_DATA_ROUTE, {
+        workspaceId: f.id,
+        hash: generated.hash,
+        token: generated.activation.token,
+      }),
+    ).toEqual({
       kind: "answer",
       answer: "data_stale",
     });
@@ -283,7 +374,11 @@ describe("mixed request sequencing", () => {
     );
     const before = getWorkspace(f.store, f.id);
     expect(
-      await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: generated.hash }),
+      await f.post(FINISH_DATA_ROUTE, {
+        workspaceId: f.id,
+        hash: generated.hash,
+        token: generated.activation.token,
+      }),
     ).toMatchObject({ kind: "failed", failure: "schema-shape" });
     expect(f.calls.map((c) => c.stage)).toEqual(["intent", "edit", "repair", "data"]);
     expect(getWorkspace(f.store, f.id)).toEqual(before);
@@ -323,18 +418,27 @@ describe("mixed request sequencing", () => {
     const repaired = await f.post(SMOKE_REPAIR_ROUTE, {
       workspaceId: f.id,
       hash: generated.hash,
+      token: generated.activation.token,
       findings: ["A field has no label"],
     });
     if (repaired.kind !== "candidate") throw new Error("Expected repaired candidate");
     expect(repaired.dataPending).toBe(true);
     expect(
-      await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: generated.hash }),
+      await f.post(FINISH_DATA_ROUTE, {
+        workspaceId: f.id,
+        hash: generated.hash,
+        token: generated.activation.token,
+      }),
     ).toMatchObject({ kind: "failed" });
     expect(activateVersion(f.store, f.id, repaired.hash, repaired.expectedDataRevision).ok).toBe(
       true,
     );
     expect(
-      await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: repaired.hash }),
+      await f.post(FINISH_DATA_ROUTE, {
+        workspaceId: f.id,
+        hash: repaired.hash,
+        token: repaired.activation.token,
+      }),
     ).toMatchObject({ kind: "data_changed" });
     expect(f.calls.map((c) => c.stage)).toEqual(["intent", "edit", "repair", "data"]);
   });
@@ -354,7 +458,11 @@ describe("mixed request sequencing", () => {
     const before = getWorkspace(f.store, f.id);
     now += 100_001;
     expect(
-      await f.post(FINISH_DATA_ROUTE, { workspaceId: f.id, hash: generated.hash }),
+      await f.post(FINISH_DATA_ROUTE, {
+        workspaceId: f.id,
+        hash: generated.hash,
+        token: generated.activation.token,
+      }),
     ).toMatchObject({ kind: "failed", failure: "provider" });
     expect(f.calls).toHaveLength(2);
     expect(getWorkspace(f.store, f.id)).toEqual(before);

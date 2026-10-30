@@ -163,6 +163,35 @@ const defaultDeps: RequestDeps = {
   stage: stageCandidate,
 };
 
+async function stageRequest(
+  reply: Extract<GenerateReply, { kind: "candidate" }>,
+  deps: RequestDeps,
+): Promise<StagingResult> {
+  const controller = new AbortController();
+  if (Date.now() >= reply.activation.expiresAt) controller.abort();
+  const timer = setTimeout(
+    () => controller.abort(),
+    Math.max(0, reply.activation.expiresAt - Date.now()),
+  );
+  try {
+    return await deps.stage({
+      candidate: {
+        mountId: reply.mountId,
+        hash: reply.hash,
+        capabilities: reply.capabilities,
+        syntheticData: reply.syntheticData,
+      },
+      workspaceId: reply.workspaceId,
+      expectedDataRevision: reply.expectedDataRevision,
+      activationToken: reply.activation.token,
+      checks: [smokeCheck()],
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Carries out a request from the chat, and says what happened in plain words (GEN-08). */
 export async function carryOut(
   request: string,
@@ -181,17 +210,13 @@ export async function carryOut(
         return dataOutcome(reply);
       case "candidate": {
         mixed ||= reply.dataPending === true;
-        const staged = await deps.stage({
-          candidate: {
-            mountId: reply.mountId,
-            hash: reply.hash,
-            capabilities: reply.capabilities,
-            syntheticData: reply.syntheticData,
-          },
-          workspaceId: reply.workspaceId,
-          expectedDataRevision: reply.expectedDataRevision,
-          checks: [smokeCheck()],
-        });
+        let staged: StagingResult;
+        try {
+          staged = await stageRequest(reply, deps);
+        } catch {
+          // Activation may have committed before its response was lost (GEN-08, DATA-10).
+          return { message: t("request.activationUnknown"), reloadData: true };
+        }
         if (staged.outcome === "activated") {
           if (reply.dataPending) {
             const interfaceMessage = t("request.edited", {
@@ -205,7 +230,11 @@ export async function carryOut(
                 workspaceId: reply.workspaceId,
                 name: reply.name,
                 interface: { outcome: "updated", summary: reply.summary },
-                data: await deps.finishData({ workspaceId: reply.workspaceId, hash: reply.hash }),
+                data: await deps.finishData({
+                  workspaceId: reply.workspaceId,
+                  hash: reply.hash,
+                  token: reply.activation.token,
+                }),
               });
             } catch {
               return {
@@ -223,12 +252,14 @@ export async function carryOut(
             openWorkspaceId: reply.workspaceId,
           };
         }
+        if (Date.now() >= reply.activation.expiresAt) return { message: t("request.timedOut") };
         if (staged.outcome === "check-failed") {
           if (!repaired && (staged.check === "smoke" || staged.check === "start")) {
             repaired = true;
             reply = await deps.repairSmoke({
               workspaceId: reply.workspaceId,
               hash: reply.hash,
+              token: reply.activation.token,
               findings: [staged.reason],
             });
             continue;

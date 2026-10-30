@@ -24,12 +24,14 @@ export const ACTIVATION_REFUSALS = [
   "not-repeatable",
   "too-large",
   "invalid",
+  "expired",
 ] as const;
 export type ActivationRefusal = (typeof ACTIVATION_REFUSALS)[number];
 
 export const activationRequestSchema = z
   .strictObject({
     workspaceId: z.uuid(),
+    token: z.uuid().describe("One-use host authority for this candidate and request deadline."),
     hash: versionHashSchema.describe("The stored tool version to activate."),
     expectedDataRevision: z
       .int()

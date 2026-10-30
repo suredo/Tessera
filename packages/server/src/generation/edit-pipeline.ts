@@ -1,4 +1,5 @@
-import type { GenerateReply, Intent, Workspace } from "@tessera/contracts";
+import type { Intent, Workspace } from "@tessera/contracts";
+import type { GenerationResult } from "./result.ts";
 import { candidateMount } from "../host/index.ts";
 import type { RepairClass } from "../prompts/index.ts";
 import type { Provider, Routes } from "../providers/index.ts";
@@ -19,7 +20,7 @@ export async function generateEdit(
   remember?: (context: SmokeRepairContext) => void,
   beforeStore: () => void = () => signal?.throwIfAborted(),
   repairUsage: Partial<Record<RepairClass, number>> = {},
-): Promise<GenerateReply> {
+): Promise<GenerationResult> {
   const stale = { kind: "answer", answer: "stale" } as const;
   if (!baseline?.currentVersion || baseline.data === null) return stale;
   const current = () => {
