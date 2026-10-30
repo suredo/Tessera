@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-30
+
+* **Correct**: The [library browser checks](code/web/package.md) now wait for the selected workspace's named tool panel to be in view and running before reading nested-frame text ([#194](https://github.com/suredo/Tessera/issues/194)). The earlier full run had 547 passes and one unresolved/empty Continue assertion; it is not reported as a pass. Exact text, workspace/data assertions and all numeric timeouts remain unchanged, with no retries or product changes.
+
 ## 2026-10-29
 
 * **Record**: The owner-approved [live chat-data check](../evals/reports/2026-10-29-chat-data-check.md) passed both required cases in two of three approved calls: Bread addition, then mixed style activation and explicit Milk replacement approval. The [runner doc](code/evals/chat-data-check.md), [generation](code/server/generation.md) and [prompts](code/server/prompts.md) now link three inspected viewport images, an allowlisted ledger and a deterministic storage-backed replay of the exact structured answers. The [budget summary](roadmap/budgets.md) records 20 M2 calls used; the unused reserve authorizes no repeat. Full-page images remain supplementary under L-76; no new defect or additional live call.
