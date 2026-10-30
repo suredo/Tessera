@@ -105,6 +105,95 @@ describe("frozen bridge edit evaluation", () => {
     await expect(run.provider.run(spec("repair"))).rejects.toThrow("stopped");
     expect(run.calls()).toBe(1);
   });
+  it("ENG-16 GEN-07 DATA-03: replays the live bridge edit through host validation and lossless migration", () => {
+    const replay = JSON.parse(
+      fs.readFileSync(
+        new URL(
+          "../spikes/bridge-edit-check/replays/bridge-edit-check-2026-10-30.json",
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ) as {
+      sourceRun: string;
+      head: string;
+      replays: { name: string; request: string; callIndex: number; answer: unknown }[];
+    };
+    expect(replay.sourceRun).toBe("bridge-edit-check-live-2026-10-30T02-59-59-384Z");
+    expect(replay.head).toBe("d900a427ddf4bbd7fb234b2ab69b0645dc765b09");
+    expect(replay.replays).toHaveLength(1);
+    const step = replay.replays[0];
+    if (!step) throw new Error("Missing recorded case");
+    expect([step.name, step.callIndex, step.request]).toEqual([
+      "quantities",
+      0,
+      PLAN.cases[0].request,
+    ]);
+    const original = candidateFrom(editFixture);
+    if (original.kind !== "candidate") throw new Error("Invalid fixture");
+    const snapshot = structuredClone(original);
+    const answer = editSchema.parse(step.answer);
+    if (answer.outcome !== "edit") throw new Error("Expected recorded edit");
+    const changed = editedCandidate(
+      {
+        request: step.request,
+        artifact: original.artifact,
+        data: original.startingData,
+        intent: {
+          kind: "edit",
+          language: "en",
+          features: [],
+          targetsCurrentTool: true,
+          behaviorChange: true,
+          lookOnly: false,
+          interfacePart: null,
+          dataPart: null,
+        },
+      },
+      answer,
+    );
+    expect(changed.kind).toBe("candidate");
+    if (changed.kind !== "candidate") throw new Error("Recorded edit refused by host checks");
+    // editedCandidate runs the actual static guard with the artifact's capabilities.
+    expect(changed.artifact.code.js).toContain('tessera.call("data.read")');
+    expect(changed.artifact.code.js).toContain("\u2014 Quantity: ");
+    expect(changed.artifact.code.html).toBe(original.artifact.code.html);
+    expect(changed.artifact.code.css).toBe(original.artifact.code.css);
+    expect(changed.artifact.capabilities).toEqual(original.artifact.capabilities);
+    expect(changed.artifact.data.schemaVersion).toBe(2);
+    expect(changed.artifact.data.migrations).toEqual([
+      ...original.artifact.data.migrations,
+      {
+        fromVersion: 1,
+        toVersion: 2,
+        operations: [{ op: "addField", collection: "items", fields: { quantity: 1 } }],
+      },
+    ]);
+    expect(
+      migrateData(original.startingData, original.artifact.data, changed.artifact.data, {
+        trackLosses: true,
+      }),
+    ).toMatchObject({
+      ok: true,
+      losses: [],
+      data: {
+        items: [
+          { id: "i-1", title: "Milk", quantity: 1 },
+          { id: "i-2", title: "Eggs", quantity: 1 },
+        ],
+      },
+    });
+    expect(
+      migrateData(original.artifact.data.defaults, original.artifact.data, changed.artifact.data, {
+        trackLosses: true,
+      }),
+    ).toMatchObject({
+      ok: true,
+      losses: [],
+      data: changed.artifact.data.defaults,
+    });
+    expect(original).toEqual(snapshot);
+  });
   it("GEN-07 DATA-03: white free answer adds only quantity while retaining IDs, titles and list layout", () => {
     const original = candidateFrom(editFixture);
     if (original.kind !== "candidate") throw new Error("Invalid original fixture");

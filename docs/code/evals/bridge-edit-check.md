@@ -1,22 +1,22 @@
 ---
 type: Code Module
 title: "Bridge edit check"
-description: "One frozen behavioral edit of a saved shopping list, exercising bridge prompt context with a fake CLI rehearsal and proposed two-call cap."
+description: "One frozen behavioral edit of a saved shopping list, exercising bridge prompt context with a fake CLI rehearsal and approved two-call live check."
 resource: ../../../evals/spikes/bridge-edit-check/
 implements: [ENG-07, ENG-16, ENG-19, GEN-07, DATA-03]
 tests: [../../../evals/test/bridge-edit-check.test.ts]
 tags: [code, evals, edit, bridge]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-30T02:51:09Z }
+generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T03:04:13Z }
 ---
 
 # Purpose
 
-Prepares the static bridge prompt slice for [issue 148](https://github.com/suredo/Tessera/issues/148). One host request adds numeric quantity 1 beside Milk and Eggs in the original white saved shopping list, preserving IDs, titles, layout and entries. This is a proposed evaluation, with no live authorization. Earlier unused reserves cannot fund this run.
+Checks the static bridge prompt slice for [issue 148](https://github.com/suredo/Tessera/issues/148). One host request adds numeric quantity 1 beside Milk and Eggs in the original white saved shopping list, preserving IDs, titles, layout and entries. The owner approved one run capped at two calls. Its [live result](../../../evals/reports/2026-10-30-bridge-edit-check.md) passed the one required case in one edit call, without repair. Unused reserves authorize no repeat.
 
 # Entry points
 
-- `run.ts`: `PLAN` freezes the one-case denominator, proposed cap two (one expected Sonnet low edit plus one shared schema/static/smoke repair reserve), zero reviewer calls and original seven-minute request budget. `REPLY` supplies the white canned answer for the exact fake CLI rehearsal. `editOnlyProvider` guards model delegation; `runBridgeEditCheck` drives the host request through smoke and activation. After integrating the bridge slice and building, rehearse with `node evals/spikes/bridge-edit-check/run.ts --dry-run`. A live invocation requires fresh explicit owner approval of the proposed cap first.
+- `run.ts`: `PLAN` freezes the one-case denominator, cap two (one expected Sonnet low edit plus one shared schema/static/smoke repair reserve), zero reviewer calls and original seven-minute request budget. `REPLY` supplies the white canned answer for the exact fake CLI rehearsal. `editOnlyProvider` guards model delegation; `runBridgeEditCheck` drives the host request through smoke and activation. After integrating the bridge slice and building, rehearse with `node evals/spikes/bridge-edit-check/run.ts --dry-run`. Any additional live invocation requires fresh explicit owner approval of its cap first.
 
 The runner includes the merged static-bridge implementation. Each report records the exact source head and whether the source tree is dirty; the CLI requires an explicit run mode and, for live mode, the matching approved cap.
 
@@ -37,11 +37,11 @@ The runner includes the merged static-bridge implementation. Each report records
 
 # Depends on / used by
 
-Reuses the [evaluation harness](harness.md), fake CLI adapter and [smoke repair check](smoke-repair.md)'s cancellation wrapper. The [edit fixture](../../../packages/server/test/fixtures/edit-tool.ts) supplies the saved original and free migration answer. Focused tests exercise contract/stage refusal, prompt provenance, shared reserve, provider stops and lossless white-fixture migration.
+Reuses the [evaluation harness](harness.md), fake CLI adapter and [smoke repair check](smoke-repair.md)'s cancellation wrapper. The [edit fixture](../../../packages/server/test/fixtures/edit-tool.ts) supplies the saved original and free migration answer. Focused tests exercise contract/stage refusal, prompt provenance, shared reserve, provider stops and lossless white-fixture migration. The portable live answer is also replayed through `editedCandidate` (including the actual direct-bridge guard) and `migrateData`, checking retained source, IDs, titles, colors, list markup, schema version and migration history.
 
 # Pitfalls
 
-The exact free rehearsal passed its one required case with one fake edit call at `b60ba875f2c912d695adfb9a34469c42d3a4370e`, with a clean source tree. Evidence stays under ignored `test-output/evals/bridge-edit-check-dry-run-2026-10-30T02-46-45-134Z/` in the evaluation checkout. The inspected viewport shows Milk and Eggs with quantity 1; the stored IDs/titles, white colors and list layout were preserved. The call exercised `bridge@63eefdc4fb28`: 13,677 system characters, 1,477 request characters and 6,512 wrapped-schema characters, or 21,666 total before CLI overhead. This establishes runner behavior, not model quality. Conservatively propose 10,000 to 25,000 input and 2,000 to 6,000 output tokens total under cap two, including CLI overhead and one repair; these are estimates, not token limits or authorization. No live call has been approved or made. Heavy local phases remain serial across worktrees; full-page captures remain supplementary under L-76.
+The exact free rehearsal passed its one required case with one fake edit call at `b60ba875f2c912d695adfb9a34469c42d3a4370e`, with a clean source tree. Evidence stays under ignored `test-output/evals/bridge-edit-check-dry-run-2026-10-30T02-46-45-134Z/` in the evaluation checkout. The inspected viewport shows Milk and Eggs with quantity 1; the stored IDs/titles, white colors and list layout were preserved. The call exercised `bridge@63eefdc4fb28`: 13,677 system characters, 1,477 request characters and 6,512 wrapped-schema characters, or 21,666 total before CLI overhead. This establishes runner behavior, not model quality. Conservatively propose 10,000 to 25,000 input and 2,000 to 6,000 output tokens total under cap two, including CLI overhead and one repair; these are estimates, not token limits or authorization. The subsequent approved live run at clean `d900a427ddf4bbd7fb234b2ab69b0645dc765b09` passed 1/1 in one call: 9,845 input tokens, zero cached input, 514 output and 3.965 model seconds. The report retains its viewport image, sanitized ledger and parsed-answer replay; negative bridge errors were not exercised live. Heavy local phases remain serial across worktrees; full-page captures remain supplementary under L-76.
 
 # Symbols (generated)
 
