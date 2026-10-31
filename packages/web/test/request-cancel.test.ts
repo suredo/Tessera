@@ -145,6 +145,36 @@ it("GEN-08: any other failure after Cancel stays uncertain", async () => {
     reloadData: true,
   });
 });
+it("GEN-08 GEN-12: a refusal without Cancel gives the server's own words, not an uncertain result", async () => {
+  const { owner } = control();
+  const fake = deps();
+  fake.generate = () => Promise.reject(new HostError("Say what you need, in a few words.", 400));
+  await expect(carryOut("A list", null, fake, undefined, owner)).rejects.toThrow(
+    "Say what you need, in a few words.",
+  );
+});
+it.each([
+  [409, "Too many requests are waiting. Please try again later."],
+  [500, ""],
+])("GEN-08: a registration refused with %i never sends generation", async (status, said) => {
+  const owner = new RequestControl(() => Promise.resolve(new Response(said, { status })));
+  const fake = deps();
+  const pending = carryOut("A list", null, fake, undefined, owner);
+  if (said) await expect(pending).rejects.toThrow(said);
+  else expect(await pending).toEqual({ message: en["request.failedPlain"] });
+  expect(fake.generate).not.toHaveBeenCalled();
+});
+it("GEN-08: a refused entry plan without Cancel keeps the applied interface and the server's reason", async () => {
+  const { owner } = control();
+  const fake = deps();
+  fake.generate = () => Promise.resolve({ ...candidate, dataPending: true });
+  fake.finishData = () => Promise.reject(new HostError("The request is too long.", 413));
+  const result = await carryOut("Make it dark and add milk", token, fake, undefined, owner);
+  expect(result.openWorkspaceId).toBe(token);
+  expect(result.message).toContain("Made it dark.");
+  expect(result.message).toContain("The request is too long.");
+  expect(result.reloadData).toBeUndefined();
+});
 it("CLI-06 RUN-03: cancelling staging aborts its signal and never repairs", async () => {
   const { owner } = control();
   const fake = deps();

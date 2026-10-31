@@ -4,7 +4,7 @@ import {
   requestControlSchema,
   cancelRequestReplySchema,
 } from "@tessera/contracts";
-import type { Send } from "./host-api.ts";
+import { HostError, type Send } from "./host-api.ts";
 
 /** One browser request owns one host capability, including its pending entry review. */
 export class RequestControl {
@@ -39,7 +39,14 @@ export class RequestControl {
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(10_000),
     });
-    if (!response.ok) throw new Error("Request control unavailable");
+    if (!response.ok) {
+      // Such as "Too many requests are waiting": the server's own words, with its status.
+      const said = await response.text().catch(() => "");
+      throw new HostError(
+        said && response.status < 500 ? said : "Request control unavailable",
+        response.status,
+      );
+    }
     return response.json();
   }
   /** Stop waiting after cancellation, without aborting a request that may already have committed. */

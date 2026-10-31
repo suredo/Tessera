@@ -209,9 +209,10 @@ export async function carryOut(
   control?: RequestControl,
 ): Promise<RequestOutcome> {
   const stopped = (): RequestOutcome => ({ message: t("request.stopped") });
-  // A 409 after Cancel is the server confirming it stopped before starting the job, not a lost reply.
-  const refused = (error: unknown) =>
-    control?.stopped === true && error instanceof HostError && error.status === 409;
+  // A refusal the server made itself (under 500) started nothing, unlike a lost reply: after
+  // Cancel it confirms the stop, and otherwise its own words say why.
+  const refusal = (error: unknown): error is HostError =>
+    error instanceof HostError && error.status !== undefined && error.status < 500;
   const reviewed = (outcome: RequestOutcome): RequestOutcome =>
     control?.stopped && outcome.dataOffer
       ? {
@@ -221,9 +222,17 @@ export async function carryOut(
       : outcome;
   const wait = <T>(pending: Promise<T>) => (control ? control.wait(pending) : pending);
   let reply: GenerateReply;
+  let controlToken: string | undefined;
   try {
-    const controlToken = control ? await control.wait(control.start()) : undefined;
+    controlToken = control ? await control.wait(control.start()) : undefined;
+  } catch (error) {
     if (control?.stopped) return stopped();
+    if (refusal(error)) throw error;
+    // Generation is never sent without a registered control.
+    return { message: t("request.failedPlain") };
+  }
+  if (control?.stopped) return stopped();
+  try {
     reply = await wait(
       deps.generate({
         request,
@@ -233,7 +242,10 @@ export async function carryOut(
     );
   } catch (error) {
     if (!control) throw error;
-    if (refused(error)) return stopped();
+    if (refusal(error)) {
+      if (control.stopped) return stopped();
+      throw error;
+    }
     return { message: t("request.requestUnknown"), reloadData: true };
   }
   let repaired = false;
@@ -283,9 +295,11 @@ export async function carryOut(
                 }),
               );
             } catch (error) {
-              if (refused(error))
+              if (refusal(error))
                 return {
-                  ...withInterfaceOutcome(interfaceMessage, stopped()),
+                  ...(control?.stopped
+                    ? withInterfaceOutcome(interfaceMessage, stopped())
+                    : withInterfaceOutcome(interfaceMessage, { message: "" }, error.message)),
                   openWorkspaceId: reply.workspaceId,
                 };
               return {
@@ -318,7 +332,10 @@ export async function carryOut(
                 }),
               );
             } catch (error) {
-              if (refused(error)) return stopped();
+              if (refusal(error)) {
+                if (control?.stopped) return stopped();
+                throw error;
+              }
               return { message: t("request.requestUnknown"), reloadData: true };
             }
             continue;
