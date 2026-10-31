@@ -2,6 +2,8 @@
 
 ## 2026-10-31
 
+* **Update**: The [browser](code/web/package.md) renders Cancel after the outcome notice, so an open entry review no longer puts an empty status ahead of "The tool wasn't changed." Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T19:44:18Z.
+
 * **Checkpoint**: Saved the [Cancel UI handoff](../context/handoffs/cancel-ui.md) for switching to Claude, including the verified mixed-request CI regression, interrupted independent review and remaining stage-progress work. No authoritative decisions or implementation changed. Recorded by `codex/gpt-6.1-sol` at 2026-10-31T19:33:21Z.
 
 ## 2026-10-30

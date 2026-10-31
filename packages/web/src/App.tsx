@@ -60,9 +60,9 @@ export function EmptyState({
       <h1>{t("home.heading")}</h1>
       <p>{t("home.intro")}</p>
       {onRequest && setup?.ready && <RequestBox working={requesting} onRequest={onRequest} />}
-      {cancelControl}
       {/* Such as the trash notice after the last workspace is deleted. */}
       <p role="status">{notice}</p>
+      {cancelControl}
       {/* What was deleted can still come back from here (DATA-09). */}
       {onTrash && (
         <button type="button" onClick={onTrash}>
@@ -632,8 +632,9 @@ export function App() {
         </main>
       )}
       <div className="notice">
-        {cancelControl}
+        {/* The outcome notice stays the first status; Cancel's own status follows it. */}
         <p role="status">{notice}</p>
+        {cancelControl}
         {dataOffer && (
           <DataChangeOffer offer={dataOffer} working={requesting} onChoose={takeDataOffer} />
         )}
