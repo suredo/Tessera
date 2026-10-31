@@ -56,7 +56,8 @@ for (const phase of ["create", "repair"] as const) {
       await page.goto(host.url);
       await page.getByRole("textbox", { name: en["request.label"] }).fill("A shopping list");
       await page.getByRole("button", { name: en["request.send"] }).click();
-      await expect.poll(() => calls.includes(phase)).toBe(true);
+      // Reaching repair needs a first staging and smoke check, slower under parallel browsers.
+      await expect.poll(() => calls.includes(phase), { timeout: 30_000 }).toBe(true);
       await page.getByRole("button", { name: en["setup.openStatus"] }).click();
       const cancel = page.getByRole("button", { name: en["request.cancel"] });
       await expect(cancel).toBeVisible();
