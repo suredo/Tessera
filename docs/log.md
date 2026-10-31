@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-10-31
+
+* **Checkpoint**: Saved the [Cancel UI handoff](../context/handoffs/cancel-ui.md) for switching to Claude, including the verified mixed-request CI regression, interrupted independent review and remaining stage-progress work. No authoritative decisions or implementation changed. Recorded by `codex/gpt-6.1-sol` at 2026-10-31T19:33:21Z.
+
 ## 2026-10-30
 
 * **Update**: The [browser](code/web/package.md) registers requests before sending them and offers Cancel across navigation, staging and pending entry reviews. [Generation](code/server/generation.md) cancellation preserves committed activation/data and mixed-interface facts; lost replies remain uncertain, with bounded cancellation waits. Actual server stages and elapsed time remain open under [#152](https://github.com/suredo/Tessera/issues/152). No live calls, prompts, dependencies or contracts changed. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T13:15:09Z.
