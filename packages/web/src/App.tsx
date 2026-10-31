@@ -1,5 +1,5 @@
 import type { SavedTool, SetupReport, Trash as TrashList, Workspace } from "@tessera/contracts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { exportArchive, importArchive, saveFile } from "./archives.ts";
 import { ask, HostError } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
@@ -16,6 +16,7 @@ import {
   type RequestOutcome,
 } from "./generate.ts";
 import { DataChangeOffer } from "./DataChangeOffer.tsx";
+import { RequestControl } from "./request-control.ts";
 import { RequestBox } from "./RequestBox.tsx";
 import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
@@ -40,6 +41,7 @@ type EmptyProps = {
   onRequest?: (request: string) => Promise<void>;
   /** True while a request runs. */
   requesting?: boolean;
+  cancelControl?: React.ReactNode;
 };
 
 export function EmptyState({
@@ -51,6 +53,7 @@ export function EmptyState({
   onStatus,
   onRequest,
   requesting = false,
+  cancelControl,
 }: EmptyProps) {
   return (
     <main className="empty">
@@ -59,6 +62,7 @@ export function EmptyState({
       {onRequest && setup?.ready && <RequestBox working={requesting} onRequest={onRequest} />}
       {/* Such as the trash notice after the last workspace is deleted. */}
       <p role="status">{notice}</p>
+      {cancelControl}
       {/* What was deleted can still come back from here (DATA-09). */}
       {onTrash && (
         <button type="button" onClick={onTrash}>
@@ -118,8 +122,41 @@ export function App() {
   const [setup, setSetup] = useState<SetupReport | null>(null);
   // A request running, and a saved tool a request matched, waiting for the person's choice.
   const [requesting, setRequesting] = useState(false);
-  const [offer, setOffer] = useState<{ id: string; name: string } | null>(null);
+  const control = useRef<RequestControl | null>(null);
+  const [stopping, setStopping] = useState(false);
+  const [cancelProblem, setCancelProblem] = useState("");
   const [dataOffer, setDataOffer] = useState<RequestOutcome["dataOffer"]>();
+  const cancelRequest = async () => {
+    const owner = control.current;
+    if (!owner || stopping) return;
+    setStopping(true);
+    setCancelProblem("");
+    // A waiting review has no active carryOut to settle it; discard its local proposal now.
+    if (!requesting) {
+      setDataOffer(undefined);
+      setNotice(
+        withInterfaceOutcome(dataOffer?.interfaceMessage, { message: t("request.stopped") })
+          .message,
+      );
+    }
+    try {
+      const confirmed = await owner.cancel();
+      if (control.current === owner && !confirmed && requesting)
+        setCancelProblem(t("request.cancelUnknown"));
+    } catch {
+      if (control.current === owner) setCancelProblem(t("request.cancelUnknown"));
+    }
+  };
+  const cancelControl = (requesting || dataOffer) && (
+    <div className="request-control">
+      <button type="button" disabled={stopping} onClick={() => void cancelRequest()}>
+        {t("request.cancel")}
+      </button>
+      <p role="status">{cancelProblem || (stopping ? t("request.stopping") : "")}</p>
+    </div>
+  );
+  const [offer, setOffer] = useState<{ id: string; name: string } | null>(null);
+
   // Why the last check couldn't be made, such as the server not answering; "" when it was.
   const [setupProblem, setSetupProblem] = useState("");
   const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -249,17 +286,29 @@ export function App() {
   // or to use again, and nothing opens until the person chooses (GEN-18).
   const request = async (text: string) => {
     if (requesting) return;
+    const owner = new RequestControl();
+    control.current = owner;
+    setStopping(false);
+    setCancelProblem("");
     setRequesting(true);
     setOffer(null);
     setDataOffer(undefined);
     try {
-      const outcome = await carryOut(text, openId, undefined, async (id) => {
-        await refresh();
-        open(id);
-        setView("workspaces");
-      });
-      setDataOffer(outcome.dataOffer);
-      const { savedTools: saved } = await refresh().then(() => ask("library.list", {}));
+      const outcome = await carryOut(
+        text,
+        openId,
+        undefined,
+        async (id) => {
+          await refresh();
+          open(id);
+          setView("workspaces");
+        },
+        owner,
+      );
+      setDataOffer(owner.stopped ? undefined : outcome.dataOffer);
+      const { savedTools: saved } = await owner
+        .wait(refresh().then(() => ask("library.list", {})))
+        .catch(() => ({ savedTools: [] }));
       if (outcome.savedToolId) {
         const tool = saved.find((s) => s.id === outcome.savedToolId);
         if (tool) {
@@ -305,18 +354,23 @@ export function App() {
   };
   const takeDataOffer = async (approve: boolean) => {
     if (!dataOffer || requesting) return;
+    const owner = control.current;
+    if (owner?.stopped) return;
     setRequesting(true);
+    setStopping(false);
+    setCancelProblem("");
     const token = dataOffer.token;
     const interfaceMessage = dataOffer.interfaceMessage;
     setDataOffer(undefined);
     try {
-      const reply = await askToConfirmData({ token, approve });
+      const pending = askToConfirmData({ token, approve });
+      const reply = await (owner ? owner.wait(pending) : pending);
       const outcome = withInterfaceOutcome(
         interfaceMessage,
         dataOutcome(reply),
         reply.kind === "failed" ? reply.message : undefined,
       );
-      await refresh();
+      await (owner ? owner.wait(refresh()) : refresh()).catch(report);
       if (outcome.openWorkspaceId) {
         open(outcome.openWorkspaceId);
         setView("workspaces");
@@ -327,7 +381,7 @@ export function App() {
       }
       setNotice(outcome.message);
     } catch {
-      await refresh().catch(report);
+      await (owner ? owner.wait(refresh()) : refresh()).catch(report);
       setReloads((n) => n + 1);
       setToolChanges((n) => n + 1);
       setNotice(
@@ -359,6 +413,7 @@ export function App() {
         onStatus={() => setView("status")}
         onRequest={request}
         requesting={requesting}
+        cancelControl={cancelControl}
       />
     );
   }
@@ -577,7 +632,9 @@ export function App() {
         </main>
       )}
       <div className="notice">
+        {/* The outcome notice stays the first status; Cancel's own status follows it. */}
         <p role="status">{notice}</p>
+        {cancelControl}
         {dataOffer && (
           <DataChangeOffer offer={dataOffer} working={requesting} onChoose={takeDataOffer} />
         )}

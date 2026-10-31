@@ -12,7 +12,14 @@ import { t } from "./i18n/translate.ts";
 // route, and its answer is checked against the same contract the server checks it with (CON-01).
 
 /** A request the server refused or couldn't do; its message is plain words for the person. */
-export class HostError extends Error {}
+export class HostError extends Error {
+  /** The HTTP status when the server itself refused, such as 409 for a stopped request. */
+  readonly status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    if (status !== undefined) this.status = status;
+  }
+}
 
 /** Sends a request and gives back the response; `fetch` by default, a test's own otherwise. */
 export type Send = (url: string, init: RequestInit) => Promise<Response>;

@@ -138,7 +138,8 @@ test("GEN-04 DATA-02: activate and display the edited interface before its separ
   const before = workspace();
   await send(page, "Make it dark and Add Bread");
   try {
-    await expect.poll(() => dataBegan).toBe(true);
+    // Data planning starts only after generation, staging, smoke and activation finish.
+    await expect.poll(() => dataBegan, { timeout: 30_000 }).toBe(true);
     await expect(page.getByRole("button", { name: en["tool.minimize"] })).toBeVisible();
     await expect(frame(page).locator("body")).toHaveCSS("background-color", "rgb(17, 17, 17)");
     await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);

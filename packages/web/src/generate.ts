@@ -15,6 +15,7 @@ import {
 import { smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
 import { HostError, type Send } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
+import type { RequestControl } from "./request-control.ts";
 
 // The host app's side of a request (GEN-01): the server carries it out as far as a candidate, and
 // the app stages the candidate behind the smoke check (RUN-03, VER-02) before the server activates
@@ -66,7 +67,10 @@ async function askForCandidate(
   });
   if (!response.ok) {
     const said = await response.text().catch(() => "");
-    throw new HostError(said && response.status < 500 ? said : t("request.failedPlain"));
+    throw new HostError(
+      said && response.status < 500 ? said : t("request.failedPlain"),
+      response.status,
+    );
   }
   const reply = generateReplySchema.safeParse(await response.json().catch(() => undefined));
   if (!reply.success) throw new HostError(t("app.unreadable"));
@@ -166,9 +170,12 @@ const defaultDeps: RequestDeps = {
 async function stageRequest(
   reply: Extract<GenerateReply, { kind: "candidate" }>,
   deps: RequestDeps,
+  control?: RequestControl,
 ): Promise<StagingResult> {
   const controller = new AbortController();
-  if (Date.now() >= reply.activation.expiresAt) controller.abort();
+  const stop = () => controller.abort();
+  control?.controller.signal.addEventListener("abort", stop, { once: true });
+  if (control?.stopped || Date.now() >= reply.activation.expiresAt) controller.abort();
   const timer = setTimeout(
     () => controller.abort(),
     Math.max(0, reply.activation.expiresAt - Date.now()),
@@ -189,6 +196,7 @@ async function stageRequest(
     });
   } finally {
     clearTimeout(timer);
+    control?.controller.signal.removeEventListener("abort", stop);
   }
 }
 
@@ -198,8 +206,48 @@ export async function carryOut(
   workspaceId: string | null,
   deps: RequestDeps = defaultDeps,
   onInterfaceApplied?: (workspaceId: string) => Promise<void>,
+  control?: RequestControl,
 ): Promise<RequestOutcome> {
-  let reply = await deps.generate({ request, ...(workspaceId ? { workspaceId } : {}) });
+  const stopped = (): RequestOutcome => ({ message: t("request.stopped") });
+  // A refusal the server made itself (under 500) started nothing, unlike a lost reply: after
+  // Cancel it confirms the stop, and otherwise its own words say why.
+  const refusal = (error: unknown): error is HostError =>
+    error instanceof HostError && error.status !== undefined && error.status < 500;
+  const reviewed = (outcome: RequestOutcome): RequestOutcome =>
+    control?.stopped && outcome.dataOffer
+      ? {
+          ...withInterfaceOutcome(outcome.dataOffer.interfaceMessage, stopped()),
+          openWorkspaceId: outcome.openWorkspaceId,
+        }
+      : outcome;
+  const wait = <T>(pending: Promise<T>) => (control ? control.wait(pending) : pending);
+  let reply: GenerateReply;
+  let controlToken: string | undefined;
+  try {
+    controlToken = control ? await control.wait(control.start()) : undefined;
+  } catch (error) {
+    if (control?.stopped) return stopped();
+    if (refusal(error)) throw error;
+    // Generation is never sent without a registered control.
+    return { message: t("request.failedPlain") };
+  }
+  if (control?.stopped) return stopped();
+  try {
+    reply = await wait(
+      deps.generate({
+        request,
+        ...(workspaceId ? { workspaceId } : {}),
+        ...(controlToken ? { controlToken } : {}),
+      }),
+    );
+  } catch (error) {
+    if (!control) throw error;
+    if (refusal(error)) {
+      if (control.stopped) return stopped();
+      throw error;
+    }
+    return { message: t("request.requestUnknown"), reloadData: true };
+  }
   let repaired = false;
   let mixed = false;
   for (;;) {
@@ -207,12 +255,13 @@ export async function carryOut(
       case "data_changed":
       case "data_confirmation":
       case "mixed_data":
-        return dataOutcome(reply);
+        return reviewed(dataOutcome(reply));
       case "candidate": {
+        if (control?.stopped) return stopped();
         mixed ||= reply.dataPending === true;
         let staged: StagingResult;
         try {
-          staged = await stageRequest(reply, deps);
+          staged = await wait(stageRequest(reply, deps, control));
         } catch {
           // Activation may have committed before its response was lost (GEN-08, DATA-10).
           return { message: t("request.activationUnknown"), reloadData: true };
@@ -225,18 +274,34 @@ export async function carryOut(
             });
             try {
               await onInterfaceApplied?.(reply.workspaceId);
-              return dataOutcome({
-                kind: "mixed_data",
-                workspaceId: reply.workspaceId,
-                name: reply.name,
-                interface: { outcome: "updated", summary: reply.summary },
-                data: await deps.finishData({
+              if (control?.stopped)
+                return {
+                  ...withInterfaceOutcome(interfaceMessage, stopped()),
+                  openWorkspaceId: reply.workspaceId,
+                };
+              return reviewed(
+                dataOutcome({
+                  kind: "mixed_data",
                   workspaceId: reply.workspaceId,
-                  hash: reply.hash,
-                  token: reply.activation.token,
+                  name: reply.name,
+                  interface: { outcome: "updated", summary: reply.summary },
+                  data: await wait(
+                    deps.finishData({
+                      workspaceId: reply.workspaceId,
+                      hash: reply.hash,
+                      token: reply.activation.token,
+                    }),
+                  ),
                 }),
-              });
-            } catch {
+              );
+            } catch (error) {
+              if (refusal(error))
+                return {
+                  ...(control?.stopped
+                    ? withInterfaceOutcome(interfaceMessage, stopped())
+                    : withInterfaceOutcome(interfaceMessage, { message: "" }, error.message)),
+                  openWorkspaceId: reply.workspaceId,
+                };
               return {
                 message: t("request.mixedUnknown", { interfaceMessage }),
                 openWorkspaceId: reply.workspaceId,
@@ -252,16 +317,27 @@ export async function carryOut(
             openWorkspaceId: reply.workspaceId,
           };
         }
+        if (control?.stopped) return stopped();
         if (Date.now() >= reply.activation.expiresAt) return { message: t("request.timedOut") };
         if (staged.outcome === "check-failed") {
           if (!repaired && (staged.check === "smoke" || staged.check === "start")) {
             repaired = true;
-            reply = await deps.repairSmoke({
-              workspaceId: reply.workspaceId,
-              hash: reply.hash,
-              token: reply.activation.token,
-              findings: [staged.reason],
-            });
+            try {
+              reply = await wait(
+                deps.repairSmoke({
+                  workspaceId: reply.workspaceId,
+                  hash: reply.hash,
+                  token: reply.activation.token,
+                  findings: [staged.reason],
+                }),
+              );
+            } catch (error) {
+              if (refusal(error)) {
+                if (control?.stopped) return stopped();
+                throw error;
+              }
+              return { message: t("request.requestUnknown"), reloadData: true };
+            }
             continue;
           }
           return {

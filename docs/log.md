@@ -1,6 +1,20 @@
 # Documentation log
 
+## 2026-10-31
+
+* **Update**: The [browser](code/web/package.md) request control falls back to the translated "couldn't carry out that request" text when the server refuses without words. Found in the third PR #202 review. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T21:03:53Z.
+
+* **Update**: The [browser](code/web/package.md) again shows the server's own words for a refusal made without Cancel, such as a request that is too long or too many requests waiting, instead of an uncertain result; after Cancel any such refusal reports the stop. Found in the second PR #202 review. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T20:46:49Z.
+
+* **Update**: The [browser](code/web/package.md) reports a 409 refusal answered after Cancel as stopped, instead of uncertain: the server confirmed no job started. Found in the PR #202 review. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T20:32:38Z.
+
+* **Update**: The [browser](code/web/package.md) renders Cancel after the outcome notice, so an open entry review no longer puts an empty status ahead of "The tool wasn't changed." Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T19:44:18Z.
+
+* **Checkpoint**: Saved the Cancel UI handoff (`context/handoffs/cancel-ui.md`, removed before merge) for switching to Claude, including the verified mixed-request CI regression, interrupted independent review and remaining stage-progress work. No authoritative decisions or implementation changed. Recorded by `codex/gpt-6.1-sol` at 2026-10-31T19:33:21Z.
+
 ## 2026-10-30
+
+* **Update**: The [browser](code/web/package.md) registers requests before sending them and offers Cancel across navigation, staging and pending entry reviews. [Generation](code/server/generation.md) cancellation preserves committed activation/data and mixed-interface facts; lost replies remain uncertain, with bounded cancellation waits. Actual server stages and elapsed time remain open under [#152](https://github.com/suredo/Tessera/issues/152). No live calls, prompts, dependencies or contracts changed. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T13:15:09Z.
 
 * **Update**: [Generation](code/server/generation.md) adds bounded opt-in registered cancellation before setup and through queued/running jobs, candidate activation, smoke repair, mixed-data continuations and reviews. [Contracts](code/contracts/package.md) keep capability ownership on the server; completed commits stand. Browser Cancel and progress remain open in [#152](https://github.com/suredo/Tessera/issues/152). [ADR 0010](decisions/adr/0010-generation-progress.md) records the owner's D7 choice of stage names and elapsed time; [provider requirements](spec/providers.md) reflect it. Streaming remains future work; no live call was made. Recorded by `codex/gpt-6.1-sol` at 2026-10-30T12:29:00Z.
 
