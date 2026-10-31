@@ -5,6 +5,7 @@ import {
   cancelRequestReplySchema,
 } from "@tessera/contracts";
 import { HostError, type Send } from "./host-api.ts";
+import { t } from "./i18n/translate.ts";
 
 /** One browser request owns one host capability, including its pending entry review. */
 export class RequestControl {
@@ -43,7 +44,7 @@ export class RequestControl {
       // Such as "Too many requests are waiting": the server's own words, with its status.
       const said = await response.text().catch(() => "");
       throw new HostError(
-        said && response.status < 500 ? said : "Request control unavailable",
+        said && response.status < 500 ? said : t("request.failedPlain"),
         response.status,
       );
     }

@@ -2,6 +2,8 @@
 
 ## 2026-10-31
 
+* **Update**: The [browser](code/web/package.md) request control falls back to the translated "couldn't carry out that request" text when the server refuses without words. Found in the third PR #202 review. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T21:03:53Z.
+
 * **Update**: The [browser](code/web/package.md) again shows the server's own words for a refusal made without Cancel, such as a request that is too long or too many requests waiting, instead of an uncertain result; after Cancel any such refusal reports the stop. Found in the second PR #202 review. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T20:46:49Z.
 
 * **Update**: The [browser](code/web/package.md) reports a 409 refusal answered after Cancel as stopped, instead of uncertain: the server confirmed no job started. Found in the PR #202 review. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T20:32:38Z.
