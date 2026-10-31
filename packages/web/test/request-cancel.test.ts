@@ -2,6 +2,7 @@ import { expect, it, vi } from "vitest";
 import type { GenerateReply } from "@tessera/contracts";
 import { RequestControl } from "../src/request-control.ts";
 import { carryOut, type RequestDeps } from "../src/generate.ts";
+import { HostError } from "../src/host-api.ts";
 import { en } from "../src/i18n/en.ts";
 
 const token = "00000000-0000-4000-8000-000000000001";
@@ -93,6 +94,57 @@ it.each(["queued", "running", "repair"])(
     expect(fake.stage).toHaveBeenCalledTimes(mode === "repair" ? 1 : 0);
   },
 );
+it.each(["generate", "repair"])(
+  "GEN-08: a %s refusal confirming the stop before any job reports it stopped",
+  async (mode) => {
+    const { owner } = control();
+    const fake = deps();
+    const refusal = deferred<void>();
+    const entered = deferred<void>();
+    const refuse = async (): Promise<GenerateReply> => {
+      entered.resolve();
+      await refusal.promise;
+      throw new HostError("The request was stopped or expired. Please ask again.", 409);
+    };
+    if (mode === "repair") {
+      fake.stage = vi.fn<RequestDeps["stage"]>(() =>
+        Promise.resolve({ outcome: "check-failed", check: "smoke", reason: "Missing label" }),
+      );
+      fake.repairSmoke = refuse;
+    } else fake.generate = refuse;
+    const pending = carryOut("A list", null, fake, undefined, owner);
+    await entered.promise;
+    await owner.cancel();
+    refusal.resolve();
+    expect(await pending).toEqual({ message: en["request.stopped"] });
+  },
+);
+it("GEN-08: a refused entry plan after Cancel keeps the applied interface and says it stopped", async () => {
+  const { owner } = control();
+  const fake = deps();
+  fake.generate = () => Promise.resolve({ ...candidate, dataPending: true });
+  fake.finishData = async () => {
+    await owner.cancel();
+    throw new HostError("The request was stopped or expired. Please ask again.", 409);
+  };
+  const result = await carryOut("Make it dark and add milk", token, fake, undefined, owner);
+  expect(result.openWorkspaceId).toBe(token);
+  expect(result.message).toContain("Made it dark.");
+  expect(result.message).toContain(en["request.stopped"]);
+  expect(result.reloadData).toBeUndefined();
+});
+it("GEN-08: any other failure after Cancel stays uncertain", async () => {
+  const { owner } = control();
+  const fake = deps();
+  fake.generate = async () => {
+    await owner.cancel();
+    throw new HostError(en["request.failedPlain"], 500);
+  };
+  expect(await carryOut("A list", null, fake, undefined, owner)).toEqual({
+    message: en["request.requestUnknown"],
+    reloadData: true,
+  });
+});
 it("CLI-06 RUN-03: cancelling staging aborts its signal and never repairs", async () => {
   const { owner } = control();
   const fake = deps();

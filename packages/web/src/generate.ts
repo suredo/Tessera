@@ -67,7 +67,10 @@ async function askForCandidate(
   });
   if (!response.ok) {
     const said = await response.text().catch(() => "");
-    throw new HostError(said && response.status < 500 ? said : t("request.failedPlain"));
+    throw new HostError(
+      said && response.status < 500 ? said : t("request.failedPlain"),
+      response.status,
+    );
   }
   const reply = generateReplySchema.safeParse(await response.json().catch(() => undefined));
   if (!reply.success) throw new HostError(t("app.unreadable"));
@@ -206,6 +209,9 @@ export async function carryOut(
   control?: RequestControl,
 ): Promise<RequestOutcome> {
   const stopped = (): RequestOutcome => ({ message: t("request.stopped") });
+  // A 409 after Cancel is the server confirming it stopped before starting the job, not a lost reply.
+  const refused = (error: unknown) =>
+    control?.stopped === true && error instanceof HostError && error.status === 409;
   const reviewed = (outcome: RequestOutcome): RequestOutcome =>
     control?.stopped && outcome.dataOffer
       ? {
@@ -227,6 +233,7 @@ export async function carryOut(
     );
   } catch (error) {
     if (!control) throw error;
+    if (refused(error)) return stopped();
     return { message: t("request.requestUnknown"), reloadData: true };
   }
   let repaired = false;
@@ -275,7 +282,12 @@ export async function carryOut(
                   ),
                 }),
               );
-            } catch {
+            } catch (error) {
+              if (refused(error))
+                return {
+                  ...withInterfaceOutcome(interfaceMessage, stopped()),
+                  openWorkspaceId: reply.workspaceId,
+                };
               return {
                 message: t("request.mixedUnknown", { interfaceMessage }),
                 openWorkspaceId: reply.workspaceId,
@@ -305,7 +317,8 @@ export async function carryOut(
                   findings: [staged.reason],
                 }),
               );
-            } catch {
+            } catch (error) {
+              if (refused(error)) return stopped();
               return { message: t("request.requestUnknown"), reloadData: true };
             }
             continue;
