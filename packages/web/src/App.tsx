@@ -124,6 +124,8 @@ export function App() {
   const [requesting, setRequesting] = useState(false);
   const control = useRef<RequestControl | null>(null);
   const [stopping, setStopping] = useState(false);
+  // A stopped request's outcome is shown while the lists still refresh; Cancel has nothing left to do.
+  const [settled, setSettled] = useState(false);
   const [cancelProblem, setCancelProblem] = useState("");
   const [dataOffer, setDataOffer] = useState<RequestOutcome["dataOffer"]>();
   const cancelRequest = async () => {
@@ -147,7 +149,7 @@ export function App() {
       if (control.current === owner) setCancelProblem(t("request.cancelUnknown"));
     }
   };
-  const cancelControl = (requesting || dataOffer) && (
+  const cancelControl = ((requesting && !settled) || dataOffer) && (
     <div className="request-control">
       <button type="button" disabled={stopping} onClick={() => void cancelRequest()}>
         {t("request.cancel")}
@@ -289,6 +291,7 @@ export function App() {
     const owner = new RequestControl();
     control.current = owner;
     setStopping(false);
+    setSettled(false);
     setCancelProblem("");
     setRequesting(true);
     setOffer(null);
@@ -306,6 +309,11 @@ export function App() {
         owner,
       );
       setDataOffer(owner.stopped ? undefined : outcome.dataOffer);
+      // After Cancel the outcome is already known: say it now, not after the bounded refresh.
+      if (owner.stopped && !outcome.savedToolId) {
+        setNotice(outcome.message || t("request.failedPlain"));
+        setSettled(true);
+      }
       const { savedTools: saved } = await owner
         .wait(refresh().then(() => ask("library.list", {})))
         .catch(() => ({ savedTools: [] }));
