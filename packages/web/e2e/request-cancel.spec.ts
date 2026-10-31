@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { HOST_ROUTE } from "@tessera/contracts";
 import {
   createScriptedProvider,
   ProviderError,
@@ -149,6 +150,51 @@ test("CLI-06: a queued browser request can be cancelled without another provider
     expect(calls).toBe(1);
   } finally {
     await other.close();
+    await host.close();
+  }
+});
+test("CLI-06 GEN-08: the stop is said at once, while the lists still refresh", async ({ page }) => {
+  let calls = 0;
+  const provider: Provider = {
+    name: "slow-refresh",
+    live: false,
+    run: (spec) => {
+      calls++;
+      return new Promise((_, reject) =>
+        spec.signal!.addEventListener(
+          "abort",
+          () => reject(new ProviderError("cancelled", "Stopped")),
+          { once: true },
+        ),
+      );
+    },
+  };
+  const host = await startApp(undefined, provider);
+  try {
+    await page.goto(host.url);
+    const box = page.getByRole("textbox", { name: en["request.label"] });
+    await box.fill("A list");
+    await page.getByRole("button", { name: en["request.send"] }).click();
+    await expect.poll(() => calls, { timeout: 30_000 }).toBe(1);
+    // Hold the refresh that follows the stop, well past the notice's expectation.
+    let release = () => {};
+    const held = new Promise<void>((done) => {
+      release = done;
+    });
+    await page.route(`**${HOST_ROUTE}`, async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.getByRole("button", { name: en["request.cancel"] }).click();
+    await expect(page.getByText(/The request was stopped\./)).toBeVisible();
+    await expect(page.getByRole("button", { name: en["request.cancel"] })).toHaveCount(0);
+    await expect(page.getByText(en["request.stopping"])).toHaveCount(0);
+    // A new request still waits for the refresh to finish.
+    await expect(box).toBeDisabled();
+    release();
+    await expect(box).toBeEnabled({ timeout: 30_000 });
+    expect(calls).toBe(1);
+  } finally {
     await host.close();
   }
 });
