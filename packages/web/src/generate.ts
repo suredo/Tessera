@@ -13,7 +13,7 @@ import {
   type DataReply,
 } from "@tessera/contracts";
 import { smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
-import { HostError, type Send } from "./host-api.ts";
+import { HostError, isRefusal, type Send } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import type { RequestControl } from "./request-control.ts";
 
@@ -101,6 +101,40 @@ export function withInterfaceOutcome(
     message: `${interfaceMessage} ${failure ? t("request.mixedEntryFailed", { reason: failure }) : outcome.message}`,
     ...(outcome.dataOffer ? { dataOffer: { ...outcome.dataOffer, interfaceMessage } } : {}),
   };
+}
+
+/**
+ * Sends the person's choice on reviewed entry changes, keeping the confirmed interface fact. A
+ * refusal the server made itself applied nothing: after Cancel it says the request stopped, and
+ * otherwise its own words say why. Only a lost reply leaves the entries uncertain, to be reloaded.
+ */
+export async function confirmDataChoice(
+  token: string,
+  approve: boolean,
+  interfaceMessage: string | undefined,
+  control?: RequestControl,
+  send?: Send,
+): Promise<RequestOutcome> {
+  try {
+    const pending = askToConfirmData({ token, approve }, send);
+    const reply = await (control ? control.wait(pending) : pending);
+    return withInterfaceOutcome(
+      interfaceMessage,
+      dataOutcome(reply),
+      reply.kind === "failed" ? reply.message : undefined,
+    );
+  } catch (error) {
+    if (isRefusal(error))
+      return control?.stopped
+        ? withInterfaceOutcome(interfaceMessage, { message: t("request.stopped") })
+        : withInterfaceOutcome(interfaceMessage, { message: error.message }, error.message);
+    return {
+      message: interfaceMessage
+        ? t("request.mixedUnknown", { interfaceMessage })
+        : t("request.dataUnknown"),
+      reloadData: true,
+    };
+  }
 }
 
 /** Data success is reported only after its transaction, never for a proposed patch. */
@@ -209,10 +243,6 @@ export async function carryOut(
   control?: RequestControl,
 ): Promise<RequestOutcome> {
   const stopped = (): RequestOutcome => ({ message: t("request.stopped") });
-  // A refusal the server made itself (under 500) started nothing, unlike a lost reply: after
-  // Cancel it confirms the stop, and otherwise its own words say why.
-  const refusal = (error: unknown): error is HostError =>
-    error instanceof HostError && error.status !== undefined && error.status < 500;
   const reviewed = (outcome: RequestOutcome): RequestOutcome =>
     control?.stopped && outcome.dataOffer
       ? {
@@ -227,7 +257,7 @@ export async function carryOut(
     controlToken = control ? await control.wait(control.start()) : undefined;
   } catch (error) {
     if (control?.stopped) return stopped();
-    if (refusal(error)) throw error;
+    if (isRefusal(error)) throw error;
     // Generation is never sent without a registered control.
     return { message: t("request.failedPlain") };
   }
@@ -242,7 +272,7 @@ export async function carryOut(
     );
   } catch (error) {
     if (!control) throw error;
-    if (refusal(error)) {
+    if (isRefusal(error)) {
       if (control.stopped) return stopped();
       throw error;
     }
@@ -295,7 +325,7 @@ export async function carryOut(
                 }),
               );
             } catch (error) {
-              if (refusal(error))
+              if (isRefusal(error))
                 return {
                   ...(control?.stopped
                     ? withInterfaceOutcome(interfaceMessage, stopped())
@@ -332,7 +362,7 @@ export async function carryOut(
                 }),
               );
             } catch (error) {
-              if (refusal(error)) {
+              if (isRefusal(error)) {
                 if (control?.stopped) return stopped();
                 throw error;
               }

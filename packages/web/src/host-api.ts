@@ -21,6 +21,11 @@ export class HostError extends Error {
   }
 }
 
+/** A refusal the server made itself (under 500): unlike a lost reply or a server error, it started
+ * nothing, so it can be said for certain. */
+export const isRefusal = (error: unknown): error is HostError =>
+  error instanceof HostError && error.status !== undefined && error.status < 500;
+
 /** Sends a request and gives back the response; `fetch` by default, a test's own otherwise. */
 export type Send = (url: string, init: RequestInit) => Promise<Response>;
 
