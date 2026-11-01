@@ -366,6 +366,13 @@ describe("GEN-08: the choice on reviewed entries", () => {
     expect(result.message).toBe(en["request.mixedUnknown"].replace("{interfaceMessage}", made));
     expect(result.reloadData).toBe(true);
   });
+  it("a reply lost on the way stays uncertain, and the entries are reloaded", async () => {
+    const lost = () => Promise.reject(new TypeError("Failed to fetch"));
+    expect(await confirmDataChoice(token, true, undefined, undefined, lost)).toEqual({
+      message: en["request.dataUnknown"],
+      reloadData: true,
+    });
+  });
   it("DATA-02: the person's own Cancel is reported once the server says so", async () => {
     const result = await confirmDataChoice(
       token,
