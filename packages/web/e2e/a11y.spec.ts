@@ -118,6 +118,9 @@ async function opened(page: Page, name: string) {
 test("APP-11: the main screen, full screen and a restore that loses data have no violations, and nothing moves", async ({
   page,
 }) => {
+  // Three full axe scans, each with its own pages: about 36 s on a loaded machine, past the 30 s
+  // default (#210). Nothing here is about speed, so it gets room for that.
+  test.setTimeout(90_000);
   await opened(page, "Shopping list");
   await check(page);
   await page.getByRole("button", { name: en["tool.fullScreen"] }).click();

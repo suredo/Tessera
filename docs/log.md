@@ -2,6 +2,8 @@
 
 ## 2026-11-01
 
+* **Update**: The main-screen accessibility test gets 90 s, like the keyboard test: its three axe scans needed about 36 s on a loaded machine, past the 30 s default ([issue 210](https://github.com/suredo/Tessera/issues/210)). No doc named its limit. Recorded by `claude-code/claude-opus-5-5` at 2026-11-01T18:11:15Z.
+
 * **Update**: The [browser](code/web/package.md) doc says two browser tests are quarantined (`ENG-20`): the queued-cancel test, whose page stops responding under load ([issue 206](https://github.com/suredo/Tessera/issues/206)), and the first-run accessibility test, whose page took 27 s to open in Edge on CI ([issue 208](https://github.com/suredo/Tessera/issues/208)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-01T17:51:46Z.
 
 ## 2026-10-31
