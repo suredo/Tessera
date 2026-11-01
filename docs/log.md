@@ -2,6 +2,8 @@
 
 ## 2026-10-31
 
+* **Update**: The status screen's probe browser test allows each probe answer 30 s, because the fake CLI it starts takes 3-4 s instead of 0.3 s on a busy machine ([#205](https://github.com/suredo/Tessera/issues/205), `ENG-20`). Its checks are unchanged. Recorded by `claude-code/claude-opus-5-5` at 2026-11-01T01:20:02Z.
+
 * **Update**: Raised Zod from 4.6.5 to 4.6.6 (contracts, server, evals; memory exhaustion on oversized constrained collections) and Vite from 8.3.1 to 8.3.3 (development server only; launch-editor and file-serving fixes), clearing the open Dependabot alerts. No docs named these versions. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T22:47:37Z.
 
 * **Update**: The [browser](code/web/package.md) says a stopped request's outcome at once, instead of after the bounded list refresh, and removes Cancel then. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T21:53:29Z.

@@ -120,6 +120,9 @@ test.afterAll(async () => {
 const probesMade = () => (fs.existsSync(calls) ? fs.readdirSync(calls).length : 0);
 const status = (page: Page) => page.getByRole("region", { name: en["setup.heading"] });
 const probeButton = (page: Page) => page.getByRole("button", { name: en["setup.probe.run"] });
+// Each probe starts the fake CLI as a real process: about 0.3 s idle, but 3-4 s with every core
+// busy, which the default 5 s wait for its answer then measures instead of the probe (#205).
+const PROBE_ANSWER = { timeout: 30_000 };
 
 async function violations(page: Page): Promise<string[]> {
   const { violations: found } = await new AxeBuilder({ page })
@@ -197,6 +200,7 @@ test("PLAT-03: the main screen says what is wrong and reaches the status screen;
 test("CLI-02: the probe says it costs a call, runs only when asked, and says how it went in plain words", async ({
   page,
 }) => {
+  test.setTimeout(90_000); // Two probe answers, each allowed PROBE_ANSWER.
   state = "ready";
   await page.goto(app.url);
   await page.getByRole("button", { name: en["nav.status"] }).click();
@@ -205,12 +209,12 @@ test("CLI-02: the probe says it costs a call, runs only when asked, and says how
   await probeButton(page).click();
   await expect(
     status(page).getByText("The model answered in 1.2 seconds (claude-haiku-5-5)."),
-  ).toBeVisible();
+  ).toBeVisible(PROBE_ANSWER);
   expect(probesMade()).toBe(1);
   await probeButton(page).click();
   await expect(
     status(page).getByText(`The probe didn't work. ${FAILURE_MESSAGES.sign_in}`),
-  ).toBeVisible();
+  ).toBeVisible(PROBE_ANSWER);
   expect(probesMade()).toBe(2);
 });
 
