@@ -10,8 +10,7 @@ import { checkSetup, runProbe } from "./setup.ts";
 import { SetupNotice, Status } from "./Status.tsx";
 import {
   carryOut,
-  askToConfirmData,
-  dataOutcome,
+  confirmDataChoice,
   withInterfaceOutcome,
   type RequestOutcome,
 } from "./generate.ts";
@@ -367,36 +366,20 @@ export function App() {
     setRequesting(true);
     setStopping(false);
     setCancelProblem("");
-    const token = dataOffer.token;
-    const interfaceMessage = dataOffer.interfaceMessage;
+    const { token, interfaceMessage } = dataOffer;
     setDataOffer(undefined);
     try {
-      const pending = askToConfirmData({ token, approve });
-      const reply = await (owner ? owner.wait(pending) : pending);
-      const outcome = withInterfaceOutcome(
-        interfaceMessage,
-        dataOutcome(reply),
-        reply.kind === "failed" ? reply.message : undefined,
-      );
+      const outcome = await confirmDataChoice(token, approve, interfaceMessage, owner ?? undefined);
       await (owner ? owner.wait(refresh()) : refresh()).catch(report);
       if (outcome.openWorkspaceId) {
         open(outcome.openWorkspaceId);
         setView("workspaces");
       }
-      if (outcome.dataChanged) {
+      if (outcome.dataChanged || outcome.reloadData) {
         setReloads((n) => n + 1);
         setToolChanges((n) => n + 1);
       }
       setNotice(outcome.message);
-    } catch {
-      await (owner ? owner.wait(refresh()) : refresh()).catch(report);
-      setReloads((n) => n + 1);
-      setToolChanges((n) => n + 1);
-      setNotice(
-        interfaceMessage
-          ? t("request.mixedUnknown", { interfaceMessage })
-          : t("request.dataUnknown"),
-      );
     } finally {
       setRequesting(false);
     }

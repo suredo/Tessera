@@ -1,7 +1,7 @@
-import { expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { GenerateReply } from "@tessera/contracts";
 import { RequestControl } from "../src/request-control.ts";
-import { carryOut, type RequestDeps } from "../src/generate.ts";
+import { carryOut, confirmDataChoice, type RequestDeps } from "../src/generate.ts";
 import { HostError } from "../src/host-api.ts";
 import { en } from "../src/i18n/en.ts";
 
@@ -323,4 +323,64 @@ it("CLI-06 GEN-08: an unreachable cancellation endpoint aborts staging locally b
   await owner.start();
   await expect(owner.cancel()).rejects.toThrow("Offline");
   expect(owner.stopped).toBe(true);
+});
+
+describe("GEN-08: the choice on reviewed entries", () => {
+  const made = "Made it dark.";
+  const replying = (response: () => Response, before?: () => Promise<unknown>) => async () => {
+    await before?.();
+    return response();
+  };
+  const refused = () =>
+    new Response("Choose whether to apply the proposed changes.", { status: 400 });
+  it("GEN-12: a refusal without Cancel gives the server's own words, and nothing to reload", async () => {
+    expect(await confirmDataChoice(token, true, undefined, undefined, replying(refused))).toEqual({
+      message: "Choose whether to apply the proposed changes.",
+    });
+  });
+  it("GEN-04: a refusal without Cancel keeps the applied interface and the server's reason", async () => {
+    const result = await confirmDataChoice(token, true, made, undefined, replying(refused));
+    expect(result.message).toContain(made);
+    expect(result.message).toContain("Choose whether to apply the proposed changes.");
+    expect(result.reloadData).toBeUndefined();
+  });
+  it("CLI-06: a refusal after Cancel keeps the applied interface and says it stopped", async () => {
+    const { owner } = control();
+    const result = await confirmDataChoice(
+      token,
+      true,
+      made,
+      owner,
+      replying(refused, () => owner.cancel()),
+    );
+    expect(result).toEqual({ message: `${made} ${en["request.stopped"]}` });
+  });
+  it("a server error stays uncertain, and the entries are reloaded", async () => {
+    const result = await confirmDataChoice(
+      token,
+      true,
+      made,
+      undefined,
+      replying(() => new Response("", { status: 500 })),
+    );
+    expect(result.message).toBe(en["request.mixedUnknown"].replace("{interfaceMessage}", made));
+    expect(result.reloadData).toBe(true);
+  });
+  it("a reply lost on the way stays uncertain, and the entries are reloaded", async () => {
+    const lost = () => Promise.reject(new TypeError("Failed to fetch"));
+    expect(await confirmDataChoice(token, true, undefined, undefined, lost)).toEqual({
+      message: en["request.dataUnknown"],
+      reloadData: true,
+    });
+  });
+  it("DATA-02: the person's own Cancel is reported once the server says so", async () => {
+    const result = await confirmDataChoice(
+      token,
+      false,
+      undefined,
+      undefined,
+      replying(() => Response.json({ kind: "answer", answer: "data_cancelled" })),
+    );
+    expect(result.message).toBe(en["request.dataCancelled"]);
+  });
 });
