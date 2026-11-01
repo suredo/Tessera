@@ -8,6 +8,7 @@ import {
   listWorkspaces,
 } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
+import { WATCHDOG_DEFAULTS } from "../../runtime/src/host.ts";
 import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
 
 // The host app is accessible (APP-11): an automated checker (axe) finds no WCAG 2.2 A or AA
@@ -16,6 +17,14 @@ import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-h
 // 1280 px (TEST-06), against a real Tessera of its own on a temporary data folder (ENG-19), which
 // starts empty and is then filled with the sample workspaces. A tool's own frame is left out: a
 // tool meets the accessibility floor the runtime gives it (RUN-05, VER-06).
+
+// Nothing here is about speed. Each test runs full axe scans, about 1 s idle but 4-5 s each on a
+// loaded machine, and the keyboard test presses Tab dozens of times, each a round trip to the
+// browser: with the full browser suite running, they pass the 30 s default (#210, #211).
+test.describe.configure({ timeout: 90_000 });
+// The runtime gives a starting tool this long to answer before it stops it, so a test waits as
+// long for its heading; on a loaded machine a start takes more than the 5 s default (#211).
+const TOOL_START = { timeout: WATCHDOG_DEFAULTS.startupMs };
 
 let app: AppHost;
 test.beforeAll(async () => {
@@ -110,7 +119,7 @@ async function opened(page: Page, name: string) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(app.url);
   await workspaceButton(page, name).click();
-  await expect(toolHeading(page)).toHaveText(name);
+  await expect(toolHeading(page)).toHaveText(name, TOOL_START);
 }
 
 test("APP-11: the main screen, full screen and a restore that loses data have no violations, and nothing moves", async ({
@@ -189,10 +198,6 @@ test("APP-11: the trash and emptying it have no violations, and nothing moves", 
 });
 
 test("APP-11: the app works by keyboard alone, with the focus always visible", async ({ page }) => {
-  // It presses Tab through the whole page, dozens of times, each a round trip to the browser: about
-  // 12 s alone, and past the 30 s default while the full browser suite runs. Nothing here is
-  // about speed, so it gets room for that.
-  test.setTimeout(90_000);
   seeded();
   await page.goto(app.url);
   await expect(workspaceButton(page, "Garden notes")).toBeVisible();
@@ -200,7 +205,7 @@ test("APP-11: the app works by keyboard alone, with the focus always visible", a
   // Open a workspace: Tab to it, Enter.
   await tabTo(page, workspaceButton(page, "Garden notes"));
   await page.keyboard.press("Enter");
-  await expect(toolHeading(page)).toHaveText("Garden notes");
+  await expect(toolHeading(page)).toHaveText("Garden notes", TOOL_START);
 
   // Minimize and show the tool again: Tab to each, Enter, then Space.
   await tabTo(page, page.getByRole("button", { name: en["tool.minimize"] }));
@@ -208,7 +213,7 @@ test("APP-11: the app works by keyboard alone, with the focus always visible", a
   await expect(page.getByText("Garden notes is minimized.")).toBeVisible();
   await tabTo(page, page.getByRole("button", { name: en["tool.restore"] }), "Shift+Tab");
   await page.keyboard.press("Space");
-  await expect(toolHeading(page)).toHaveText("Garden notes");
+  await expect(toolHeading(page)).toHaveText("Garden notes", TOOL_START);
 
   // A form: Tab to Rename, Enter; its field has the focus; type and Enter saves.
   await tabTo(page, page.getByRole("button", { name: "Rename Garden notes" }), "Shift+Tab");
@@ -221,7 +226,7 @@ test("APP-11: the app works by keyboard alone, with the focus always visible", a
 
   // A confirmation: Tab to Restore, Enter; Tab on to its Cancel, Enter closes it.
   await workspaceButton(page, "Shopping list").click();
-  await expect(toolHeading(page)).toHaveText("Shopping list");
+  await expect(toolHeading(page)).toHaveText("Shopping list", TOOL_START);
   await tabTo(page, page.getByRole("button", { name: "Restore version 1" }));
   await page.keyboard.press("Enter");
   const confirm = page.getByRole("group", { name: "Restore version 1?" });

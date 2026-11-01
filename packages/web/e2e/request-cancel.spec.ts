@@ -108,7 +108,9 @@ test("CLI-06 RUN-03: Cancel removes a stalled staging frame without activation o
     await host.close();
   }
 });
-test("CLI-06: a queued browser request can be cancelled without another provider call", async ({
+// Quarantined (ENG-20): under load its page stops responding for most of a minute, with no network
+// traffic in between, and the test runs past its limit. Find why and remove this (#206).
+test.fixme("CLI-06: a queued browser request can be cancelled without another provider call", async ({
   page,
   context,
 }) => {

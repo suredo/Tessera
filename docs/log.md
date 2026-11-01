@@ -1,5 +1,13 @@
 # Documentation log
 
+## 2026-11-01
+
+* **Update**: The [browser](code/web/package.md) doc says Edge opens its first page once before any test, as the first Edge tests on CI sometimes waited about 27 s for it ([issue 208](https://github.com/suredo/Tessera/issues/208)); the first-run accessibility test, quarantined for that, is back. The accessibility tests get 90 s each and wait for a tool to start as long as the runtime does ([issue 211](https://github.com/suredo/Tessera/issues/211)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-01T19:43:06Z.
+
+* **Update**: The main-screen accessibility test gets 90 s, like the keyboard test: its three axe scans needed about 36 s on a loaded machine, past the 30 s default ([issue 210](https://github.com/suredo/Tessera/issues/210)). No doc named its limit. Recorded by `claude-code/claude-opus-5-5` at 2026-11-01T18:11:15Z.
+
+* **Update**: The [browser](code/web/package.md) doc says two browser tests are quarantined (`ENG-20`): the queued-cancel test, whose page stops responding under load ([issue 206](https://github.com/suredo/Tessera/issues/206)), and the first-run accessibility test, whose page took 27 s to open in Edge on CI ([issue 208](https://github.com/suredo/Tessera/issues/208)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-01T17:51:46Z.
+
 ## 2026-10-31
 
 * **Update**: Raised Zod from 4.6.5 to 4.6.6 (contracts, server, evals; memory exhaustion on oversized constrained collections) and Vite from 8.3.1 to 8.3.3 (development server only; launch-editor and file-serving fixes), clearing the open Dependabot alerts. No docs named these versions. Recorded by `claude-code/claude-opus-5-5` at 2026-10-31T22:47:37Z.

@@ -16,7 +16,7 @@ const browsers = { chrome: "chrome", edge: "msedge" };
 export default defineConfig({
   testDir: "packages/web/e2e",
   outputDir: runFolder,
-  globalSetup: "./packages/web/e2e/prune-runs.ts",
+  globalSetup: ["./packages/web/e2e/prune-runs.ts", "./packages/web/e2e/warm-edge.ts"],
   reporter: [["list"]],
   use: {
     baseURL: "http://127.0.0.1:4173",
