@@ -7,7 +7,7 @@ import type {
   WorkspaceVersion,
 } from "@tessera/contracts";
 import { useEffect, useState } from "react";
-import { ask } from "./host-api.ts";
+import { ask, problemText } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 
 // The open workspace's history (APP-05): its tool versions, newest first, with restore; undo of
@@ -92,10 +92,7 @@ export function History({ workspace, changes, onChanged }: Props) {
     };
   }, [id, workspace.currentVersion, workspace.dataRevision, changes]);
 
-  const problem = (error: unknown) =>
-    setMessage(
-      t("app.problem", { message: error instanceof Error ? error.message : String(error) }),
-    );
+  const problem = (error: unknown) => setMessage(t("app.problem", { message: problemText(error) }));
   // The data revision now: the tool may have changed the data since the list was loaded.
   const revisionNow = async () => {
     const { workspaces } = await ask("workspaces.list", {});

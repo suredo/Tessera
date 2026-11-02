@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { ask, HostError, type Send } from "../src/host-api.ts";
+import { ask, HostError, problemText, type Send } from "../src/host-api.ts";
 
 // A stand-in translator that marks its text, so only words taken from the translation layer pass.
 vi.mock("../src/i18n/translate.ts", () => ({ t: (key: string) => `[${key}]` }));
@@ -32,4 +32,17 @@ it("passes on the server's own plain refusal", async () => {
   await expect(ask("workspaces.list", {}, answering(reply))).rejects.toThrow(
     "That workspace is gone.",
   );
+});
+
+describe("GEN-12: a failed request is told in plain words, never the browser's own (#217)", () => {
+  it("no answer at all, as fetch reports it, says Tessera didn't answer", () => {
+    expect(problemText(new TypeError("Failed to fetch"))).toBe("[app.unreachable]");
+  });
+
+  it("the server's or the app's own words are kept", () => {
+    expect(problemText(new HostError("That workspace is gone.", 404))).toBe(
+      "That workspace is gone.",
+    );
+    expect(problemText(new Error("The restore was refused."))).toBe("The restore was refused.");
+  });
 });

@@ -2,6 +2,8 @@
 
 ## 2026-11-02
 
+* **Update**: The [browser](code/web/package.md) says a failed request in plain words, never the browser's own "Failed to fetch", and if the first load of the lists fails, it says so and offers Try again instead of a dead end ([issue 217](https://github.com/suredo/Tessera/issues/217)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T03:53:45Z.
+
 * **Update**: The queued-cancel browser test is back from quarantine. It brings each of its two pages to the front before using it: on a loaded machine the page left behind answered each step in 40 s or more, against about 1 s in front ([issue 206](https://github.com/suredo/Tessera/issues/206)). [Testing](practices/testing.md) adds this to `ENG-14`, and the [browser](code/web/package.md) doc no longer lists the test as quarantined. Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T00:55:49Z.
 
 ## 2026-11-01
