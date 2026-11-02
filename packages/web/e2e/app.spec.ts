@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { saveTool } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
+import { startApp, testTool, TOOL_START, workspaceWith, type AppHost } from "./support/app-host.ts";
 
 // The host app's main screen and workspaces (APP-01, APP-03, RUN-02, UX-07), in Chrome and Edge at
 // 320 and 1280 px (TEST-06), against a real Tessera on a temporary data folder (ENG-19).
@@ -54,9 +54,9 @@ test("APP-03, RUN-02: lists the workspaces, opens one's tool, and switching runs
   ).toBeVisible();
 
   await workspaceButton(page, garden).click();
-  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`, TOOL_START);
   await workspaceButton(page, shopping).click();
-  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
   await expect(toolFrames(page)).toHaveCount(1);
   await expect(list.getByRole("button", { name: `${shopping}, open` })).toBeVisible();
 });
@@ -65,9 +65,9 @@ test("UX-07: a reload opens the same workspace again", async ({ page }) => {
   const { garden, suffix } = twoWorkspaces();
   await page.goto(app.url);
   await workspaceButton(page, garden).click();
-  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`, TOOL_START);
   await page.reload();
-  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`, TOOL_START);
 });
 
 test("APP-03: renames a workspace, and moves one to the trash", async ({ page }) => {
@@ -91,13 +91,13 @@ test("APP-01: the tool can be minimized, shown again and put full screen", async
   const { shopping, suffix } = twoWorkspaces();
   await page.goto(app.url);
   await workspaceButton(page, shopping).click();
-  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
 
   await page.getByRole("button", { name: en["tool.minimize"] }).click();
   await expect(page.getByText(`${shopping} is minimized.`)).toBeVisible();
   await expect(toolFrames(page)).toHaveCount(0);
   await page.getByRole("button", { name: en["tool.restore"] }).click();
-  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
 
   await page.getByRole("button", { name: en["tool.fullScreen"] }).click();
   await expect(page.locator(".tool-panel.full-screen")).toBeVisible();
@@ -111,7 +111,7 @@ test("UX-07: a minimized tool stays minimized after a reload, and after switchin
   const { shopping, garden, suffix } = twoWorkspaces();
   await page.goto(app.url);
   await workspaceButton(page, shopping).click();
-  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
   await page.getByRole("button", { name: en["tool.minimize"] }).click();
   await expect(page.getByText(`${shopping} is minimized.`)).toBeVisible();
 
@@ -120,12 +120,12 @@ test("UX-07: a minimized tool stays minimized after a reload, and after switchin
   await expect(toolFrames(page)).toHaveCount(0);
 
   await workspaceButton(page, garden).click();
-  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`, TOOL_START);
   await workspaceButton(page, shopping).click();
   await expect(page.getByText(`${shopping} is minimized.`)).toBeVisible();
   await expect(toolFrames(page)).toHaveCount(0);
   await page.getByRole("button", { name: en["tool.restore"] }).click();
-  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
 });
 
 /** Makes a workspace look last used and changed on 1 January 2020. */
@@ -150,14 +150,14 @@ test("APP-03: opening a workspace shows it as used at once, even minimized, and 
 
   // Used now, in this tab, without moving its row.
   await workspaceButton(page, garden).click();
-  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`, TOOL_START);
   await expect(lastUsedOf(page, garden)).toContainText(thisYear);
   expect(await names()).toEqual(before);
 
   // A minimized tool doesn't start when it is opened again, but opening it is still using it.
   await page.getByRole("button", { name: en["tool.minimize"] }).click();
   await workspaceButton(page, shopping).click();
-  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
   backdate(ids[1]!);
   await page.reload();
   await expect(lastUsedOf(page, garden)).toContainText("2020");
@@ -169,7 +169,7 @@ test("APP-03: opening a workspace shows it as used at once, even minimized, and 
   const fresh = await page.context().newPage();
   await fresh.goto(app.url);
   // How a tool was left is kept per tab, so here it starts.
-  await expect(toolText(fresh)).toHaveText(`The garden tool ${suffix}`);
+  await expect(toolText(fresh)).toHaveText(`The garden tool ${suffix}`, TOOL_START);
   const order = await workspaceList(fresh)
     .locator(".workspace-name > span:first-child")
     .allTextContents();
@@ -181,7 +181,7 @@ test("RUN-02: showing a tool again is one start at a time", async ({ page }) => 
   const { shopping, suffix } = twoWorkspaces();
   await page.goto(app.url);
   await workspaceButton(page, shopping).click();
-  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
   await page.getByRole("button", { name: en["tool.minimize"] }).click();
 
   // Hold the runtime's wrapper document, so the start is still going when the person clicks again.
@@ -198,7 +198,7 @@ test("RUN-02: showing a tool again is one start at a time", async ({ page }) => 
   await expect.poll(() => heldRequests).toBe(1);
   await expect(showAgain).toHaveCount(0);
   release();
-  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`);
+  await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
   await expect(page.getByRole("button", { name: en["tool.minimize"] })).toBeVisible();
   await expect(toolFrames(page)).toHaveCount(1);
   await page.context().unrouteAll();

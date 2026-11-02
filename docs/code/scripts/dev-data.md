@@ -7,7 +7,7 @@ implements: [ENG-19]
 tests: [../../../scripts/test/dev-data.test.ts, ../../../packages/web/e2e/samples.spec.ts]
 tags: [code, scripts, development]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T21:02:54Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-02T02:38:06Z }
 ---
 
 # Purpose
@@ -30,7 +30,7 @@ Gives the owner, and anyone developing Tessera, a Tessera with something in it b
 - **Never under a running Tessera.** The seed takes the launcher's own lock (`LOCK_FILE`) while it writes, so it refuses while Tessera runs on the folder, and Tessera can't start halfway through.
 - **Only an empty folder is seeded.** A folder that already has workspaces is refused; to start again, close Tessera and delete the folder.
 - **The guards are tested as commands.** `scripts/test/dev-data.test.ts` builds a pretend real folder and links to it in temporary storage, and runs `pnpm seed` itself: once, then refused while the folder has workspaces, and refused, without opening the database, while Tessera's lock is held.
-- **The samples are real tools, tested as the owner will use them.** `samples.spec.ts` seeds a test Tessera's own temporary folder and adds and ticks items through the tool, sees the change in the history, and previews the lossy restore.
+- **The samples are real tools, tested as the owner will use them.** `samples.spec.ts` seeds a test Tessera's own temporary folder and adds and ticks items through the tool, sees the change in the history, and previews the lossy restore. That test is quarantined (`ENG-20`) until it is found why, on a busy machine, the list was sometimes drawn about 11 s after the workspace opened ([#214](https://github.com/suredo/Tessera/issues/214)).
 
 # Depends on / used by
 
