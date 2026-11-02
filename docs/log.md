@@ -2,6 +2,8 @@
 
 ## 2026-11-02
 
+* **Update**: The [runtime](code/runtime/package.md)'s smoke check (`VER-02`) watches a tool for 2 seconds after the tool's own code ran, not 2 seconds from the page's start. On a slow machine the page load used up that window, and a quiet tool that threw half a second in could pass ([issue 214](https://github.com/suredo/Tessera/issues/214)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T02:37:17Z.
+
 * **Update**: The queued-cancel browser test is back from quarantine. It brings each of its two pages to the front before using it: on a loaded machine the page left behind answered each step in 40 s or more, against about 1 s in front ([issue 206](https://github.com/suredo/Tessera/issues/206)). [Testing](practices/testing.md) adds this to `ENG-14`, and the [browser](code/web/package.md) doc no longer lists the test as quarantined. Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T00:55:49Z.
 
 ## 2026-11-01
