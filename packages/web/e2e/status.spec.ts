@@ -137,6 +137,9 @@ async function violations(page: Page): Promise<string[]> {
 test("PLAT-03: on the first screen, each Claude Code problem is explained with its fix, and the status screen says the same", async ({
   page,
 }) => {
+  // Not about speed: five full axe scans, about 1 s each idle but 4-5 s on a busy machine, with a
+  // page load for each, pass the 30 s default (#210, #214).
+  test.setTimeout(90_000);
   for (const problem of ["missing", "batch-file", "old", "signed-out", "broken"]) {
     state = problem;
     const expected = await STATES[problem]!();

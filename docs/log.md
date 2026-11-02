@@ -2,6 +2,8 @@
 
 ## 2026-11-02
 
+* **Update**: The [browser](code/web/package.md) doc says a test waits for a tool it starts as long as the runtime gives it, 10 s, now set once in the test host, in the workspace and sample tests as in the accessibility tests. The status screen's first-screen test, with five axe scans, gets 90 s. On a busy machine these ran past the 5 s and 30 s defaults ([issue 214](https://github.com/suredo/Tessera/issues/214)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T02:09:13Z.
+
 * **Update**: The queued-cancel browser test is back from quarantine. It brings each of its two pages to the front before using it: on a loaded machine the page left behind answered each step in 40 s or more, against about 1 s in front ([issue 206](https://github.com/suredo/Tessera/issues/206)). [Testing](practices/testing.md) adds this to `ENG-14`, and the [browser](code/web/package.md) doc no longer lists the test as quarantined. Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T00:55:49Z.
 
 ## 2026-11-01

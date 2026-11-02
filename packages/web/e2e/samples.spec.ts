@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { seedSamples } from "../../../scripts/seed.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, TOOL_START, type AppHost } from "./support/app-host.ts";
 
 // The sample workspaces `pnpm seed` makes (ENG-19) work as the owner will try them: a tool that
 // saves its data, a history with a lossy restore to preview, a saved tool, the trash and a
@@ -27,7 +27,7 @@ test("ENG-19, APP-05, DATA-04: the sample shopping list saves what the person ad
   await page.goto(app.url);
   await openWorkspace(page, "Shopping list");
   const items = tool(page).getByRole("listitem");
-  await expect(items).toHaveText([/Milk/, /Bread/, /Eggs/]);
+  await expect(items).toHaveText([/Milk/, /Bread/, /Eggs/], TOOL_START);
   await expect(tool(page).getByRole("checkbox", { name: "Milk" })).toBeChecked();
 
   await tool(page).getByLabel("Item").fill("Apples");
