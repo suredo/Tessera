@@ -84,7 +84,7 @@ export function History({ workspace, changes, onChanged }: Props) {
         setSnapshots(kept.snapshots);
       },
       (error: unknown) => {
-        if (current) setMessage(error instanceof Error ? error.message : String(error));
+        if (current) setMessage(problemText(error));
       },
     );
     return () => {
