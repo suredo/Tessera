@@ -92,9 +92,12 @@ const HOST_CHECKS = `
   },
   // SBX-13: device and powerful features. A refusal must come back: "no answer" could mean a
   // permission prompt is waiting for the person. Asking for devices can take seconds to be refused
-  // on a busy machine, so each gets ten.
+  // on a busy machine, so each gets ten. The camera and microphone get thirty: the browser touches
+  // the devices before it refuses, which took 1.5-4 s on an idle machine and up to 6.5 s under load,
+  // and past ten with more load or another program using the camera (#214).
   async devices() {
     const slow = (promise) => within(promise, 10000);
+    const slowDevices = (promise) => within(promise, 30000);
     const geolocation = () => new Promise((done) =>
       navigator.geolocation.getCurrentPosition(() => done("granted"), () => done("refused")));
     const pointerLock = () => new Promise((done) => {
@@ -106,7 +109,7 @@ const HOST_CHECKS = `
     return {
       geolocation: await attempt(() => slow(geolocation())),
       "camera and microphone": await attempt(() =>
-        slow(settled(navigator.mediaDevices.getUserMedia({ video: true, audio: true })))),
+        slowDevices(settled(navigator.mediaDevices.getUserMedia({ video: true, audio: true })))),
       "clipboard read": await attempt(() => slow(settled(navigator.clipboard.readText()))),
       fullscreen: await attempt(() => slow(settled(document.documentElement.requestFullscreen()))),
       "pointer lock": await attempt(() => slow(pointerLock())),

@@ -2,6 +2,8 @@
 
 ## 2026-11-02
 
+* **Update**: The [runtime](code/runtime/package.md) doc says the device boundary test (`SBX-13`) waits up to 30 s for the camera and microphone to be refused. The browser refused them every time, but only after touching the devices: 1.5-4 s on an idle machine, up to 6.5 s under load, and past the old 10 s with more load ([issue 214](https://github.com/suredo/Tessera/issues/214)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T04:33:23Z.
+
 * **Update**: The [browser](code/web/package.md) says a failed request in plain words, never the browser's own "Failed to fetch", and if the first load of the lists fails, it says so and offers Try again instead of a dead end ([issue 217](https://github.com/suredo/Tessera/issues/217)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T03:53:45Z.
 
 * **Update**: The [runtime](code/runtime/package.md)'s smoke check (`VER-02`) watches a tool for 2 seconds after the tool's own code ran, not 2 seconds from the page's start. On a slow machine the page load used up that window, and a quiet tool that threw half a second in could pass ([issue 214](https://github.com/suredo/Tessera/issues/214)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T02:37:17Z.
