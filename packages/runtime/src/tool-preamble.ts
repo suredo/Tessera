@@ -93,14 +93,22 @@ import type { BridgeMethodName } from "@tessera/contracts";
     note(`Something the tool tried was blocked (${event.effectiveDirective}).`);
   });
 
+  // When the tool's own code had run: its script ends the document, so by DOMContentLoaded it has,
+  // and any timer it set counts from about then. A slow page load comes before this, not after.
+  const codeRan = new Promise<number>((done) => {
+    if (document.readyState !== "loading") done(performance.now());
+    else addEventListener("DOMContentLoaded", () => done(performance.now()), { once: true });
+  });
+
   // The smoke check's question: once the tool's calls have settled (or 3 seconds have passed),
   // what it shows, whether it scrolls sideways, and the accessibility floor's basics.
   async function inspect(id: unknown) {
     const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
     for (let waited = 0; pending.size > 0 && waited < 3000; waited += 50) await wait(50);
-    // Watched for at least two seconds from the page's start, so an error a quiet tool makes a
-    // moment after starting is seen too.
-    await wait(Math.max(100, 2000 - performance.now()));
+    // Watched for at least two seconds after the tool's code ran, so an error a quiet tool makes a
+    // moment after starting is seen too, however long the page took to load (#214).
+    const ran = await codeRan;
+    await wait(Math.max(100, ran + 2000 - performance.now()));
     const body = document.body;
     const all = (selector: string) => (body ? [...body.querySelectorAll(selector)] : []);
     // Visible: rendered, not hidden by CSS visibility, and not fully transparent.

@@ -29,6 +29,13 @@ const tools: Record<string, Artifact["code"]> = {
     css: "",
     js: 'setTimeout(() => { throw new Error("half a second in"); }, 500);',
   },
+  // The same, but its code is busy for most of two seconds first, as when its page is slow to
+  // load: the error still comes half a second after its code ran (#214).
+  slowThrowsLater: {
+    html: "<p>Hi</p>",
+    css: "",
+    js: 'const until = performance.now() + 1800; while (performance.now() < until) {} setTimeout(() => { throw new Error("half a second after a slow start"); }, 500);',
+  },
   // Only a hidden drawing: nothing shows.
   hiddenMedia: { html: '<canvas hidden aria-label="Drawing"></canvas>', css: "", js: "" },
   // Only a drawing, hidden by CSS or fully transparent: nothing shows.
@@ -144,6 +151,12 @@ test("VER-02: an error a moment after a quiet tool starts is still seen", async 
   const result = await smoke(page, "throwsLater");
   expect(result).toMatchObject({ outcome: "check-failed", check: "smoke" });
   expect(result.reason).toContain("half a second in");
+});
+
+test("VER-02: that error is still seen when the tool's code runs late", async ({ page }) => {
+  const result = await smoke(page, "slowThrowsLater");
+  expect(result).toMatchObject({ outcome: "check-failed", check: "smoke" });
+  expect(result.reason).toContain("half a second after a slow start");
 });
 
 test("VER-02: hidden media shows nothing; a visible drawing does", async ({ page }) => {
