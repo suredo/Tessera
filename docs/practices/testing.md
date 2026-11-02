@@ -4,7 +4,7 @@ title: "Testing"
 description: "The five-layer test pyramid and test rules (ENG-11, ENG-13, ENG-14, ENG-17, ENG-20, ENG-31)."
 tags: [practices, testing]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-10-29T10:25:56Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-02T00:55:49Z }
 ---
 # Testing
 
@@ -22,7 +22,7 @@ The POC showed that offline tests can pass while live behavior fails (L-08). The
 | --- | --- |
 | ENG-11 | **Test configuration never travels in the user's words.** Scripted scenarios are chosen by a test header, a fixture file or provider configuration, never by markers inside the request text. (In the POC a marker containing "engine" changed what the product did.) |
 | ENG-13 | **Every live failure becomes a replay test.** When a live run finds a defect, export the inputs and outputs (`DATA-05`), add a replay test that fails before the fix, then fix. |
-| ENG-14 | **Fixed browser contexts.** Each Playwright test sets its viewport when the browser context is created; never resize a live page. Test on Chrome and Edge. Interact through stable hooks (`VER-03`), never by guessing at generated layouts. |
+| ENG-14 | **Fixed browser contexts.** Each Playwright test sets its viewport when the browser context is created; never resize a live page. Test on Chrome and Edge. Interact through stable hooks (`VER-03`), never by guessing at generated layouts. A test that opens a second page brings each page to the front (`bringToFront`) before using it, as a person would: on a loaded machine a page left behind another answered each step in 40 s or more, against about 1 s in front ([issue 206](https://github.com/suredo/Tessera/issues/206)). |
 | ENG-17 | **Traceability and stable IDs.** Tests name their requirement ID. CI lists every requirement and lesson, its milestone, proposed/implemented/verified status, evidence and remaining limits. Implementation and tests are read from code docs' `implements` and `tests` fields (`ENG-24`) and from test names. A test name is a coverage link, not proof of general correctness. Deferred work stays visible and excluded from current closure counts. IDs are never reused or renumbered; removed requirements stay retired. |
 | ENG-20 | **No flaky tests.** A test that fails intermittently is quarantined at once, with an issue, and fixed before the milestone closes. Tests are never retried until they pass. (The POC had a flaky viewport test whose cause was first misdiagnosed.) |
 | ENG-31 | **Targeted local checks; the full suite in CI.** Locally, before saying a change is done and when reviewing it, run the checks the change can affect, as set out in [targeted local checks](#targeted-local-checks). CI runs the full suite on every pull request and on `main` (`ENG-02`), nothing merges without it green (`ENG-09`), and closing a milestone is verified with the full suite. A full local run is allowed when it is justified, but it isn't the default. |

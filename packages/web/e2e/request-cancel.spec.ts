@@ -108,9 +108,7 @@ test("CLI-06 RUN-03: Cancel removes a stalled staging frame without activation o
     await host.close();
   }
 });
-// Quarantined (ENG-20): under load its page stops responding for most of a minute, with no network
-// traffic in between, and the test runs past its limit. Find why and remove this (#206).
-test.fixme("CLI-06: a queued browser request can be cancelled without another provider call", async ({
+test("CLI-06: a queued browser request can be cancelled without another provider call", async ({
   page,
   context,
 }) => {
@@ -131,7 +129,11 @@ test.fixme("CLI-06: a queued browser request can be cancelled without another pr
   };
   const host = await startApp(undefined, provider);
   const other = await context.newPage();
+  // A person uses the page in front of them. Opening a second page puts it in front, and a page left
+  // behind it, while this test kept using it, answered each step in 40 s or more on a loaded machine;
+  // in front, about 1 s (ENG-14, #206).
   try {
+    await page.bringToFront();
     await page.goto(host.url);
     await page.getByRole("textbox", { name: en["request.label"] }).fill("First list");
     await page.getByRole("button", { name: en["request.send"] }).click();
@@ -140,6 +142,7 @@ test.fixme("CLI-06: a queued browser request can be cancelled without another pr
     other.on("request", (request) => {
       if (new URL(request.url()).pathname === "/api/generate") generated = true;
     });
+    await other.bringToFront();
     await other.goto(host.url);
     await other.getByRole("textbox", { name: en["request.label"] }).fill("Second list");
     await other.getByRole("button", { name: en["request.send"] }).click();
@@ -147,6 +150,7 @@ test.fixme("CLI-06: a queued browser request can be cancelled without another pr
     await other.getByRole("button", { name: en["request.cancel"] }).click();
     await expect(other.getByText(/The request was stopped\./)).toBeVisible();
     expect(calls).toBe(1);
+    await page.bringToFront();
     await page.getByRole("button", { name: en["request.cancel"] }).click();
     await expect(page.getByText(/The request was stopped\./)).toBeVisible();
     expect(calls).toBe(1);
