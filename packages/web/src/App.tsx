@@ -1,7 +1,7 @@
 import type { SavedTool, SetupReport, Trash as TrashList, Workspace } from "@tessera/contracts";
 import { useEffect, useRef, useState } from "react";
 import { exportArchive, importArchive, saveFile } from "./archives.ts";
-import { ask, HostError } from "./host-api.ts";
+import { ask, HostError, problemText } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import { History } from "./History.tsx";
 import { ImportFile } from "./ImportFile.tsx";
@@ -160,7 +160,7 @@ export function App() {
 
   // Why the last check couldn't be made, such as the server not answering; "" when it was.
   const [setupProblem, setSetupProblem] = useState("");
-  const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+  const message = problemText;
   const [trash, setTrash] = useState<TrashList | null>(null);
   // Moved on after a restore or an undo, so the tool starts again with the changed data.
   const [reloads, setReloads] = useState(0);
@@ -180,10 +180,10 @@ export function App() {
     setSavedTools(library.savedTools);
     return ordered;
   };
-  const report = (error: unknown) =>
-    setNotice(
-      t("app.problem", { message: error instanceof Error ? error.message : String(error) }),
-    );
+  const report = (error: unknown) => setNotice(t("app.problem", { message: problemText(error) }));
+  // Why the first load of the lists failed, "" while none has; trying again moves `opening` on.
+  const [openProblem, setOpenProblem] = useState("");
+  const [opening, setOpening] = useState(0);
 
   // The setup check on start (PLAT-03); the status screen runs it again on request.
   useEffect(() => {
@@ -211,14 +211,15 @@ export function App() {
         const start = ordered.find((w) => w.id === remembered()) ?? ordered[0];
         setOpenId(start?.id ?? null);
       },
+      // Not a dead end: the person is told plainly and can try again (#217).
       (error: unknown) => {
-        if (current) report(error);
+        if (current) setOpenProblem(problemText(error));
       },
     );
     return () => {
       current = false;
     };
-  }, []);
+  }, [opening]);
 
   // Opening a workspace is using it (APP-03), whether the person picked it or it opened by
   // itself, and whether or not its tool starts: the server records it, and the list shows it.
@@ -386,6 +387,22 @@ export function App() {
   };
 
   if (workspaces === null) {
+    if (openProblem) {
+      return (
+        <main>
+          <p role="alert">{t("app.openFailed", { message: openProblem })}</p>
+          <button
+            type="button"
+            onClick={() => {
+              setOpenProblem("");
+              setOpening((n) => n + 1);
+            }}
+          >
+            {t("app.retry")}
+          </button>
+        </main>
+      );
+    }
     return (
       <main>
         <p role="status">{notice || t("app.loading")}</p>

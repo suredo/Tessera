@@ -26,6 +26,18 @@ export class HostError extends Error {
 export const isRefusal = (error: unknown): error is HostError =>
   error instanceof HostError && error.status !== undefined && error.status < 500;
 
+/**
+ * What to tell the person about a failed request: the server's or the app's own plain words, or,
+ * when no answer came at all (`fetch` rejects with a TypeError), that Tessera didn't answer. Never
+ * the browser's own wording, such as "Failed to fetch" (GEN-12, #217).
+ */
+export const problemText = (error: unknown): string =>
+  error instanceof TypeError
+    ? t("app.unreachable")
+    : error instanceof Error
+      ? error.message
+      : String(error);
+
 /** Sends a request and gives back the response; `fetch` by default, a test's own otherwise. */
 export type Send = (url: string, init: RequestInit) => Promise<Response>;
 
