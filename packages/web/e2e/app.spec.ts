@@ -213,3 +213,24 @@ test("RUN-06: the main screen doesn't scroll sideways", async ({ page }) => {
   );
   expect(overflow).toBeLessThanOrEqual(0);
 });
+
+test("GEN-12: a first load that gets no answer says so plainly and can be tried again", async ({
+  page,
+}) => {
+  const { shopping } = twoWorkspaces();
+  // The first request for the lists gets no answer, as when the network drops it (#217).
+  let dropped = false;
+  await page.route("**/api/host", (route) => {
+    if (dropped) return route.continue();
+    dropped = true;
+    return route.abort("failed");
+  });
+  await page.goto(app.url);
+  await expect(page.getByRole("alert")).toHaveText(
+    en["app.openFailed"].replace("{message}", en["app.unreachable"]),
+  );
+  await expect(page.getByText("Failed to fetch")).toHaveCount(0);
+  await page.getByRole("button", { name: en["app.retry"] }).click();
+  await expect(workspaceList(page)).toContainText(shopping);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
