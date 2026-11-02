@@ -229,3 +229,18 @@ test("DATA-04: a change the running tool saves can be undone at once, without le
   await add.click();
   await expect(history(page)).toContainText("One record changed");
 });
+
+test("GEN-12: a history that gets no answer says so plainly, never the browser's words", async ({
+  page,
+}) => {
+  const { name } = workspaceThrough(tool("Tool A"), tool("Tool B"));
+  // The history's request for the versions gets no answer, as when the network drops it (#217).
+  await page.route("**/api/host", (route) =>
+    route.request().postData()?.includes('"versions.list"')
+      ? route.abort("failed")
+      : route.continue(),
+  );
+  await openWorkspace(page, name);
+  await expect(history(page).getByRole("status")).toHaveText(en["app.unreachable"]);
+  await expect(page.getByText("Failed to fetch")).toHaveCount(0);
+});

@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts, ../../../packages/web/test/generate.test.ts, ../../../packages/web/e2e/request.spec.ts, ../../../packages/web/test/data-offer.test.tsx, ../../../packages/web/e2e/chat-data.spec.ts, ../../../packages/web/e2e/request-deadline.spec.ts, ../../../packages/web/test/request-cancel.test.ts, ../../../packages/web/e2e/request-cancel.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-02T00:55:49Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-02T03:53:45Z }
 ---
 
 # Purpose
@@ -57,6 +57,7 @@ The host app that runs in the browser. Vite builds it, and React 19 renders it w
 
 - **No host text in components** (`UX-05`). A component asks `t("key")` for every word it shows, including `aria-label`, `title`, `alt`, `placeholder`, `label`, and the `value` of a submit, button or reset input. The lint rule `tessera/no-host-text` (`scripts/eslint/no-host-text.mjs`) fails on text written in a component, also when it is reached through a condition, a fallback, a concatenation, a template or a list. It never looks inside a function call, so `t("key")` passes.
 - **Chrome and Edge are the supported browsers** (`RUN-06`): the browser tests run in both, and CI runs them. Firefox is best effort and isn't tested. Embedded browser panes that can't load nested sandboxed frames are unsupported; the Claude desktop app's built-in pane couldn't mount the POC's tools.
+- **A failed request is said in plain words, and opening can be tried again** (`GEN-12`, [#217](https://github.com/suredo/Tessera/issues/217)). `problemText` in `src/host-api.ts` keeps the server's or the app's own words, and turns a request that got no answer at all (`fetch` rejects with a `TypeError`) into "Tessera didn't answer", never the browser's own "Failed to fetch"; the app's notices and the history use it. If the first load of the workspace, library and trash lists fails, the app says so with that reason and offers Try again, which loads them again, instead of staying on the message.
 - **A missing key is visible, never silent.** The translator falls back to English for a key another language lacks; a key no language has shows as the key itself. Either way it reports the gap through its `onMissing` handler, which warns in the console by default.
 - **Exactly one tool runs** (`RUN-02`): the tool panel makes a runtime for the open workspace and closes it when another opens, and its frames go with it.
 - **The open workspace survives a reload** (`UX-07`): which one is open is kept in the tab's session storage, and the app opens it again, or the most recently used one if it is gone.
@@ -111,7 +112,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `src/Workspaces.tsx`: `Workspaces`
 - `src/archives.ts`: `exportArchive`, `importArchive`, `saveFile`
 - `src/generate.ts`: `askToGenerate`, `askToRepairSmoke`, `askToConfirmData`, `askToFinishData`, `RequestOutcome` (type), `withInterfaceOutcome`, `confirmDataChoice`, `dataOutcome`, `RequestDeps` (type), `carryOut`
-- `src/host-api.ts`: `HostError`, `isRefusal`, `Send` (type), `ask`
+- `src/host-api.ts`: `HostError`, `isRefusal`, `problemText`, `Send` (type), `ask`
 - `src/i18n/en.ts`: `en`, `MessageKey` (type)
 - `src/i18n/translate.ts`: `Messages` (type), `Params` (type), `Translate` (type), `MissingHandler` (type), `createTranslator`, `t`
 - `src/index.ts`: `App`, `EmptyState`, `checkSetup`, `formatBytes`, `runProbe`, `SetupNotice`, `Status`, `ask`, `HostError`, `Send` (type), `en`, `MessageKey` (type), `createTranslator`, `t`, `Messages` (type), `MissingHandler` (type), `Params` (type), `Translate` (type)
