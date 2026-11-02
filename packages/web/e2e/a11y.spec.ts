@@ -8,8 +8,7 @@ import {
   listWorkspaces,
 } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
-import { WATCHDOG_DEFAULTS } from "../../runtime/src/host.ts";
-import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
+import { startApp, testTool, TOOL_START, workspaceWith, type AppHost } from "./support/app-host.ts";
 
 // The host app is accessible (APP-11): an automated checker (axe) finds no WCAG 2.2 A or AA
 // violation on any of its screens, forms or confirmations, and the parts a checker can't judge are
@@ -22,9 +21,6 @@ import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-h
 // loaded machine, and the keyboard test presses Tab dozens of times, each a round trip to the
 // browser: with the full browser suite running, they pass the 30 s default (#210, #211).
 test.describe.configure({ timeout: 90_000 });
-// The runtime gives a starting tool this long to answer before it stops it, so a test waits as
-// long for its heading; on a loaded machine a start takes more than the 5 s default (#211).
-const TOOL_START = { timeout: WATCHDOG_DEFAULTS.startupMs };
 
 let app: AppHost;
 test.beforeAll(async () => {
