@@ -4,9 +4,9 @@ title: "M2: Generation pipeline"
 description: "The Claude Code adapter and generation pipeline, ending in the internal alpha."
 tags: [roadmap, generation-pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T10:34:33Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T21:35:26Z }
 ---
-# M2: Generation pipeline (size L, live budget about 35 calls) → internal alpha
+# M2: Generation pipeline (size L, live budget about 50 calls) → internal alpha
 
 **Goal:** everyday requests create and change tools reliably, with honest results and full visibility. At the end, you start using Tessera for real tasks (A35).
 
@@ -32,7 +32,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T10:34:33Z }
 | Replay tests from the POC's recorded failures, where exports exist | TEST-04 |
 | Scripted end-to-end tests in Playwright through the real pipeline, with canned replies chosen by test configuration, screenshots and video (moved from M0, which built their tooling: Playwright with video, the scripted provider, the harness) | TEST-03 |
 
-**Live evaluation (about 35 calls, `TEST-05`):** T1 about 10, T6 about 7, T13 about 7, the limits run about 5, probe and image check 2, repair reserve about 4.
+**Live evaluation (about 35 calls at first, raised to about 50 on 2026-11-05 for the [live run](../../evals/reports/2026-11-05-m2-live-run.md)'s 29-call cap, [budgets](budgets.md), `TEST-05`):** T1 about 10, T6 about 7, T13 about 7, the limits run about 5, probe and image check 2, repair reserve about 4.
 - One probe call plus a check that a sanitized screenshot reaches the model as an image input (CLI-08, A27).
 - The M2 scenario set from [the milestone scenario sets](../testing/milestone-sets.md): T1 shopping list, T6 calculator, T13 drawing board, and a short limits run (ambiguous, impossible, cancel). In M2, scenarios use only chat, reload, save, Continue, Use again, undo and the trash. Steps that drive a tool's own controls (`do`) need verification profiles and start in M3.
 

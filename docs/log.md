@@ -2,11 +2,12 @@
 
 ## 2026-11-05
 
+* **Update**: The [M2 live run](../evals/reports/2026-11-05-m2-live-run.md) happened, with the owner's approved 29-call cap: 23 calls, 10 of 12 requests at the first attempt (83%, the target 85%), 11 of 11 lifecycle steps, finding a saved tool by asking working and no data lost. A stale message after Continue keeps the no-false-message exit criterion open; four defects are listed for fixes. The recorded answers are in `evals/scenarios/replays/`. The [budgets](roadmap/budgets.md) show M2's envelope raised to about 50, with 44 used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:24:36Z.
 <<<<<<< HEAD
 * **Update**: After Cancel, a failed reply says the request stopped instead of "That didn't work. The request was stopped.", the wording the M2 live run found ([browser](code/web/package.md), `GEN-08`, `GEN-12`). The [Tessera issues](lessons/tessera-issues.md) record it as L-78. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:46:26Z.
 =======
-* **Update**: The [M2 live run](../evals/reports/2026-11-05-m2-live-run.md) happened, with the owner's approved 29-call cap: 23 calls, 10 of 12 requests at the first attempt (83%, the target 85%), 11 of 11 lifecycle steps, finding a saved tool by asking working and no data lost. A stale message after Continue keeps the no-false-message exit criterion open; four defects are listed for fixes. The recorded answers are in `evals/scenarios/replays/`. The [budgets](roadmap/budgets.md) show M2's envelope raised to about 50, with 44 used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:24:36Z.
->>>>>>> a468cd6 (docs: record the M2 live run's results, and keep its answers as replays (#155))
+* **Update**: The [M2 live run](../evals/reports/2026-11-05-m2-live-run.md) happened, with the owner's approved 29-call cap: 23 calls, 10 of 12 requests at the first attempt (83%, the target 85%), 11 of 11 lifecycle steps, finding a saved tool by asking working and no data lost. A stale message after Continue keeps the no-false-message exit criterion open; four defects are listed for fixes. The recorded answers are in `evals/scenarios/replays/`. The [scenario runner](code/evals/runner.md) replays every recorded live run in CI, step for step, through `replayScenario` (`EVAL-07`, `TEST-04`). The [budgets](roadmap/budgets.md) and the [M2 roadmap](roadmap/m2-generation-pipeline.md) show M2's envelope raised to about 50, with 44 used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:24:36Z.
+>>>>>>> 446e54d (test: replay every recorded live run in CI, step for step (#155))
 
 * **Update**: Continue from my tools says "… is open again.", so Use again's earlier message no longer stays on screen about the wrong workspace, the stale message the M2 live run found ([browser](code/web/package.md), `GEN-08`). The [Tessera issues](lessons/tessera-issues.md) record it as L-77. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:40:00Z.
 
