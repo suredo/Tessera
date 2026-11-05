@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Artifact } from "../../../contracts/src/index.ts";
+import { WATCHDOG_DEFAULTS } from "../../../runtime/src/host.ts";
 import { launch, type LaunchOptions } from "../../../server/src/launcher/index.ts";
 import type { Provider } from "../../../server/src/providers/index.ts";
 import type { DataFolder } from "../../../server/src/storage/index.ts";
@@ -60,6 +61,13 @@ export async function startApp(setup = READY_SETUP, provider?: Provider): Promis
     },
   };
 }
+
+/**
+ * How long a test waits for a tool it starts to show: the runtime gives a starting tool this long to
+ * answer before it stops it, and on a busy machine a start takes more than the 5 s default (#211,
+ * #214).
+ */
+export const TOOL_START = { timeout: WATCHDOG_DEFAULTS.startupMs };
 
 /** A hand-written test tool, in standard mode, that shows `text` and saves nothing. */
 export const testTool = (text: string): Artifact => ({
