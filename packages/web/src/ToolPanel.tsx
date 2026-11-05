@@ -88,6 +88,8 @@ export function ToolPanel({ workspace, onDataChanged }: Props) {
     <section
       aria-label={t("tool.label", { name })}
       className={fullScreen ? "tool-panel full-screen" : "tool-panel"}
+      // A stable hook for the scenario runner and tests (VER-03): titles repeat, IDs don't.
+      data-workspace-id={id}
     >
       <div className="tool-controls">
         {hasTool && mode === "running" && (

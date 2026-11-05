@@ -11,3 +11,4 @@
 
 * [Bridge edit check](bridge-edit-check.md) - One frozen behavioral edit of a saved shopping list, exercising bridge prompt context with a fake CLI rehearsal and approved two-call live check.
 * [Scenario files and host facts](scenarios.md) - Scenario files in evals/scenarios/, their one schema and loader, and the host facts each step is checked against without a model.
+* [Scenario runner](runner.md) - Plays a scenario through the host app in Chrome, step by step, with every call through the harness, checks each step's host facts and writes the report; rehearsal and replay modes call no model.

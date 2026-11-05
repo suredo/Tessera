@@ -1,0 +1,182 @@
+{
+  "about": "A rehearsal of T1-shopping-list, written by hand: no model answered these.",
+  "scenario": "T1-shopping-list",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Shopping list",
+          "summary": "A list of what to buy, to tick off at the store.",
+          "code": {
+            "html": "<h1>Shopping list</h1><ul id=\"items\" aria-label=\"Items\"></ul>",
+            "css": "",
+            "js": "tessera.call(\"data.read\").then(({ data }) => {\n  for (const item of data.items) {\n    const row = document.createElement(\"li\");\n    row.textContent = item.title;\n    document.getElementById(\"items\").append(row);\n  }\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "title"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "items": []
+            },
+            "initialState": {
+              "items": [
+                {
+                  "id": "i-1",
+                  "title": "Milk"
+                },
+                {
+                  "id": "i-2",
+                  "title": "Eggs"
+                },
+                {
+                  "id": "i-3",
+                  "title": "Bread"
+                },
+                {
+                  "id": "i-4",
+                  "title": "Apples"
+                }
+              ]
+            }
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "The list is grouped by aisle.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Shopping list</h1><h2>By aisle</h2><ul id=\"items\" aria-label=\"Items by aisle\"></ul>",
+              "css": "h2{font-size:1rem}",
+              "js": "tessera.call(\"data.read\").then(({ data }) => {\n  for (const item of data.items) {\n    const row = document.createElement(\"li\");\n    row.textContent = item.title;\n    document.getElementById(\"items\").append(row);\n  }\n});"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "data",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Cheese is added and the apples are taken off.",
+          "patch": {
+            "operations": [
+              {
+                "op": "add",
+                "collection": "items",
+                "record": {
+                  "title": "Cheese"
+                }
+              },
+              {
+                "op": "remove",
+                "collection": "items",
+                "id": "i-4",
+                "revisionCount": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "open_saved",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [],
+          "savedToolId": "{{saved:Weekly shopping}}"
+        }
+      }
+    }
+  ]
+}

@@ -4,7 +4,7 @@ title: "Scenario file format"
 description: "The scenario file format, step types and fields, with a full example."
 tags: [testing, scenario-format]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T07:45:07Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T08:43:21Z }
 ---
 # Scenario file format
 
@@ -50,7 +50,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 - `save`, `continue`, `use-again`: save the tool, or open a saved one in its two ways
 - `undo`: undo an interface or data change
 - `cancel`: cancel the request the step before started; that `say` step expects nothing of its own
-- `switch`: move to another workspace, or a new empty one
+- `switch`: move to another workspace, or a new empty one (until the app has a control for one, #132, the runner makes it through the store, then opens it in the app)
 - `delete`, `restore`: move a workspace or saved tool to the trash and back
 
 **Scenario fields:**
@@ -58,6 +58,8 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 - `budget`: the maximum calls for the live run
 - `profiles`: the verification profiles the person's tools should match
 - `review`: the AI review items that apply ([AI technical review](judging.md#ai-technical-review-each-scenario-eval-03))
+
+**Answers.** A rehearsal (`evals/scenarios/rehearsals/<id>.json`, written by hand) or a replay (a live run's recording) gives the answers each stage asks for, in order. A saved tool is named as `{{saved:<name>}}`, since its ID is new on every run, and an answer can take its time (`delayMs`) so a `cancel` has something to stop. The [runner](../code/evals/runner.md) plays them.
 
 **Expectations** are host-verified facts ([automatic host facts](judging.md#automatic-host-facts-every-step)): `created` (true or false), `version` (`new` or `unchanged`), `data` (`changed` or `unchanged`), `workspace` (`new`, `same` or `original`, the one the saved tool's Continue opens), `offered: saved` with `savedTool` (its name), and `answer` (`clarify`, `unsupported` or `stopped`). Each one left out isn't checked; every step also checks that nothing unrelated changed and that no success was claimed that wasn't applied. For tools that match no profile, data expectations are limited to "unchanged" or "changed", compared by content hash, plus the smoke check.
 
