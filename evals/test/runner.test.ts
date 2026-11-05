@@ -177,13 +177,14 @@ describe("live runs become replays (EVAL-07, ENG-07)", () => {
     const { answers, skipped } = recordAnswers({
       harnessFolder: path.join(root, "harness"),
       scenario: "T1-shopping-list",
-      savedTools: [{ id: savedId, name: "Weekly shopping" }],
+      // Quotes and a backslash: names the saved-tool contract allows, kept whole both ways.
+      savedTools: [{ id: savedId, name: 'My "weekly" \\ shop' }],
       recorded: { head: "a".repeat(40), at: "2026-11-05T10:00:00.000Z", cliVersion: "2.1.311" },
     });
     expect(skipped).toEqual([]);
     expect(answers.answers.map((a) => a.reply.kind)).toEqual(["value", "value", "error", "error"]);
     expect(answers.answers[1]!.reply).toMatchObject({
-      value: { kind: "open_saved", savedToolId: "{{saved:Weekly shopping}}" },
+      value: { kind: "open_saved", savedToolId: '{{saved:My "weekly" \\ shop}}' },
     });
     expect(answers.answers[3]).toMatchObject({
       reply: { error: "cancelled" },
@@ -191,7 +192,9 @@ describe("live runs become replays (EVAL-07, ENG-07)", () => {
     });
     expect(answers.answers[0]!.parts).toEqual(["intent@abc"]);
     // What it recorded replays: the same answers, the saved tool's ID filled in again.
-    const replay = answersProvider(answers, () => "11111111-2222-4333-8444-555555555555");
+    const replay = answersProvider(answers, (name) =>
+      name === 'My "weekly" \\ shop' ? "11111111-2222-4333-8444-555555555555" : undefined,
+    );
     expect((await replay.run(ask("intent"))).value).toMatchObject({ kind: "clarify" });
     expect((await replay.run(ask("intent"))).value).toMatchObject({
       savedToolId: "11111111-2222-4333-8444-555555555555",

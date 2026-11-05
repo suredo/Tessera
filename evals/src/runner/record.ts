@@ -2,7 +2,7 @@
 import type { ScriptedReply } from "@tessera/contracts";
 import { ANSWER_KEY } from "@tessera/server";
 import { readLedger, readRequestLog } from "../harness/index.ts";
-import type { Answers } from "./script.ts";
+import { mapStrings, type Answers } from "./script.ts";
 
 // A live run becomes a replay (EVAL-07, TEST-04): each call it made, in order, as the answer the
 // stage got, from the harness's ledger and request log. A replay then runs offline, through the
@@ -35,11 +35,14 @@ export function recordAnswers(input: {
 }): { answers: Answers; skipped: string[] } {
   const ledger = readLedger(input.harnessFolder);
   const requests = new Map(readRequestLog(input.harnessFolder).map((r) => [r.callIndex, r]));
-  const named = (value: unknown): unknown => {
-    let text = JSON.stringify(value);
-    for (const tool of input.savedTools) text = text.split(tool.id).join(`{{saved:${tool.name}}}`);
-    return JSON.parse(text) as unknown;
-  };
+  // In the answer's strings, never its JSON text, so a name with quotes or backslashes stays whole.
+  const named = (value: unknown): unknown =>
+    mapStrings(value, (text) =>
+      input.savedTools.reduce(
+        (done, tool) => done.split(tool.id).join(`{{saved:${tool.name}}}`),
+        text,
+      ),
+    );
   const skipped: string[] = [];
   const answers: Answers["answers"] = [];
   for (const entry of [...ledger].sort((a, b) => a.callIndex - b.callIndex)) {

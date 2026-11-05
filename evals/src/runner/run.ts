@@ -140,14 +140,15 @@ export async function runScenario(
 ): Promise<RunReport> {
   const unplayable = m2Problems(scenario);
   if (unplayable.length > 0) throw new Error(`${scenario.id} can't run in M2: ${unplayable[0]}`);
-  const webRoot = options.webRoot ?? WEB_ROOT;
-  if (!fs.existsSync(path.join(webRoot, "index.html"))) throw new Error("Build first: pnpm build.");
+  // The cap first: it is what the owner approved, so it is checked before anything else.
   const callCap = options.callCap ?? scenario.budget.calls;
   if (!Number.isInteger(callCap) || callCap < 1 || callCap > scenario.budget.calls) {
     throw new Error(
       `The cap must be a whole number from 1 to ${scenario.id}'s budget of ${scenario.budget.calls}, not ${callCap}.`,
     );
   }
+  const webRoot = options.webRoot ?? WEB_ROOT;
+  if (!fs.existsSync(path.join(webRoot, "index.html"))) throw new Error("Build first: pnpm build.");
   const folder = path.resolve(options.folder);
   const dataDir = path.join(folder, "tessera");
   refuseRealDataFolder(dataDir);

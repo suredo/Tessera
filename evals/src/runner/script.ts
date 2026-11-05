@@ -45,15 +45,30 @@ export function loadAnswers(file: string): Answers {
   return answersSchema.parse(JSON.parse(fs.readFileSync(file, "utf8")));
 }
 
-const SAVED = /\{\{saved:([^}]+)\}\}/g;
+/**
+ * A JSON value with each of its strings changed by `change`, keys and structure untouched. Saved
+ * tools are named in an answer's strings, never its JSON text, so a name with quotes or
+ * backslashes stays whole both ways.
+ */
+export function mapStrings(value: unknown, change: (text: string) => string): unknown {
+  if (typeof value === "string") return change(value);
+  if (Array.isArray(value)) return value.map((item) => mapStrings(item, change));
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [key, mapStrings(item, change)]),
+    );
+  }
+  return value;
+}
+
+/** A saved tool named in an answer; the name runs to the first `}}`. */
+const SAVED = /\{\{saved:(.+?)\}\}/g;
 
 /** The answer with each saved tool it names by name given its ID now; unknown names stay. */
 function fill(value: unknown, savedToolId: (name: string) => string | undefined): unknown {
-  const text = JSON.stringify(value).replace(
-    SAVED,
-    (whole, name: string) => savedToolId(name) ?? whole,
+  return mapStrings(value, (text) =>
+    text.replace(SAVED, (whole, name: string) => savedToolId(name) ?? whole),
   );
-  return JSON.parse(text) as unknown;
 }
 
 const wait = (ms: number, signal?: AbortSignal) =>
