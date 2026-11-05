@@ -1,9 +1,10 @@
 // Docs: docs/code/evals/runner.md
 // Every approved live run's recorded answers, replayed through the real pipeline and the host app
 // with no call (EVAL-07, TEST-04): the scenario runner plays each file in
-// evals/scenarios/replays/ and the report must match the live run's, step for step. A recording
-// that stops fitting the pipeline (a misfit, or prompt parts it wasn't recorded with) fails its
-// step, so it fails here. Chrome at 1280 px only: the runner starts its own Chrome.
+// evals/scenarios/replays/ and the report must match the live run's, step for step. An answer
+// that stops fitting the pipeline (a misfit) fails its step, so it fails here. One recorded with
+// other prompt parts still runs and is only listed in the report as stale (ENG-16), which this
+// doesn't check. Chrome at 1280 px only: the runner starts its own Chrome.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
