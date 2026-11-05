@@ -82,6 +82,10 @@ describe("the CI workflow", () => {
     expect(playwright).toContain('edge: "msedge"');
   });
 
+  it("runs four unit workers on CI and two locally (ENG-31, #188)", () => {
+    expect(read("vitest.config.ts")).toContain(`maxWorkers: process.env["CI"] ? 4 : 2`);
+  });
+
   it("records every browser test's video on CI, where the CI variable is set (ENG-10, ENG-31)", () => {
     expect(read("playwright.config.ts")).toContain(
       `video: process.env["CI"] ? "on" : "retain-on-failure"`,

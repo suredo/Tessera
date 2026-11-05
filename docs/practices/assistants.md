@@ -4,7 +4,7 @@ title: "Working with AI assistants"
 description: "How Claude Code and Codex work on the project: rules file, briefs, review, pull request size, tool memory, templates and checklist."
 tags: [practices, assistants]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T05:01:36Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T07:04:58Z }
 stale_after: 2027-04-11T00:00:00Z
 sources:
   - { id: gh-branch-protection, resource: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/managing-a-branch-protection-rule, title: "GitHub Docs: managing a branch protection rule" }
@@ -49,7 +49,7 @@ How the reviewing assistant carries out `ENG-15`. Ask for it with `/cross-review
 
 1. **Read the brief:** the pull request's Brief section, or the issue it closes (`gh pr view`, `gh issue view`). Read the docs it lists under "Docs read" only as far as the review needs them, starting from the indexes.
 2. **Review the exact head.** Note the head commit; the review covers that commit only. Check it out in a clean working tree (`gh pr checkout <number>`), never on top of uncommitted work.
-3. **Run the checks the change can affect** on that head, chosen as [targeted local checks](testing.md#targeted-local-checks) says (`ENG-31`): always `node scripts/okf-check.mjs --base origin/<base> --pr-body <file holding the description>` (with `--merge-ready` once the pull request is meant to be final) and `git diff --check origin/<base>...HEAD`, then the tests of the changed behaviour and its consumers, broadened when the change is shared or its reach unclear. Don't repeat the author's browser runs: use CI's run on the same head, and run a browser spec locally only to confirm a suspected defect. Note why they are enough. Read CI, which runs the full suite, with `gh pr checks <number>`.
+3. **Run the checks the change can affect** on that head, chosen as [targeted local checks](testing.md#targeted-local-checks) says (`ENG-31`): always `node scripts/okf-check.mjs --base origin/<base> --pr-body <file holding the description>` (with `--merge-ready` once the pull request is meant to be final) and `git diff --check origin/<base>...HEAD`, then single test files of the changed modules where they help the review. Don't run the heavy suites (the full unit suite, `pnpm typecheck`, the whole of `pnpm lint`, `pnpm build`, browser runs): use CI's run on the same head ([heavy suites once per pull request](testing.md#targeted-local-checks)), and run more locally only to confirm a suspected defect, saying why. Note why the checks are enough. Read CI, which runs the full suite, with `gh pr checks <number>`, and wait for it on the exact head before saying the pull request is ready.
 4. **Check every item** of the [AI review checklist](#ai-review-checklist) against the diff (`gh pr diff <number>`) and the code around it. Each item is fine, or a finding with evidence: the file and line, the command and its output, or the rule it breaks. Mark anything that isn't a defect as a note.
 5. **Post one comment** on the pull request (`gh pr comment <number> --body-file <file>`) in this form:
 
