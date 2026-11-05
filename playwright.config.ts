@@ -3,8 +3,9 @@ import { defineConfig } from "@playwright/test";
 
 // Browser tests (TEST-06): the installed Chrome and Edge, at fixed viewports including 320 px,
 // set when each browser context is created (ENG-14). On CI every test records a video (ENG-10);
-// locally only a failed test keeps its video, as encoding one for every test on every worker costs
-// the machine memory and time that the targeted local runs don't need (ENG-31). A failed test also
+// locally only a failed test keeps its video, so runs don't fill the disk with passing tests' videos.
+// Playwright still records every test and drops a passing one's video at the end, so the local
+// runs' load is cut by running fewer specs, projects and workers (ENG-31). A failed test also
 // keeps a light trace, its actions and console, to tell a stalled page from a slow
 // browser (#83, #98). Snapshots stay off: Playwright takes them inside every frame, which counts as
 // the person's activation there and lets a tool write before any click (GEN-06). Without them it
