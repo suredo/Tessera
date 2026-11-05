@@ -7,12 +7,12 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/scenarios.test.ts]
 tags: [code, evals, scenarios]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T08:11:47Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T08:43:21Z }
 ---
 
 # Purpose
 
-The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01`), written as the [scenario file format](../../testing/scenario-format.md) describes, and each step's expected host facts are checked from what Tessera stored, with no model (`EVAL-02`). The runner that plays them through the host app, in dry-run, replay and live modes, builds on this, with the [harness](harness.md) guarding and recording every call.
+The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01`), written as the [scenario file format](../../testing/scenario-format.md) describes, and each step's expected host facts are checked from what Tessera stored, with no model (`EVAL-02`). The [runner](runner.md) plays them through the host app, with the [harness](harness.md) guarding and recording every call.
 
 # Entry points
 
@@ -39,11 +39,11 @@ The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01
 
 # Depends on / used by
 
-Depends on `yaml` (2.9.1, already in the lockfile through other packages) to read the files, zod, `canonicalJson` from `@tessera/contracts`, and the workspace store of `@tessera/server`. The scenario runner (#155) uses it next.
+Depends on `yaml` (2.9.1, already in the lockfile through other packages) to read the files, zod, `canonicalJson` from `@tessera/contracts`, and the workspace store of `@tessera/server`. The [scenario runner](runner.md) uses it.
 
 # Pitfalls
 
-- **Not yet played.** The runner that drives the host app step by step, its replay and live modes and its report come in the next part of #155; until then the files are checked, not run.
+- **Played by the [runner](runner.md),** in rehearsal and replay so far; the live mode comes with the M2 live evaluation.
 - **Expectations are host facts, not quality.** Whether a tool does what was asked is the AI review's (`EVAL-03`), from the scenario's `review` items.
 
 # Symbols (generated)
