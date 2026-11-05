@@ -63,6 +63,10 @@ export type RunReport = {
   steps: StepResult[];
   /** Why the run stopped early, if it did. */
   stopped?: string;
+  /** The hard cap the run had: the approved one, at most the scenario file's budget (ENG-07). */
+  callCap: number;
+  /** A replay recorded with other prompt parts: it ran, but its evidence is stale (ENG-16). */
+  stale: string[];
   ledger: LedgerSummary;
   folder: string;
 };
@@ -123,6 +127,12 @@ export async function runScenario(
     onStarted?: (store: Store) => void;
     /** Calls the answers didn't fit (a rehearsal's or replay's); each one fails its step. */
     misfits?: () => readonly string[];
+    /** Called with the run's store once the steps are done, before Tessera stops. */
+    onFinished?: (store: Store) => void;
+    /** Calls a replay answered with answers recorded under other prompt parts. */
+    stale?: () => readonly string[];
+    /** The approved hard cap; the scenario file's budget when left out, and never above it. */
+    callCap?: number;
     /** The browser's web build and launcher; tests pass their own. */
     webRoot?: string;
     launchBrowser?: () => Promise<Browser>;
@@ -130,6 +140,13 @@ export async function runScenario(
 ): Promise<RunReport> {
   const unplayable = m2Problems(scenario);
   if (unplayable.length > 0) throw new Error(`${scenario.id} can't run in M2: ${unplayable[0]}`);
+  // The cap first: it is what the owner approved, so it is checked before anything else.
+  const callCap = options.callCap ?? scenario.budget.calls;
+  if (!Number.isInteger(callCap) || callCap < 1 || callCap > scenario.budget.calls) {
+    throw new Error(
+      `The cap must be a whole number from 1 to ${scenario.id}'s budget of ${scenario.budget.calls}, not ${callCap}.`,
+    );
+  }
   const webRoot = options.webRoot ?? WEB_ROOT;
   if (!fs.existsSync(path.join(webRoot, "index.html"))) throw new Error("Build first: pnpm build.");
   const folder = path.resolve(options.folder);
@@ -138,7 +155,7 @@ export async function runScenario(
   const harness = startHarness({
     provider: options.provider,
     mode: options.mode === "live" ? "live" : "dry-run",
-    callCap: scenario.budget.calls,
+    callCap,
     dataFolder: path.join(folder, "harness"),
   });
   // The host's clock starts at the scenario's time, in its zone, and moves only on a next-day
@@ -236,6 +253,11 @@ export async function runScenario(
   } finally {
     await context?.close().catch(() => undefined);
     await browser?.close().catch(() => undefined);
+    try {
+      options.onFinished?.(store);
+    } catch (error) {
+      stopped ??= error instanceof Error ? error.message : String(error);
+    }
     await app.stop();
   }
   const report: RunReport = {
@@ -245,6 +267,8 @@ export async function runScenario(
     seconds: (Date.now() - started) / 1000,
     steps: results,
     ...(stopped ? { stopped } : {}),
+    callCap,
+    stale: [...(options.stale?.() ?? [])],
     ledger: harness.finish(),
     folder,
   };

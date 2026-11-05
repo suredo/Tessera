@@ -20,8 +20,14 @@ export function reportMarkdown(report: RunReport): string {
     "",
     `- **Requests passed at the first attempt:** ${passed(requests)} of ${requests.length}.`,
     `- **Lifecycle steps passed:** ${passed(lifecycle)} of ${lifecycle.length}; every one must pass.`,
-    `- **Calls:** ${ledger.callCount} (${ledger.failedCount} failed, ${ledger.refusedCount} refused); tokens in ${ledger.inputTokens}, cached ${ledger.cachedInputTokens}, out ${ledger.outputTokens}${ledger.unknownUsageCount ? `; ${ledger.unknownUsageCount} with unknown usage` : ""}.`,
+    `- **Calls:** ${ledger.callCount} of a hard cap of ${report.callCap} (${ledger.failedCount} failed, ${ledger.refusedCount} refused); tokens in ${ledger.inputTokens}, cached ${ledger.cachedInputTokens}, out ${ledger.outputTokens}${ledger.unknownUsageCount ? `; ${ledger.unknownUsageCount} with unknown usage` : ""}.`,
     ...(report.stopped ? [`- **Stopped early:** ${report.stopped}`] : []),
+    ...(report.stale.length > 0
+      ? [
+          `- **Stale replay:** ${report.stale.length === 1 ? "one answer was" : `${report.stale.length} answers were`} recorded with other prompt parts, so this replay shows how the host handles them, not what the model would answer now.`,
+          ...report.stale.map((note) => `  - ${note}`),
+        ]
+      : []),
     "",
     "| Step | Action | Outcome | Host said | Problems |",
     "| --- | --- | --- | --- | --- |",

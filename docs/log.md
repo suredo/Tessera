@@ -2,6 +2,8 @@
 
 ## 2026-11-05
 
+* **Update**: The [scenario runner](code/evals/runner.md) has its live mode: `--live --cap <n>` calls Claude Code within the owner's approved cap, never above the scenario's budget, and records the run as answers that replay offline (`EVAL-07`); a replay recorded with other prompt parts is reported as stale. No call was made. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T12:54:57Z.
+
 * **New**: The [M2 live run plan](../evals/reports/2026-11-05-m2-live-run.md) ([issue 155](https://github.com/suredo/Tessera/issues/155)): T1, T6, T13 and the J6 limits run, 24 steps (12 model-dependent, 11 lifecycle), 22-23 expected calls, a 29-call hard cap with 6 in reserve, frozen denominators and stop rules, for the owner to approve. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T12:28:12Z.
 
 * **Update**: The [scenario runner](code/evals/runner.md) has a rehearsal for every M2 scenario: T6 (tip and split calculator) and T13 (drawing board) join J6 and T1, each passing every step at no cost. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T09:12:20Z.

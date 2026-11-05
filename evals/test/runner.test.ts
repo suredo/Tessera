@@ -10,6 +10,9 @@ import { outcomeOf, say } from "../src/runner/messages.ts";
 import { reportMarkdown } from "../src/runner/report.ts";
 import { runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
 import { answersProvider, loadAnswers, type Answers } from "../src/runner/script.ts";
+import { CANCELLED_WAIT_MS, recordAnswers } from "../src/runner/record.ts";
+import { startHarness } from "../src/harness/index.ts";
+import { createScriptedProvider } from "@tessera/server";
 
 // The scenario runner's parts that need no browser (EVAL-01, EVAL-02, EVAL-07): what a notice
 // claims, the answers a rehearsal or replay gives, and the report. Playing a scenario through the
@@ -140,6 +143,100 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
   });
 });
 
+describe("live runs become replays (EVAL-07, ENG-07)", () => {
+  const roots: string[] = [];
+  afterAll(() => roots.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
+  const savedId = "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4";
+
+  it("EVAL-07: records each call's answer in order, names saved tools, keeps failures and cancels, skips refusals", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-record-"));
+    roots.push(root);
+    // A real harness ledger and request log, from a dry run of four calls and one refused.
+    const harness = startHarness({
+      provider: createScriptedProvider({
+        name: "record",
+        replies: [
+          intent("clarify"),
+          intent("open_saved", { savedToolId: savedId }),
+          { kind: "error", stage: "intent", error: "schema" },
+          { kind: "error", stage: "intent", error: "cancelled" },
+        ],
+      }),
+      mode: "dry-run",
+      callCap: 4,
+      dataFolder: path.join(root, "harness"),
+    });
+    const call = () => harness.provider.run({ ...ask("intent"), promptParts: ["intent@abc"] });
+    await call();
+    await call();
+    await expect(call()).rejects.toThrow();
+    await expect(call()).rejects.toThrow();
+    await expect(call()).rejects.toThrow(/used all 4 of its calls/);
+    harness.finish();
+
+    const { answers, skipped } = recordAnswers({
+      harnessFolder: path.join(root, "harness"),
+      scenario: "T1-shopping-list",
+      // Quotes and a backslash: names the saved-tool contract allows, kept whole both ways.
+      savedTools: [{ id: savedId, name: 'My "weekly" \\ shop' }],
+      recorded: { head: "a".repeat(40), at: "2026-11-05T10:00:00.000Z", cliVersion: "2.1.311" },
+    });
+    expect(skipped).toEqual([]);
+    expect(answers.answers.map((a) => a.reply.kind)).toEqual(["value", "value", "error", "error"]);
+    expect(answers.answers[1]!.reply).toMatchObject({
+      value: { kind: "open_saved", savedToolId: '{{saved:My "weekly" \\ shop}}' },
+    });
+    expect(answers.answers[3]).toMatchObject({
+      reply: { error: "cancelled" },
+      delayMs: CANCELLED_WAIT_MS,
+    });
+    expect(answers.answers[0]!.parts).toEqual(["intent@abc"]);
+    // What it recorded replays: the same answers, the saved tool's ID filled in again.
+    const replay = answersProvider(answers, (name) =>
+      name === 'My "weekly" \\ shop' ? "11111111-2222-4333-8444-555555555555" : undefined,
+    );
+    expect((await replay.run(ask("intent"))).value).toMatchObject({ kind: "clarify" });
+    expect((await replay.run(ask("intent"))).value).toMatchObject({
+      savedToolId: "11111111-2222-4333-8444-555555555555",
+    });
+  });
+
+  it("ENG-16: a replay recorded with other prompt parts runs, flagged as stale", async () => {
+    const provider = answersProvider(
+      {
+        about: "test",
+        scenario: "T0-test",
+        answers: [{ reply: intent("clarify"), parts: ["intent@old"] }],
+      },
+      () => undefined,
+    );
+    await provider.run({ ...ask("intent"), promptParts: ["intent@new"] });
+    expect(provider.stale()).toEqual([
+      "Call 1 (intent) was recorded with other prompt parts; now intent@new.",
+    ]);
+    expect(provider.misfits()).toEqual([]);
+  });
+
+  it("ENG-07: a run's cap can be lower than the scenario's budget, never higher, and is checked before anything starts", async () => {
+    const t1 = loadScenario(path.join(scenarios, "T1-shopping-list.yaml"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-cap-"));
+    roots.push(root);
+    const run = (callCap: number) =>
+      runScenario(t1, {
+        mode: "live",
+        provider: createScriptedProvider({ name: "never", replies: [] }),
+        folder: path.join(root, String(callCap)),
+        callCap,
+      });
+    for (const callCap of [11, 0, 2.5]) {
+      await expect(run(callCap)).rejects.toThrow(
+        /whole number from 1 to T1-shopping-list's budget of 10/,
+      );
+      expect(fs.existsSync(path.join(root, String(callCap)))).toBe(false);
+    }
+  });
+});
+
 describe("the run's clock and its failures (RUN-07, EVAL-02)", () => {
   const roots: string[] = [];
   afterAll(() => roots.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
@@ -240,11 +337,16 @@ describe("the report (EVAL-02, A40)", () => {
         outputTokens: 5,
       } as RunReport["ledger"],
       folder: "x",
+      callCap: 9,
+      stale: ["Call 2 (edit) was recorded with other prompt parts; now edit@abc."],
     };
     const text = reportMarkdown(report);
     expect(text).toContain("**Requests passed at the first attempt:** 1 of 2.");
     expect(text).toContain("**Lifecycle steps passed:** 1 of 2; every one must pass.");
-    expect(text).toContain("**Calls:** 4 (0 failed, 0 refused); tokens in 10, cached 0, out 5.");
+    expect(text).toContain(
+      "**Calls:** 4 of a hard cap of 9 (0 failed, 0 refused); tokens in 10, cached 0, out 5.",
+    );
+    expect(text).toContain("**Stale replay:** one answer was recorded with other prompt parts");
     // A table cell keeps its text whole, even with a bar in it.
     expect(text).toContain("| 2 | say: Group \\| them | failed | — | The tool didn't change. |");
   });
