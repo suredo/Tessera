@@ -64,7 +64,9 @@ const improved = version("<p>Shopping, improved</p>", defaults);
 /** A saved "Weekly shopping" tool whose workspace holds the person's own entries. */
 async function withSavedTool() {
   const folder = await openDataFolder(newFolder());
-  const { id } = createWorkspace(folder, "This week's shopping");
+  const { id } = createWorkspace(folder, "This week's shopping", {
+    description: "A list to tick off at the store.",
+  });
   const firstHash = saveVersion(folder.db, first);
   expect(activateVersion(folder, id, firstHash, 0).ok).toBe(true);
   expect(
@@ -97,15 +99,20 @@ describe("Continue and Use again (DATA-07)", () => {
     folder.close();
   });
 
-  it("DATA-07: Use again starts a new workspace from the defaults only, and Continue still opens the first", async () => {
+  it("DATA-07, APP-04: Use again starts a new workspace from the defaults only, and Continue still opens the first", async () => {
     const { folder, id, firstHash, saved } = await withSavedTool();
     const before = unit(folder, id);
     const result = useAgain(folder, saved.id);
     if (!result.ok) throw new Error(result.message);
     const fresh = result.workspace;
     expect(fresh.id).not.toBe(id);
-    // The same tool, named after the entry, with the defaults and none of the person's entries.
-    expect(fresh).toMatchObject({ title: "Weekly shopping", currentVersion: firstHash });
+    // The same tool, named and described after the entry, with the defaults and none of the
+    // person's entries.
+    expect(fresh).toMatchObject({
+      title: "Weekly shopping",
+      description: "A list to tick off at the store.",
+      currentVersion: firstHash,
+    });
     expect(readWorkspaceData(folder, fresh.id)).toEqual({ data: defaults, revisions: {} });
     // The linked workspace and the entry are untouched.
     expect(unit(folder, id)).toEqual(before);

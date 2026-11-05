@@ -16,6 +16,7 @@ const request = {
 const workspace = {
   id: WORKSPACE,
   title: "Errands",
+  description: "",
   currentVersion: "a".repeat(64),
   data: { tasks: [] },
   dataRevision: 4,

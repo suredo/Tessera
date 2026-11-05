@@ -162,7 +162,8 @@ button.primary {
 .name-form label {
   flex-basis: 100%;
 }
-.name-form input {
+.name-form input,
+.name-form textarea {
   flex: 1 1 10rem;
   min-width: 0;
 }
@@ -201,6 +202,9 @@ button.primary {
   font-size: var(--ui-size-section);
   font-weight: 600;
   margin: 0;
+}
+.saved-tool .description {
+  margin: var(--ui-space-1) 0 0;
 }
 .saved-tool .detail,
 .trash-entry .detail {

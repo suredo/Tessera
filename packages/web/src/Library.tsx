@@ -3,15 +3,16 @@ import { useState } from "react";
 import { t } from "./i18n/translate.ts";
 import { NameForm } from "./NameForm.tsx";
 
-// My tools, the saved-tools library (APP-04, DATA-07): each saved tool with its name, when it or
-// its workspace was last updated and the workspace Continue opens, so the target is clear. Continue goes back to that
-// workspace; Use again starts a new one from the tool's starting data; Save as a new tool does the
-// same under a new name in the library. Each can be renamed or moved to the trash, and the list
-// can be searched by name.
+// My tools, the saved-tools library (APP-04, DATA-07): each saved tool with its name, its short
+// description, when it or its workspace was last updated and the workspace Continue opens, so the
+// target is clear. Continue goes back to that workspace; Use again starts a new one from the tool's
+// starting data; Save as a new tool does the same under a new name in the library. Each can be
+// renamed, described in the person's own words or moved to the trash, and the list can be searched
+// by name and description.
 
 const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
 
-type Editing = { id: string; kind: "rename" | "saveAsNew" } | null;
+type Editing = { id: string; kind: "rename" | "describe" | "saveAsNew" } | null;
 
 type Props = {
   savedTools: readonly SavedTool[];
@@ -20,6 +21,7 @@ type Props = {
   onUseAgain: (tool: SavedTool) => Promise<void>;
   onSaveAsNew: (tool: SavedTool, name: string) => Promise<void>;
   onRename: (tool: SavedTool, name: string) => Promise<void>;
+  onDescribe: (tool: SavedTool, description: string) => Promise<void>;
   onDelete: (tool: SavedTool) => Promise<void>;
   /** Exports the saved tool, with the workspace it follows, to a file (APP-06). */
   onExport: (tool: SavedTool) => Promise<void>;
@@ -31,7 +33,9 @@ export function Library(props: Props) {
   const [editing, setEditing] = useState<Editing>(null);
   const linked = new Map(workspaces.map((w) => [w.id, w]));
   const wanted = query.trim().toLocaleLowerCase();
-  const shown = savedTools.filter((tool) => tool.name.toLocaleLowerCase().includes(wanted));
+  const shown = savedTools.filter((tool) =>
+    [tool.name, tool.description].some((text) => text.toLocaleLowerCase().includes(wanted)),
+  );
 
   return (
     <section aria-labelledby="library-heading" className="library">
@@ -58,11 +62,20 @@ export function Library(props: Props) {
           return (
             <li key={tool.id} className="saved-tool">
               <h3>{name}</h3>
+              {tool.description && <p className="description">{tool.description}</p>}
               <p className="detail">
                 {t("library.updated", { when: when.format(new Date(updated)) })}
               </p>
               <p className="detail">{t("library.continues", { workspace })}</p>
-              {editing?.id === tool.id ? (
+              {editing?.id === tool.id && editing.kind === "describe" ? (
+                <NameForm
+                  description
+                  label={t("library.describeLabel", { name })}
+                  initial={tool.description}
+                  onSubmit={(next) => props.onDescribe(tool, next).then(done)}
+                  onCancel={done}
+                />
+              ) : editing?.id === tool.id ? (
                 <NameForm
                   label={
                     editing.kind === "rename"
@@ -108,6 +121,13 @@ export function Library(props: Props) {
                     onClick={() => setEditing({ id: tool.id, kind: "rename" })}
                   >
                     {t("library.renameShort")}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("library.describe", { name })}
+                    onClick={() => setEditing({ id: tool.id, kind: "describe" })}
+                  >
+                    {t("library.describeShort")}
                   </button>
                   <button
                     type="button"

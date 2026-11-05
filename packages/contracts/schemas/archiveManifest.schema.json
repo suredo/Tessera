@@ -40,6 +40,12 @@
             "minLength": 1,
             "maxLength": 200
           },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 400,
+            "description": "What its tool does, from the tool's creation; empty until a tool is made, or for one made before descriptions."
+          },
           "data": {
             "anyOf": [
               {
@@ -110,6 +116,7 @@
         "required": [
           "id",
           "title",
+          "description",
           "data",
           "dataRevision",
           "createdAt",
@@ -135,6 +142,12 @@
             "minLength": 1,
             "maxLength": 200
           },
+          "description": {
+            "default": "",
+            "type": "string",
+            "maxLength": 400,
+            "description": "What its tool does, from the tool's creation; empty until a tool is made, or for one made before descriptions."
+          },
           "workspaceId": {
             "type": "string",
             "format": "uuid",
@@ -155,12 +168,12 @@
         "required": [
           "id",
           "name",
+          "description",
           "workspaceId",
           "createdAt",
           "updatedAt"
         ],
-        "additionalProperties": false,
-        "description": "A named entry in the saved-tools library (DATA-08)."
+        "additionalProperties": false
       }
     },
     "assets": {

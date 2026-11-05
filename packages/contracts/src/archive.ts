@@ -9,11 +9,15 @@ import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./work
 
 export const ARCHIVE_FORMAT = "tessera-archive";
 /** Raised when the format changes; an archive from a newer format is refused (CON-04). */
-export const ARCHIVE_FORMAT_VERSION = 2;
+export const ARCHIVE_FORMAT_VERSION = 3;
+
+// Descriptions (APP-04) arrived in format 3: an older archive's workspaces and saved tools have none.
+const archivedDescription = workspaceSchema.shape.description.default("");
 
 export const archivedWorkspaceSchema = workspaceSchema
   .omit({ currentVersion: true })
   .extend({
+    description: archivedDescription,
     versions: z
       .array(workspaceVersionSchema)
       .describe("The version history, the first first; the last is the current version."),
@@ -30,7 +34,7 @@ export const archiveManifestSchema = z
       .describe("What the person exported: a workspace with its saved tools, or one saved tool."),
     exportedAt: z.iso.datetime(),
     workspaces: z.array(archivedWorkspaceSchema).min(1),
-    savedTools: z.array(savedToolSchema),
+    savedTools: z.array(savedToolSchema.extend({ description: archivedDescription })),
     assets: z
       .array(assetSchema)
       .default([])

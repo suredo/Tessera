@@ -43,6 +43,8 @@ export {
   listWorkspaces,
   patchWorkspaceData,
   readWorkspaceData,
+  describeSavedTool,
+  describeWorkspace,
   renameSavedTool,
   renameWorkspace,
   replaceData,

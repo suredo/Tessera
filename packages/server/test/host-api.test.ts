@@ -130,6 +130,10 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     expect(ask(folder, "library.rename", { id: savedTool.id, name: "Chores" }).savedTool.name).toBe(
       "Chores",
     );
+    expect(
+      ask(folder, "library.describe", { id: savedTool.id, description: "Jobs for the week." })
+        .savedTool.description,
+    ).toBe("Jobs for the week.");
     expect(ask(folder, "library.delete", { id: savedTool.id }).entry.kind).toBe("savedTool");
     expect(ask(folder, "trash.restoreSavedTool", { id: savedTool.id }).savedTool.id).toBe(
       savedTool.id,

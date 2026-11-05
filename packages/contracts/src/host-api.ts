@@ -182,6 +182,10 @@ export const HOST_ACTIONS = {
     args: z.strictObject({ id, name }),
     result: z.strictObject({ savedTool: savedToolSchema }),
   },
+  "library.describe": {
+    args: z.strictObject({ id, description: savedToolSchema.shape.description }),
+    result: z.strictObject({ savedTool: savedToolSchema }),
+  },
   "library.delete": {
     args: z.strictObject({ id }),
     result: z.strictObject({ entry: trashEntrySchema }),

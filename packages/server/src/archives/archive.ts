@@ -79,8 +79,8 @@ function archive(
       }
       bodies.set(hash, found.body);
     }
-    const { id, title, data, dataRevision, createdAt, updatedAt } = workspace;
-    return { id, title, data, dataRevision, createdAt, updatedAt, versions };
+    const { id, title, description, data, dataRevision, createdAt, updatedAt } = workspace;
+    return { id, title, description, data, dataRevision, createdAt, updatedAt, versions };
   });
   // The images named by what the archive carries, its workspaces' data and their tool versions,
   // exactly what import checks against. Undo history and recovery snapshots stay behind, and so
@@ -417,9 +417,10 @@ function writeImport(
     for (const workspace of manifest.workspaces) {
       const id = idOf(workspace.id);
       store.db.run(
-        "INSERT INTO workspaces (id, title, data, data_revision, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO workspaces (id, title, description, data, data_revision, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
         id,
         workspace.title,
+        workspace.description,
         JSON.stringify(workspace.data),
         workspace.dataRevision,
         workspace.createdAt,
@@ -437,9 +438,10 @@ function writeImport(
     }
     for (const tool of manifest.savedTools) {
       store.db.run(
-        "INSERT INTO saved_tools (id, name, workspace_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO saved_tools (id, name, description, workspace_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
         idOf(tool.id),
         tool.name,
+        tool.description,
         idOf(tool.workspaceId),
         tool.createdAt,
         tool.updatedAt,

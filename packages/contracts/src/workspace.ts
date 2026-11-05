@@ -11,10 +11,16 @@ export const versionHashSchema = z
   .regex(/^[0-9a-f]{64}$/)
   .describe("A tool version's name: the SHA-256 of its canonical JSON (DATA-04).");
 
+/** What a tool does, in one or two plain sentences (APP-04, GEN-18); empty when there is none. */
+export const descriptionSchema = z.string().max(400);
+
 export const workspaceSchema = z
   .strictObject({
     id,
     title: z.string().min(1).max(200),
+    description: descriptionSchema.describe(
+      "What its tool does, from the tool's creation; empty until a tool is made, or for one made before descriptions.",
+    ),
     currentVersion: versionHashSchema
       .nullable()
       .describe("The tool version in use; null until the workspace has a tool."),
@@ -46,6 +52,9 @@ export const savedToolSchema = z
   .strictObject({
     id,
     name: z.string().min(1).max(200),
+    description: descriptionSchema.describe(
+      "What the tool does: its workspace's description when saved, which the person can change.",
+    ),
     workspaceId: id.describe("The workspace that Continue opens; it follows its latest version."),
     createdAt: timestamp,
     updatedAt: timestamp,

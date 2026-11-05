@@ -30,6 +30,7 @@ const sampleArtifact: Artifact = {
 const workspace = (data: unknown) => ({
   id: "6f1c2a3b-4d5e-4f60-8a7b-9c0d1e2f3a4b",
   title: "Plans",
+  description: "",
   currentVersion: null,
   data,
   dataRevision: 0,

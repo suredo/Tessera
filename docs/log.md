@@ -2,6 +2,8 @@
 
 ## 2026-11-05
 
+* **Update**: Saved tools have a short description (`APP-04`, [issue 119](https://github.com/suredo/Tessera/issues/119)). The [contracts](code/contracts/package.md) add one to workspaces and saved tools. The [workspaces](code/server/workspaces.md) doc says a created tool's workspace takes the creation's summary ([generation](code/server/generation.md)), saving copies it, and the person can change it. The [archives](code/server/archives.md) carry it from format 3, and older archives import with none. The [browser](code/web/package.md)'s library shows and searches it, and lets the person change it. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T06:09:47Z.
+
 * **Update**: [Testing](practices/testing.md) narrows local browser runs (`ENG-31`): only the specs a change affects, with `pnpm e2e:local` (Chrome at 1280 px, 2 workers), never the whole browser suite to cover a change's reach, and load or repeat runs only when asked or when CI's evidence can't explain a failure. Locally only failed tests keep a video; CI still records every test and runs the full suite. The [CI workflow](code/ci/workflow.md) doc says CI keeps every video. The [review steps](practices/assistants.md#cross-review) use CI's browser run instead of repeating the author's, and the [browser](code/web/package.md) doc and `AGENTS.md` say so. Both assistants may run `pnpm e2e:local` without asking. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T05:01:36Z.
 
 ## 2026-11-02
