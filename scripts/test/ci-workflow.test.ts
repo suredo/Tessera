@@ -82,6 +82,12 @@ describe("the CI workflow", () => {
     expect(playwright).toContain('edge: "msedge"');
   });
 
+  it("records every browser test's video on CI, where the CI variable is set (ENG-10, ENG-31)", () => {
+    expect(read("playwright.config.ts")).toContain(
+      `video: process.env["CI"] ? "on" : "retain-on-failure"`,
+    );
+  });
+
   it("gives no job a secret, such as a provider's key, and only read access (ENG-02)", () => {
     expect(text).not.toMatch(/\$\{\{\s*secrets\./);
     expect(workflow.permissions).toEqual({ contents: "read" });
