@@ -7,7 +7,7 @@ implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T05:05:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T07:04:58Z }
 ---
 
 # Purpose
@@ -32,7 +32,7 @@ Runs every check on every pull request and on every push to `main` (`ENG-02`), s
 
 Depends on GitHub Actions' Ubuntu and Windows runners, with Chrome and Edge preinstalled on Windows; Node from `.nvmrc` and pnpm through Corepack; and the workspace's scripts in `package.json`. Used on every pull request and on `main`. Its coverage report job writes to the job summary, and its Windows job keeps the browser videos, one for every test since Playwright records them all when the `CI` variable is set (locally only failed tests keep one), and the traces of failed browser tests, for 14 days (`ENG-10`).
 
-The shared `vitest.config.ts` caps unit workers at four while keeping every package, evaluation and script test included. Locally, [sequence heavyweight checks](../../practices/testing.md#targeted-local-checks) across worktrees: the full unit suite, browser tests/rehearsals and lint each get a separate phase to avoid Windows subprocess and filesystem contention ([#188](https://github.com/suredo/Tessera/issues/188)). CI's required jobs remain unchanged.
+The shared `vitest.config.ts` runs four unit workers on CI, where the `CI` variable is set, and two locally, while keeping every package, evaluation and script test included. Locally, [sequence heavyweight checks](../../practices/testing.md#targeted-local-checks) across worktrees: the full unit suite, browser tests/rehearsals and lint each get a separate phase to avoid Windows subprocess and filesystem contention ([#188](https://github.com/suredo/Tessera/issues/188)). CI's required jobs remain unchanged.
 
 # Pitfalls
 

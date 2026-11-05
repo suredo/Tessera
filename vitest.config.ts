@@ -3,8 +3,9 @@ import { defineConfig } from "vitest/config";
 // Unit tests for every package (TEST-01) and the repository scripts, run from the repository root.
 export default defineConfig({
   test: {
-    // Bound subprocess and filesystem contention on local Windows checks (ENG-20, #188).
-    maxWorkers: 4,
+    // Bound subprocess and filesystem contention on local Windows checks (ENG-20, #188), and memory:
+    // the local machine has 16 GB shared with the owner's apps, so it runs two workers; CI runs four.
+    maxWorkers: process.env["CI"] ? 4 : 2,
     // Many tests open a data folder (SQLite, migrations, a backup) and write to it. They take well
     // under a second alone, but several seconds while all the files run at once on Windows, and
     // past vitest's 5 s default in about one full run in three on a 12-core machine (ENG-20). None

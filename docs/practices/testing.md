@@ -4,7 +4,7 @@ title: "Testing"
 description: "The five-layer test pyramid and test rules (ENG-11, ENG-13, ENG-14, ENG-17, ENG-20, ENG-31)."
 tags: [practices, testing]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T05:01:36Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T07:04:58Z }
 ---
 # Testing
 
@@ -29,7 +29,7 @@ The POC showed that offline tests can pass while live behavior fails (L-08). The
 
 ## Targeted local checks
 
-How `ENG-31` chooses and reports local checks. It applies to the author before saying a change is done, and to the reviewing assistant ([cross-review](assistants.md#cross-review)). The commands are those in the Checks section of [`AGENTS.md`](../../AGENTS.md).
+How `ENG-31` chooses and reports local checks. It applies to the author before saying a change is done, and to the reviewing assistant ([cross-review](assistants.md#cross-review)), who runs only the light ones, as [heavy suites once per pull request](#targeted-local-checks) says. The commands are those in the Checks section of [`AGENTS.md`](../../AGENTS.md).
 
 **Choose by what depends on the change, not by file names.** For a change to code, tests or configuration, run:
 
@@ -46,7 +46,9 @@ How `ENG-31` chooses and reports local checks. It applies to the author before s
 
 **A full local run** is allowed when it is justified, such as a failure whose cause CI's trace and video can't explain, or closing a milestone, but it is never the default. Runs under added load or with `--repeat-each`, to reproduce a flaky test, happen only when the owner asks or CI's evidence can't explain the failure, and use at most 2 workers.
 
-**Sequence heavyweight local phases.** Run the full unit suite, browser tests (including browser rehearsals), and lint as separate phases on the same machine, including across worktrees and assistant sessions. Wait for one phase to finish before starting another. Vitest caps unit workers at four in `vitest.config.ts` to bound subprocess and filesystem contention. In [issue 188](https://github.com/suredo/Tessera/issues/188), unrestricted unit workers overlapping six browser workers and other checks exceeded unchanged subprocess-test timeouts. Preserve test inclusion, assertions, timeouts, provider/stage limits and the no-retry rule; record failures instead of rerunning unchanged orchestration. CI still runs every required check.
+**Heavy suites once per pull request, by the author.** The full unit suite, `pnpm typecheck`, the whole of `pnpm lint`, `pnpm build` and browser runs are heavy on the local machine, which has 16 GB shared with the owner's apps. The author runs each one the change can affect at most once per head. The reviewer runs none of them: CI's run on the same head is their evidence. Locally the reviewer runs only light checks: the OKF check, `git diff --check`, and single test files of the changed modules, to confirm a suspected defect or that a fix's regression test fails without the fix. A reviewer who needs a heavy suite says why in the review, and runs it alone.
+
+**Sequence heavyweight local phases.** Run the full unit suite, browser tests (including browser rehearsals), and lint as separate phases on the same machine, including across worktrees and assistant sessions. Wait for one phase to finish before starting another. Vitest runs two unit workers locally and four on CI (`vitest.config.ts`), to bound subprocess and filesystem contention and memory. In [issue 188](https://github.com/suredo/Tessera/issues/188), unrestricted unit workers overlapping six browser workers and other checks exceeded unchanged subprocess-test timeouts. Preserve test inclusion, assertions, timeouts, provider/stage limits and the no-retry rule; record failures instead of rerunning unchanged orchestration. CI still runs every required check.
 
 **Say why the checks are enough.** Each report names what the change can reach and why the checks run cover it.
 
