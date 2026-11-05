@@ -346,6 +346,7 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     target.savedTool = name;
     const entry = listSavedTools(store).find((t) => t.name === name);
     if (!entry) throw new Error(`There is no saved tool named ${name}.`);
+    const existing = new Set(listWorkspaces(store).map((w) => w.id));
     // From the offer when the host is offering it, otherwise from my tools.
     const offered = button(
       page,
@@ -364,7 +365,19 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
         })
         .click();
     }
-    await page.locator(".tool-panel[data-workspace-id]").waitFor();
+    // The workspace it opens, not the one already showing: Continue's own, or a new one for
+    // Use again. The panel before the switch would otherwise be read on a slow machine. If it
+    // never opens, the host facts say so in their own words.
+    await expect
+      .poll(
+        async () => {
+          const id = await openWorkspace(page);
+          return id !== null && ("continue" in s ? id === entry.workspaceId : !existing.has(id));
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(true)
+      .catch(() => undefined);
     return { claim: "none" };
   }
   if ("undo" in s) {
