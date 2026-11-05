@@ -460,6 +460,21 @@ export const existingSavedTool = (store: Store, id: string): SavedTool => {
   return found;
 };
 
+/**
+ * The saved tools, the most recently used first (GEN-18): by the later of when the entry changed
+ * and when its workspace was last used, since a saved tool follows its workspace (A32).
+ */
+export function recentSavedTools(store: Store): SavedTool[] {
+  const used = lastUsed(store);
+  const recency = (tool: SavedTool) => {
+    const workspace = used[tool.workspaceId];
+    return workspace && workspace > tool.updatedAt ? workspace : tool.updatedAt;
+  };
+  return listSavedTools(store).sort(
+    (a, b) => recency(b).localeCompare(recency(a)) || a.id.localeCompare(b.id),
+  );
+}
+
 /** The saved-tools library, by name. */
 export const listSavedTools = (store: Store): SavedTool[] =>
   store.db.all(savedToolFromRow, `${SELECT_SAVED_TOOL} ORDER BY name COLLATE NOCASE, id`);

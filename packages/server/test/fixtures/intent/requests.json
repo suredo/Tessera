@@ -1,13 +1,29 @@
 {
-  "about": "The intent stage's fixtures (GEN-01, TEST-04): the POC's routing failures from the intent spike (evals/spikes/intent), with ADR 0008's pairs. Each request has its context and the host's expected action. Answers recorded from live runs are in replays.json; the live evaluation runs the rest.",
+  "about": "The intent stage's fixtures (GEN-01, TEST-04): the POC's routing failures from the intent spike (evals/spikes/intent), with ADR 0008's pairs. Each request has its context (the open tool and the saved tools, most recently used first) and the host's expected action. Answers recorded from live runs are in replays.json; the live evaluation runs the rest.",
   "contexts": {
     "empty": {
       "open": null,
-      "savedToolIds": []
+      "savedTools": []
     },
     "library": {
       "open": null,
-      "savedToolIds": ["t-shop", "t-budget", "t-study"]
+      "savedTools": [
+        {
+          "id": "t-shop",
+          "name": "Weekly shopping list",
+          "description": "What to buy each week, ticked off at the store."
+        },
+        {
+          "id": "t-budget",
+          "name": "Monthly budget",
+          "description": "Tracks what comes in and goes out each month."
+        },
+        {
+          "id": "t-study",
+          "name": "Study planner",
+          "description": "Plans study sessions for each subject before the exams."
+        }
+      ]
     },
     "shopping-open": {
       "open": {
@@ -19,7 +35,13 @@
           }
         ]
       },
-      "savedToolIds": ["t-budget"]
+      "savedTools": [
+        {
+          "id": "t-budget",
+          "name": "Monthly budget",
+          "description": "Tracks what comes in and goes out each month."
+        }
+      ]
     },
     "party-open": {
       "open": {
@@ -35,7 +57,7 @@
           }
         ]
       },
-      "savedToolIds": []
+      "savedTools": []
     },
     "queue-open": {
       "open": {
@@ -47,7 +69,7 @@
           }
         ]
       },
-      "savedToolIds": []
+      "savedTools": []
     }
   },
   "requests": [

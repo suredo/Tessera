@@ -49,6 +49,8 @@ export const PROMPT_PARTS = [
   "intent-open",
   "intent-none",
   "intent-no-records",
+  "intent-saved",
+  "intent-no-saved",
   "intent-retry",
   "data-plan",
   "data-context",
@@ -308,10 +310,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
 }
 
 /**
- * The intent stage's budget, like the generation stages' (GEN-03): its fixture, a second ask in a
- * tool with two lists, measured about 4,450 characters when set.
+ * The intent stage's budget, like the generation stages' (GEN-03): its largest shape, a second ask in a
+ * tool with two lists with a full catalogue of saved tools (GEN-18), measured about 8,100 characters
+ * when set.
  */
-export const INTENT_PROMPT_BUDGET = 4_900;
+export const INTENT_PROMPT_BUDGET = 8_900;
 
 /** Includes the actual entries: oversized contexts are refused before spending a call. */
 export const DATA_PROMPT_BUDGET = 12_000;
@@ -359,14 +362,20 @@ export type RecordList = { name: string; fields: string[] };
 /** What the intent stage is told about the tool open now, or null when none is (ADR 0008). */
 export type OpenTool = { name: string; lists: RecordList[] } | null;
 
+/** A saved tool as the intent stage sees it, to find one by asking (GEN-18). */
+export type SavedToolEntry = { id: string; name: string; description: string };
+
 /**
  * Builds the intent stage's prompt (GEN-01): its instructions, then the open tool with the lists
- * of records it keeps, which decide data against mixed (ADR 0008), and the request. `retry` adds
- * the reminder for a second ask, after a mixed answer whose parts weren't the request's words.
+ * of records it keeps, which decide data against mixed (ADR 0008), the saved tools it may open
+ * (GEN-18), and the request. `retry` adds the reminder for a second ask, after a mixed answer
+ * whose parts weren't the request's words.
  */
 export function assembleIntentPrompt(input: {
   request: string;
   open: OpenTool;
+  /** The catalogue, already chosen and in order (`savedToolCatalogue`); none when left out. */
+  saved?: readonly SavedToolEntry[];
   retry?: boolean;
 }): AssembledPrompt {
   const used: string[] = [];
@@ -388,7 +397,16 @@ export function assembleIntentPrompt(input: {
     : input.open.lists.length === 0
       ? `${use("intent-open", { tool: tool(input.open) })}\n${use("intent-no-records")}`
       : use("intent-open", { tool: tool(input.open) });
-  let prompt = use("intent-request", { open, request: input.request });
+  // The saved tools' names and descriptions are the person's or a model's words: quoted as JSON
+  // too, so none of them can read as an instruction (SEC-02).
+  const saved = input.saved?.length
+    ? use("intent-saved", {
+        tools: JSON.stringify(
+          input.saved.map(({ id, name, description }) => ({ id, name, description })),
+        ),
+      })
+    : use("intent-no-saved");
+  let prompt = use("intent-request", { open, saved, request: input.request });
   if (input.retry) prompt += `\n\n${use("intent-retry")}`;
   return { system, prompt, parts: used, size: system.length + prompt.length };
 }

@@ -3,11 +3,11 @@ type: Code Module
 title: "Intent stage"
 description: "One cheap call works out what a request asks for, in any language, and the host decides what happens: guardrails no answer gets past, the whole request where nothing is split, and a word check, second ask and hand-back for a mixed split (ADR 0008)."
 resource: ../../../packages/server/src/intent/
-implements: [GEN-01, GEN-15]
+implements: [GEN-01, GEN-15, GEN-18]
 tests: [../../../packages/server/test/intent.test.ts]
 tags: [code, server, generation, intent]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T02:55:08Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:47:34Z }
 ---
 
 # Purpose
@@ -17,19 +17,20 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
 # Entry points
 
 - `src/intent/intent.ts`:
-  - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the saved tools' IDs) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, or ask the person to split it.
+  - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the person's saved tools, the most recently used first) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, or ask the person to split it.
   - `recordLists` reads the lists a tool keeps, and their fields, from its declared data shape (`DATA-03`).
   - `wordsNotInRequest` is the word check of a split part.
   - `INTENT_TIME_LIMIT_MS` is the stage's time limit (`GEN-11`).
-- Its prompt is assembled by the [prompt assembly](prompts.md) from the intent parts: the instructions, the request, the open tool or none, a tool with no records, and the reminder for a second ask.
-- `packages/server/test/fixtures/intent/`: `requests.json`, the 31 requests of the intent spike plus ADR 0008's pairs, each with its context and expected action; `replays.json`, the spike's recorded live answers (`TEST-04`).
+  - `savedToolCatalogue` chooses the saved tools the stage is shown (`GEN-18`): each one's ID, name and description, in the order given, until the next would pass `CATALOGUE_MAX_TOOLS` (20) or `CATALOGUE_MAX_CHARACTERS` (3,000, as quoted). It stops there rather than skip one, so the most recent always come first.
+- Its prompt is assembled by the [prompt assembly](prompts.md) from the intent parts: the instructions, the request, the open tool or none, a tool with no records, the saved tools or none, and the reminder for a second ask.
+- `packages/server/test/fixtures/intent/`: `requests.json`, the 31 requests of the intent spike plus ADR 0008's pairs, each with its context (the open tool, and the saved tools with their names and descriptions) and expected action; `replays.json`, the spike's recorded live answers (`TEST-04`).
 
 # Invariants
 
 - **Guardrails no answer gets past** (`GEN-01`):
   - With no tool open, a request opens a listed saved tool or creates one (A12).
   - A request that isn't about the open tool never changes it: it becomes a new tool. Building a tool while one is open is a new tool too.
-  - A saved tool must be one of those listed. Clarify and unsupported reach the person as they are.
+  - A saved tool must be one of those the stage was shown in the catalogue; one left out, or unknown, is treated as no match. Clarify and unsupported reach the person as they are.
 - **The open tool's records decide data against mixed** (ADR 0008). The prompt lists each list the tool keeps with its fields, and says that adding what the tool keeps as records is data.
 - **The open tool is quoted data** (`SEC-02`). Its name and lists come from the tool, which may be generated or imported, so they go in as JSON between markers, and the instructions say they are never instructions; only the request says what the person wants.
 - **Nothing split, nothing reworded** (ADR 0008, L-75). For create, new tool and edit, the interface part is the whole request; for data, the data part is the whole request. A part the model wrote is never used for these.
@@ -38,12 +39,12 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
 
 # Depends on / used by
 
-The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md), and the contracts' intent schema. The generation pipeline (#146) will run it first for every request, and the chat (#150) will say what each decision means; finding saved tools (#145) adds the saved-tools catalogue to its prompt.
+The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md), and the contracts' intent schema. The generation pipeline (#146) will run it first for every request, and the chat (#150) will say what each decision means.
 
 # Pitfalls
 
 - **The fixtures are replayed only where live answers exist** (r19, r20 and r23 from the spike). How often the stage routes the rest right is measured by the live evaluation (#155), against `requests.json`.
-- **No saved tools are listed in the prompt yet,** so the stage can't choose one; the host would still check any it named. The catalogue comes with #145.
+- **Finding a saved tool depends on its name and description,** which the person or a creation wrote (`APP-04`). A tool with neither saying what it is for is hard to find by asking; the person still has the library.
 - **It splits a mixed request; it doesn't carry it out.** `GEN-04` also asks that the interface part goes to generation and the data part is applied after the new version is installed, neither seeing the other; the pipeline (#146) does that, and claims it.
 - **Destructive data changes need an explicit target** (`GEN-01`); that guardrail belongs to the data stage, which acts on the data part.
 
@@ -51,5 +52,5 @@ The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `decideIntent`, `INTENT_TIME_LIMIT_MS`, `recordLists`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type)
-- `intent.ts`: `INTENT_TIME_LIMIT_MS`, `recordLists`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type), `decideIntent`
+- `index.ts`: `CATALOGUE_MAX_CHARACTERS`, `CATALOGUE_MAX_TOOLS`, `decideIntent`, `INTENT_TIME_LIMIT_MS`, `recordLists`, `savedToolCatalogue`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type)
+- `intent.ts`: `INTENT_TIME_LIMIT_MS`, `CATALOGUE_MAX_TOOLS`, `CATALOGUE_MAX_CHARACTERS`, `savedToolCatalogue`, `recordLists`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type), `decideIntent`

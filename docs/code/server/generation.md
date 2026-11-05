@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:09:47Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:47:34Z }
 ---
 
 # Purpose
@@ -59,7 +59,7 @@ The core of generation (#146): interface requests create or edit a candidate too
 - **The prompt's schema keywords are the host's own list,** the one the data shape is checked against, so the model is told exactly what passes.
 
 - **Mixed instructions stay apart** (`GEN-04`). Only the interface instruction reaches editing and its repairs. A server-owned continuation retains the data instruction, language, original expiry and shared per-class repair counts. Smoke and finish-data requests require the candidate's opaque token; maps key continuations by that identity, with workspace/hash checked before consumption. Activation consumes its own authority while leaving the independent data continuation eligible until the same original expiry. An expired old POST cannot consume a later same-workspace/hash request's instructions or budget. After staging/activation, finish-data consumes its continuation and checks the active version before planning against its new shape. Identical interfaces still run the separate data part; failed interfaces never do. Smoke repair revokes the old continuations and transfers remaining data work to the repaired candidate's fresh token, without another smoke allowance. Outstanding equal workspace/hash candidates are refused before replacing instructions. Continuations are bounded to 100 and disappear on restart/expiry. Missing, premature and replayed follow-ups spend no model call or write.
-- **The pipeline carries a request as far as the server goes, and activates nothing.** The intent stage decides, with the open tool and its lists, and the saved tools' IDs.
+- **The pipeline carries a request as far as the server goes, and activates nothing.** The intent stage decides, with the open tool and its lists, and the saved tools, the most recently used first, from which it is shown a catalogue (`GEN-18`).
   - Clarify, unsupported and ask-to-split are answered as they are, and a listed saved tool is offered to open.
   - An interface edit runs `generateEdit` against the open tool. Data requests run `changeData`; mixed requests edit first and retain their data part for the activated version. An unchanged edit plans data immediately and returns both facts.
   - Create and new tool run the create stage on the interface part. A checked candidate is stored, and its workspace starts with its starting data: the open workspace if it has no tool and no data yet, or a new one, named after the tool and described by the creation's summary (`APP-04`).

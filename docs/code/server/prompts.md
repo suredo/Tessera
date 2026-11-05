@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T03:04:13Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:47:34Z }
 ---
 
 # Purpose
@@ -20,7 +20,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 - `packages/server/prompts/`: the parts, one Markdown file each, with `{{placeholders}}` for what is filled in: `base.md` (the rules every tool follows), `create.md` (what creation answers, with the host's data schema keywords), `bridge.md`, `ui-standard.md` (the standard's look), `accessibility.md` (the rules every tool keeps, whatever its look), `request.md`, `attempt.md` (a failed answer, quoted for its repair), `repair-schema-shape.md` and `repair-static.md` (each failure class's repair instructions, `GEN-09`), `language.md` (the request's language, as the intent stage found it, `GEN-15`), `source.md`, `diagnostics.md`, the probe's `probe.md` and `probe-request.md`, and the [intent stage](intent.md)'s `intent*.md`.
 - `src/prompts/prompts.ts`:
   - `assemblePrompt` builds a generation stage's prompt (`PromptInput` to `AssembledPrompt`): the instructions, the request, each part as name@version, and the size.
-  - `assembleIntentPrompt` builds the intent stage's prompt: its instructions, then the open tool (`OpenTool`) with each `RecordList` it keeps, quoted as JSON between markers (`SEC-02`), or none, the request, and on a second ask the reminder; `INTENT_PROMPT_BUDGET` caps it.
+  - `assembleIntentPrompt` builds the intent stage's prompt: its instructions, then the open tool (`OpenTool`) with each `RecordList` it keeps, quoted as JSON between markers (`SEC-02`), or none; then the saved tools it may open (`SavedToolEntry`: ID, name and description, `GEN-18`), quoted the same way, or none; the request, and on a second ask the reminder. `INTENT_PROMPT_BUDGET` caps it, at 8,900 characters, measured on a second ask in a tool with two lists and a full catalogue.
   - `fixedPart` gives a part used as it is, such as the probe's.
   - `fillPart`, `partText` and `partVersion` read, fill and version a part. `PROMPT_PARTS` lists them, `PROMPT_BUDGETS` caps each stage, and `manifestForPrompt` is the bridge manifest as the bridge part quotes it.
 
@@ -53,5 +53,5 @@ The [contracts](../contracts/package.md)' bridge manifest and intent, and the [r
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `assembleIntentPrompt`, `assembleDataPrompt`, `DATA_PROMPT_BUDGET`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
-- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `DATA_PROMPT_BUDGET`, `assembleDataPrompt`, `RecordList` (type), `OpenTool` (type), `assembleIntentPrompt`, `fixedPart`
+- `index.ts`: `assembleIntentPrompt`, `assembleDataPrompt`, `DATA_PROMPT_BUDGET`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `SavedToolEntry` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
+- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `DATA_PROMPT_BUDGET`, `assembleDataPrompt`, `RecordList` (type), `OpenTool` (type), `SavedToolEntry` (type), `assembleIntentPrompt`, `fixedPart`
