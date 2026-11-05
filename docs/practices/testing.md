@@ -4,7 +4,7 @@ title: "Testing"
 description: "The five-layer test pyramid and test rules (ENG-11, ENG-13, ENG-14, ENG-17, ENG-20, ENG-31)."
 tags: [practices, testing]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-02T00:55:49Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T05:01:36Z }
 ---
 # Testing
 
@@ -34,15 +34,17 @@ How `ENG-31` chooses and reports local checks. It applies to the author before s
 **Choose by what depends on the change, not by file names.** For a change to code, tests or configuration, run:
 
 - the tests of the behaviour that changed;
-- the tests of its consumers: the modules and packages that import or call it, and the browser tests that load it (for example, the runtime's scripts reach every browser test through the test host);
+- the tests of its consumers: the modules and packages that import or call it, and the browser specs that exercise the changed behaviour;
 - the checks every change gets, since they are fast and cover the whole repository: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm secrets`, and the OKF check (`node scripts/okf-check.mjs`, with `--base` and `--pr-body` for a pull request, and `--merge-ready` once it is meant to be final);
 - `pnpm contracts:schemas` after a change to `packages/contracts`, and `pnpm coverage` whenever a requirement or lesson ID is added, moved or claimed.
 
 **Docs only.** For a change to documentation and nothing else (Markdown, including `AGENTS.md` and the GitHub templates), the OKF check as above and `pnpm format:check` are enough; the code checks can't be affected. Run `node --test scripts/okf-check.test.mjs` too if the checker changed, and `pnpm coverage` if IDs or claims changed.
 
-**Broaden when the impact is wide or unclear.** Run the full suite, or every layer the change can reach, when it touches a shared contract (`packages/contracts` and its generated schemas), shared infrastructure (storage and migrations, the local server and its guard, the runtime's wrapper and preamble, the browser test host and other test support), dependencies or the lockfile, test or tool configuration (Vitest, Playwright, TypeScript, ESLint, Prettier), or when you can't tell what it reaches. When in doubt, broaden.
+**Browser tests locally: only the affected specs, in one browser and one width.** Run them with `pnpm e2e:local <spec files>`: Chrome at 1280 px, with 2 workers. Add Edge or the 320 px width (`pnpm e2e --project=<name> <spec files>`) only when the change depends on them, such as layout at narrow widths or a fix for one browser. Locally only failed tests keep a video; CI records every test. Never run the whole browser suite to cover a change's reach: when a change reaches every browser test (the runtime's wrapper and preamble, the browser test host and other test support, the Playwright configuration), run its own specs and one or two that depend most on it, and leave the rest to CI.
 
-**A full local run** is allowed when it is justified, such as for a change that reaches most of the code, a failure whose cause isn't clear, or closing a milestone, but it is never the default.
+**Broaden the other layers when the impact is wide or unclear.** Run the full unit suite, or every layer the change can reach other than the browser tests, when it touches a shared contract (`packages/contracts` and its generated schemas), shared infrastructure (storage and migrations, the local server and its guard, the runtime's wrapper and preamble), dependencies or the lockfile, test or tool configuration (Vitest, TypeScript, ESLint, Prettier), or when you can't tell what it reaches. When in doubt, broaden.
+
+**A full local run** is allowed when it is justified, such as a failure whose cause CI's trace and video can't explain, or closing a milestone, but it is never the default. Runs under added load or with `--repeat-each`, to reproduce a flaky test, happen only when the owner asks or CI's evidence can't explain the failure, and use at most 2 workers.
 
 **Sequence heavyweight local phases.** Run the full unit suite, browser tests (including browser rehearsals), and lint as separate phases on the same machine, including across worktrees and assistant sessions. Wait for one phase to finish before starting another. Vitest caps unit workers at four in `vitest.config.ts` to bound subprocess and filesystem contention. In [issue 188](https://github.com/suredo/Tessera/issues/188), unrestricted unit workers overlapping six browser workers and other checks exceeded unchanged subprocess-test timeouts. Preserve test inclusion, assertions, timeouts, provider/stage limits and the no-retry rule; record failures instead of rerunning unchanged orchestration. CI still runs every required check.
 

@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "e2e": "playwright test",
+    "e2e:local": "playwright test --project=chrome-1280 --workers=2",
     "seed": "node scripts/seed.ts",
     "dev": "vite build packages/web && node scripts/dev.ts"
   },

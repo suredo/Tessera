@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-05
+
+* **Update**: [Testing](practices/testing.md) narrows local browser runs (`ENG-31`): only the specs a change affects, with `pnpm e2e:local` (Chrome at 1280 px, 2 workers), never the whole browser suite to cover a change's reach, and load or repeat runs only when asked or when CI's evidence can't explain a failure. Locally only failed tests keep a video; CI still records every test and runs the full suite. The [review steps](practices/assistants.md#cross-review) use CI's browser run instead of repeating the author's, and the [browser](code/web/package.md) doc and `AGENTS.md` say so. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T05:01:36Z.
+
 ## 2026-11-02
 
 * **Update**: The [runtime](code/runtime/package.md) doc says the device boundary test (`SBX-13`) waits up to 30 s for the camera and microphone to be refused. The browser refused them every time, but only after touching the devices: 1.5-4 s on an idle machine, up to 6.5 s under load, and past the old 10 s with more load ([issue 214](https://github.com/suredo/Tessera/issues/214)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-02T04:33:23Z.
