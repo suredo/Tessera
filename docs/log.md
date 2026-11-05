@@ -2,6 +2,8 @@
 
 ## 2026-11-05
 
+* **New**: The [M2 live run plan](../evals/reports/2026-11-05-m2-live-run.md) ([issue 155](https://github.com/suredo/Tessera/issues/155)): T1, T6, T13 and the J6 limits run, 24 steps (12 model-dependent, 11 lifecycle), 22-23 expected calls, a 29-call hard cap with 6 in reserve, frozen denominators and stop rules, for the owner to approve. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T12:28:12Z.
+
 * **Update**: The [scenario runner](code/evals/runner.md) has a rehearsal for every M2 scenario: T6 (tip and split calculator) and T13 (drawing board) join J6 and T1, each passing every step at no cost. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T09:12:20Z.
 
 * **New**: The [scenario runner](code/evals/runner.md), the second part of [issue 155](https://github.com/suredo/Tessera/issues/155): it plays a scenario through the host app in Chrome, with every call through the harness, checks each step's host facts and writes a report; rehearsals for J6 and T1 call no model. The [scenario format](testing/scenario-format.md) describes the answers files and how `switch: new` is made for now; the [browser](code/web/package.md) doc names the tool panel's `data-workspace-id` hook. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T08:43:21Z.
