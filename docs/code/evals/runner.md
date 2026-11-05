@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04]
 tests: [../../../evals/test/runner.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T22:21:07Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T22:27:23Z }
 ---
 
 # Purpose
@@ -49,7 +49,7 @@ Depends on the [harness](harness.md), the [scenario files and host facts](scenar
 - **Not in CI.** A rehearsal starts Chrome and Tessera and takes about a minute; run it locally, alone (`ENG-31`). Its parts that need no browser are unit-tested.
 - **A recorded run is reviewed before it is kept.** `answers.json` holds what the model answered; it is copied into `evals/scenarios/replays/` only after a person checks it holds nothing private (`ENG-19`).
 - **Continue and Use again wait for the workspace they open** (L-80): Continue's own, or one that didn't exist before Use again, for up to 30 s, never just any tool panel, since the one already showing would pass on a slow machine. If it never opens, the host facts report it.
-- **A notice can be stale.** A step that shows no new message, such as a Continue from my tools, reports the last one; the facts never rely on a notice alone.
+- **A notice can be stale.** A step that shows no new message, such as `next-day`, reports the last one (Continue from my tools has its own since L-77); the facts never rely on a notice alone.
 
 # Symbols (generated)
 
