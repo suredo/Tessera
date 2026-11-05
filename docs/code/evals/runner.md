@@ -18,7 +18,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 
 - `src/runner/cli.ts`: `node evals/src/runner/cli.ts <scenario-id> [--replay <answers file> | --live --cap <n>]`, after `pnpm build`. Without a flag it plays the scenario's rehearsal, `evals/scenarios/rehearsals/<id>.json`. `--live` is LIVE: it needs the owner's approved cap (`ENG-07`), runs Claude Code's free checks first (found, recent enough, signed in) and writes the run's answers as `answers.json`. The evidence (report, screenshots, video, ledger, answers) goes to `test-output/evals/scenarios/`.
 - `src/runner/run.ts`: `runScenario` plays one scenario (`RunReport`, `StepResult`, `RunMode`); `zonedInstant` is a wall time's instant in a zone. `STEP_LIMIT_MS` is how long a request may take; `NEW_WORKSPACE` is the title of the empty workspace a `switch: new` step opens.
-- `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit (`AnswersProvider`).
+- `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit and each stale one (`AnswersProvider`). `mapStrings` changes an answer's strings, never its JSON text, so a saved tool's name with quotes or backslashes stays whole.
 - `src/runner/messages.ts`: `outcomeOf` reads what a notice claims, in the app's own words from `en.ts`; `say` fills one of them.
 - `src/runner/record.ts`: `recordAnswers` turns a run's ledger and request log into answers that replay it (`EVAL-07`); `CANCELLED_WAIT_MS` is how long a cancelled call's answer waits in the replay.
 - `src/runner/report.ts`: `reportMarkdown`, the report a person reads.
@@ -57,4 +57,4 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `record.ts`: `CANCELLED_WAIT_MS`, `recordAnswers`
 - `report.ts`: `reportMarkdown`
 - `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `RunReport` (type), `zonedInstant`, `runScenario`
-- `script.ts`: `answersSchema`, `Answers` (type), `loadAnswers`, `AnswersProvider` (type), `answersProvider`
+- `script.ts`: `answersSchema`, `Answers` (type), `loadAnswers`, `mapStrings`, `AnswersProvider` (type), `answersProvider`
