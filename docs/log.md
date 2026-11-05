@@ -2,6 +2,8 @@
 
 ## 2026-11-05
 
+* **Update**: The [scenario runner](code/evals/runner.md) has a rehearsal for every M2 scenario: T6 (tip and split calculator) and T13 (drawing board) join J6 and T1, each passing every step at no cost. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T09:12:20Z.
+
 * **New**: The [scenario runner](code/evals/runner.md), the second part of [issue 155](https://github.com/suredo/Tessera/issues/155): it plays a scenario through the host app in Chrome, with every call through the harness, checks each step's host facts and writes a report; rehearsals for J6 and T1 call no model. The [scenario format](testing/scenario-format.md) describes the answers files and how `switch: new` is made for now; the [browser](code/web/package.md) doc names the tool panel's `data-workspace-id` hook. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T08:43:21Z.
 
 * **New**: [Scenario files and host facts](code/evals/scenarios.md), the first part of the scenario runner ([issue 155](https://github.com/suredo/Tessera/issues/155), `EVAL-01`, `EVAL-02`): the M2 scenarios in `evals/scenarios/`, their schema and loader, and the host facts checked after each step, including that nothing unrelated went away and no saved tool's Continue moved. The [scenario file format](testing/scenario-format.md) names its definition, the expectation fields and how `cancel` follows its request. The [harness](code/evals/harness.md) now refuses the real user data folder. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T07:45:07Z.

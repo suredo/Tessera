@@ -1,0 +1,122 @@
+{
+  "about": "A rehearsal of T6-tip-calculator, written by hand: no model answered these.",
+  "scenario": "T6-tip-calculator",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Tip and split calculator",
+          "summary": "Splits a bill with a tip between friends, and says what happens to the extra cent.",
+          "code": {
+            "html": "<h1>Split the bill</h1>\n<form id=\"calc\">\n  <label for=\"bill\">Bill</label> <input id=\"bill\" type=\"number\" step=\"0.01\" value=\"87.50\">\n  <label for=\"people\">People</label> <input id=\"people\" type=\"number\" min=\"1\" value=\"4\">\n  <label for=\"tip\">Tip (%)</label> <input id=\"tip\" type=\"number\" value=\"15\">\n</form>\n<p>Total with tip: <output id=\"total\"></output></p>\n<p>Each person pays: <output id=\"share\" class=\"share\"></output></p>\n<p id=\"cent\"></p>",
+            "css": "",
+            "js": "const read = (id) => Number(document.getElementById(id).value);\nfunction update() {\n  // In whole cents, so 87.50 with 15% is 100.63, not a float a hair under it.\n  const cents = Math.round((Math.round(read(\"bill\") * 100) * (100 + read(\"tip\"))) / 100);\n  const total = cents / 100;\n  const people = Math.max(1, read(\"people\"));\n  let share = Math.round(cents / people) / 100;\n  document.getElementById(\"total\").textContent = total.toFixed(2);\n  document.getElementById(\"share\").textContent = share.toFixed(2);\n  const left = Math.round((share * people - total) * 100) / 100;\n  document.getElementById(\"cent\").textContent =\n    left === 0 ? \"The shares add up to the total.\" : \"The shares come to \" + Math.abs(left).toFixed(2) + (left > 0 ? \" more\" : \" less\") + \" than the total.\";\n}\ndocument.getElementById(\"calc\").addEventListener(\"input\", update);\nupdate();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {}
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": true,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Each person's share is shown in bigger numbers.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Split the bill</h1>\n<form id=\"calc\">\n  <label for=\"bill\">Bill</label> <input id=\"bill\" type=\"number\" step=\"0.01\" value=\"87.50\">\n  <label for=\"people\">People</label> <input id=\"people\" type=\"number\" min=\"1\" value=\"4\">\n  <label for=\"tip\">Tip (%)</label> <input id=\"tip\" type=\"number\" value=\"15\">\n</form>\n<p>Total with tip: <output id=\"total\"></output></p>\n<p>Each person pays: <output id=\"share\" class=\"share\"></output></p>\n<p id=\"cent\"></p>",
+              "css": ".share{font-size:2.5rem;font-weight:700}",
+              "js": "const read = (id) => Number(document.getElementById(id).value);\nfunction update() {\n  // In whole cents, so 87.50 with 15% is 100.63, not a float a hair under it.\n  const cents = Math.round((Math.round(read(\"bill\") * 100) * (100 + read(\"tip\"))) / 100);\n  const total = cents / 100;\n  const people = Math.max(1, read(\"people\"));\n  let share = Math.round(cents / people) / 100;\n  document.getElementById(\"total\").textContent = total.toFixed(2);\n  document.getElementById(\"share\").textContent = share.toFixed(2);\n  const left = Math.round((share * people - total) * 100) / 100;\n  document.getElementById(\"cent\").textContent =\n    left === 0 ? \"The shares add up to the total.\" : \"The shares come to \" + Math.abs(left).toFixed(2) + (left > 0 ? \" more\" : \" less\") + \" than the total.\";\n}\ndocument.getElementById(\"calc\").addEventListener(\"input\", update);\nupdate();"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "There is an option to round each share up to a whole number.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Split the bill</h1>\n<form id=\"calc\">\n  <label for=\"bill\">Bill</label> <input id=\"bill\" type=\"number\" step=\"0.01\" value=\"87.50\">\n  <label for=\"people\">People</label> <input id=\"people\" type=\"number\" min=\"1\" value=\"4\">\n  <label for=\"tip\">Tip (%)</label> <input id=\"tip\" type=\"number\" value=\"15\">\n  <label><input id=\"round\" type=\"checkbox\"> Round each share up to a whole number</label>\n</form>\n<p>Total with tip: <output id=\"total\"></output></p>\n<p>Each person pays: <output id=\"share\" class=\"share\"></output></p>\n<p id=\"cent\"></p>",
+              "css": ".share{font-size:2.5rem;font-weight:700}",
+              "js": "const read = (id) => Number(document.getElementById(id).value);\nfunction update() {\n  // In whole cents, so 87.50 with 15% is 100.63, not a float a hair under it.\n  const cents = Math.round((Math.round(read(\"bill\") * 100) * (100 + read(\"tip\"))) / 100);\n  const total = cents / 100;\n  const people = Math.max(1, read(\"people\"));\n  const up = document.getElementById(\"round\").checked;\n  let share = Math.round(cents / people) / 100;\n  if (up) share = Math.ceil(total / people);\n  document.getElementById(\"total\").textContent = total.toFixed(2);\n  document.getElementById(\"share\").textContent = share.toFixed(2);\n  const left = Math.round((share * people - total) * 100) / 100;\n  document.getElementById(\"cent\").textContent =\n    left === 0 ? \"The shares add up to the total.\" : \"The shares come to \" + Math.abs(left).toFixed(2) + (left > 0 ? \" more\" : \" less\") + \" than the total.\";\n}\ndocument.getElementById(\"calc\").addEventListener(\"input\", update);\nupdate();"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
+    }
+  ]
+}
