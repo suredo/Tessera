@@ -1,0 +1,21 @@
+# J6, limits (docs/testing/journeys.md), the short M2 run: an ambiguous request, an impossible one
+# and a cancel. Honest answers, nothing invented, nothing made (GEN-08). A `cancel` step cancels the
+# request the step before it started, so the runner doesn't wait for that one to finish.
+id: J6-limits
+tier: limits
+language: en
+person: "Someone trying Tessera for the first time"
+goal: "See what happens when a request can't or shouldn't be carried out"
+clock: { start: "2026-10-16T10:00:00", zone: "America/New_York" }
+budget: { calls: 5 }
+steps:
+  - say: "Can you do the thing from before?"
+    expect: { answer: clarify, created: false }
+  - say: "Book me a table for two at an Italian restaurant tonight."
+    expect: { answer: unsupported, created: false }
+  - say: "I need a weekly planner for my family's chores, with each person's jobs."
+  - cancel: true
+    expect: { answer: stopped, created: false }
+review:
+  - messages
+  - coherence

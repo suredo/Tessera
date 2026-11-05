@@ -1,0 +1,50 @@
+---
+type: Code Module
+title: "Scenario files and host facts"
+description: "Scenario files in evals/scenarios/, their one schema and loader, and the host facts each step is checked against without a model."
+resource: ../../../evals/src/scenarios/
+implements: [EVAL-01, EVAL-02]
+tests: [../../../evals/test/scenarios.test.ts]
+tags: [code, evals, scenarios]
+status: draft
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T07:45:07Z }
+---
+
+# Purpose
+
+The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01`), written as the [scenario file format](../../testing/scenario-format.md) describes, and each step's expected host facts are checked from what Tessera stored, with no model (`EVAL-02`). The runner that plays them through the host app, in dry-run, replay and live modes, builds on this, with the [harness](harness.md) guarding and recording every call.
+
+# Entry points
+
+- `evals/scenarios/*.yaml`: the M2 live set ([milestone sets](../../testing/milestone-sets.md)): `T1-shopping-list`, `T6-tip-calculator`, `T13-drawing-board` and `J6-limits`, each in its M2 form, without steps that drive a tool's own controls. Their budgets are the M2 roadmap's: 10, 7, 7 and 5 calls.
+- `src/scenarios/scenario.ts`:
+  - `scenarioSchema`, `stepSchema` and `expectationSchema`, the format's one definition (P3), and their types `Scenario`, `Step` and `Expectation`.
+  - `loadScenario` reads and checks one file, whose name must be its ID, and `loadScenarios` every file in a folder; a file that isn't a scenario raises `ScenarioError` with each problem in plain words.
+  - `stepKind` names a step's kind. `M2_STEPS` are the kinds the M2 runner plays, and `m2Problems` says why a scenario can't be played in M2: a step that drives the tool's own controls needs verification profiles (M3).
+- `src/scenarios/facts.ts`:
+  - `readHostState` reads what Tessera stored (each workspace's tool version and a hash of its data, the saved tools) with the workspace the host app has open (`HostState`, `WorkspaceFacts`).
+  - `checkFacts` compares the state before and after a step, with what the host app showed (`StepOutcome`), against the step's expectation, and gives each difference in plain words.
+
+# Invariants
+
+- **Every scenario starts from an empty Tessera,** so its first step is a request (`say`). A test checks every file in `evals/scenarios/`.
+- **Only the facts a step names are checked, plus two that every step keeps:** nothing unrelated changed (a workspace other than the one open before or after keeps its version and data), and no success claimed that wasn't applied (`GEN-08`): "made" needs a stored tool, "changed" needs a changed version or data.
+- **Data is compared by content,** as a hash of its canonical JSON: for tools that match no verification profile, a step can only expect it changed or unchanged.
+- **A `cancel` step follows the request it cancels,** a `say` step that expects nothing of its own; the schema refuses any other order.
+
+# Depends on / used by
+
+Depends on `yaml` (2.9.1, already in the lockfile through other packages) to read the files, zod, `canonicalJson` from `@tessera/contracts`, and the workspace store of `@tessera/server`. The scenario runner (#155) uses it next.
+
+# Pitfalls
+
+- **Not yet played.** The runner that drives the host app step by step, its replay and live modes and its report come in the next part of #155; until then the files are checked, not run.
+- **Expectations are host facts, not quality.** Whether a tool does what was asked is the AI review's (`EVAL-03`), from the scenario's `review` items.
+
+# Symbols (generated)
+
+Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
+
+- `facts.ts`: `WorkspaceFacts` (type), `HostState` (type), `StepOutcome` (type), `readHostState`, `checkFacts`
+- `index.ts`: `expectationSchema`, `loadScenario`, `loadScenarios`, `M2_STEPS`, `m2Problems`, `ScenarioError`, `scenarioSchema`, `stepKind`, `stepSchema`, `Expectation` (type), `Scenario` (type), `Step` (type), `checkFacts`, `readHostState`, `HostState` (type), `StepOutcome` (type), `WorkspaceFacts` (type)
+- `scenario.ts`: `expectationSchema`, `Expectation` (type), `stepSchema`, `Step` (type), `M2_STEPS`, `scenarioSchema`, `Scenario` (type), `stepKind`, `ScenarioError`, `loadScenario`, `loadScenarios`, `m2Problems`

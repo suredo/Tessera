@@ -7,12 +7,12 @@ implements: [OBS-02, ENG-07, ENG-19, CLI-04]
 tests: [../../../evals/test/harness.test.ts]
 tags: [code, evals, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:35:16Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T07:45:07Z }
 ---
 
 # Purpose
 
-Makes every evaluation run follow the [live evaluation protocol](../../practices/live-evaluation.md) (`ENG-07`) by construction (`OBS-02`). A script calls models only through the harness's provider, which refuses calls past the approved hard cap, records each call in a ledger, with its prompt parts and sizes, and each request in a log, and stops after a provider error. A dry run uses the [scripted provider](../server/providers.md), so the exact script is rehearsed at no cost before any call is spent. The live spikes (#19, #20) are its first users; the scenario runner (M2) builds on it.
+Makes every evaluation run follow the [live evaluation protocol](../../practices/live-evaluation.md) (`ENG-07`) by construction (`OBS-02`). A script calls models only through the harness's provider, which refuses calls past the approved hard cap, records each call in a ledger, with its prompt parts and sizes, and each request in a log, and stops after a provider error. A dry run uses the [scripted provider](../server/providers.md), so the exact script is rehearsed at no cost before any call is spent. The live spikes (#19, #20) are its first users; the [scenario runner](scenarios.md) (M2) builds on it.
 
 # Entry points
 
@@ -27,22 +27,21 @@ Makes every evaluation run follow the [live evaluation protocol](../../practices
 - **Every call leaves a trace.** Each call, refused ones included, gets a ledger line: stage, model, effort, prompt size, usage and outcome (`ok`, `failed` with its error kind, its plain message and the provider's own words as `detail`, `crashed` for a bug, or `refused`). Each call that started gets a request log line with its prompt and raw answer. Lines are appended as calls end, so a run that breaks keeps what it recorded; a ledger line still gives the time its call started, read before the call.
 - **Provider errors stop the run** (`ENG-07`). After a sign-in, usage limit, unavailable model or unsupported effort error, every later call is refused. A usage limit pauses: the rest resumes as a new run once the limit resets.
 - **Unknown cost is never 0** (`CLI-04`). The summary counts calls with unknown usage and leaves their unknown parts out of the totals.
-- **The run's own data folder** (`ENG-19`). It must be new or empty, so it can never be someone's real data folder, and it holds the ledger, request log and summary.
+- **The run's own data folder** (`ENG-19`). It must be new or empty, and `refuseRealDataFolder` refuses it if it is, holds or sits inside the real user data folder (`PLAT-04`): Tessera's default one, and the one `TESSERA_DATA_DIR` chooses for the process. It holds the ledger, request log and summary.
 
 # Depends on / used by
 
-Depends on `@tessera/contracts` and on the `Provider` interface from `@tessera/server`. Used by the live spikes (#19, #20) and, from M2, the scenario runner.
+Depends on `@tessera/contracts` and on the `Provider` interface from `@tessera/server`. Used by the live spikes (#19, #20) and, from M2, the [scenario runner](scenarios.md).
 
 # Pitfalls
 
 - **The request log holds whole prompts and answers.** Keep run folders out of the repository (`test-output/` is ignored) and sanitize anything before committing it (`ENG-19`).
-- **The data folder is not yet checked against the real user data folder,** which doesn't exist until M1 (`PLAT-04`). The "new or empty" rule covers it until then; add the check when the data folder lands.
 - **Not yet recorded:** diagnostics (`OBS-01`), which arrive with the pipeline in M2. Prompt part versions are recorded (`ENG-16`). The step-level stop rules (step 1 fails, a step fails twice) belong to the scenario runner.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `harness.ts`: `RunMode` (type), `HarnessOptions` (type), `Harness` (type), `HarnessError`, `startHarness`
-- `index.ts`: `HarnessError`, `startHarness`, `Harness` (type), `HarnessOptions` (type), `RunMode` (type), `LEDGER_FILE`, `readLedger`, `readRequestLog`, `REQUEST_LOG_FILE`, `summarizeLedger`, `SUMMARY_FILE`, `LedgerSummary` (type)
+- `harness.ts`: `RunMode` (type), `HarnessOptions` (type), `Harness` (type), `HarnessError`, `refuseRealDataFolder`, `startHarness`
+- `index.ts`: `HarnessError`, `refuseRealDataFolder`, `startHarness`, `Harness` (type), `HarnessOptions` (type), `RunMode` (type), `LEDGER_FILE`, `readLedger`, `readRequestLog`, `REQUEST_LOG_FILE`, `summarizeLedger`, `SUMMARY_FILE`, `LedgerSummary` (type)
 - `ledger.ts`: `LEDGER_FILE`, `REQUEST_LOG_FILE`, `SUMMARY_FILE`, `LedgerSummary` (type), `appendLine`, `readLedger`, `readRequestLog`, `summarizeLedger`

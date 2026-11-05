@@ -10,7 +10,9 @@ import {
 } from "@tessera/contracts";
 import {
   assemblePrompt,
+  chooseDataFolder,
   createScriptedProvider,
+  DATA_FOLDER_VARIABLE,
   runStage,
   type Provider,
   type StageSpec,
@@ -20,6 +22,7 @@ import {
   HarnessError,
   readLedger,
   readRequestLog,
+  refuseRealDataFolder,
   startHarness,
   SUMMARY_FILE,
 } from "../src/harness/index.ts";
@@ -255,5 +258,35 @@ describe("evaluation harness (OBS-02, ENG-07)", () => {
     fs.writeFileSync(path.join(used, "tessera.db"), "");
     expect(start({ dataFolder: used })).toThrow(/new or empty/);
     expect(reached).toBe(false);
+  });
+
+  it("ENG-19, PLAT-04: refuses the real user data folder, a folder inside it and one that holds it", () => {
+    const scripted = createScriptedProvider({ name: "test", replies: [] });
+    const home = newFolder();
+    const environment = {
+      LOCALAPPDATA: path.join(home, "Local"),
+      XDG_DATA_HOME: path.join(home, "share"),
+    };
+    const real = chooseDataFolder(environment);
+    const start =
+      (dataFolder: string, env: NodeJS.ProcessEnv = environment) =>
+      () =>
+        startHarness({
+          provider: scripted,
+          mode: "dry-run",
+          callCap: 1,
+          dataFolder,
+          environment: env,
+        });
+    for (const folder of [real, path.join(real, "evals"), path.dirname(real)]) {
+      expect(start(folder)).toThrow(/real user data folder/);
+    }
+    // The folder TESSERA_DATA_DIR chooses for this process is real too, and the default still is.
+    const chosen = path.join(home, "chosen");
+    const withChosen = { ...environment, [DATA_FOLDER_VARIABLE]: chosen };
+    expect(start(chosen, withChosen)).toThrow(/real user data folder/);
+    expect(start(real, withChosen)).toThrow(/real user data folder/);
+    expect(() => refuseRealDataFolder(path.join(home, "run"), withChosen)).not.toThrow();
+    expect(fs.existsSync(real)).toBe(false);
   });
 });

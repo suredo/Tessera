@@ -1,0 +1,40 @@
+# T1, shopping list (docs/testing/app-catalogue.md), in its M2 form: chat, undo, save, the next
+# day, finding it by asking, Use again and Continue. The tick-off step drives the tool's own
+# controls, so it waits for verification profiles (M3).
+id: T1-shopping-list
+tier: simple
+language: en
+person: "A busy parent who shops once a week"
+goal: "A shopping list to tick off at the store, used again every week"
+clock: { start: "2026-10-12T09:00:00", zone: "America/Sao_Paulo" }
+budget: { calls: 10 }
+profiles: [item-list]
+steps:
+  - say: "I need a shopping list I can tick off at the store. We need milk, eggs, bread and apples."
+    expect: { created: true, workspace: new }
+  - say: "Group them by aisle."
+    expect: { version: new, data: unchanged }
+  - say: "Add cheese and take the apples off."
+    expect: { version: unchanged, data: changed }
+  - undo: data
+    expect: { version: unchanged, data: changed }
+  - save: "Weekly shopping"
+    expect: { version: unchanged, data: unchanged }
+  - next-day: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+  - switch: new
+    expect: { created: false }
+  - say: "Open my weekly shopping list"
+    expect: { offered: saved, savedTool: "Weekly shopping", created: false }
+  - use-again: "Weekly shopping"
+    expect: { workspace: new }
+  - continue: "Weekly shopping"
+    expect: { workspace: original }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence

@@ -1,0 +1,28 @@
+# T13, drawing board (docs/testing/app-catalogue.md), in its M2 form: smoke-checked only, as no
+# profile covers drawing. Sketching with the mouse needs the tool's own controls (M3).
+id: T13-drawing-board
+tier: advanced
+language: en
+person: "A student who wants to sketch ideas quickly"
+goal: "A drawing board to sketch on with the mouse"
+clock: { start: "2026-10-15T16:00:00", zone: "Europe/London" }
+budget: { calls: 7 }
+steps:
+  - say: "A simple drawing board where I can sketch with the mouse."
+    expect: { created: true, workspace: new }
+  - say: "Make the brush thicker and add a red colour."
+    expect: { version: new }
+  - say: "Add an eraser."
+    expect: { version: new }
+  - reload: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+  - save: "Sketch pad"
+    expect: { version: unchanged, data: unchanged }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence
