@@ -120,8 +120,17 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
     await expect(running).rejects.toThrow(ProviderError);
   });
 
-  it("EVAL-01: every rehearsal is for its scenario and checks as answers", () => {
-    for (const id of ["J6-limits", "T1-shopping-list"]) {
+  it("EVAL-01: every M2 scenario has a rehearsal, for it, within its budget", () => {
+    const ids = fs
+      .readdirSync(path.join(scenarios, "rehearsals"))
+      .map((f) => path.basename(f, ".json"));
+    expect(ids.sort()).toEqual([
+      "J6-limits",
+      "T1-shopping-list",
+      "T13-drawing-board",
+      "T6-tip-calculator",
+    ]);
+    for (const id of ids) {
       const rehearsal = loadAnswers(path.join(scenarios, "rehearsals", `${id}.json`));
       expect(rehearsal.scenario).toBe(loadScenario(path.join(scenarios, `${id}.yaml`)).id);
       expect(rehearsal.answers.length).toBeLessThanOrEqual(

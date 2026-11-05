@@ -1,0 +1,122 @@
+{
+  "about": "A rehearsal of T13-drawing-board, written by hand: no model answered these.",
+  "scenario": "T13-drawing-board",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Drawing board",
+          "summary": "A board to sketch on with the mouse.",
+          "code": {
+            "html": "<h1>Drawing board</h1>\n<canvas id=\"board\" width=\"600\" height=\"400\" role=\"img\" aria-label=\"Drawing area\"></canvas>",
+            "css": "canvas{border:1px solid #888;max-width:100%}",
+            "js": "const board = document.getElementById(\"board\");\nconst pen = board.getContext(\"2d\");\npen.lineWidth = 2;\npen.lineCap = \"round\";\nlet drawing = false;\nboard.addEventListener(\"pointerdown\", (event) => {\n  drawing = true;\n  pen.beginPath();\n  pen.moveTo(event.offsetX, event.offsetY);\n});\nboard.addEventListener(\"pointermove\", (event) => {\n  if (!drawing) return;\n  pen.strokeStyle = \"#222222\";\n  pen.lineTo(event.offsetX, event.offsetY);\n  pen.stroke();\n});\nboard.addEventListener(\"pointerup\", () => (drawing = false));"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {}
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "The brush is thicker, and red is one of the colours.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Drawing board</h1>\n<label for=\"colour\">Colour</label> <select id=\"colour\"><option value=\"#222222\">Black</option><option value=\"#d22\">Red</option></select>\n<canvas id=\"board\" width=\"600\" height=\"400\" role=\"img\" aria-label=\"Drawing area\"></canvas>",
+              "css": "canvas{border:1px solid #888;max-width:100%}",
+              "js": "const board = document.getElementById(\"board\");\nconst pen = board.getContext(\"2d\");\npen.lineWidth = 6;\npen.lineCap = \"round\";\nlet drawing = false;\nconst colour = () => document.getElementById(\"colour\").value;\nboard.addEventListener(\"pointerdown\", (event) => {\n  drawing = true;\n  pen.beginPath();\n  pen.moveTo(event.offsetX, event.offsetY);\n});\nboard.addEventListener(\"pointermove\", (event) => {\n  if (!drawing) return;\n  pen.strokeStyle = colour();\n  pen.lineTo(event.offsetX, event.offsetY);\n  pen.stroke();\n});\nboard.addEventListener(\"pointerup\", () => (drawing = false));"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "There is an eraser.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Drawing board</h1>\n<label for=\"colour\">Colour</label> <select id=\"colour\"><option value=\"#222222\">Black</option><option value=\"#d22\">Red</option></select>\n<label><input id=\"eraser\" type=\"checkbox\"> Eraser</label>\n<canvas id=\"board\" width=\"600\" height=\"400\" role=\"img\" aria-label=\"Drawing area\"></canvas>",
+              "css": "canvas{border:1px solid #888;max-width:100%}",
+              "js": "const board = document.getElementById(\"board\");\nconst pen = board.getContext(\"2d\");\npen.lineWidth = 6;\npen.lineCap = \"round\";\nlet drawing = false;\nconst colour = () => document.getElementById(\"colour\").value;\nconst erasing = () => document.getElementById(\"eraser\").checked;\nboard.addEventListener(\"pointerdown\", (event) => {\n  drawing = true;\n  pen.beginPath();\n  pen.moveTo(event.offsetX, event.offsetY);\n});\nboard.addEventListener(\"pointermove\", (event) => {\n  if (!drawing) return;\n  pen.strokeStyle = erasing() ? \"#ffffff\" : colour();\n  pen.lineTo(event.offsetX, event.offsetY);\n  pen.stroke();\n});\nboard.addEventListener(\"pointerup\", () => (drawing = false));"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
+    }
+  ]
+}

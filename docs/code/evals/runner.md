@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/runner.test.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T08:53:41Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T09:12:20Z }
 ---
 
 # Purpose
@@ -21,7 +21,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 - `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit (`AnswersProvider`).
 - `src/runner/messages.ts`: `outcomeOf` reads what a notice claims, in the app's own words from `en.ts`; `say` fills one of them.
 - `src/runner/report.ts`: `reportMarkdown`, the report a person reads.
-- `evals/scenarios/rehearsals/`: rehearsals for `J6-limits` and `T1-shopping-list`, written by hand.
+- `evals/scenarios/rehearsals/`: a rehearsal for each M2 scenario, written by hand: `J6-limits`, `T1-shopping-list`, `T6-tip-calculator` and `T13-drawing-board`. The tools in them pass creation's checks; the calculator works in whole cents, so it shows the catalogue's 100.63 and 25.16 each.
 
 # Invariants
 
