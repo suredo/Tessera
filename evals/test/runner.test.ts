@@ -1,12 +1,14 @@
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { intentSchema, type Intent } from "@tessera/contracts";
-import { ProviderError, ScriptError } from "@tessera/server";
-import { describe, expect, it } from "vitest";
+import { listWorkspaces, ProviderError, ScriptError, type Store } from "@tessera/server";
+import { afterAll, describe, expect, it } from "vitest";
 import { loadScenario } from "../src/scenarios/index.ts";
 import { outcomeOf, say } from "../src/runner/messages.ts";
 import { reportMarkdown } from "../src/runner/report.ts";
-import type { RunReport } from "../src/runner/run.ts";
+import { runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
 import { answersProvider, loadAnswers, type Answers } from "../src/runner/script.ts";
 
 // The scenario runner's parts that need no browser (EVAL-01, EVAL-02, EVAL-07): what a notice
@@ -94,10 +96,17 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
     expect(provider.remaining()).toBe(0);
   });
 
-  it("TEST-04: a call for a stage the answers don't have next fails instead of guessing", async () => {
+  it("TEST-04: a call for a stage the answers don't have next fails instead of guessing, and is kept to fail the run", async () => {
     const provider = answersProvider(answers([{ reply: intent("create") }]), () => undefined);
     await expect(provider.run(ask("create"))).rejects.toThrow(ScriptError);
     await expect(provider.run(ask("intent"))).rejects.toThrow(/no reply left/);
+    // The host turns these into ordinary failed requests, so the runner reads them from here.
+    expect(provider.misfits()).toEqual([
+      expect.stringMatching(
+        /needs a new live run: .*has a intent reply next, but the call is for create/,
+      ),
+      expect.stringMatching(/needs a new live run: .*no reply left for the intent call/),
+    ]);
   });
 
   it("EVAL-07: an answer that takes its time is stopped by a cancel, as a model call would be", async () => {
@@ -119,6 +128,51 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
         loadScenario(path.join(scenarios, `${id}.yaml`)).budget.calls,
       );
     }
+  });
+});
+
+describe("the run's clock and its failures (RUN-07, EVAL-02)", () => {
+  const roots: string[] = [];
+  afterAll(() => roots.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
+
+  it("RUN-07: a scenario's start is its wall time in its own zone, across a date and a clock change", () => {
+    const iso = (ms: number) => new Date(ms).toISOString();
+    expect(iso(zonedInstant("2026-10-12T09:00:00", "America/Sao_Paulo"))).toBe(
+      "2026-10-12T12:00:00.000Z",
+    );
+    // Early morning in Tokyo is the day before in UTC.
+    expect(iso(zonedInstant("2026-10-12T05:00:00", "Asia/Tokyo"))).toBe("2026-10-11T20:00:00.000Z");
+    // Just after New York's clocks go forward, and in summer time.
+    expect(iso(zonedInstant("2026-03-08T03:30:00", "America/New_York"))).toBe(
+      "2026-03-08T07:30:00.000Z",
+    );
+    expect(iso(zonedInstant("2026-07-01T12:00:00", "UTC"))).toBe("2026-07-01T12:00:00.000Z");
+  });
+
+  it("EVAL-02: a browser that won't start still stops Tessera, blocks every step and leaves a report", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-runner-"));
+    roots.push(root);
+    const webRoot = path.join(root, "web");
+    fs.mkdirSync(webRoot);
+    fs.writeFileSync(path.join(webRoot, "index.html"), "<!doctype html><title>Tessera</title>");
+    let store: Store | undefined;
+    const report = await runScenario(loadScenario(path.join(scenarios, "J6-limits.yaml")), {
+      mode: "rehearsal",
+      provider: answersProvider(
+        loadAnswers(path.join(scenarios, "rehearsals", "J6-limits.json")),
+        () => undefined,
+      ),
+      folder: path.join(root, "run"),
+      webRoot,
+      onStarted: (started) => (store = started),
+      launchBrowser: () => Promise.reject(new Error("Chrome isn't installed.")),
+    });
+    expect(report.stopped).toBe("Chrome isn't installed.");
+    expect(report.steps.every((s) => s.outcome === "blocked")).toBe(true);
+    expect(report.ledger.callCount).toBe(0);
+    expect(fs.existsSync(path.join(root, "run", "report.json"))).toBe(true);
+    // Tessera was stopped: its data folder is closed.
+    expect(() => listWorkspaces(store!)).toThrow();
   });
 });
 

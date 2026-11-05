@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/runner.test.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T08:43:21Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T08:53:41Z }
 ---
 
 # Purpose
@@ -17,8 +17,8 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 # Entry points
 
 - `src/runner/cli.ts`: `node evals/src/runner/cli.ts <scenario-id> [--replay <answers file>]`, after `pnpm build`. Without `--replay` it plays the scenario's rehearsal, `evals/scenarios/rehearsals/<id>.json`. The evidence (report, screenshots, video, ledger) goes to `test-output/evals/scenarios/`.
-- `src/runner/run.ts`: `runScenario` plays one scenario (`RunReport`, `StepResult`, `RunMode`). `STEP_LIMIT_MS` is how long a request may take; `NEW_WORKSPACE` is the title of the empty workspace a `switch: new` step opens.
-- `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called.
+- `src/runner/run.ts`: `runScenario` plays one scenario (`RunReport`, `StepResult`, `RunMode`); `zonedInstant` is a wall time's instant in a zone. `STEP_LIMIT_MS` is how long a request may take; `NEW_WORKSPACE` is the title of the empty workspace a `switch: new` step opens.
+- `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit (`AnswersProvider`).
 - `src/runner/messages.ts`: `outcomeOf` reads what a notice claims, in the app's own words from `en.ts`; `say` fills one of them.
 - `src/runner/report.ts`: `reportMarkdown`, the report a person reads.
 - `evals/scenarios/rehearsals/`: rehearsals for `J6-limits` and `T1-shopping-list`, written by hand.
@@ -27,12 +27,14 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 
 - **The person's way in.** Each step uses the host app's own controls: the request box, the review's Apply, Save to my tools, the offer's Continue and Use again or my tools, History's undo and restore, the trash. A change to existing entries waits for review, and the runner applies it, as the person would. One exception: the app has no control for an empty workspace yet (#132), so `switch: new` makes one through the store and then opens it in the app.
 - **The open workspace is read, never chosen.** It comes from the tool panel's `data-workspace-id` hook (`VER-03`). After a reload the runner doesn't reopen anything: whatever the app opens is what the facts check.
-- **No model in a rehearsal or a replay.** The harness's dry run refuses a provider that can reach one (`ENG-07`). An answer for a stage the pipeline doesn't ask for next fails the call, so a replay can't pass by guessing ("needs a new live run").
+- **No model in a rehearsal or a replay.** The harness's dry run refuses a provider that can reach one (`ENG-07`).
+- **Answers that don't fit fail the run.** An answer for a stage the pipeline doesn't ask for next, or a call with no answer left, fails the call. The host shows that as an ordinary failed request, which a step expecting nothing to change would pass, so the answers provider keeps each misfit (`misfits`) and the runner fails its step with "needs a new live run", whatever the host showed (`TEST-04`).
 - **A saved tool is named, not numbered, in answers.** IDs are new on every run, so an answer says `{{saved:<name>}}`, filled with that saved tool's ID in the run's own Tessera when the call is made.
 - **A cancel has a request to stop.** An answer can take its time (`delayMs`), and a cancel stops it as it would stop a model call.
 - **The first step decides the run.** If it fails, the rest are reported as blocked; otherwise every step is played and judged on its own.
 - **The run's own data folders** (`ENG-19`): Tessera's under the run folder, refused if it is the real one, and the harness's beside it.
-- **The host's clock starts at the scenario's time** (`RUN-07`), in the server and the browser, in the scenario's time zone; a next-day step moves both a day.
+- **The host's clock starts at the scenario's time in its own zone** (`RUN-07`): `zonedInstant` turns the wall time into the instant, across date and daylight-saving changes, for the server and the browser, which also shows the zone. A next-day step moves both a day.
+- **A run always ends the same way:** Tessera stops, the harness writes its summary and the report is written, even when Chrome won't start; the steps not played are blocked and the report says why it stopped.
 
 # Depends on / used by
 
@@ -50,5 +52,5 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `messages.ts`: `outcomeOf`, `say`
 - `report.ts`: `reportMarkdown`
-- `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `RunReport` (type), `runScenario`
-- `script.ts`: `answersSchema`, `Answers` (type), `loadAnswers`, `answersProvider`
+- `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `RunReport` (type), `zonedInstant`, `runScenario`
+- `script.ts`: `answersSchema`, `Answers` (type), `loadAnswers`, `AnswersProvider` (type), `answersProvider`

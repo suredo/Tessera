@@ -1,7 +1,7 @@
 // Docs: docs/code/evals/runner.md
 import fs from "node:fs";
 import { scriptedReplySchema, type ScriptedReply } from "@tessera/contracts";
-import { createScriptedProvider, ProviderError, type Provider } from "@tessera/server";
+import { createScriptedProvider, ProviderError, ScriptError, type Provider } from "@tessera/server";
 import { z } from "zod";
 
 // The answers a rehearsal or a replay gives, in the order the stages ask for them (TEST-04,
@@ -58,12 +58,20 @@ const wait = (ms: number, signal?: AbortSignal) =>
     signal?.addEventListener("abort", done, { once: true });
   });
 
+/** An answers provider, with what it couldn't answer: the run fails on these, whatever the host showed. */
+export type AnswersProvider = Provider & {
+  remaining(): number;
+  /** Each call the answers didn't fit, in plain words, oldest first. */
+  misfits(): readonly string[];
+};
+
 /** A provider that answers from the file's answers, one per call, and can't reach a model. */
 export function answersProvider(
   answers: Answers,
   savedToolId: (name: string) => string | undefined,
-): Provider & { remaining(): number } {
+): AnswersProvider {
   let next = 0;
+  const misfits: string[] = [];
   return {
     name: `answers:${answers.scenario}`,
     live: false,
@@ -74,8 +82,21 @@ export function answersProvider(
         ? [fill(current.reply, savedToolId) as ScriptedReply]
         : [];
       // One reply at a time, through the scripted provider, so its stage and shape checks apply.
-      return createScriptedProvider({ name: answers.scenario, replies }).run(spec);
+      try {
+        return await createScriptedProvider({ name: answers.scenario, replies }).run(spec);
+      } catch (error) {
+        // The host turns any failed call into an ordinary failed request, which a step that
+        // expects nothing to change would pass, so a misfit is kept here for the runner to fail
+        // the run on: the answers need a new live run (docs/testing/scenarios.md).
+        if (error instanceof ScriptError) {
+          misfits.push(
+            `The answers don't fit this run, so it needs a new live run: ${error.message}`,
+          );
+        }
+        throw error;
+      }
     },
     remaining: () => Math.max(0, answers.answers.length - next),
+    misfits: () => misfits,
   };
 }

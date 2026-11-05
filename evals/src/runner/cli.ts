@@ -41,6 +41,7 @@ const report = await runScenario(scenario, {
   provider,
   folder,
   onStarted: (started) => (store = started),
+  misfits: () => provider.misfits(),
 });
 fs.writeFileSync(path.join(folder, "report.md"), reportMarkdown(report));
 console.log(reportMarkdown(report));

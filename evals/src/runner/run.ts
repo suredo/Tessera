@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium, expect, type BrowserContext, type Page } from "@playwright/test";
+import { chromium, expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import {
   createWorkspace,
   getWorkspace,
@@ -76,6 +76,42 @@ const actionOf = (s: Step): string => {
     : `${kind}: ${typeof value === "string" ? value : JSON.stringify(value)}`;
 };
 
+/**
+ * The instant a wall-clock time names in a time zone (RUN-07): "2026-10-12T09:00:00" in
+ * America/Sao_Paulo is 12:00 UTC. Found from the zone's offset at that time, checked once more
+ * across a daylight-saving change.
+ */
+export function zonedInstant(local: string, zone: string): number {
+  const asUtc = Date.parse(`${local}Z`);
+  const offsetAt = (instant: number) => {
+    const parts = Object.fromEntries(
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: zone,
+        hourCycle: "h23",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+        .formatToParts(instant)
+        .map((p) => [p.type, p.value]),
+    );
+    const wall = Date.UTC(
+      Number(parts["year"]),
+      Number(parts["month"]) - 1,
+      Number(parts["day"]),
+      Number(parts["hour"]),
+      Number(parts["minute"]),
+      Number(parts["second"]),
+    );
+    return wall - instant;
+  };
+  const first = asUtc - offsetAt(asUtc);
+  return asUtc - offsetAt(first);
+}
+
 /** Plays one scenario and writes its report beside the run's ledger. */
 export async function runScenario(
   scenario: Scenario,
@@ -85,12 +121,17 @@ export async function runScenario(
     folder: string;
     /** Called once the run's Tessera is up, with its store, before the first step. */
     onStarted?: (store: Store) => void;
+    /** Calls the answers didn't fit (a rehearsal's or replay's); each one fails its step. */
+    misfits?: () => readonly string[];
+    /** The browser's web build and launcher; tests pass their own. */
+    webRoot?: string;
+    launchBrowser?: () => Promise<Browser>;
   },
 ): Promise<RunReport> {
   const unplayable = m2Problems(scenario);
   if (unplayable.length > 0) throw new Error(`${scenario.id} can't run in M2: ${unplayable[0]}`);
-  if (!fs.existsSync(path.join(WEB_ROOT, "index.html")))
-    throw new Error("Build first: pnpm build.");
+  const webRoot = options.webRoot ?? WEB_ROOT;
+  if (!fs.existsSync(path.join(webRoot, "index.html"))) throw new Error("Build first: pnpm build.");
   const folder = path.resolve(options.folder);
   const dataDir = path.join(folder, "tessera");
   refuseRealDataFolder(dataDir);
@@ -100,15 +141,16 @@ export async function runScenario(
     callCap: scenario.budget.calls,
     dataFolder: path.join(folder, "harness"),
   });
-  // The host's clock starts at the scenario's time and moves only on a next-day step (RUN-07).
-  const start = new Date(`${scenario.clock.start}Z`).getTime();
+  // The host's clock starts at the scenario's time, in its zone, and moves only on a next-day
+  // step (RUN-07).
+  const start = zonedInstant(scenario.clock.start, scenario.clock.zone);
   const started = Date.now();
   let offset = 0;
   const now = () => new Date(start + offset + (Date.now() - started));
   const app = await launch({
     dataDir,
     port: 0,
-    webRoot: WEB_ROOT,
+    webRoot,
     provider: harness.provider,
     now,
     openBrowser: () => Promise.resolve(),
@@ -134,9 +176,12 @@ export async function runScenario(
     seconds: 0,
   }));
   let stopped: string | undefined;
+  let browser: Browser | undefined;
   let context: BrowserContext | undefined;
-  const browser = await chromium.launch({ channel: "chrome" });
+  const misfits = () => options.misfits?.() ?? [];
   try {
+    // Inside the guard, so a browser that won't start still stops Tessera and leaves a report.
+    browser = await (options.launchBrowser ?? (() => chromium.launch({ channel: "chrome" })))();
     context = await browser.newContext({
       viewport: { width: 1280, height: 800 },
       timezoneId: scenario.clock.zone,
@@ -153,6 +198,7 @@ export async function runScenario(
       const result = results[index]!;
       const began = Date.now();
       const before = readHostState(store, await openWorkspace(page));
+      const misfitsBefore = misfits().length;
       const target: StepTarget = {};
       let outcome: StepOutcome = { claim: "none" };
       try {
@@ -174,6 +220,8 @@ export async function runScenario(
         result.problems = [error instanceof Error ? error.message.split("\n")[0]! : String(error)];
         result.notice = await notice(page).catch(() => "");
       }
+      // Answers that didn't fit fail the step whatever the host showed (TEST-04).
+      result.problems.push(...misfits().slice(misfitsBefore));
       result.outcome = result.problems.length === 0 ? "passed" : "failed";
       result.seconds = (Date.now() - began) / 1000;
       await page.screenshot({ path: path.join(folder, `step-${result.index}.png`) });
@@ -187,7 +235,7 @@ export async function runScenario(
     stopped = error instanceof Error ? error.message : String(error);
   } finally {
     await context?.close().catch(() => undefined);
-    await browser.close().catch(() => undefined);
+    await browser?.close().catch(() => undefined);
     await app.stop();
   }
   const report: RunReport = {
