@@ -1,0 +1,79 @@
+{
+  "about": "A live run of J6-limits, recorded for replay.",
+  "scenario": "J6-limits",
+  "recorded": {
+    "head": "19d7056fe3a0b175b4df668085ba2b98ed0e4a7f",
+    "at": "2026-11-05T21:11:10.520Z",
+    "cliVersion": "2.1.318"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "clarify",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Repeat earlier work",
+              "request": "Can you do the thing from before?"
+            }
+          ]
+        }
+      },
+      "parts": [
+        "intent@3222248e8a6e",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "unsupported",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Book a restaurant table",
+              "request": "Book me a table for two at an Italian restaurant tonight."
+            }
+          ]
+        }
+      },
+      "parts": [
+        "intent@3222248e8a6e",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "error",
+        "stage": "intent",
+        "error": "cancelled"
+      },
+      "delayMs": 120000,
+      "parts": [
+        "intent@3222248e8a6e",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    }
+  ]
+}
