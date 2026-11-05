@@ -7,7 +7,7 @@ implements: [UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, AP
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts, ../../../packages/web/test/generate.test.ts, ../../../packages/web/e2e/request.spec.ts, ../../../packages/web/test/data-offer.test.tsx, ../../../packages/web/e2e/chat-data.spec.ts, ../../../packages/web/e2e/request-deadline.spec.ts, ../../../packages/web/test/request-cancel.test.ts, ../../../packages/web/e2e/request-cancel.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:09:47Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:21:45Z }
 ---
 
 # Purpose
@@ -90,7 +90,7 @@ Depends on React 19, the [contracts](../contracts/package.md) and the [runtime](
 # Pitfalls
 
 - **Versions have no change summary or check results yet.** `APP-05` asks for both, but a version records neither until generation and the checks exist ([issue 121](https://github.com/suredo/Tessera/issues/121)).
-- **A saved tool has no description yet.** `APP-04` asks for a short one, but nothing stores one until generation can write it ([issue 119](https://github.com/suredo/Tessera/issues/119)); search matches names only.
+- **Only a created tool brings a description.** A saved tool from before descriptions, or whose workspace never had a generated tool, shows none until the person writes one (`APP-04`).
 - **Keys are typed.** `t` accepts only keys that exist in `en.ts`, so a new string starts there. Another language's file may leave keys out; they fall back to English.
 - **The title in `index.html` is empty on purpose.** `src/main.tsx` sets it from the translation layer.
 - **The package's TypeScript settings include Node's types,** for its tests and build config. `src/` must still use only browser APIs.

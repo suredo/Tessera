@@ -13,7 +13,7 @@ import {
   schemaVersion,
   syncedFolderOf,
 } from "../src/storage/index.ts";
-import { listTrash } from "../src/trash/index.ts";
+import { listTrash, restoreSavedTool } from "../src/trash/index.ts";
 import { loadVersion } from "../src/versions/index.ts";
 import { getWorkspace, listSavedTools } from "../src/workspaces/index.ts";
 
@@ -120,6 +120,35 @@ describe("migrating real data (ENG-18)", () => {
     });
     expect(listSavedTools(folder).map((tool) => tool.name)).toEqual(["Weekly shop"]);
     expect(listTrash(folder).entries).toEqual([]);
+    folder.close();
+  });
+
+  it("ENG-18, APP-04: migrates a schema 8 database to descriptions, keeping every row, with none described", async () => {
+    const root = folderFromFixture("schema-8.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated[0]).toBe(9);
+    expect(backups(root)).toHaveLength(1);
+    expect(getWorkspace(folder, "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4")).toMatchObject({
+      title: "Garden plan",
+      description: "",
+      currentVersion: FIXTURE_VERSION,
+      data: { items: [{ id: "a", text: "tomatoes" }] },
+      dataRevision: 1,
+      updatedAt: "2026-11-04T08:05:00.000Z",
+    });
+    expect(listSavedTools(folder)).toEqual([
+      {
+        id: "1c7d3e2f-4a5b-4c6d-9e7f-8091a2b3c4d5",
+        name: "Garden",
+        description: "",
+        workspaceId: "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4",
+        createdAt: "2026-11-04T08:10:00.000Z",
+        updatedAt: "2026-11-04T08:10:00.000Z",
+      },
+    ]);
+    // The saved tool in the trash stays there, and comes back described as none.
+    expect(listTrash(folder).entries.map((entry) => entry.name)).toEqual(["Old garden"]);
+    expect(restoreSavedTool(folder, "2d8e4f3a-5b6c-4d7e-8f80-91a2b3c4d5e6").description).toBe("");
     folder.close();
   });
 
