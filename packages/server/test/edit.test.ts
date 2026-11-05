@@ -130,10 +130,14 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
   });
 
   it("GEN-07: identical output is unchanged, including a replace that returns the same code", () => {
-    expect(editedCandidate(input, unchanged)).toEqual({ kind: "unchanged" });
+    // The model's summary says why, so the person reads it (GEN-08, L-79).
+    expect(editedCandidate(input, unchanged)).toEqual({
+      kind: "unchanged",
+      summary: "No changes needed.",
+    });
     expect(
       editedCandidate(input, { ...style, files: { mode: "replace", code: artifact.code } }),
-    ).toEqual({ kind: "unchanged" });
+    ).toEqual({ kind: "unchanged", summary: "Made it darker." });
   });
 
   it("GEN-07, GEN-13: an edit with unchanged files can migrate data, preserving every existing value on copies", () => {

@@ -247,7 +247,10 @@ export const generateReplySchema = z
     z.strictObject({
       kind: z.literal("answer"),
       answer: z.enum(GENERATE_ANSWERS),
-      reason: z.string().optional().describe("The model's own plain reason, for cannot."),
+      reason: z
+        .string()
+        .optional()
+        .describe("The model's own plain reason, for cannot, and for unchanged when it gave one."),
     }),
     z.strictObject({ kind: z.literal("open_saved"), savedToolId: z.string().min(1) }),
     generationFailureSchema,

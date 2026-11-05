@@ -391,6 +391,9 @@ export async function carryOut(
           case "not_yet":
             return { message: t("request.notYet") };
           case "unchanged":
+            // The model's own reason, such as that the tool already does it (GEN-08).
+            if (!mixed && reply.reason)
+              return { message: t("request.unchangedBecause", { reason: reply.reason }) };
             return { message: t(mixed ? "request.mixedKept" : "request.unchanged") };
           case "stale":
             return { message: t("request.stale") };
