@@ -197,19 +197,33 @@ describe("host facts (EVAL-02)", () => {
     expect(checkFacts(before, lost, none, { version: "unchanged", data: "unchanged" })).toEqual([
       "Notes is gone, though the step wasn't about it.",
     ]);
-    expect(checkFacts(before, lost, none, {}, { trashes: "Notes" })).toEqual([]);
+    expect(checkFacts(before, lost, none, {}, { trashes: "w2" })).toEqual([]);
+    expect(checkFacts(before, before, none, {}, { trashes: "w2" })).toEqual([
+      "The workspace to delete is still there.",
+    ]);
     // A saved tool goes only with its workspace (DATA-09).
     const noEntry = { ...before, savedTools: [] };
     expect(checkFacts(before, noEntry, none)).toEqual(["The saved tool Weekly shopping is gone."]);
     expect(
-      checkFacts(
-        before,
-        { ...state(null, notes), savedTools: [] },
-        none,
-        {},
-        { trashes: "Shopping list" },
-      ),
+      checkFacts(before, { ...state(null, notes), savedTools: [] }, none, {}, { trashes: "w1" }),
     ).toEqual([]);
+  });
+
+  it("EVAL-02: a delete excuses only the one workspace it targets, even when another has its title", () => {
+    // Use again names a new workspace after its saved tool, so titles repeat.
+    const twin = { ...list, id: "w3" };
+    const before: HostState = {
+      ...state("w1", list, twin),
+      savedTools: [
+        { id: "s1", name: "Weekly shopping", workspaceId: "w1" },
+        { id: "s2", name: "Party shopping", workspaceId: "w3" },
+      ],
+    };
+    const bothGone: HostState = { workspaces: [], savedTools: [], open: null };
+    expect(checkFacts(before, bothGone, none, {}, { trashes: "w1" })).toEqual([
+      "Shopping list is gone, though the step wasn't about it.",
+      "The saved tool Party shopping is gone.",
+    ]);
   });
 
   it("EVAL-02: an answer instead of a tool", () => {

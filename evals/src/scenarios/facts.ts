@@ -34,8 +34,9 @@ export type StepOutcome = {
 };
 
 /**
- * What a step acts on, by name, when it names something: the saved tool a Continue or Use again
- * opens, and the workspace a delete moves to the trash.
+ * What a step acts on, when it names something: the saved tool a Continue or Use again opens, by
+ * name, and the one workspace a delete moves to the trash, by ID. Titles repeat (Use again names a
+ * new workspace after its saved tool), so the runner finds the workspace before the step.
  */
 export type StepTarget = { savedTool?: string; trashes?: string };
 
@@ -132,7 +133,7 @@ export function checkFacts(
   for (const old of before.workspaces) {
     const w = later.get(old.id);
     if (!w) {
-      if (old.title !== target.trashes)
+      if (old.id !== target.trashes)
         problems.push(`${old.title} is gone, though the step wasn't about it.`);
       continue;
     }
@@ -141,14 +142,16 @@ export function checkFacts(
       problems.push(`${w.title} changed, though the step wasn't about it.`);
     }
   }
-  const trashed = new Set(
-    before.workspaces.filter((w) => w.title === target.trashes).map((w) => w.id),
-  );
+  if (target.trashes !== undefined && later.has(target.trashes)) {
+    problems.push("The workspace to delete is still there.");
+  }
   for (const entry of before.savedTools) {
     const still = after.savedTools.find((t) => t.id === entry.id);
     if (!still) {
       // A saved tool goes to the trash with its workspace (DATA-09), and only then.
-      if (!trashed.has(entry.workspaceId)) problems.push(`The saved tool ${entry.name} is gone.`);
+      if (entry.workspaceId !== target.trashes) {
+        problems.push(`The saved tool ${entry.name} is gone.`);
+      }
     } else if (still.workspaceId !== entry.workspaceId) {
       problems.push(`${entry.name}'s Continue now opens a different workspace.`);
     }
