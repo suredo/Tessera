@@ -4,7 +4,7 @@ title: "Tessera issues"
 description: "Issues found while building Tessera, from L-70 on: what happened, the cause, the mitigation and where it was found."
 tags: [lessons, issues]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T21:40:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T21:46:26Z }
 ---
 # Tessera issues
 
@@ -12,6 +12,7 @@ Every defect a live run finds gets an entry here, a replay test and a fix (`ENG-
 
 | ID | What happened | Root cause | Mitigation | Status | Found in |
 | --- | --- | --- | --- | --- | --- |
+| L-78 | In the M2 live run's J6, cancelling a request ended with "That didn't work. The request was stopped.", as if something had gone wrong, although the person had asked to stop and nothing was applied. | The server answers a cancelled generation with a failed reply, and the browser showed every failed reply as a failure, whether or not the person had cancelled | GEN-08, GEN-12, ENG-13 (a failed reply after Cancel says the request stopped; a unit test in `request-cancel.test.ts`) | R | [M2 live run](../../evals/reports/2026-11-05-m2-live-run.md) |
 | L-77 | In the M2 live run, Continue from My tools, right after Use again, left Use again's message on screen: "Weekly shopping opened in a new workspace, with its starting data." That was untrue for the workspace now open. Every host fact passed. | Continue from My tools set no message of its own, so the last one stayed; the host facts don't read messages | GEN-08, ENG-13 (Continue says "… is open again."; the library browser test checks Continue after Use again) | R | [M2 live run](../../evals/reports/2026-11-05-m2-live-run.md) |
 | L-76 | The edit check passed DOM text/computed-style assertions but its intermediate full-page screenshot showed a blank panel. A free replay captured the expected list in a viewport image while the immediately following full-page image was blank. | Text/styles do not prove visibility; full-page capture can omit this nested-frame content even when rows are visible | ENG-07, ENG-13 (wait for visible rows, keep viewport and full-page images, replay recorded answers free and retain the original live visual limitation) | R | [Live edit check](../../evals/reports/2026-10-29-edit-check.md) |
 | L-70 | Claude Code refused the intent contract's JSON Schema before calling a model: it checks `--json-schema` with a draft-07 validator, and the contracts generated draft 2020-12. The dry run had passed. | The CLI's schema dialect was untested, and the fake CLI didn't check schemas | CON-01, ENG-13 (draft-07 from `jsonSchemaOf`; the fake checks like the CLI) | D | CLI contract spike, run 1 ([ADR 0002](../decisions/adr/0002-claude-code-cli-contract.md)) |

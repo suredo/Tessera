@@ -133,6 +133,22 @@ it("GEN-08: a refused entry plan after Cancel keeps the applied interface and sa
   expect(result.message).toContain(en["request.stopped"]);
   expect(result.reloadData).toBeUndefined();
 });
+it("GEN-08 GEN-12: the server's failed reply for a cancelled request says it stopped, not that it failed", async () => {
+  const { owner } = control();
+  const fake = deps();
+  fake.generate = async () => {
+    await owner.cancel();
+    return {
+      kind: "failed",
+      failure: "provider",
+      message: "The request was stopped.",
+      findings: [],
+    };
+  };
+  expect(await carryOut("A weekly planner", null, fake, undefined, owner)).toEqual({
+    message: en["request.stopped"],
+  });
+});
 it("GEN-08: any other failure after Cancel stays uncertain", async () => {
   const { owner } = control();
   const fake = deps();
