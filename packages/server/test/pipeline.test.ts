@@ -340,17 +340,29 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     folder.close();
   });
 
-  it("GEN-18: a listed saved tool is offered to open", async () => {
+  it("GEN-18: the intent stage is shown the saved tools, and a listed one is offered to open", async () => {
     const folder = await newFolder();
-    const workspace = createWorkspace(folder, "Errands");
+    const workspace = createWorkspace(folder, "Errands", {
+      description: "Jobs to do around town this week.",
+    });
     const saved = saveTool(folder, workspace.id, "Weekly errands");
-    const reply = await generate(
-      folder,
-      script(intentReply({ kind: "open_saved", savedToolId: saved.id, targetsCurrentTool: false })),
-      DEFAULT_ROUTES,
-      { request: "Open my errands" },
+    const scripted = script(
+      intentReply({ kind: "open_saved", savedToolId: saved.id, targetsCurrentTool: false }),
     );
+    const prompts: string[] = [];
+    const provider: Provider = {
+      ...scripted,
+      run: (spec) => {
+        prompts.push(spec.prompt);
+        return scripted.run(spec);
+      },
+    };
+    const reply = await generate(folder, provider, DEFAULT_ROUTES, { request: "Open my errands" });
     expect(reply).toEqual({ kind: "open_saved", savedToolId: saved.id });
+    const quoted = /--- saved tools ---\n(.*)\n--- end of the saved tools ---/.exec(prompts[0]!);
+    expect(JSON.parse(quoted?.[1] ?? "null")).toEqual([
+      { id: saved.id, name: "Weekly errands", description: "Jobs to do around town this week." },
+    ]);
     folder.close();
   });
 

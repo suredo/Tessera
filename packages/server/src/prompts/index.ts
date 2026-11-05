@@ -16,6 +16,7 @@ export {
   REPAIR_CLASSES,
   type AssembledPrompt,
   type OpenTool,
+  type SavedToolEntry,
   type RecordList,
   type GenerationStage,
   type PromptInput,

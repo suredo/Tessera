@@ -8,7 +8,7 @@ import { saveVersion, loadVersion } from "../versions/index.ts";
 import {
   createWorkspace,
   getWorkspace,
-  listSavedTools,
+  recentSavedTools,
   renameWorkspace,
   describeWorkspace,
   replaceData,
@@ -53,7 +53,7 @@ export async function generate(
     decision = await decideIntent(provider, routes, {
       request: input.request,
       open,
-      savedToolIds: listSavedTools(store).map((tool) => tool.id),
+      saved: recentSavedTools(store),
       signal,
     });
   } catch (error) {

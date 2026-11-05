@@ -1,5 +1,10 @@
 import { intentSchema, type Artifact, type Intent } from "@tessera/contracts";
-import { assembleIntentPrompt, type OpenTool, type RecordList } from "../prompts/index.ts";
+import {
+  assembleIntentPrompt,
+  type OpenTool,
+  type RecordList,
+  type SavedToolEntry,
+} from "../prompts/index.ts";
 import type { Provider } from "../providers/index.ts";
 import { runStage, type Routes } from "../providers/index.ts";
 
@@ -10,6 +15,29 @@ import { runStage, type Routes } from "../providers/index.ts";
 
 /** How long the intent stage may take (GEN-11). */
 export const INTENT_TIME_LIMIT_MS = 60_000;
+
+/** At most this many saved tools are listed for the intent stage (GEN-18). */
+export const CATALOGUE_MAX_TOOLS = 20;
+/** And at most this many characters of them, as quoted, so the prompt keeps its budget (GEN-03). */
+export const CATALOGUE_MAX_CHARACTERS = 3_000;
+
+/**
+ * The saved tools the intent stage is shown (GEN-18): the most recently used first, as given,
+ * until the next one would pass either limit. Only these can be opened by asking.
+ */
+export function savedToolCatalogue(tools: readonly SavedToolEntry[]): SavedToolEntry[] {
+  const listed: SavedToolEntry[] = [];
+  // Measured as the prompt quotes them: one JSON array, so each entry adds itself and a comma.
+  let size = 2;
+  for (const { id, name, description } of tools) {
+    const entry = { id, name, description };
+    const added = JSON.stringify(entry).length + (listed.length > 0 ? 1 : 0);
+    if (listed.length === CATALOGUE_MAX_TOOLS || size + added > CATALOGUE_MAX_CHARACTERS) break;
+    listed.push(entry);
+    size += added;
+  }
+  return listed;
+}
 
 /**
  * The lists of records a tool keeps, from its declared data shape (DATA-03): each top-level list
@@ -68,8 +96,8 @@ export type IntentInput = {
   request: string;
   /** The tool open now, with the lists it keeps; null when none is. */
   open: OpenTool;
-  /** The IDs of the saved tools the person can open (GEN-18); none until the catalogue (#145). */
-  savedToolIds?: readonly string[];
+  /** The person's saved tools, the most recently used first; the catalogue is chosen from them (GEN-18). */
+  saved?: readonly SavedToolEntry[];
   signal?: AbortSignal;
 };
 
@@ -85,8 +113,15 @@ export async function decideIntent(
   routes: Routes,
   input: IntentInput,
 ): Promise<IntentDecision> {
+  const saved = savedToolCatalogue(input.saved ?? []);
+  const listed = saved.map((tool) => tool.id);
   const ask = async (retry: boolean) => {
-    const prompt = assembleIntentPrompt({ request: input.request, open: input.open, retry });
+    const prompt = assembleIntentPrompt({
+      request: input.request,
+      open: input.open,
+      saved,
+      retry,
+    });
     const result = await runStage(provider, routes, {
       stage: "intent",
       system: prompt.system,
@@ -98,22 +133,22 @@ export async function decideIntent(
     });
     return result.value;
   };
-  const first = route(input, await ask(false));
+  const first = route(input, listed, await ask(false));
   if (first.action !== "ask_to_split") return first;
   // Asked once more, then left to the person if the parts still aren't the request's words.
-  return route(input, await ask(true));
+  return route(input, listed, await ask(true));
 }
 
 /**
  * The host's decision for one answer. A mixed answer whose parts fail the word check is
  * `ask_to_split`; the caller asks the stage once more before leaving it to the person.
  */
-function route(input: IntentInput, intent: Intent): IntentDecision {
+function route(input: IntentInput, listed: readonly string[], intent: Intent): IntentDecision {
   const { request, open } = input;
   const whole = { intent, interfacePart: request };
   // No tool open: nothing to change, so the request opens a saved tool or creates one (A12).
   if (open === null) {
-    if (intent.kind === "open_saved" && input.savedToolIds?.includes(intent.savedToolId)) {
+    if (intent.kind === "open_saved" && listed.includes(intent.savedToolId)) {
       return { action: "open_saved", savedToolId: intent.savedToolId, intent };
     }
     if (intent.kind === "clarify" || intent.kind === "unsupported") {
@@ -123,7 +158,7 @@ function route(input: IntentInput, intent: Intent): IntentDecision {
   }
   switch (intent.kind) {
     case "open_saved":
-      return input.savedToolIds?.includes(intent.savedToolId)
+      return listed.includes(intent.savedToolId)
         ? { action: "open_saved", savedToolId: intent.savedToolId, intent }
         : { action: "new_tool", ...whole };
     case "clarify":

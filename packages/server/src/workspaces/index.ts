@@ -40,6 +40,7 @@ export {
   lastUsed,
   recordUse,
   listSavedTools,
+  recentSavedTools,
   listWorkspaces,
   patchWorkspaceData,
   readWorkspaceData,

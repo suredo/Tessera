@@ -14,6 +14,8 @@ import {
   getWorkspace,
   listSavedTools,
   listWorkspaces,
+  recentSavedTools,
+  recordUse,
   renameSavedTool,
   renameWorkspace,
   saveTool,
@@ -177,6 +179,29 @@ describe("always saved (DATA-08)", () => {
     expect(() => renameSavedTool(folder, missing, "x")).toThrow(/no saved tool/);
     expect(() => describeSavedTool(folder, missing, "x")).toThrow(/no saved tool/);
     expect(listSavedTools(folder)).toEqual([]);
+    folder.close();
+  });
+});
+
+describe("the most recently used saved tools (GEN-18)", () => {
+  it("GEN-18: orders saved tools by the later of the entry's change and its workspace's last use", async () => {
+    const clock = testClock();
+    const folder = await openDataFolder(newFolder(), { now: clock.now });
+    const garden = createWorkspace(folder, "Garden");
+    const budget = createWorkspace(folder, "Budget");
+    const gardenTool = saveTool(folder, garden.id, "Garden");
+    clock.advance(1000);
+    const budgetTool = saveTool(folder, budget.id, "Budget");
+    // Newest first: the budget was saved last.
+    expect(recentSavedTools(folder).map((t) => t.name)).toEqual(["Budget", "Garden"]);
+    // Opening the garden's workspace later makes its saved tool the most recent.
+    clock.advance(1000);
+    recordUse(folder, garden.id);
+    expect(recentSavedTools(folder).map((t) => t.id)).toEqual([gardenTool.id, budgetTool.id]);
+    // And so does changing the budget's entry after that.
+    clock.advance(1000);
+    renameSavedTool(folder, budgetTool.id, "Monthly budget");
+    expect(recentSavedTools(folder).map((t) => t.id)).toEqual([budgetTool.id, gardenTool.id]);
     folder.close();
   });
 });
