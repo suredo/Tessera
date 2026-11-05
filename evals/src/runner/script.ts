@@ -17,12 +17,24 @@ import { z } from "zod";
 const answerSchema = z.strictObject({
   reply: scriptedReplySchema,
   delayMs: z.int().min(0).max(120_000).optional(),
+  parts: z
+    .array(z.string().min(1))
+    .optional()
+    .describe("The prompt parts the call was recorded with, as name@version (ENG-16)."),
 });
 
 export const answersSchema = z
   .strictObject({
     about: z.string().min(1).describe("What the answers are: a rehearsal, or which live run."),
     scenario: z.string().min(1),
+    recorded: z
+      .strictObject({
+        head: z.string().regex(/^[0-9a-f]{40}$/),
+        at: z.iso.datetime(),
+        cliVersion: z.string().min(1),
+      })
+      .optional()
+      .describe("For a replay: the commit, time and Claude Code version it was recorded with."),
     answers: z.array(answerSchema),
   })
   .describe("A rehearsal's or a replay's answers, in the order the stages ask for them.");
@@ -63,6 +75,8 @@ export type AnswersProvider = Provider & {
   remaining(): number;
   /** Each call the answers didn't fit, in plain words, oldest first. */
   misfits(): readonly string[];
+  /** Each call recorded with other prompt parts than it was asked with: a stale replay. */
+  stale(): readonly string[];
 };
 
 /** A provider that answers from the file's answers, one per call, and can't reach a model. */
@@ -72,11 +86,22 @@ export function answersProvider(
 ): AnswersProvider {
   let next = 0;
   const misfits: string[] = [];
+  const stale: string[] = [];
   return {
     name: `answers:${answers.scenario}`,
     live: false,
     async run(spec) {
-      const current = answers.answers[next++];
+      const index = next++;
+      const current = answers.answers[index];
+      // A replay recorded with other prompt parts still runs, flagged as stale (ENG-16).
+      const asked = spec.promptParts ?? [];
+      const recorded = current?.parts;
+      if (recorded && asked.length > 0 && recorded.join() !== asked.join()) {
+        const now = asked.filter((part) => !recorded.includes(part));
+        stale.push(
+          `Call ${index + 1} (${spec.stage}) was recorded with other prompt parts; now ${now.join(", ")}.`,
+        );
+      }
       if (current) await wait(current.delayMs ?? 0, spec.signal);
       const replies: ScriptedReply[] = current
         ? [fill(current.reply, savedToolId) as ScriptedReply]
@@ -98,5 +123,6 @@ export function answersProvider(
     },
     remaining: () => Math.max(0, answers.answers.length - next),
     misfits: () => misfits,
+    stale: () => stale,
   };
 }
