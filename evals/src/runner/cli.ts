@@ -7,13 +7,13 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { listSavedTools, type Provider, type Store } from "@tessera/server";
+import { listSavedTools } from "@tessera/server";
 import { liveClaudeProvider } from "../../spikes/cli-contract/claude-cli.ts";
 import { loadScenario } from "../scenarios/index.ts";
 import { recordAnswers } from "./record.ts";
 import { reportMarkdown } from "./report.ts";
-import { runScenario, type RunMode } from "./run.ts";
-import { answersProvider, loadAnswers, type AnswersProvider } from "./script.ts";
+import { replayScenario } from "./replay.ts";
+import { runScenario, type RunMode, type RunReport } from "./run.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const scenarios = path.resolve(here, "../../scenarios");
@@ -46,42 +46,31 @@ const folder = path.resolve(
 );
 fs.mkdirSync(folder, { recursive: true });
 
-let store: Store | undefined;
-let answers: AnswersProvider | undefined;
-let provider: Provider;
 let cliVersion = "";
+let savedTools: { id: string; name: string }[] = [];
+let report: RunReport;
 if (mode === "live") {
   // Claude Code's free checks first: found, recent enough and signed in (L-71). The cap is the
   // owner's approved one; the runner refuses one above the scenario file's budget.
   const found = await liveClaudeProvider();
-  provider = found.provider;
   cliVersion = found.cliVersion;
   console.log(`LIVE: ${scenario.id}, hard cap ${cap}, Claude Code ${cliVersion}.`);
+  report = await runScenario(scenario, {
+    mode,
+    provider: found.provider,
+    folder,
+    ...(cap !== undefined ? { callCap: cap } : {}),
+    onFinished: (finished) => {
+      savedTools = listSavedTools(finished).map((t) => ({ id: t.id, name: t.name }));
+    },
+  });
 } else {
-  const loaded = loadAnswers(file ?? path.join(scenarios, "rehearsals", `${id}.json`));
-  if (loaded.scenario !== scenario.id) {
-    throw new Error(`The answers are for ${loaded.scenario}, not ${scenario.id}.`);
-  }
-  // The saved tools a recorded answer names are looked up in the run's own Tessera.
-  answers = answersProvider(
-    loaded,
-    (name) => store && listSavedTools(store).find((t) => t.name === name)?.id,
-  );
-  provider = answers;
+  report = await replayScenario(scenario, {
+    mode,
+    file: file ?? path.join(scenarios, "rehearsals", `${id}.json`),
+    folder,
+  });
 }
-
-let savedTools: { id: string; name: string }[] = [];
-const report = await runScenario(scenario, {
-  mode,
-  provider,
-  folder,
-  ...(cap !== undefined ? { callCap: cap } : {}),
-  onStarted: (started) => (store = started),
-  onFinished: (finished) => {
-    savedTools = listSavedTools(finished).map((t) => ({ id: t.id, name: t.name }));
-  },
-  ...(answers ? { misfits: () => answers.misfits(), stale: () => answers.stale() } : {}),
-});
 fs.writeFileSync(path.join(folder, "report.md"), reportMarkdown(report));
 console.log(reportMarkdown(report));
 

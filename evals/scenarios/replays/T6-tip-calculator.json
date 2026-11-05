@@ -1,0 +1,258 @@
+{
+  "about": "A live run of T6-tip-calculator, recorded for replay.",
+  "scenario": "T6-tip-calculator",
+  "recorded": {
+    "head": "19d7056fe3a0b175b4df668085ba2b98ed0e4a7f",
+    "at": "2026-11-05T21:16:01.254Z",
+    "cliVersion": "2.1.318"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Split a bill",
+              "request": "Split a bill of 87.50 between 4 friends"
+            },
+            {
+              "name": "Add a 15% tip",
+              "request": "with a 15% tip"
+            }
+          ]
+        }
+      },
+      "parts": [
+        "intent@3222248e8a6e",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Bill splitter",
+          "summary": "Splits a bill between friends with a tip. Starts with 87.50, 4 people and 15% tip; change any of them to see the total and each share.",
+          "code": {
+            "html": "<h1>Bill splitter</h1>\n<div class=\"fields\">\n<div class=\"f\"><label for=\"bill\">Bill amount</label><input id=\"bill\" type=\"number\" inputmode=\"decimal\" min=\"0\" step=\"0.01\" value=\"87.50\"></div>\n<div class=\"f\"><label for=\"people\">Number of people</label><input id=\"people\" type=\"number\" inputmode=\"numeric\" min=\"1\" step=\"1\" value=\"4\"></div>\n<div class=\"f\"><label for=\"tip\">Tip (%)</label><input id=\"tip\" type=\"number\" inputmode=\"decimal\" min=\"0\" step=\"1\" value=\"15\"></div>\n</div>\n<p id=\"err\" class=\"err\" role=\"alert\"></p>\n<table aria-live=\"polite\">\n<tbody>\n<tr><th scope=\"row\">Tip</th><td id=\"rTip\"></td></tr>\n<tr><th scope=\"row\">Total with tip</th><td id=\"rTotal\"></td></tr>\n<tr class=\"main\"><th scope=\"row\">Each person pays</th><td id=\"rEach\"></td></tr>\n</tbody>\n</table>",
+            "css": "body{font-family:var(--ui-font)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-4)}\n.fields{display:flex;flex-wrap:wrap;gap:var(--ui-space-3)}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font-size:var(--ui-size-body);background:var(--ui-surface);color:var(--ui-text);width:100%;box-sizing:border-box}\ninput:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.err{color:var(--ui-error);min-height:1.5em;margin:var(--ui-space-2) 0}\ntable{width:100%;border-collapse:collapse;margin-top:var(--ui-space-2)}\nth,td{padding:var(--ui-space-3) var(--ui-space-2);border-bottom:1px solid var(--ui-divider);text-align:left;font-weight:400}\ntd{text-align:right}\n.main th,.main td{font-weight:600;font-size:var(--ui-size-section);color:var(--ui-accent)}",
+            "js": "const ids=['bill','people','tip'];\nconst el={};for(const i of ids.concat(['err','rTip','rTotal','rEach']))el[i]=document.getElementById(i);\nfunction fmt(n){return n.toFixed(2)}\nfunction calc(){\nconst b=parseFloat(el.bill.value),p=parseInt(el.people.value,10),t=parseFloat(el.tip.value);\nlet msg='';\nif(!(b>=0))msg='Enter the bill amount as a number, 0 or more.';\nelse if(!(p>=1))msg='Enter at least 1 person.';\nelse if(!(t>=0))msg='Enter the tip as a number, 0 or more.';\nel.err.textContent=msg;\nif(msg){el.rTip.textContent=el.rTotal.textContent=el.rEach.textContent='–';return}\nconst tip=b*t/100,tot=b+tip;\nel.rTip.textContent=fmt(tip);el.rTotal.textContent=fmt(tot);el.rEach.textContent=fmt(tot/p);\n}\nfor(const i of ids)el[i].addEventListener('input',calc);\ncalc();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "unused": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id"]
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@425d17c8b071",
+        "bridge@63eefdc4fb28",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "create@9705683faa8f",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "tool",
+          "name": "Bill splitter",
+          "summary": "Splits a bill between friends with a tip. Starts with 87.50, 4 people and 15% tip; change any of them to see the total and each share.",
+          "code": {
+            "html": "<h1>Bill splitter</h1>\n<div class=\"fields\">\n<div class=\"f\"><label for=\"bill\">Bill amount</label><input id=\"bill\" type=\"number\" inputmode=\"decimal\" min=\"0\" step=\"0.01\" value=\"87.50\"></div>\n<div class=\"f\"><label for=\"people\">Number of people</label><input id=\"people\" type=\"number\" inputmode=\"numeric\" min=\"1\" step=\"1\" value=\"4\"></div>\n<div class=\"f\"><label for=\"tip\">Tip (%)</label><input id=\"tip\" type=\"number\" inputmode=\"decimal\" min=\"0\" step=\"1\" value=\"15\"></div>\n</div>\n<p id=\"err\" class=\"err\" role=\"alert\"></p>\n<table aria-live=\"polite\">\n<tbody>\n<tr><th scope=\"row\">Tip</th><td id=\"rTip\"></td></tr>\n<tr><th scope=\"row\">Total with tip</th><td id=\"rTotal\"></td></tr>\n<tr class=\"main\"><th scope=\"row\">Each person pays</th><td id=\"rEach\"></td></tr>\n</tbody>\n</table>",
+            "css": "body{font-family:var(--ui-font)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-4)}\n.fields{display:flex;flex-wrap:wrap;gap:var(--ui-space-3)}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font-size:var(--ui-size-body);background:var(--ui-surface);color:var(--ui-text);width:100%;box-sizing:border-box}\ninput:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.err{color:var(--ui-error);min-height:1.5em;margin:var(--ui-space-2) 0}\ntable{width:100%;border-collapse:collapse;margin-top:var(--ui-space-2)}\nth,td{padding:var(--ui-space-3) var(--ui-space-2);border-bottom:1px solid var(--ui-divider);text-align:left;font-weight:400}\ntd{text-align:right}\n.main th,.main td{font-weight:600;font-size:var(--ui-size-section);color:var(--ui-accent)}",
+            "js": "const bill=document.getElementById('bill');\nconst people=document.getElementById('people');\nconst tipIn=document.getElementById('tip');\nconst err=document.getElementById('err');\nconst rTip=document.getElementById('rTip');\nconst rTotal=document.getElementById('rTotal');\nconst rEach=document.getElementById('rEach');\nfunction fmt(n){return n.toFixed(2)}\nfunction calc(){\nconst b=parseFloat(bill.value),p=parseInt(people.value,10),t=parseFloat(tipIn.value);\nlet msg='';\nif(!(b>=0))msg='Enter the bill amount as a number, 0 or more.';\nelse if(!(p>=1))msg='Enter at least 1 person.';\nelse if(!(t>=0))msg='Enter the tip as a number, 0 or more.';\nerr.textContent=msg;\nif(msg){rTip.textContent='–';rTotal.textContent='–';rEach.textContent='–';return}\nconst tip=b*t/100,tot=b+tip;\nrTip.textContent=fmt(tip);rTotal.textContent=fmt(tot);rEach.textContent=fmt(tot/p);\n}\nfor(const inp of [bill,people,tipIn])inp.addEventListener('input',calc);\ncalc();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "unused": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id"]
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@425d17c8b071",
+        "bridge@63eefdc4fb28",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "create@9705683faa8f",
+        "repair-static@a49fe96d58a7",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "attempt@d0e3b25ea223",
+        "diagnostics@e6c5ef2dc5d0"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": "Show what each person pays in bigger numbers.",
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": true,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "Bigger amounts per person",
+              "request": "Show what each person pays in bigger numbers."
+            }
+          ]
+        }
+      },
+      "parts": [
+        "intent@3222248e8a6e",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "The Bill splitter now shows what each person pays in much bigger numbers. Everything else is unchanged.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Bill splitter</h1>\n<div class=\"fields\">\n<div class=\"f\"><label for=\"bill\">Bill amount</label><input id=\"bill\" type=\"number\" inputmode=\"decimal\" min=\"0\" step=\"0.01\" value=\"87.50\"></div>\n<div class=\"f\"><label for=\"people\">Number of people</label><input id=\"people\" type=\"number\" inputmode=\"numeric\" min=\"1\" step=\"1\" value=\"4\"></div>\n<div class=\"f\"><label for=\"tip\">Tip (%)</label><input id=\"tip\" type=\"number\" inputmode=\"decimal\" min=\"0\" step=\"1\" value=\"15\"></div>\n</div>\n<p id=\"err\" class=\"err\" role=\"alert\"></p>\n<table aria-live=\"polite\">\n<tbody>\n<tr><th scope=\"row\">Tip</th><td id=\"rTip\"></td></tr>\n<tr><th scope=\"row\">Total with tip</th><td id=\"rTotal\"></td></tr>\n<tr class=\"main\"><th scope=\"row\">Each person pays</th><td id=\"rEach\"></td></tr>\n</tbody>\n</table>",
+              "css": "body{font-family:var(--ui-font)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-4)}\n.fields{display:flex;flex-wrap:wrap;gap:var(--ui-space-3)}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font-size:var(--ui-size-body);background:var(--ui-surface);color:var(--ui-text);width:100%;box-sizing:border-box}\ninput:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.err{color:var(--ui-error);min-height:1.5em;margin:var(--ui-space-2) 0}\ntable{width:100%;border-collapse:collapse;margin-top:var(--ui-space-2)}\nth,td{padding:var(--ui-space-3) var(--ui-space-2);border-bottom:1px solid var(--ui-divider);text-align:left;font-weight:400}\ntd{text-align:right}\n.main th,.main td{font-weight:600;font-size:var(--ui-size-section);color:var(--ui-accent)}\n.main td{font-size:clamp(36px,12vw,64px);line-height:1.1;overflow-wrap:anywhere}",
+              "js": "const bill=document.getElementById('bill');\nconst people=document.getElementById('people');\nconst tipIn=document.getElementById('tip');\nconst err=document.getElementById('err');\nconst rTip=document.getElementById('rTip');\nconst rTotal=document.getElementById('rTotal');\nconst rEach=document.getElementById('rEach');\nfunction fmt(n){return n.toFixed(2)}\nfunction calc(){\nconst b=parseFloat(bill.value),p=parseInt(people.value,10),t=parseFloat(tipIn.value);\nlet msg='';\nif(!(b>=0))msg='Enter the bill amount as a number, 0 or more.';\nelse if(!(p>=1))msg='Enter at least 1 person.';\nelse if(!(t>=0))msg='Enter the tip as a number, 0 or more.';\nerr.textContent=msg;\nif(msg){rTip.textContent='–';rTotal.textContent='–';rEach.textContent='–';return}\nconst tip=b*t/100,tot=b+tip;\nrTip.textContent=fmt(tip);rTotal.textContent=fmt(tot);rEach.textContent=fmt(tot/p);\n}\nfor(const inp of [bill,people,tipIn])inp.addEventListener('input',calc);\ncalc();"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      },
+      "parts": [
+        "base@425d17c8b071",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "edit@2e80b2067d6d",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "source@cd07cc0c84ce",
+        "edit-declarations@7eb300505e9f"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": "Add an option to round each share up to a whole number.",
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "Round-up option",
+              "request": "Add an option to round each share up to a whole number."
+            }
+          ]
+        }
+      },
+      "parts": [
+        "intent@3222248e8a6e",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Adds a checkbox to round each person's share up to a whole number. The tip and total stay exact.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Bill splitter</h1>\n<div class=\"fields\">\n<div class=\"f\"><label for=\"bill\">Bill amount</label><input id=\"bill\" type=\"number\" inputmode=\"decimal\" min=\"0\" step=\"0.01\" value=\"87.50\"></div>\n<div class=\"f\"><label for=\"people\">Number of people</label><input id=\"people\" type=\"number\" inputmode=\"numeric\" min=\"1\" step=\"1\" value=\"4\"></div>\n<div class=\"f\"><label for=\"tip\">Tip (%)</label><input id=\"tip\" type=\"number\" inputmode=\"decimal\" min=\"0\" step=\"1\" value=\"15\"></div>\n</div>\n<div class=\"opt\"><input id=\"roundUp\" type=\"checkbox\"><label for=\"roundUp\">Round each share up to a whole number</label></div>\n<p id=\"err\" class=\"err\" role=\"alert\"></p>\n<table aria-live=\"polite\">\n<tbody>\n<tr><th scope=\"row\">Tip</th><td id=\"rTip\"></td></tr>\n<tr><th scope=\"row\">Total with tip</th><td id=\"rTotal\"></td></tr>\n<tr class=\"main\"><th scope=\"row\">Each person pays</th><td id=\"rEach\"></td></tr>\n</tbody>\n</table>",
+              "css": "body{font-family:var(--ui-font)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-4)}\n.fields{display:flex;flex-wrap:wrap;gap:var(--ui-space-3)}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font-size:var(--ui-size-body);background:var(--ui-surface);color:var(--ui-text);width:100%;box-sizing:border-box}\ninput:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.opt{display:flex;align-items:center;gap:var(--ui-space-2);margin-top:var(--ui-space-3)}\n.opt input{width:24px;min-height:24px;height:24px;padding:0;flex:none}\n.err{color:var(--ui-error);min-height:1.5em;margin:var(--ui-space-2) 0}\ntable{width:100%;border-collapse:collapse;margin-top:var(--ui-space-2)}\nth,td{padding:var(--ui-space-3) var(--ui-space-2);border-bottom:1px solid var(--ui-divider);text-align:left;font-weight:400}\ntd{text-align:right}\n.main th,.main td{font-weight:600;font-size:var(--ui-size-section);color:var(--ui-accent)}\n.main td{font-size:clamp(36px,12vw,64px);line-height:1.1;overflow-wrap:anywhere}",
+              "js": "const bill=document.getElementById('bill');\nconst people=document.getElementById('people');\nconst tipIn=document.getElementById('tip');\nconst roundUp=document.getElementById('roundUp');\nconst err=document.getElementById('err');\nconst rTip=document.getElementById('rTip');\nconst rTotal=document.getElementById('rTotal');\nconst rEach=document.getElementById('rEach');\nfunction fmt(n){return n.toFixed(2)}\nfunction calc(){\nconst b=parseFloat(bill.value),p=parseInt(people.value,10),t=parseFloat(tipIn.value);\nlet msg='';\nif(!(b>=0))msg='Enter the bill amount as a number, 0 or more.';\nelse if(!(p>=1))msg='Enter at least 1 person.';\nelse if(!(t>=0))msg='Enter the tip as a number, 0 or more.';\nerr.textContent=msg;\nif(msg){rTip.textContent='–';rTotal.textContent='–';rEach.textContent='–';return}\nconst tip=b*t/100,tot=b+tip;\nlet each=tot/p;\nif(roundUp.checked)each=Math.ceil(Math.round(each*100)/100);\nrTip.textContent=fmt(tip);rTotal.textContent=fmt(tot);rEach.textContent=fmt(each);\n}\nfor(const inp of [bill,people,tipIn])inp.addEventListener('input',calc);\nroundUp.addEventListener('change',calc);\ncalc();"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      },
+      "parts": [
+        "base@425d17c8b071",
+        "bridge@63eefdc4fb28",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "edit@2e80b2067d6d",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "source@cd07cc0c84ce",
+        "edit-declarations@7eb300505e9f"
+      ]
+    }
+  ]
+}
