@@ -148,14 +148,68 @@ describe("host facts (EVAL-02)", () => {
     expect(checkFacts(asking, asking, offered)).toEqual([
       "A saved tool was offered when none was expected.",
     ]);
+    const target = { savedTool: "Weekly shopping" };
     const again = state("w4", list, fresh, { ...list, id: "w4", title: "Weekly shopping" });
-    expect(checkFacts(asking, again, none, { workspace: "new" })).toEqual([]);
+    expect(checkFacts(asking, again, none, { workspace: "new" }, target)).toEqual([]);
     expect(
-      checkFacts(again, state("w1", ...again.workspaces), none, { workspace: "original" }),
+      checkFacts(again, state("w1", ...again.workspaces), none, { workspace: "original" }, target),
     ).toEqual([]);
-    expect(checkFacts(asking, again, none, { workspace: "original" })).toEqual([
+    // Continue must open the named entry's workspace as it was before the step (DATA-07).
+    expect(checkFacts(again, again, none, { workspace: "original" }, target)).toEqual([
       "The saved tool's own workspace isn't open.",
     ]);
+  });
+
+  it("EVAL-02, DATA-07: a Use again that moves the entry's Continue is caught, and so is a Continue to it", () => {
+    const fresh = { id: "w4", title: "Weekly shopping", version: "v1", dataHash: "d0" };
+    const before = state("w1", list);
+    const retargeted: HostState = {
+      ...state("w4", list, fresh),
+      savedTools: [{ id: "s1", name: "Weekly shopping", workspaceId: "w4" }],
+    };
+    const target = { savedTool: "Weekly shopping" };
+    expect(checkFacts(before, retargeted, none, { workspace: "new" }, target)).toEqual([
+      "Weekly shopping's Continue now opens a different workspace.",
+    ]);
+    // A later Continue that opens the moved link still fails against the entry's link before it.
+    const later = { ...retargeted, open: "w4" };
+    expect(checkFacts(before, later, none, { workspace: "original" }, target)).toContain(
+      "The saved tool's own workspace isn't open.",
+    );
+    expect(checkFacts(before, state("w1", list), none, { workspace: "original" })).toEqual([
+      "There was no saved tool named (none named).",
+    ]);
+  });
+
+  it("EVAL-02, GEN-01: a tool made in the empty workspace that was open counts as made", () => {
+    const empty = { id: "w1", title: "New chat", version: null, dataHash: "x" };
+    const before = state("w1", empty);
+    const after = state("w1", { ...empty, title: "Shopping list", version: "v1" });
+    expect(checkFacts(before, after, { claim: "created" }, { created: true })).toEqual([]);
+    expect(checkFacts(before, after, none, { created: false })).toEqual([
+      "A tool was created: Shopping list.",
+    ]);
+  });
+
+  it("EVAL-02: a workspace or saved tool that goes away unasked is caught; a delete may take them", () => {
+    const before = state("w1", list, notes);
+    const lost = state("w1", list);
+    expect(checkFacts(before, lost, none, { version: "unchanged", data: "unchanged" })).toEqual([
+      "Notes is gone, though the step wasn't about it.",
+    ]);
+    expect(checkFacts(before, lost, none, {}, { trashes: "Notes" })).toEqual([]);
+    // A saved tool goes only with its workspace (DATA-09).
+    const noEntry = { ...before, savedTools: [] };
+    expect(checkFacts(before, noEntry, none)).toEqual(["The saved tool Weekly shopping is gone."]);
+    expect(
+      checkFacts(
+        before,
+        { ...state(null, notes), savedTools: [] },
+        none,
+        {},
+        { trashes: "Shopping list" },
+      ),
+    ).toEqual([]);
   });
 
   it("EVAL-02: an answer instead of a tool", () => {

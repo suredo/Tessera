@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/scenarios.test.ts]
 tags: [code, evals, scenarios]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T07:45:07Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T08:05:41Z }
 ---
 
 # Purpose
@@ -23,12 +23,17 @@ The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01
   - `stepKind` names a step's kind. `M2_STEPS` are the kinds the M2 runner plays, and `m2Problems` says why a scenario can't be played in M2: a step that drives the tool's own controls needs verification profiles (M3).
 - `src/scenarios/facts.ts`:
   - `readHostState` reads what Tessera stored (each workspace's tool version and a hash of its data, the saved tools) with the workspace the host app has open (`HostState`, `WorkspaceFacts`).
-  - `checkFacts` compares the state before and after a step, with what the host app showed (`StepOutcome`), against the step's expectation, and gives each difference in plain words.
+  - `checkFacts` compares the state before and after a step, with what the host app showed (`StepOutcome`) and what the step acts on by name (`StepTarget`: the saved tool a Continue or Use again opens, the workspace a delete moves to the trash), against the step's expectation, and gives each difference in plain words.
 
 # Invariants
 
 - **Every scenario starts from an empty Tessera,** so its first step is a request (`say`). A test checks every file in `evals/scenarios/`.
-- **Only the facts a step names are checked, plus two that every step keeps:** nothing unrelated changed (a workspace other than the one open before or after keeps its version and data), and no success claimed that wasn't applied (`GEN-08`): "made" needs a stored tool, "changed" needs a changed version or data.
+- **Only the facts a step names are checked, plus what every step keeps:**
+  - Nothing unrelated changed: a workspace other than the one open before or after keeps its version and data, and none goes away unless the step deletes it.
+  - No saved tool's Continue moves to another workspace, and none goes away except with the workspace a delete takes (`DATA-07`, `DATA-09`).
+  - No success claimed that wasn't applied (`GEN-08`): "made" needs a workspace that gained a tool, "changed" needs a changed version or data.
+- **A tool is made when a workspace gains one:** a new workspace, or the empty one that was open, which a creation takes over (`GEN-01`).
+- **Continue's "original" is the named saved tool's workspace before the step,** so a Use again or anything else that moved its link can't make a later Continue pass (`DATA-07`).
 - **Data is compared by content,** as a hash of its canonical JSON: for tools that match no verification profile, a step can only expect it changed or unchanged.
 - **A `cancel` step follows the request it cancels,** a `say` step that expects nothing of its own; the schema refuses any other order.
 
@@ -45,6 +50,6 @@ Depends on `yaml` (2.9.1, already in the lockfile through other packages) to rea
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `facts.ts`: `WorkspaceFacts` (type), `HostState` (type), `StepOutcome` (type), `readHostState`, `checkFacts`
-- `index.ts`: `expectationSchema`, `loadScenario`, `loadScenarios`, `M2_STEPS`, `m2Problems`, `ScenarioError`, `scenarioSchema`, `stepKind`, `stepSchema`, `Expectation` (type), `Scenario` (type), `Step` (type), `checkFacts`, `readHostState`, `HostState` (type), `StepOutcome` (type), `WorkspaceFacts` (type)
+- `facts.ts`: `WorkspaceFacts` (type), `HostState` (type), `StepOutcome` (type), `StepTarget` (type), `readHostState`, `checkFacts`
+- `index.ts`: `expectationSchema`, `loadScenario`, `loadScenarios`, `M2_STEPS`, `m2Problems`, `ScenarioError`, `scenarioSchema`, `stepKind`, `stepSchema`, `Expectation` (type), `Scenario` (type), `Step` (type), `checkFacts`, `readHostState`, `HostState` (type), `StepOutcome` (type), `StepTarget` (type), `WorkspaceFacts` (type)
 - `scenario.ts`: `expectationSchema`, `Expectation` (type), `stepSchema`, `Step` (type), `M2_STEPS`, `scenarioSchema`, `Scenario` (type), `stepKind`, `ScenarioError`, `loadScenario`, `loadScenarios`, `m2Problems`

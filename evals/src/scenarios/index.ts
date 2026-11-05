@@ -19,5 +19,6 @@ export {
   readHostState,
   type HostState,
   type StepOutcome,
+  type StepTarget,
   type WorkspaceFacts,
 } from "./facts.ts";

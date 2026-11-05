@@ -33,6 +33,12 @@ export type StepOutcome = {
   answer?: "clarify" | "unsupported" | "stopped";
 };
 
+/**
+ * What a step acts on, by name, when it names something: the saved tool a Continue or Use again
+ * opens, and the workspace a delete moves to the trash.
+ */
+export type StepTarget = { savedTool?: string; trashes?: string };
+
 const hash = (value: unknown) =>
   createHash("sha256")
     .update(canonicalJson(value ?? null))
@@ -65,10 +71,14 @@ export function checkFacts(
   after: HostState,
   outcome: StepOutcome,
   expected: Expectation = {},
+  target: StepTarget = {},
 ): string[] {
   const problems: string[] = [];
   const earlier = new Map(before.workspaces.map((w) => [w.id, w]));
-  const made = after.workspaces.filter((w) => !earlier.has(w.id) && w.version !== null);
+  const later = new Map(after.workspaces.map((w) => [w.id, w]));
+  // A tool is made when a workspace gains one: a new workspace, or an empty one that was open,
+  // which a creation takes over (GEN-01).
+  const made = after.workspaces.filter((w) => w.version !== null && !earlier.get(w.id)?.version);
   const was = before.open === null ? undefined : earlier.get(before.open);
   const now = after.workspaces.find((w) => w.id === after.open);
   // The same workspace's own changes; a step that opens another one changes neither.
@@ -92,10 +102,12 @@ export function checkFacts(
     problems.push("A different workspace is open.");
   }
   if (expected.workspace === "original") {
-    const linked = new Set(after.savedTools.map((t) => t.workspaceId));
-    if (now === undefined || !earlier.has(now.id) || !linked.has(now.id)) {
+    // The workspace the named saved tool's Continue opened before the step (DATA-07).
+    const entry = before.savedTools.find((t) => t.name === target.savedTool);
+    if (!entry)
+      problems.push(`There was no saved tool named ${target.savedTool ?? "(none named)"}.`);
+    else if (now?.id !== entry.workspaceId)
       problems.push("The saved tool's own workspace isn't open.");
-    }
   }
   if (expected.offered === "saved" && outcome.offered === undefined) {
     problems.push("No saved tool was offered.");
@@ -115,12 +127,30 @@ export function checkFacts(
     problems.push(`The host didn't answer ${expected.answer}.`);
   }
 
-  // Every step: nothing unrelated changed, and nothing claimed that didn't happen (GEN-08).
-  for (const w of after.workspaces) {
-    const old = earlier.get(w.id);
-    if (!old || w.id === after.open || w.id === before.open) continue;
+  // Every step: nothing unrelated changed or went away, no saved tool's Continue moved, and
+  // nothing claimed that didn't happen (GEN-08, DATA-07).
+  for (const old of before.workspaces) {
+    const w = later.get(old.id);
+    if (!w) {
+      if (old.title !== target.trashes)
+        problems.push(`${old.title} is gone, though the step wasn't about it.`);
+      continue;
+    }
+    if (w.id === after.open || w.id === before.open) continue;
     if (old.version !== w.version || old.dataHash !== w.dataHash) {
       problems.push(`${w.title} changed, though the step wasn't about it.`);
+    }
+  }
+  const trashed = new Set(
+    before.workspaces.filter((w) => w.title === target.trashes).map((w) => w.id),
+  );
+  for (const entry of before.savedTools) {
+    const still = after.savedTools.find((t) => t.id === entry.id);
+    if (!still) {
+      // A saved tool goes to the trash with its workspace (DATA-09), and only then.
+      if (!trashed.has(entry.workspaceId)) problems.push(`The saved tool ${entry.name} is gone.`);
+    } else if (still.workspaceId !== entry.workspaceId) {
+      problems.push(`${entry.name}'s Continue now opens a different workspace.`);
     }
   }
   if (outcome.claim === "created" && made.length === 0) {
