@@ -12,6 +12,11 @@
       "minLength": 1,
       "maxLength": 200
     },
+    "description": {
+      "type": "string",
+      "maxLength": 400,
+      "description": "What the tool does: its workspace's description when saved, which the person can change."
+    },
     "workspaceId": {
       "type": "string",
       "format": "uuid",
@@ -32,6 +37,7 @@
   "required": [
     "id",
     "name",
+    "description",
     "workspaceId",
     "createdAt",
     "updatedAt"

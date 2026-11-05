@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { saveVersion } from "../../server/src/versions/index.ts";
 import {
   activateVersion,
+  describeSavedTool,
   getWorkspace,
   patchWorkspaceData,
   saveTool,
@@ -54,8 +55,8 @@ function savedTool() {
   patchWorkspaceData(app.folder, workspaceId, {
     operations: [{ op: "add", collection: "tasks", record: { title: "Buy milk" } }],
   });
-  saveTool(app.folder, workspaceId, name);
-  return { id, workspace, name, workspaceId };
+  const { id: savedToolId } = saveTool(app.folder, workspaceId, name);
+  return { id, workspace, name, workspaceId, savedToolId };
 }
 
 test("DATA-08: a workspace is saved to my tools by name, and found there by searching", async ({
@@ -155,6 +156,29 @@ test("APP-04: Save as a new tool makes a separate entry with its own workspace",
     `Continue opens Party errands ${id}`,
   );
   await expect(entry(page, name)).toContainText(`Continue opens ${workspace}`);
+});
+
+test("APP-04: a saved tool shows its description, search finds it, and the person can change it", async ({
+  page,
+}) => {
+  const { id, name, savedToolId } = savedTool();
+  describeSavedTool(app.folder, savedToolId, `Jobs around the house ${id}.`);
+  await page.goto(app.url);
+  await toLibrary(page);
+  await expect(entry(page, name)).toContainText(`Jobs around the house ${id}.`);
+  // Search matches the description as well as the name.
+  await library(page).getByLabel(en["library.search"]).fill(`around the house ${id}`);
+  await expect(library(page).getByRole("listitem")).toHaveCount(1);
+  await library(page).getByLabel(en["library.search"]).fill("");
+  await entry(page, name)
+    .getByRole("button", { name: `Change what ${name} says it does` })
+    .click();
+  const field = library(page).getByLabel(`What ${name} does`);
+  await expect(field).toHaveValue(`Jobs around the house ${id}.`);
+  await field.fill(`Weekend chores ${id}.`);
+  await library(page).getByRole("button", { name: en["library.confirm"], exact: true }).click();
+  await expect(entry(page, name)).toContainText(`Weekend chores ${id}.`);
+  await expect(entry(page, name)).not.toContainText("Jobs around the house");
 });
 
 test("APP-04: a saved tool can be renamed and moved to the trash", async ({ page }) => {

@@ -32,6 +32,7 @@ const workspaceFromRow = z
   .object({
     id: z.string(),
     title: z.string(),
+    description: z.string(),
     current_version: z.string().nullable(),
     data: z.string(),
     data_revision: z.number(),
@@ -41,6 +42,7 @@ const workspaceFromRow = z
   .transform((row) => ({
     id: row.id,
     title: row.title,
+    description: row.description,
     currentVersion: row.current_version,
     data: JSON.parse(row.data) as unknown,
     dataRevision: row.data_revision,
@@ -58,6 +60,7 @@ const savedToolFromRow = z
   .object({
     id: z.string(),
     name: z.string(),
+    description: z.string(),
     workspace_id: z.string(),
     created_at: z.string(),
     updated_at: z.string(),
@@ -65,6 +68,7 @@ const savedToolFromRow = z
   .transform((row) => ({
     id: row.id,
     name: row.name,
+    description: row.description,
     workspaceId: row.workspace_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -72,13 +76,13 @@ const savedToolFromRow = z
   .pipe(savedToolSchema);
 
 // Only what isn't in the trash (DATA-09). The current version is the last entry of the history.
-const SELECT_WORKSPACE = `SELECT w.id, w.title, w.data, w.data_revision, w.created_at, w.updated_at,
+const SELECT_WORKSPACE = `SELECT w.id, w.title, w.description, w.data, w.data_revision, w.created_at, w.updated_at,
   (SELECT v.hash FROM workspace_versions v WHERE v.workspace_id = w.id
     ORDER BY v.number DESC LIMIT 1) AS current_version
   FROM workspaces w WHERE w.deleted_at IS NULL`;
 
 const SELECT_SAVED_TOOL =
-  "SELECT id, name, workspace_id, created_at, updated_at FROM saved_tools WHERE deleted_at IS NULL";
+  "SELECT id, name, description, workspace_id, created_at, updated_at FROM saved_tools WHERE deleted_at IS NULL";
 
 const stamp = (store: Store) => store.now().toISOString();
 
@@ -150,19 +154,21 @@ export const listWorkspaces = (store: Store): Workspace[] =>
 export function createWorkspace(
   store: Store,
   title: string,
-  options: { data?: Workspace["data"] } = {},
+  options: { data?: Workspace["data"]; description?: string } = {},
 ): Workspace {
   const id = randomUUID();
   const at = stamp(store);
   const name = workspaceSchema.shape.title.parse(title);
+  const description = workspaceSchema.shape.description.parse(options.description ?? "");
   const data =
     options.data === undefined ? undefined : workspaceSchema.shape.data.parse(options.data);
   // No transaction of its own: callers such as Use again create it inside theirs. The data was
   // checked above, so writing it can't fail halfway.
   store.db.run(
-    "INSERT INTO workspaces (id, title, data, data_revision, created_at, updated_at) VALUES (?, ?, 'null', 0, ?, ?)",
+    "INSERT INTO workspaces (id, title, description, data, data_revision, created_at, updated_at) VALUES (?, ?, ?, 'null', 0, ?, ?)",
     id,
     name,
+    description,
     at,
     at,
   );
@@ -458,17 +464,21 @@ export const existingSavedTool = (store: Store, id: string): SavedTool => {
 export const listSavedTools = (store: Store): SavedTool[] =>
   store.db.all(savedToolFromRow, `${SELECT_SAVED_TOOL} ORDER BY name COLLATE NOCASE, id`);
 
-/** Save to my tools: a named library entry whose Continue opens the workspace (DATA-08). */
+/**
+ * Save to my tools: a named library entry whose Continue opens the workspace (DATA-08). It starts
+ * with the workspace's description (APP-04).
+ */
 export function saveTool(store: Store, workspaceId: string, name: string): SavedTool {
   const id = randomUUID();
   const checkedName = savedToolSchema.shape.name.parse(name);
   return store.db.transaction(() => {
-    existingWorkspace(store, workspaceId);
+    const { description } = existingWorkspace(store, workspaceId);
     const at = stamp(store);
     store.db.run(
-      "INSERT INTO saved_tools (id, name, workspace_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO saved_tools (id, name, description, workspace_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
       id,
       checkedName,
+      description,
       workspaceId,
       at,
       at,
@@ -476,11 +486,35 @@ export function saveTool(store: Store, workspaceId: string, name: string): Saved
     return savedToolSchema.parse({
       id,
       name: checkedName,
+      description,
       workspaceId,
       createdAt: at,
       updatedAt: at,
     });
   });
+}
+
+/** The person's own description of a saved tool, in place of the one it was saved with (APP-04). */
+export function describeSavedTool(store: Store, id: string, description: string): SavedTool {
+  const changed = store.db.run(
+    "UPDATE saved_tools SET description = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+    savedToolSchema.shape.description.parse(description.trim()),
+    stamp(store),
+    id,
+  );
+  const found = changed === 0 ? undefined : getSavedTool(store, id);
+  if (!found) throw noSavedTool(store, id);
+  return found;
+}
+
+/** A created tool's description becomes its workspace's (APP-04). */
+export function describeWorkspace(store: Store, id: string, description: string): void {
+  const changed = store.db.run(
+    "UPDATE workspaces SET description = ? WHERE id = ? AND deleted_at IS NULL",
+    workspaceSchema.shape.description.parse(description),
+    id,
+  );
+  if (changed === 0) throw noWorkspace(store, id);
 }
 
 export function renameSavedTool(store: Store, id: string, name: string): SavedTool {

@@ -629,6 +629,9 @@ export function App() {
               }
             }}
             onRename={(tool, name) => act(() => ask("library.rename", { id: tool.id, name }))}
+            onDescribe={(tool, description) =>
+              act(() => ask("library.describe", { id: tool.id, description }))
+            }
             onDelete={(tool) =>
               act(
                 () => ask("library.delete", { id: tool.id }),

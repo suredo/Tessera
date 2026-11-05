@@ -24,6 +24,7 @@ import { loadVersion, saveVersion } from "../src/versions/index.ts";
 import {
   addWorkspaceVersion,
   createWorkspace,
+  describeSavedTool,
   getWorkspace,
   listSavedTools,
   listWorkspaces,
@@ -59,9 +60,14 @@ const artifact = (html: string, contractVersion = 2) =>
     ui: { standardVersion: 1, mode: "standard" },
   }) as Artifact;
 
-/** A workspace with a history of three versions (the last a return to the first), data and two saved tools. */
+/**
+ * A workspace with a history of three versions (the last a return to the first), data and two
+ * saved tools, one with the person's own description.
+ */
 function makeWorkspace(store: Store, clock: ReturnType<typeof testClock>) {
-  const workspace = createWorkspace(store, "Shopping list");
+  const workspace = createWorkspace(store, "Shopping list", {
+    description: "Keeps the week's shopping, ticked off as you go.",
+  });
   const v1 = saveVersion(store.db, artifact("<ul></ul>"));
   const v2 = saveVersion(store.db, artifact("<ol></ol>"));
   for (const hash of [v1, v2, v1]) {
@@ -71,7 +77,8 @@ function makeWorkspace(store: Store, clock: ReturnType<typeof testClock>) {
   saveWorkspaceData(store, workspace.id, { items: [{ id: "a", text: "milk", done: false }] }, 0);
   saveWorkspaceData(store, workspace.id, { items: [{ id: "a", text: "milk", done: true }] }, 1);
   saveTool(store, workspace.id, "Weekly shop");
-  saveTool(store, workspace.id, "Party shop");
+  const party = saveTool(store, workspace.id, "Party shop");
+  describeSavedTool(store, party.id, "Drinks and snacks for Saturday.");
   return workspace.id;
 }
 
@@ -611,6 +618,27 @@ describe("images in archives (DATA-05, DATA-11)", () => {
     const into = await openDataFolder(newFolder());
     const imported = await importArchive(into, pack({ ...older, formatVersion: 1 }, files));
     expect(imported.workspaces).toHaveLength(1);
+    into.close();
+  });
+
+  it("CON-04, APP-04: an archive from before descriptions, format 2, imports with none", async () => {
+    const { files, manifest } = await exportedFiles();
+    expect(manifest["formatVersion"]).toBe(3);
+    const strip = (value: Record<string, unknown>) => {
+      const rest = { ...value };
+      delete rest["description"];
+      return rest;
+    };
+    const older = {
+      ...manifest,
+      formatVersion: 2,
+      workspaces: manifest.workspaces.map(strip),
+      savedTools: (manifest["savedTools"] as Record<string, unknown>[]).map(strip),
+    };
+    const into = await openDataFolder(newFolder());
+    const imported = await importArchive(into, pack(older, files));
+    expect(imported.workspaces.map((w) => w.description)).toEqual([""]);
+    expect(imported.savedTools.map((t) => t.description)).toEqual(["", ""]);
     into.close();
   });
 });

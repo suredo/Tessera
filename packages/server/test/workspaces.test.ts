@@ -9,6 +9,7 @@ import { saveVersion } from "../src/versions/index.ts";
 import {
   addWorkspaceVersion,
   createWorkspace,
+  describeSavedTool,
   getSavedTool,
   getWorkspace,
   listSavedTools,
@@ -174,7 +175,44 @@ describe("always saved (DATA-08)", () => {
     );
     expect(() => renameWorkspace(folder, missing, "x")).toThrow(/no workspace/);
     expect(() => renameSavedTool(folder, missing, "x")).toThrow(/no saved tool/);
+    expect(() => describeSavedTool(folder, missing, "x")).toThrow(/no saved tool/);
     expect(listSavedTools(folder)).toEqual([]);
+    folder.close();
+  });
+});
+
+describe("descriptions (APP-04)", () => {
+  it("APP-04: a saved tool starts with its workspace's description, which the person can change", async () => {
+    const clock = testClock();
+    const folder = await openDataFolder(newFolder(), { now: clock.now });
+    const workspace = createWorkspace(folder, "Budget", {
+      description: "Tracks what comes in and goes out each month.",
+    });
+    const saved = saveTool(folder, workspace.id, "Monthly budget");
+    expect(saved.description).toBe("Tracks what comes in and goes out each month.");
+    clock.advance(1000);
+    const changed = describeSavedTool(folder, saved.id, "  Our household budget.  ");
+    // Trimmed, and the change is the entry's latest update; the workspace keeps its own.
+    expect(changed).toMatchObject({
+      description: "Our household budget.",
+      updatedAt: "2026-10-19T09:00:01.000Z",
+    });
+    expect(getSavedTool(folder, saved.id)).toEqual(changed);
+    expect(getWorkspace(folder, workspace.id)?.description).toBe(
+      "Tracks what comes in and goes out each month.",
+    );
+    // Empty is allowed and means none; one longer than 400 characters is refused, changing nothing.
+    expect(describeSavedTool(folder, saved.id, " ").description).toBe("");
+    expect(() => describeSavedTool(folder, saved.id, "x".repeat(401))).toThrow();
+    expect(getSavedTool(folder, saved.id)?.description).toBe("");
+    folder.close();
+  });
+
+  it("APP-04: a workspace made without a tool has no description, and nor does its saved tool", async () => {
+    const folder = await openDataFolder(newFolder());
+    const workspace = createWorkspace(folder, "Notes");
+    expect(workspace.description).toBe("");
+    expect(saveTool(folder, workspace.id, "Notes").description).toBe("");
     folder.close();
   });
 });

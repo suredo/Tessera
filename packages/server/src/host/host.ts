@@ -28,6 +28,7 @@ import {
   listWorkspaces,
   planRestore,
   renameSavedTool,
+  describeSavedTool,
   renameWorkspace,
   restoreRecoverySnapshot,
   restoreVersion,
@@ -85,6 +86,9 @@ const run: {
     savedTool: saveTool(store, workspaceId, name),
   }),
   "library.rename": (store, { id, name }) => ({ savedTool: renameSavedTool(store, id, name) }),
+  "library.describe": (store, { id, description }) => ({
+    savedTool: describeSavedTool(store, id, description),
+  }),
   "library.delete": (store, { id }) => ({ entry: deleteSavedTool(store, id) }),
   "library.continue": (store, { id }) => continueSavedTool(store, id),
   "library.useAgain": (store, { id, title }) => useAgain(store, id, { title }),

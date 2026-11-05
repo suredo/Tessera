@@ -10,6 +10,7 @@ import {
   getWorkspace,
   listSavedTools,
   renameWorkspace,
+  describeWorkspace,
   replaceData,
   type Store,
 } from "../workspaces/index.ts";
@@ -155,10 +156,14 @@ export async function generate(
   const workspace = store.db.transaction(() => {
     if (empty && empty.currentVersion === null && empty.data === null) {
       renameWorkspace(store, empty.id, created.name);
+      describeWorkspace(store, empty.id, created.summary);
       replaceData(store, getWorkspace(store, empty.id)!, created.startingData);
       return getWorkspace(store, empty.id)!;
     }
-    return createWorkspace(store, created.name, { data: created.startingData });
+    return createWorkspace(store, created.name, {
+      data: created.startingData,
+      description: created.summary,
+    });
   });
   const reply = {
     kind: "candidate" as const,

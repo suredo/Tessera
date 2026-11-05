@@ -56,7 +56,9 @@ export function useAgain(
     }
     const version = usableVersion(store, linked.currentVersion);
     if (!version.ok) return version;
-    const fresh = createWorkspace(store, options.title ?? savedTool.name);
+    const fresh = createWorkspace(store, options.title ?? savedTool.name, {
+      description: savedTool.description,
+    });
     replaceData(store, fresh, version.artifact.data.defaults);
     appendVersion(store, fresh.id, linked.currentVersion);
     options.afterWrites?.();

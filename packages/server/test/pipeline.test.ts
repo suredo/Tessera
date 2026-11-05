@@ -228,7 +228,7 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     }
   });
 
-  it("GEN-01, GEN-05: a new tool is stored with a workspace holding its starting data, ready to stage", async () => {
+  it("GEN-01, GEN-05, APP-04: a new tool is stored with a workspace holding its starting data and description, ready to stage", async () => {
     const folder = await newFolder();
     const provider = script(intentReply({ kind: "create" }), createReply(tool));
     const reply = await generate(folder, provider, DEFAULT_ROUTES, { request: "A shopping list" });
@@ -244,6 +244,7 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     const workspace = getWorkspace(folder, reply.workspaceId)!;
     expect(workspace).toMatchObject({
       title: "Shopping list",
+      description: "A list to tick off at the store.",
       currentVersion: null,
       data: { items: [{ id: "i-1", title: "Milk" }] },
     });
@@ -265,7 +266,7 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     folder.close();
   });
 
-  it("GEN-01: an open workspace with no tool yet becomes the new tool's", async () => {
+  it("GEN-01, APP-04: an open workspace with no tool yet becomes the new tool's, with its name and description", async () => {
     const folder = await newFolder();
     const empty = createWorkspace(folder, "New chat");
     const provider = script(intentReply({ kind: "create" }), createReply(tool));
@@ -274,7 +275,10 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
       workspaceId: empty.id,
     });
     expect(reply).toMatchObject({ kind: "candidate", workspaceId: empty.id });
-    expect(getWorkspace(folder, empty.id)?.title).toBe("Shopping list");
+    expect(getWorkspace(folder, empty.id)).toMatchObject({
+      title: "Shopping list",
+      description: "A list to tick off at the store.",
+    });
     expect(listWorkspaces(folder)).toHaveLength(1);
     folder.close();
   });
