@@ -2,6 +2,8 @@
 
 ## 2026-11-05
 
+* **Update**: After Cancel, a failed reply says the request stopped instead of "That didn't work. The request was stopped.", the wording the M2 live run found ([browser](code/web/package.md), `GEN-08`, `GEN-12`). The [Tessera issues](lessons/tessera-issues.md) record it as L-78. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:46:26Z.
+
 * **Update**: Continue from my tools says "… is open again.", so Use again's earlier message no longer stays on screen about the wrong workspace, the stale message the M2 live run found ([browser](code/web/package.md), `GEN-08`). The [Tessera issues](lessons/tessera-issues.md) record it as L-77. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:40:00Z.
 
 * **Update**: The [scenario runner](code/evals/runner.md) has its live mode: `--live --cap <n>` calls Claude Code within the owner's approved cap, never above the scenario's budget, and records the run as answers that replay offline (`EVAL-07`); a replay recorded with other prompt parts is reported as stale. No call was made. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T12:54:57Z.

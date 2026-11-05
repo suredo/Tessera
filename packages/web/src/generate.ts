@@ -405,6 +405,9 @@ export async function carryOut(
       case "open_saved":
         return { message: "", savedToolId: reply.savedToolId };
       case "failed":
+        // A failed reply applied nothing; after Cancel it is the stop the person asked for, not
+        // something that went wrong (GEN-08, GEN-12; the M2 live run's J6).
+        if (control?.stopped) return stopped();
         return { message: t("request.failed", { message: reply.message }) };
     }
     return { message: t("request.failedPlain") };
