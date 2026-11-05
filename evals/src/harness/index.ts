@@ -2,6 +2,7 @@
 // The evaluation harness: a budget guard, call ledger and dry run around any provider (OBS-02).
 export {
   HarnessError,
+  refuseRealDataFolder,
   startHarness,
   type Harness,
   type HarnessOptions,

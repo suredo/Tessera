@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import type { LedgerEntry, ProviderErrorKind, RUN_MODES, Usage } from "@tessera/contracts";
 import {
+  chooseDataFolder,
+  DATA_FOLDER_VARIABLE,
   ProviderError,
   UNKNOWN_USAGE,
   type Provider,
@@ -32,6 +34,8 @@ export type HarnessOptions = {
   /** The run's own folder, new or empty, so it is never anyone's real data (ENG-19). */
   dataFolder: string;
   now?: () => Date;
+  /** Where the real user data folder is looked for; the process's own by default. */
+  environment?: NodeJS.ProcessEnv;
 };
 
 export type Harness = {
@@ -63,7 +67,37 @@ const STOPPING_ERRORS: ReadonlySet<ProviderErrorKind> = new Set([
 
 const NO_COST: Usage = { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, durationMs: 0 };
 
-function checkOptions({ provider, mode, callCap, dataFolder }: HarnessOptions): void {
+/**
+ * Refuses a folder that is, holds or sits inside the real user data folder (ENG-19, PLAT-04):
+ * Tessera's default one, and the one `TESSERA_DATA_DIR` chooses for this process, if it is set.
+ * Evaluations, tests and development each use their own.
+ */
+export function refuseRealDataFolder(
+  folder: string,
+  environment: NodeJS.ProcessEnv = process.env,
+): void {
+  const { [DATA_FOLDER_VARIABLE]: chosen, ...rest } = environment;
+  const real = [chooseDataFolder(rest), ...(chosen ? [chooseDataFolder(environment)] : [])];
+  // Windows paths compare without case, as the file system does.
+  const key = (p: string) => {
+    const full = path.resolve(p);
+    return process.platform === "win32" ? full.toLowerCase() : full;
+  };
+  const within = (inner: string, outer: string) => {
+    const relative = path.relative(key(outer), key(inner));
+    return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  };
+  for (const place of real) {
+    if (within(folder, place) || within(place, folder)) {
+      throw new HarnessError(
+        `The run's data folder can't be or hold the real user data folder (${place}): ${folder}`,
+      );
+    }
+  }
+}
+
+function checkOptions({ provider, mode, callCap, dataFolder, environment }: HarnessOptions): void {
+  refuseRealDataFolder(dataFolder, environment);
   if (!Number.isInteger(callCap) || callCap < 1) {
     throw new HarnessError(`The call cap must be a whole number of at least 1, not ${callCap}.`);
   }
