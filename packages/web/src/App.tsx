@@ -600,6 +600,9 @@ export function App() {
                 // Continue opens exactly the linked workspace (DATA-07).
                 const { workspace } = await ask("library.continue", { id: tool.id });
                 showWorkspace(workspace.id);
+                // Its own message, so an earlier one (such as Use again's) never stays on
+                // screen and says something untrue about this workspace (GEN-08).
+                setNotice(t("request.continued", { name: tool.name }));
               } catch (error) {
                 report(error);
               }

@@ -138,6 +138,14 @@ test("DATA-07: Use again opens a new workspace with fresh data, and Continue sti
   // The library entry still continues its own workspace.
   await toLibrary(page);
   await expect(entry(page, name)).toContainText(`Continue opens ${workspace}`);
+  // Continue says what it did, and Use again's message no longer shows (GEN-08; the M2
+  // live run's stale-message defect).
+  await entry(page, name)
+    .getByRole("button", { name: `Continue ${name}, in ${workspace}` })
+    .click();
+  await expect(openWorkspace(page, workspace)).toBeVisible();
+  await expect(page.getByText(`${name} is open again.`)).toBeVisible();
+  await expect(page.getByText(`${name} opened in a new workspace`)).toHaveCount(0);
 });
 
 test("APP-04: Save as a new tool makes a separate entry with its own workspace", async ({
