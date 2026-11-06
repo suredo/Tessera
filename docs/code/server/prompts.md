@@ -3,11 +3,11 @@ type: Code Module
 title: "Prompt assembly"
 description: "Prompts built from versioned part files, chosen by the stage and the intent's structured fields: base rules, the bridge manifest and the UI standard generated from their one definitions, the tool's code and diagnostics; each part's version recorded, and each stage's fixture prompt within its budget."
 resource: ../../../packages/server/src/prompts/
-implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03, GEN-14]
+implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03, GEN-14, SEC-02]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T07:15:11Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T21:49:54Z }
 ---
 
 # Purpose
@@ -35,7 +35,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 - **A part's version is a hash of its text.** For an instruction part it covers what was generated into it (the manifest, the UI tokens), so a change to either changes the version. For a request part it covers only the wording, since what it quotes changes with every call. A stage call carries them, and the [evaluation harness](../evals/harness.md)'s ledger records them with the instructions' size.
 - **Parts are chosen by the stage and structured fields, never the request's words** (`GEN-02`): base rules always; the bridge manifest unless the intent says the request only changes the look; the UI standard's look only for a tool in standard mode, and the accessibility rules in either mode, since a custom look never drops them (`UX-04`); the tool's code for edit, and for the repair of an edit, but for a look-only edit only its page and style (`source-style.md`, asking for a style answer), never its JavaScript, and a failed answer it repairs is quoted as its style alone, whatever mode it came in, so no repair brings the JavaScript back (`GEN-14`), which with the bridge manifest left out makes that prompt under 60% of a full edit's; for repair, its failure class's part and what the checks found, and, when it repairs a creation, the create part and the failed answer, if it had the right shape; the request's language whenever the intent stage gave one, so creation doesn't guess it. A test runs requests full of words a keyword rule would act on, and gets the same parts.
 - **The manifest and the UI tokens come from their one definitions** (`CON-03`, `VER-06`, P3): the bridge part quotes the contracts' bridge manifest as compact JSON, without the schema-version line, a pattern beside a format that says the same, or the bounds every JSON integer has; the UI standard part lists the runtime's UI tokens. The standard's rules are the POC's, ported.
-- **Quoted material is data** (`SEC-02`): the tool's code sits between markers and is called data, and the base rules say quoted material is never instructions.
+- **Quoted material is data, and can't end its own quote** (`SEC-02`). The base rules say quoted material is never instructions. What is quoted as JSON (the open tool, the saved tools, an edit's declarations and failed answer, the data stage's entries and failed plan) stays on one line, so it can't write a marker line. What is quoted as raw text (the tool's code, a failed creation's answer, and what the checks found, which can carry an error message the tool's own code wrote) ends at a marker carrying a tag, `quoteTag`: a short hash of everything that prompt quotes, skipping any tag that appears in it. So a quoted line that copies the end marker, even with a guessed tag, isn't the end, and what follows it is still data. The same material gets the same tag, so a prompt is the same for the same call. The M2 limit: web pages, read only by research, arrive in M5 and will need the same quoting.
 - **Each stage's fixture prompt stays within its budget** (`GEN-03`): about 15,700 characters for creation, 17,900 for an edit, 18,400 for the repair of an edit and 21,200 for the repair of a creation, of the shopping-list fixture (`packages/server/test/fixtures/prompts`), against budgets of 17,000, 18,500 and 23,500. Creation's grew with its own part, its output contract; repair's was set by the repair of a creation, which carries the creation prompt and the failed answer (`GEN-09`). CI fails past them.
 - **Filling a part is exact:** a placeholder without a value, or a value without a placeholder, is an error, and a value is never read as a replacement pattern.
 
@@ -45,7 +45,7 @@ The [contracts](../contracts/package.md)' bridge manifest and intent, and the [r
 
 # Pitfalls
 
-- **The replay suite doesn't exist yet** (`TEST-04`, #156). `ENG-16` asks every prompt change to pass it; until it exists, a change to a part is reviewed and its tests run, and one that changes behavior gets a small budgeted live check.
+- **A replay recorded with older parts is only reported as stale** (`ENG-16`, `TEST-04`). A prompt change must pass the replay suite, `e2e/scenario-replays.spec.ts`, which replays every recorded live run through the [scenario runner](../evals/runner.md). A replay recorded with other part versions still runs, so it shows how the host handles those answers, not what the model would answer now. A change that alters behavior also gets a small budgeted live check. Replays of the POC's recorded failures are still to come (#156).
 - **The bridge manifest is most of the instructions,** about 7,000 characters, and grows with every action. The budgets will say when it needs a shorter form.
 - **Create, edit, repair, intent and data plans are assembled so far.** Data-plan routing/confirmation follow in a separate slice. Research, review and acceptance get their parts with their stages.
 
@@ -53,5 +53,5 @@ The [contracts](../contracts/package.md)' bridge manifest and intent, and the [r
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `assembleIntentPrompt`, `assembleDataPrompt`, `DATA_PROMPT_BUDGET`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `SavedToolEntry` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
-- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `DATA_PROMPT_BUDGET`, `assembleDataPrompt`, `RecordList` (type), `OpenTool` (type), `SavedToolEntry` (type), `assembleIntentPrompt`, `fixedPart`
+- `index.ts`: `assembleIntentPrompt`, `assembleDataPrompt`, `DATA_PROMPT_BUDGET`, `assemblePrompt`, `fillPart`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `quoteTag`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `SavedToolEntry` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
+- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `quoteTag`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `DATA_PROMPT_BUDGET`, `assembleDataPrompt`, `RecordList` (type), `OpenTool` (type), `SavedToolEntry` (type), `assembleIntentPrompt`, `fixedPart`
