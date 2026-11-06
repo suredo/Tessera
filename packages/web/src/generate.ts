@@ -201,6 +201,13 @@ const defaultDeps: RequestDeps = {
   stage: stageCandidate,
 };
 
+/**
+ * The longest delay a browser timer keeps: a longer one overflows and fires at once (L-82). The
+ * server still enforces the deadline, refusing activation after it, so a browser whose clock is
+ * far behind the server's only waits longer, and never cancels at once.
+ */
+export const LONGEST_TIMER_MS = 2_147_483_647;
+
 async function stageRequest(
   reply: Extract<GenerateReply, { kind: "candidate" }>,
   deps: RequestDeps,
@@ -212,7 +219,7 @@ async function stageRequest(
   if (control?.stopped || Date.now() >= reply.activation.expiresAt) controller.abort();
   const timer = setTimeout(
     () => controller.abort(),
-    Math.max(0, reply.activation.expiresAt - Date.now()),
+    Math.min(LONGEST_TIMER_MS, Math.max(0, reply.activation.expiresAt - Date.now())),
   );
   try {
     return await deps.stage({
