@@ -53,7 +53,8 @@ export type Candidate = {
 
 export type CreateResult = (
   | ({ kind: "candidate" } & Candidate)
-  | { kind: "cannot"; reason: string }
+  /** `detail`: the model's own words, kept for the details view when `reason` replaced them. */
+  | { kind: "cannot"; reason: string; detail?: string }
   | {
       kind: "failed";
       /** Which repair, if any, can fix it; a provider failure is never repaired (GEN-09). */
@@ -296,12 +297,17 @@ export function plainWordProblems(what: string, text: string, request: string): 
 export const PLAIN_CANNOT_REASON = "It isn't something a tool here can do.";
 
 /**
- * A model's reason for not making something, as the person will read it (GEN-12): its own words
- * when they are plain, otherwise the host's plain sentence. A refusal is final, so it isn't
- * repaired; the model's words stay in the ledger's request log.
+ * A model's refusal, as the person will read it (GEN-12): its own reason when it is plain,
+ * otherwise the host's plain sentence, with the model's words kept as `detail` for the details
+ * view (GEN-10). A refusal is final, so it isn't repaired.
  */
-export const plainReason = (reason: string, request: string): string =>
-  internalTerms(reason, request).length === 0 ? reason : PLAIN_CANNOT_REASON;
+export const plainRefusal = (
+  reason: string,
+  request: string,
+): { kind: "cannot"; reason: string; detail?: string } =>
+  internalTerms(reason, request).length === 0
+    ? { kind: "cannot", reason }
+    : { kind: "cannot", reason: PLAIN_CANNOT_REASON, detail: reason };
 
 /** One call, creation or a repair, and the host's checks on its answer. */
 async function ask(
@@ -343,7 +349,7 @@ async function ask(
     };
   }
   if (creation.outcome === "cannot") {
-    return { outcome: { kind: "cannot", reason: plainReason(creation.reason, input.request) } };
+    return { outcome: plainRefusal(creation.reason, input.request) };
   }
   // Plain words first: a name like "Capability declaration fix" never becomes a tool (L-36).
   const words = [

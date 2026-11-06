@@ -336,6 +336,23 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
       answer: "cannot",
       reason: "Booking needs the internet.",
     });
+    // A refusal in Tessera's own words: the person reads a plain sentence, and the model's words
+    // go with the reply as a finding, for the ledger and the details view (GEN-10, GEN-12).
+    const internal = await generate(
+      folder,
+      script(
+        intentReply({ kind: "create" }),
+        createReply({ outcome: "cannot", reason: "The runtime cannot read this JSON schema." }),
+      ),
+      DEFAULT_ROUTES,
+      { request: "Book a table" },
+    );
+    expect(internal).toEqual({
+      kind: "answer",
+      answer: "cannot",
+      reason: "It isn't something a tool here can do.",
+      findings: ["The runtime cannot read this JSON schema."],
+    });
     expect(listWorkspaces(folder)).toEqual([]);
     folder.close();
   });

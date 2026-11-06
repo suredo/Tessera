@@ -388,7 +388,12 @@ describe("the create stage (CLI-09, GEN-11)", () => {
     const first = answering(refusal);
     expect(
       await createTool(first.provider, DEFAULT_ROUTES, { request: "A shopping list" }),
-    ).toEqual({ kind: "cannot", reason: PLAIN_CANNOT_REASON });
+    ).toEqual({
+      kind: "cannot",
+      reason: PLAIN_CANNOT_REASON,
+      // The model's own words, kept for the details view (GEN-10).
+      detail: "The runtime cannot read this JSON schema.",
+    });
     // A refusal is final: no repair is spent on its words.
     expect(first.calls).toHaveLength(1);
     // The same from a repair, after an answer of the wrong shape.
@@ -398,7 +403,11 @@ describe("the create stage (CLI-09, GEN-11)", () => {
     );
     expect(
       await createTool(repaired.provider, DEFAULT_ROUTES, { request: "A shopping list" }),
-    ).toMatchObject({ kind: "cannot", reason: PLAIN_CANNOT_REASON });
+    ).toMatchObject({
+      kind: "cannot",
+      reason: PLAIN_CANNOT_REASON,
+      detail: "The runtime cannot read this JSON schema.",
+    });
     // A plain reason, or one in words the person used, is theirs to read as it is.
     const plain = answering({
       ...refusal,

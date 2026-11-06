@@ -221,6 +221,7 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
     expect(await editTool(provider, DEFAULT_ROUTES, input)).toEqual({
       kind: "cannot",
       reason: PLAIN_CANNOT_REASON,
+      detail: "The capability manifest has no payload for that.",
     });
   });
 

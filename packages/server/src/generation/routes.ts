@@ -261,7 +261,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
               });
             waitingData.delete(id);
             pending.delete(id);
-            return withinRequestDeadline(
+            return withinRequestDeadline<GenerateReply>(
               provider,
               entry.expires,
               (bounded, stopped, check) => {

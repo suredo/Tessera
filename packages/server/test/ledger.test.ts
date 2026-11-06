@@ -184,6 +184,18 @@ describe("the call ledger (OBS-01, GEN-10)", () => {
       const answered = ledger.start("data", workspace.id);
       ledger.finish(answered, { kind: "answer", answer: "clarify", reason: "Which list?" });
       expect(ledger.request(answered)).toMatchObject({ outcome: "answer", message: "Which list?" });
+      // A refusal whose words had to be replaced keeps them for the details (GEN-10, GEN-12).
+      const refused = ledger.start("generate", workspace.id);
+      ledger.finish(refused, {
+        kind: "answer",
+        answer: "cannot",
+        reason: "It isn't something a tool here can do.",
+        findings: ["The runtime cannot read this JSON schema."],
+      });
+      expect(ledger.request(refused)).toMatchObject({
+        message: "It isn't something a tool here can do.",
+        findings: ["The runtime cannot read this JSON schema."],
+      });
     });
   });
 

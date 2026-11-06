@@ -41,7 +41,14 @@ export async function generateEdit(
     repairUsage,
   });
   if (!current()) return stale;
-  if (result.kind === "cannot") return { kind: "answer", answer: "cannot", reason: result.reason };
+  if (result.kind === "cannot")
+    // The model's own words, when the plain reason replaced them, stay for the details (GEN-10).
+    return {
+      kind: "answer",
+      answer: "cannot",
+      reason: result.reason,
+      ...(result.detail ? { findings: [result.detail] } : {}),
+    };
   if (result.kind === "unchanged")
     return {
       kind: "answer",

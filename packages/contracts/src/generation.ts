@@ -272,6 +272,12 @@ export const generateReplySchema = z
         .string()
         .optional()
         .describe("The model's own plain reason, for cannot, and for unchanged when it gave one."),
+      findings: z
+        .array(z.string())
+        .optional()
+        .describe(
+          "For the details view: the model's own words when the reason above had to replace them (GEN-10, GEN-12).",
+        ),
     }),
     z.strictObject({ kind: z.literal("open_saved"), savedToolId: z.string().min(1) }),
     generationFailureSchema,
