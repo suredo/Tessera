@@ -21,6 +21,13 @@ export const en = {
   "request.requestUnknown":
     "Tessera couldn't confirm the result. Changes may have been saved. Check the tool and its history before asking again.",
   "request.working": "Working on your request. This can take a few minutes.",
+  "request.stage.waiting": "Waiting for another request to finish…",
+  "request.stage.intent": "Reading your request…",
+  "request.stage.create": "Making your tool…",
+  "request.stage.edit": "Changing your tool…",
+  "request.stage.repair": "Fixing a problem the checks found…",
+  "request.stage.data": "Changing your entries…",
+  "request.elapsed": "{seconds} s",
   "request.mixedEntryFailed": "The entry changes weren't applied. {reason}",
   "request.mixedKept": "Your tool and entries weren't changed.",
   "request.mixedUnknown":

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { t } from "./i18n/translate.ts";
+import type { Progress } from "./progress.ts";
 
 // Where the person says what they need (GEN-01): a field and a button, the start of the chat
 // (#132). It is offered only once the setup check passes (PLAT-03). Whether a request is running
@@ -9,11 +10,17 @@ import { t } from "./i18n/translate.ts";
 type Props = {
   /** True while a request runs: the box says so and takes no other. */
   working: boolean;
+  /**
+   * The running request's stage and elapsed time (GEN-16). The stage is the status a screen
+   * reader announces when it changes; the seconds sit beside it, outside the live region, so they
+   * aren't read out every second.
+   */
+  progress?: Progress;
   /** Carries out the request; resolves when the app has said what happened. */
   onRequest: (request: string) => Promise<void>;
 };
 
-export function RequestBox({ working, onRequest }: Props) {
+export function RequestBox({ working, progress, onRequest }: Props) {
   const [request, setRequest] = useState("");
   const send = async () => {
     const text = request.trim();
@@ -42,7 +49,10 @@ export function RequestBox({ working, onRequest }: Props) {
       <button type="button" className="primary" disabled={working} onClick={() => void send()}>
         {t("request.send")}
       </button>
-      <p role="status">{working ? t("request.working") : ""}</p>
+      <div className="request-progress">
+        <p role="status">{working ? (progress?.status ?? t("request.working")) : ""}</p>
+        {working && progress && <p className="request-elapsed">{progress.elapsed}</p>}
+      </div>
     </div>
   );
 }

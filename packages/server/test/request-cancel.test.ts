@@ -10,10 +10,12 @@ import {
   DEFAULT_ROUTES,
   FINISH_DATA_ROUTE,
   GENERATE_ROUTE,
+  PROGRESS_REQUEST_ROUTE,
   REGISTER_REQUEST_ROUTE,
   SMOKE_REPAIR_ROUTE,
   generateReplySchema,
   requestControlSchema,
+  requestProgressSchema,
   type Intent,
   type ProviderScript,
 } from "@tessera/contracts";
@@ -107,6 +109,8 @@ async function fixture(
   const register = async () =>
     requestControlSchema.parse((await post(REGISTER_REQUEST_ROUTE)).body).token;
   const cancel = (token: string) => post(CANCEL_REQUEST_ROUTE, { token });
+  const progress = async (token: string) =>
+    requestProgressSchema.parse((await post(PROGRESS_REQUEST_ROUTE, { token })).body);
   const ask = (controlToken: string, active = false) =>
     post(GENERATE_ROUTE, {
       request: "Make it dark and add Bread",
@@ -124,6 +128,7 @@ async function fixture(
     post,
     register,
     cancel,
+    progress,
     ask,
     snapshot,
     discoveries: () => discoveries,
@@ -385,5 +390,62 @@ describe("registered request cancellation", () => {
     expect(controls.register()).toEqual(expect.any(String));
     expect(controls.owner("candidate")).toBeUndefined();
     expect(() => controls.claim(tokens[1]!)).toThrow();
+  });
+});
+
+describe("request progress (GEN-16, CLI-07)", () => {
+  it("GEN-16 CLI-07: says the request is waiting, then each stage as it runs, with the seconds since it was sent", async () => {
+    const intentGate = deferred();
+    const createGate = deferred();
+    const entered: string[] = [];
+    const f = await fixture(creation, (p) => ({
+      ...p,
+      run: async (spec) => {
+        entered.push(spec.stage);
+        await (spec.stage === "intent" ? intentGate : createGate).promise;
+        return p.run(spec);
+      },
+    }));
+    const token = await f.register();
+    expect(await f.progress(token)).toEqual({ stage: null, seconds: 0 });
+    const gate = deferred();
+    const blocker = f.jobs.submit("Other request", () => gate.promise);
+    const answer = f.ask(token);
+    await vi.waitFor(async () => expect((await f.progress(token)).stage).toBe("waiting"));
+    gate.resolve();
+    await blocker.outcome;
+    await vi.waitFor(() => expect(entered).toEqual(["intent"]));
+    expect((await f.progress(token)).stage).toBe("intent");
+    const later = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 41_000);
+    expect(await f.progress(token)).toMatchObject({ stage: "intent", seconds: 41 });
+    later.mockRestore();
+    intentGate.resolve();
+    await vi.waitFor(() => expect(entered).toEqual(["intent", "create"]));
+    expect((await f.progress(token)).stage).toBe("create");
+    createGate.resolve();
+    expect((await answer).status).toBe(200);
+    // Between parts and after the end, no stage: the browser shows its own checks then.
+    expect(await f.progress(token)).toEqual({ stage: null, seconds: 0 });
+    // An unknown or cancelled request has none either.
+    expect(await f.progress(randomUUID())).toEqual({ stage: null, seconds: 0 });
+    expect((await f.post(PROGRESS_REQUEST_ROUTE, { token: "nope" })).status).toBe(400);
+  });
+
+  it("GEN-16: a cancelled request reports no stage", async () => {
+    const createGate = deferred();
+    const f = await fixture(creation, (p) => ({
+      ...p,
+      run: async (spec) => {
+        if (spec.stage === "create") await createGate.promise;
+        return p.run(spec);
+      },
+    }));
+    const token = await f.register();
+    const answer = f.ask(token);
+    await vi.waitFor(async () => expect((await f.progress(token)).stage).toBe("create"));
+    await f.cancel(token);
+    expect(await f.progress(token)).toEqual({ stage: null, seconds: 0 });
+    createGate.resolve();
+    await answer;
   });
 });
