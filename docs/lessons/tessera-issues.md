@@ -4,7 +4,7 @@ title: "Tessera issues"
 description: "Issues found while building Tessera, from L-70 on: what happened, the cause, the mitigation and where it was found."
 tags: [lessons, issues]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T22:45:14Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T03:46:30Z }
 ---
 # Tessera issues
 
@@ -12,6 +12,7 @@ Every defect a live run finds gets an entry here, a replay test and a fix (`ENG-
 
 | ID | What happened | Root cause | Mitigation | Status | Found in |
 | --- | --- | --- | --- | --- | --- |
+| L-81 | In the M2 live run, the screenshots after Use again and Continue showed an empty tool panel, though the tool worked; the free replay showed the same. | The runner took each step's screenshot as soon as the facts were read, while the newly opened workspace's nested tool frames were still loading. Timing, not the full-page capture limit of L-76: the runner takes viewport screenshots. | EVAL-02, ENG-13 (before each screenshot the runner waits up to 5 s for the tool to show something; the T1 replay's step 10 now shows the list) | D | [M2 live run](../../evals/reports/2026-11-05-m2-live-run.md) defect 4, T1 replay |
 | L-80 | The T1 replay spec passed on CI, then failed on the next run at step 9: "No new workspace is open." after Use again, though the host had opened one. | After Continue or Use again, the runner waited for any tool panel, and the one already showing passed at once, before the switch, on a loaded runner | EVAL-02, ENG-13 (the runner waits for the workspace the step opens; the replay spec on CI) | D | [M2 live run](../../evals/reports/2026-11-05-m2-live-run.md) replay spec, CI |
 | L-79 | In the M2 live run's T13, "Add an eraser." on a board that already had one was answered "The tool wasn't changed." The model had said why, "This drawing board already has an eraser … I changed nothing.", but the person never saw it. | An identical edit dropped the model's summary on its way to the reply | GEN-08, ENG-13 (an unchanged answer carries the summary as its `reason`, shown after "The tool wasn't changed."; unit tests in `edit.test.ts`, `edit-pipeline.test.ts` and `generate.test.ts`) | R | [M2 live run](../../evals/reports/2026-11-05-m2-live-run.md) |
 | L-78 | In the M2 live run's J6, cancelling a request ended with "That didn't work. The request was stopped.", as if something had gone wrong, although the person had asked to stop and nothing was applied. | The server answers a cancelled generation with a failed reply, and the browser showed every failed reply as a failure, whether or not the person had cancelled | GEN-08, GEN-12, ENG-13 (a failed reply after Cancel says the request stopped; a unit test in `request-cancel.test.ts`) | R | [M2 live run](../../evals/reports/2026-11-05-m2-live-run.md) |

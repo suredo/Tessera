@@ -4,6 +4,8 @@
 
 * **Update**: A running request shows its stage in plain words and the seconds since it was sent, as [ADR 0010](decisions/adr/0010-generation-progress.md) decided ([issue 152](https://github.com/suredo/Tessera/issues/152), `GEN-16`, `CLI-07`, `UX-02`, `APP-10`): the server records each model call's stage on the request's control and answers a new progress route ([generation](code/server/generation.md), [contracts](code/contracts/package.md)), and the request box announces the stage and shows the seconds beside it ([browser](code/web/package.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T04:07:43Z.
 
+* **Update**: The [scenario runner](code/evals/runner.md) waits, before each step's screenshot, for the open tool to show something, so the screenshots after Use again and Continue no longer show an empty panel, the M2 live run's fourth defect. The [Tessera issues](lessons/tessera-issues.md) record it as L-81. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T03:46:30Z.
+
 * **Update**: Corrected the two M2 scenario expectations the [live run](../evals/reports/2026-11-05-m2-live-run.md) found wrong: T1's "Group them by aisle." now expects its data kept, a new host fact that allows added fields and items but no changed or lost value ([scenario files and host facts](code/evals/scenarios.md), [scenario format](testing/scenario-format.md), `EVAL-02`), and T13's "Add an eraser." no longer requires a new version, since the board may already have one. Every recorded run now replays with no failed step ([runner](code/evals/runner.md)); the live run's score stays as recorded. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T03:36:07Z.
 
 ## 2026-11-05
