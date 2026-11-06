@@ -364,7 +364,17 @@ button.primary {
   border: 1px solid var(--ui-control-border);
   border-radius: var(--ui-radius-control);
 }
-.request [role="status"] {
+/* The running request's stage and, beside it, its elapsed seconds (GEN-16). */
+.request-progress {
   flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.request-progress p {
   margin: 0;
+}
+.request-elapsed {
+  color: var(--ui-text-secondary);
+  font-variant-numeric: tabular-nums;
 }

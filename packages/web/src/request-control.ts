@@ -1,8 +1,11 @@
 import {
   REGISTER_REQUEST_ROUTE,
   CANCEL_REQUEST_ROUTE,
+  PROGRESS_REQUEST_ROUTE,
   requestControlSchema,
   cancelRequestReplySchema,
+  requestProgressSchema,
+  type RequestProgress,
 } from "@tessera/contracts";
 import { HostError, type Send } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
@@ -26,6 +29,13 @@ export class RequestControl {
       if (this.stopped) await this.cancel();
       return this.#token;
     }));
+  }
+  /** Where the request stands on the server (GEN-16): none before it is registered or sent. */
+  async progress(): Promise<RequestProgress> {
+    if (!this.#token || this.stopped) return { stage: null, seconds: 0 };
+    return requestProgressSchema.parse(
+      await this.#post(PROGRESS_REQUEST_ROUTE, { token: this.#token }),
+    );
   }
   async cancel(): Promise<boolean> {
     this.controller.abort();

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { STAGES } from "./provider.ts";
 import { UI_MODES } from "./artifact.ts";
 import { BRIDGE_CAPABILITIES } from "./bridge.ts";
 import { jsonObjectSchema } from "./json.ts";
@@ -123,6 +124,18 @@ export const REGISTER_REQUEST_ROUTE = "/api/generate/register";
 export const CANCEL_REQUEST_ROUTE = "/api/generate/cancel";
 export const requestControlSchema = z.strictObject({ token: z.uuid() });
 export const cancelRequestReplySchema = z.strictObject({ cancelled: z.boolean() });
+
+/**
+ * Where a registered request stands (GEN-16, CLI-07, ADR 0010): waiting in the queue, or the
+ * model stage running, with the seconds since the request was sent; `null` before it is sent,
+ * between its parts and after it ends. Stage names and elapsed time only, no streamed output.
+ */
+export const PROGRESS_REQUEST_ROUTE = "/api/generate/progress";
+export const requestProgressSchema = z.strictObject({
+  stage: z.enum(["waiting", ...STAGES]).nullable(),
+  seconds: z.int().nonnegative(),
+});
+export type RequestProgress = z.infer<typeof requestProgressSchema>;
 
 export const generateRequestSchema = z
   .strictObject({

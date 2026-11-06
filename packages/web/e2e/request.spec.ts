@@ -179,7 +179,7 @@ test("GEN-09, GEN-08: a tool that fails its checks, even after its repair, is ne
   expect(listWorkspaces(app.folder)).toHaveLength(1);
 });
 
-test("GEN-01: a request keeps running when the person goes elsewhere, and no second one starts meanwhile", async ({
+test("GEN-01, GEN-16, UX-02, APP-10: a request keeps running when the person goes elsewhere, shows its stage and time, and no second one starts meanwhile", async ({
   page,
 }) => {
   await page.goto(app.url);
@@ -188,8 +188,12 @@ test("GEN-01: a request keeps running when the person goes elsewhere, and no sec
   await page.getByRole("button", { name: en["nav.workspaces"], exact: true }).click();
   // Back on the workspace: still running, so the box takes no other request.
   await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeDisabled();
-  await expect(page.getByText(en["request.working"])).toBeVisible();
+  // The stage it is in, announced as the status, and the seconds since it was sent (GEN-16).
+  const box = page.locator(".request");
+  await expect(box.getByRole("status")).toHaveText(en["request.stage.intent"]);
+  await expect(box.locator(".request-elapsed")).toHaveText(/^[1-9]\d* s$/);
   await expect(page.getByText(en["request.clarify"])).toBeVisible({ timeout: 30_000 });
+  await expect(box.getByRole("status")).toHaveText("");
   await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeEnabled();
 });
 

@@ -17,6 +17,7 @@ import {
 import { DataChangeOffer } from "./DataChangeOffer.tsx";
 import { RequestControl } from "./request-control.ts";
 import { RequestBox } from "./RequestBox.tsx";
+import { useRequestProgress, type Progress } from "./progress.ts";
 import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
 import { Workspaces } from "./Workspaces.tsx";
@@ -40,6 +41,8 @@ type EmptyProps = {
   onRequest?: (request: string) => Promise<void>;
   /** True while a request runs. */
   requesting?: boolean;
+  /** The running request's stage and elapsed time (GEN-16). */
+  progress?: Progress;
   cancelControl?: React.ReactNode;
 };
 
@@ -52,13 +55,16 @@ export function EmptyState({
   onStatus,
   onRequest,
   requesting = false,
+  progress,
   cancelControl,
 }: EmptyProps) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
       <p>{t("home.intro")}</p>
-      {onRequest && setup?.ready && <RequestBox working={requesting} onRequest={onRequest} />}
+      {onRequest && setup?.ready && (
+        <RequestBox working={requesting} progress={progress} onRequest={onRequest} />
+      )}
       {/* Such as the trash notice after the last workspace is deleted. */}
       <p role="status">{notice}</p>
       {cancelControl}
@@ -127,6 +133,8 @@ export function App() {
   const [settled, setSettled] = useState(false);
   const [cancelProblem, setCancelProblem] = useState("");
   const [dataOffer, setDataOffer] = useState<RequestOutcome["dataOffer"]>();
+  // Stage and elapsed time while the request runs, until a cancel has settled it (GEN-16).
+  const progress = useRequestProgress(control, requesting && !settled);
   const cancelRequest = async () => {
     const owner = control.current;
     if (!owner || stopping) return;
@@ -421,6 +429,7 @@ export function App() {
         onStatus={() => setView("status")}
         onRequest={request}
         requesting={requesting}
+        progress={progress}
         cancelControl={cancelControl}
       />
     );
@@ -517,7 +526,9 @@ export function App() {
             <ImportFile onImport={importFile} />
           </aside>
           <main>
-            {setup?.ready && <RequestBox working={requesting} onRequest={request} />}
+            {setup?.ready && (
+              <RequestBox working={requesting} progress={progress} onRequest={request} />
+            )}
             {current && (
               <ToolPanel
                 key={`${current.id}:${reloads}`}

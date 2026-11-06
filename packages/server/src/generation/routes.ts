@@ -14,6 +14,8 @@ import {
   CANCEL_REQUEST_ROUTE,
   requestControlSchema,
   cancelRequestReplySchema,
+  PROGRESS_REQUEST_ROUTE,
+  requestProgressSchema,
 } from "@tessera/contracts";
 import { randomUUID } from "node:crypto";
 import { json, readJson, text } from "../http/body.ts";
@@ -163,18 +165,20 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       } catch {
         return text(res, 409, "The request was stopped or expired. Please ask again.");
       }
-      const provider = await options.provider();
-      if ("problem" in provider) {
+      const found = await options.provider();
+      if ("problem" in found) {
         return json(
           res,
           generateReplySchema.parse({
             kind: "failed",
             failure: "provider",
-            message: provider.problem,
+            message: found.problem,
             findings: [],
           }),
         );
       }
+      // Each model call names its stage, for the request's progress (GEN-16, ADR 0010).
+      const provider = controls.watch(control, found);
       let routes: Routes;
       try {
         routes = options.routes();
@@ -197,6 +201,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       }
       const nextToken = randomUUID();
       let expires = 0;
+      controls.waiting(control);
       const { job, outcome } = options.jobs.submit(
         "request" in input ? input.request : "findings" in input ? "Repair tool" : "Change entries",
         (jobSignal) => {
@@ -305,6 +310,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       control?.jobs.add(job.id);
       const ended = await outcome;
       control?.jobs.delete(job.id);
+      controls.idle(control);
       if (control && control.expires === Infinity) control.expires = Date.now() + limit;
       if (ended.state === "done") {
         // Committed data facts stand. Cancelled candidates must never regain activation authority.
@@ -407,6 +413,14 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       cancelRequestReplySchema.parse({ cancelled: controls.cancel(checked.data.token) }),
     );
   };
+  const progress: Handler = async (req, res) => {
+    if (req.method !== "POST") return text(res, 405, "Send a request with POST.");
+    const body = await readJson(req, REQUEST_LIMIT_BYTES);
+    const checked =
+      typeof body === "string" ? undefined : requestControlSchema.safeParse(body.json);
+    if (!checked?.success) return text(res, 400, "Choose the request to follow.");
+    return json(res, requestProgressSchema.parse(controls.progress(checked.data.token)));
+  };
   return {
     ...activate,
     [GENERATE_ROUTE]: handle("generate"),
@@ -415,5 +429,6 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     [CONFIRM_DATA_ROUTE]: confirm,
     [REGISTER_REQUEST_ROUTE]: register,
     [CANCEL_REQUEST_ROUTE]: cancel,
+    [PROGRESS_REQUEST_ROUTE]: progress,
   };
 }
