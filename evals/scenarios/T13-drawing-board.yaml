@@ -12,8 +12,10 @@ steps:
     expect: { created: true, workspace: new }
   - say: "Make the brush thicker and add a red colour."
     expect: { version: new }
+  # The board may already have an eraser, and then saying so and changing nothing is right; the
+  # host facts still refuse a claimed change that wasn't stored (GEN-08).
   - say: "Add an eraser."
-    expect: { version: new }
+    expect: { workspace: same }
   - reload: true
     expect: { workspace: same, version: unchanged, data: unchanged }
   - save: "Sketch pad"
