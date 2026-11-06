@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:09:47Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T21:52:33Z }
 ---
 
 # Purpose
@@ -46,7 +46,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 - **Cancellation transport uses opaque host capabilities.** `requestControlSchema` is the registration reply and cancellation request; `cancelRequestReplySchema` reports whether a known live registration was stopped. The initial generate request optionally carries `controlToken`; continuation contracts carry only their existing server-owned tokens, so clients cannot reassign cancellation ownership. Cancellation acknowledges future authority revocation and does not claim rollback. The browser has not adopted this opt-in transport yet ([generation](../server/generation.md), #152).
 
 - **Public bridge method metadata is shared** (`CON-03`). `BRIDGE_METHODS` defines method names, argument roles, action selection and the existing page-value isolation classification. The runtime object must implement exactly those keys; the generated manifest and prompt projection derive from it, and the server static check validates direct calls against it. This preserves the DOM check's existing exceptions for `call`, `send` and `assetUrl`; it does not claim that every return is JSON (`assetUrl` returns a blob address, and `onMessage` returns an unsubscribe function).
-- **Candidate replies identify creation versus editing.** `generateReplySchema` carries `operation` so the host can word the verified activation result appropriately. Its answer kinds also include unchanged and stale; neither is a candidate and neither starts staging.
+- **Candidate replies identify creation versus editing.** `generateReplySchema` carries `operation` so the host can word the verified activation result appropriately. Its answer kinds also include unchanged and stale; neither is a candidate and neither starts staging. An answer's optional `reason` is the model's own words, for cannot and for unchanged.
 
 - **Edit output is explicit and bounded by existing contracts** (`CON-02`, `GEN-07`). `editSchema` (`Edit`) is edit or cannot; an edit has a plain summary, independent unchanged/replace file modes and unchanged/migrate data modes. Migration uses the existing migration contract; code and cannot/summary fields reuse creation's definitions. Name, capabilities, pins, UI mode and session entries cannot be supplied by an edit. The committed `edit.schema.json` is generated from the same zod definition.
 

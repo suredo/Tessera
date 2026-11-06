@@ -105,7 +105,7 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
         DEFAULT_ROUTES,
         { request: "Keep it as it is", workspaceId: workspace.id },
       ),
-    ).toEqual({ kind: "answer", answer: "unchanged" });
+    ).toEqual({ kind: "answer", answer: "unchanged", reason: "Kept the tool as it is." });
     expect(getWorkspace(store, workspace.id)).toEqual(workspace);
     expect(workspaceVersions(store, workspace.id)).toHaveLength(1);
   });

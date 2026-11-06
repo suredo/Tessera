@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:47:34Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T21:52:33Z }
 ---
 
 # Purpose
@@ -19,7 +19,7 @@ The core of generation (#146): interface requests create or edit a candidate too
 - `src/generation/data.ts`: `planDataChange` asks for a record patch on the data route (60 seconds), with one existing schema/shape repair allowance. `checkedDataPlan` binds revisions to the original host snapshot, simulates the entire batch on a copy, validates the target shape and builds before/after facts with host-generated add IDs. `commitDataPlan` applies the frozen plan with version, live shape and per-record revision checks inside the workspace transaction.
 - `src/generation/data-action.ts`: `changeData` handles data-only requests, committing adds or returning a host-owned `DataOffer` for explicit confirmation. `applyDataOffer` commits that frozen plan and composes changed/unchanged/refused facts. Route continuations retain at most 100 offers until the original request deadline; tokens are random and consumed before queuing approve/cancel. Confirmation needs no provider or routes discovery and calls no model. A restart, expiry, replay, changed tool or touched-record conflict cannot apply an old plan.
 - `src/generation/edit.ts`: `editTool` runs an edit or a per-class repair with the edit output contract; `editedCandidate` checks it without storing anything. `EditInput` carries the original artifact, workspace data for local validation only, structured intent and repair usage.
-- `src/generation/edit-pipeline.ts`: `generateEdit` retains the workspace/version/revision captured before intent, checks it again before and after editing, and stores only a changed candidate. An identical result returns unchanged without staging or a history entry; a concurrent workspace change returns stale without applying the edit. Actual data migration remains activation's transaction.
+- `src/generation/edit-pipeline.ts`: `generateEdit` retains the workspace/version/revision captured before intent, checks it again before and after editing, and stores only a changed candidate. An identical result returns unchanged without staging or a history entry, with the model's summary as its reason, so the person reads why, such as that the tool already does it (`GEN-08`, L-79); a concurrent workspace change returns stale without applying the edit. Actual data migration remains activation's transaction.
 
 - `src/generation/create.ts`:
   - `createTool` asks the create stage on its route (`CLI-09`), within `GENERATION_TIME_LIMIT_MS` (`GEN-11`), repairs a failure of the host's checks on the repair route, within `REPAIR_TIME_LIMIT_MS` and `REPAIR_BUDGETS`, and gives a `CreateResult`: a `Candidate`, a "cannot" with its reason, or a failure with its class and findings, each with how many repairs it took.

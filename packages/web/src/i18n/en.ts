@@ -30,6 +30,7 @@ export const en = {
   "request.made": "{name} is ready. {summary}",
   "request.edited": "{name} was updated. {summary}",
   "request.unchanged": "The tool wasn't changed.",
+  "request.unchangedBecause": "The tool wasn't changed. {reason}",
   "request.dataChanged": "Changed {count} entries in {name}. {summary}",
   "request.dataChangedOne": "Changed one entry in {name}. {summary}",
   "request.dataReview": "Review the proposed entry changes before applying them.",

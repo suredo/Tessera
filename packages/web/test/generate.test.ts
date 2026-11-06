@@ -199,6 +199,14 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       expect(untouched.seen.stagings).toHaveLength(0);
     }
   });
+  it("GEN-08: an unchanged edit says why, in the model's words, when it gave a reason (L-79)", async () => {
+    const reason = "This drawing board already has an eraser. I changed nothing.";
+    const untouched = deps({ kind: "answer", answer: "unchanged", reason });
+    expect((await carryOut("Add an eraser.", null, untouched.fake)).message).toBe(
+      `The tool wasn't changed. ${reason}`,
+    );
+    expect(untouched.seen.stagings).toHaveLength(0);
+  });
   it("GEN-09: stages a smoke repair once, reports its own outcome, and never repairs a cancellation or refusal", async () => {
     const { fake, seen } = deps(candidate);
     const repair = vi

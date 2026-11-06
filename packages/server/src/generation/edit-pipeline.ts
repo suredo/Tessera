@@ -42,7 +42,12 @@ export async function generateEdit(
   });
   if (!current()) return stale;
   if (result.kind === "cannot") return { kind: "answer", answer: "cannot", reason: result.reason };
-  if (result.kind === "unchanged") return { kind: "answer", answer: "unchanged" };
+  if (result.kind === "unchanged")
+    return {
+      kind: "answer",
+      answer: "unchanged",
+      ...(result.summary ? { reason: result.summary } : {}),
+    };
   if (result.kind === "failed")
     return {
       kind: "failed",
