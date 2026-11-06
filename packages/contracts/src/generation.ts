@@ -214,6 +214,12 @@ export const dataReplySchema = z.discriminatedUnion("kind", [
     kind: z.literal("answer"),
     answer: z.enum(DATA_ANSWERS),
     reason: z.string().optional(),
+    findings: z
+      .array(z.string())
+      .optional()
+      .describe(
+        "For the details view: the model's own words when the reason replaced them (GEN-10).",
+      ),
   }),
   generationFailureSchema,
 ]);

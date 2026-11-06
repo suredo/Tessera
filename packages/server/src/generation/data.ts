@@ -13,7 +13,7 @@ import { applyPatch, recordKey } from "../patches/index.ts";
 import { assembleDataPrompt, DATA_PROMPT_BUDGET, type RepairClass } from "../prompts/index.ts";
 import { ProviderError, runStage, type Provider, type Routes } from "../providers/index.ts";
 import { patchWorkspaceData, type Store, type WorkspaceData } from "../workspaces/index.ts";
-import { REPAIR_BUDGETS } from "./create.ts";
+import { plainRefusal, REPAIR_BUDGETS } from "./create.ts";
 
 /** Cheap record planning gets the intent stage's initial 60-second allowance (GEN-11). */
 export const DATA_TIME_LIMIT_MS = 60_000;
@@ -28,7 +28,7 @@ export type PlannedData = {
 export type DataPlanResult =
   | { kind: "planned"; plan: PlannedData }
   | { kind: "unchanged" | "clarify" }
-  | { kind: "cannot"; reason: string }
+  | { kind: "cannot"; reason: string; detail?: string }
   | { kind: "failed"; failure: "provider" | "schema-shape"; findings: string[] };
 type Input = {
   request: string;
@@ -167,7 +167,8 @@ export async function planDataChange(
       });
       const answer = response.value;
       attempt = answer;
-      if (answer.outcome === "cannot") return { kind: "cannot", reason: answer.reason };
+      // Plain words for the person, the model's own kept for the details (GEN-12, GEN-10).
+      if (answer.outcome === "cannot") return plainRefusal(answer.reason, input.request);
       if (answer.outcome === "unchanged" || answer.outcome === "clarify")
         return { kind: answer.outcome };
       result = checkedDataPlan(input, answer);

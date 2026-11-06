@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { DEFAULT_ROUTES, type Intent } from "@tessera/contracts";
-import { candidateFrom, generate } from "../src/generation/index.ts";
+import { candidateFrom, generate, PLAIN_CANNOT_REASON } from "../src/generation/index.ts";
 import { repairSmoke, type SmokeRepairContext } from "../src/generation/smoke.ts";
 import { createScriptedProvider, type Provider } from "../src/providers/index.ts";
 import { openDataFolder } from "../src/storage/index.ts";
@@ -156,6 +156,39 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
     ).toMatchObject({ kind: "failed", failure: "static" });
     expect(getWorkspace(store, workspace.id)).toEqual(workspace);
     expect(workspaceVersions(store, workspace.id)).toHaveLength(1);
+  });
+
+  it("GEN-12, GEN-10: a smoke repair that refuses in Tessera's own words says so plainly, and keeps its words for the details", async () => {
+    const { store, workspace } = await setup();
+    let context: SmokeRepairContext | undefined;
+    const candidate = await generate(
+      store,
+      provider(reply(intent(), "intent"), reply(quantityEdit, "edit")),
+      DEFAULT_ROUTES,
+      { request: "Add quantities", workspaceId: workspace.id },
+      undefined,
+      (c) => {
+        context = c;
+      },
+    );
+    if (candidate.kind !== "candidate" || !context) throw new Error("Expected continuation");
+    const repaired = await repairSmoke(
+      store,
+      provider(
+        reply({ outcome: "cannot", reason: "The runtime cannot read this JSON schema." }, "repair"),
+      ),
+      DEFAULT_ROUTES,
+      { workspaceId: workspace.id, hash: candidate.hash, findings: ["1 field has no label."] },
+      context,
+    );
+    expect(repaired).toEqual({
+      kind: "answer",
+      answer: "cannot",
+      reason: PLAIN_CANNOT_REASON,
+      findings: ["The runtime cannot read this JSON schema."],
+    });
+    // Nothing changed: the working tool and its entries stay.
+    expect(getWorkspace(store, workspace.id)).toEqual(workspace);
   });
 
   it("GEN-14, GEN-09: a look-only edit's smoke repair is shown only the page and its style, and its failed answer as a style answer", async () => {

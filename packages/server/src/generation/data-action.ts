@@ -80,7 +80,12 @@ export async function changeData(
           : "The change couldn't be prepared. Your entries were kept.",
     };
   if (result.kind === "cannot")
-    return { kind: "answer", answer: "data_cannot", reason: result.reason };
+    return {
+      kind: "answer",
+      answer: "data_cannot",
+      reason: result.reason,
+      ...(result.detail ? { findings: [result.detail] } : {}),
+    };
   if (result.kind !== "planned")
     return {
       kind: "answer",

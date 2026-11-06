@@ -110,7 +110,13 @@ export async function repairSmoke(
         });
   if (repaired.kind === "unchanged") return { kind: "answer", answer: "unchanged" };
   if (repaired.kind === "cannot")
-    return { kind: "answer", answer: "cannot", reason: repaired.reason };
+    // The model's own words, when the plain reason replaced them, stay for the details (GEN-10).
+    return {
+      kind: "answer",
+      answer: "cannot",
+      reason: repaired.reason,
+      ...(repaired.detail ? { findings: [repaired.detail] } : {}),
+    };
   if (repaired.kind === "failed")
     return {
       kind: "failed",
