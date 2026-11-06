@@ -15,6 +15,7 @@ import {
   type RequestOutcome,
 } from "./generate.ts";
 import { DataChangeOffer } from "./DataChangeOffer.tsx";
+import { Details } from "./Details.tsx";
 import { RequestControl } from "./request-control.ts";
 import { RequestBox } from "./RequestBox.tsx";
 import { useRequestProgress, type Progress } from "./progress.ts";
@@ -44,6 +45,8 @@ type EmptyProps = {
   /** The running request's stage and elapsed time (GEN-16). */
   progress?: Progress;
   cancelControl?: React.ReactNode;
+  /** The details view, for requests that made no tool (APP-09, GEN-10). */
+  details?: React.ReactNode;
 };
 
 export function EmptyState({
@@ -57,6 +60,7 @@ export function EmptyState({
   requesting = false,
   progress,
   cancelControl,
+  details,
 }: EmptyProps) {
   return (
     <main className="empty">
@@ -83,6 +87,7 @@ export function EmptyState({
             {t("setup.openStatus")}
           </button>
         ))}
+      {details}
     </main>
   );
 }
@@ -174,6 +179,8 @@ export function App() {
   const [reloads, setReloads] = useState(0);
   // Moved on by each change the running tool saves, so the history shows it at once (APP-05).
   const [toolChanges, setToolChanges] = useState(0);
+  // Moved on by every request that settles, whatever it changed, so open details load again.
+  const [settledRequests, setSettledRequests] = useState(0);
 
   const refresh = async () => {
     const [list, library, deleted] = await Promise.all([
@@ -346,6 +353,7 @@ export function App() {
       say(error);
     } finally {
       setRequesting(false);
+      setSettledRequests((n) => n + 1);
     }
   };
   const takeOffer = async (choice: "continue" | "useAgain") => {
@@ -391,6 +399,7 @@ export function App() {
       setNotice(outcome.message);
     } finally {
       setRequesting(false);
+      setSettledRequests((n) => n + 1);
     }
   };
 
@@ -431,6 +440,7 @@ export function App() {
         requesting={requesting}
         progress={progress}
         cancelControl={cancelControl}
+        details={<Details workspace={null} changes={settledRequests} />}
       />
     );
   }
@@ -546,6 +556,13 @@ export function App() {
                   setReloads((n) => n + 1);
                   setNotice(done);
                 }}
+              />
+            )}
+            {current && (
+              <Details
+                key={`details-${current.id}`}
+                workspace={current}
+                changes={toolChanges + settledRequests}
               />
             )}
           </main>

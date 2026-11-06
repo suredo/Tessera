@@ -61,3 +61,56 @@ export const requestLogEntrySchema = z
   })
   .describe("What one call of an evaluation run asked and got back (OBS-02).");
 export type RequestLogEntry = z.infer<typeof requestLogEntrySchema>;
+
+const tokenCount = z.int().nonnegative().nullable();
+
+/** One model call the host app made, as its call ledger keeps it (OBS-01, GEN-10). */
+export const ledgerCallSchema = z
+  .strictObject({
+    index: z.int().nonnegative().describe("Its place in the request, in the order calls ended."),
+    stage: z.string().min(1),
+    provider: z.string().min(1),
+    model: z.string().min(1),
+    effort: z.string().min(1),
+    promptChars: z.int().nonnegative(),
+    systemChars: z.int().nonnegative(),
+    promptParts: z.array(z.string()).describe("The prompt parts used, as name@version (ENG-16)."),
+    diagnostics: z
+      .array(z.string())
+      .describe("For a repair: the host's findings it was asked to fix (GEN-10)."),
+    startedAt: z.iso.datetime(),
+    durationMs: z.number().nonnegative().nullable(),
+    inputTokens: tokenCount,
+    cachedInputTokens: tokenCount,
+    outputTokens: tokenCount,
+    outcome: z.enum(["ok", "failed", "crashed"]),
+    error: z.string().nullable().describe("A failure's kind (CLI-05)."),
+    message: z.string().nullable().describe("A failure's plain message."),
+    detail: z
+      .string()
+      .nullable()
+      .describe("What the provider itself said: for diagnosis, never shown as the message."),
+  })
+  .describe("One call in the host app's ledger; null usage is unknown, never 0 (CLI-04).");
+export type LedgerCall = z.infer<typeof ledgerCallSchema>;
+
+/** One request the host app carried out, with its calls in order (OBS-01, GEN-10). */
+export const ledgerRequestSchema = z
+  .strictObject({
+    id: z.uuid(),
+    workspaceId: z.uuid().nullable(),
+    kind: z.enum(["generate", "repair", "data"]),
+    startedAt: z.iso.datetime(),
+    endedAt: z.iso.datetime().nullable(),
+    outcome: z
+      .string()
+      .nullable()
+      .describe(
+        "The reply's kind, and a mixed request's entry part after a colon; null while it runs.",
+      ),
+    message: z.string().nullable().describe("The plain message the person read."),
+    findings: z.array(z.string()).describe("The checks' findings when it failed (GEN-10)."),
+    calls: z.array(ledgerCallSchema),
+  })
+  .describe("One request in the host app's ledger (OBS-01).");
+export type LedgerRequest = z.infer<typeof ledgerRequestSchema>;

@@ -7,7 +7,7 @@ implements: [OBS-01, GEN-10]
 tests: [../../../packages/server/test/ledger.test.ts]
 tags: [code, server, ledger, observability]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T04:47:14Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T05:35:10Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Keeps what the host learns from each request instead of throwing it away (`OBS-0
 
 # Entry points
 
-- `src/ledger/ledger.ts`: `RequestLedger` over a store. Its start method opens a request's record, with the workspace it acts on when one is known, and returns its ID; its record method wraps a provider so each call is written when it ends; its finish method records the reply's kind, its plain message and findings, and attaches the request to the reply's workspace. Its forWorkspace method lists a workspace's newest requests, and its request method reads one, each with its calls in order. `UNATTACHED_REQUESTS_KEPT` is how many requests without a workspace are kept.
+- `src/ledger/ledger.ts`: `RequestLedger` over a store, with rows shaped as the contracts' `LedgerRequest` and `LedgerCall`. Its start method opens a request's record, with the workspace it acts on when one is known, and returns its ID; its record method wraps a provider so each call is written when it ends; its finish method records the reply's kind, its plain message and findings, and attaches the request to the reply's workspace. Its forWorkspace method lists a workspace's newest requests, its unattached method the newest that made no workspace, and its request method reads one, each with its calls in order. `UNATTACHED_REQUESTS_KEPT` is how many requests without a workspace are kept.
 - The [generation routes](generation.md) start a request for every generate, smoke repair and data call once its control check passes, record each model call through the provider, and finish it with whatever reply the person gets, including a missing provider, an unusable routes file and a stop.
 
 # Invariants
@@ -34,11 +34,11 @@ Depends on the [storage](storage.md) database (migration `0010-request-ledger.sq
 
 # Pitfalls
 
-- **Not shown yet.** The details view that reads it is the next part of issue 151.
+- **Requests with no workspace are shown apart.** The [host API](host-api.md)'s `details.get` reads a workspace's newest 20 and, separately, the newest 20 that made no workspace (an unclear request, a failed creation), so a failed first creation's reasons can be seen from the empty screen too.
 
 # Symbols (generated)
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `RequestLedger`, `UNATTACHED_REQUESTS_KEPT`, `LedgerCall` (type), `LedgerRequest` (type), `RequestKind` (type)
-- `ledger.ts`: `UNATTACHED_REQUESTS_KEPT`, `RequestKind` (type), `LedgerCall` (type), `LedgerRequest` (type), `RequestLedger`
+- `index.ts`: `RequestLedger`, `UNATTACHED_REQUESTS_KEPT`, `RequestKind` (type), `LedgerCall` (type), `LedgerRequest` (type)
+- `ledger.ts`: `UNATTACHED_REQUESTS_KEPT`, `RequestKind` (type), `RequestLedger`

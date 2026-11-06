@@ -36,6 +36,7 @@ export {
   addWorkspaceVersion,
   createWorkspace,
   getSavedTool,
+  existingWorkspace,
   getWorkspace,
   lastUsed,
   recordUse,

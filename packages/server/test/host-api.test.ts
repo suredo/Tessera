@@ -10,6 +10,7 @@ import {
 } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { answerHost, hostRoutes, workspaceTools } from "../src/host/index.ts";
+import { RequestLedger } from "../src/ledger/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { saveVersion } from "../src/versions/index.ts";
@@ -109,6 +110,59 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     expect(ask(folder, "workspaces.open", { id: workspace.id }).capabilities).toEqual(["clock"]);
     ask(folder, "workspaces.delete", { id: workspace.id });
     expect(refusal(folder, "workspaces.open", { id: workspace.id })).toEqual({
+      ok: false,
+      error: { code: "refused", message: "The workspace is in the trash; restore it first." },
+    });
+    folder.close();
+  });
+
+  it("APP-09 UX-06 OBS-01 GEN-10: the details give the tool's code, what it declares, the workspace's ledger newest first, and the requests that made no workspace", async () => {
+    const folder = await newFolder();
+    const { workspace } = ask(folder, "workspaces.create", { title: "Clock" });
+    expect(ask(folder, "details.get", { workspaceId: workspace.id })).toEqual({
+      source: null,
+      capabilities: [],
+      requests: [],
+      unattached: [],
+    });
+    const clock = saveVersion(folder.db, { ...tool, capabilities: ["clock"] });
+    expect(activateVersion(folder, workspace.id, clock, 0).ok).toBe(true);
+    const ledger = new RequestLedger(folder);
+    const older = ledger.start("generate", workspace.id);
+    ledger.finish(older, { kind: "answer", answer: "clarify" });
+    const newer = ledger.start("repair", workspace.id);
+    ledger.finish(newer, {
+      kind: "failed",
+      failure: "smoke",
+      message: "The tool didn't pass its checks.",
+      findings: ["A button has no name."],
+    });
+    // A failed creation made no workspace; its reasons are listed with or without one (GEN-10).
+    const failed = ledger.start("generate");
+    ledger.finish(failed, {
+      kind: "failed",
+      failure: "static",
+      message: "That didn't work.",
+      findings: ["The tool reads the clock at startup."],
+    });
+    const details = ask(folder, "details.get", { workspaceId: workspace.id });
+    expect(details.unattached.map((r) => [r.id, r.findings])).toEqual([
+      [failed, ["The tool reads the clock at startup."]],
+    ]);
+    expect(ask(folder, "details.get", { workspaceId: null })).toEqual({
+      source: null,
+      capabilities: [],
+      requests: [],
+      unattached: details.unattached,
+    });
+    expect(details.source).toEqual(tool.code);
+    expect(details.capabilities).toEqual(["clock"]);
+    expect(details.requests.map((r) => [r.id, r.kind, r.outcome, r.findings])).toEqual([
+      [newer, "repair", "failed", ["A button has no name."]],
+      [older, "generate", "answer", []],
+    ]);
+    ask(folder, "workspaces.delete", { id: workspace.id });
+    expect(refusal(folder, "details.get", { workspaceId: workspace.id })).toEqual({
       ok: false,
       error: { code: "refused", message: "The workspace is in the trash; restore it first." },
     });

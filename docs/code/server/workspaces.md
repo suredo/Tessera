@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-07, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06
 tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts, ../../../packages/server/test/activation-route.test.ts, ../../../packages/server/test/undo.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:47:34Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T05:35:10Z }
 ---
 
 # Purpose
@@ -75,7 +75,7 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `activation.ts`: `ActivationRefusal` (type), `ActivationResult` (type), `ActivationOptions` (type), `defaultsProblem`, `UsableVersion` (type), `usableVersion`, `activateVersion`
-- `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `activationRoutes`, `listUndo`, `undoDataChange`, `UndoEntry` (type), `UndoRefusal` (type), `UndoResult` (type), `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `getWorkspace`, `lastUsed`, `recordUse`, `listSavedTools`, `recentSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `describeSavedTool`, `describeWorkspace`, `renameSavedTool`, `renameWorkspace`, `replaceData`, `saveTool`, `saveWorkspaceData`, `UNDO_LIMIT`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type), `WorkspacePatchOptions` (type)
+- `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `activationRoutes`, `listUndo`, `undoDataChange`, `UndoEntry` (type), `UndoRefusal` (type), `UndoResult` (type), `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `existingWorkspace`, `getWorkspace`, `lastUsed`, `recordUse`, `listSavedTools`, `recentSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `describeSavedTool`, `describeWorkspace`, `renameSavedTool`, `renameWorkspace`, `replaceData`, `saveTool`, `saveWorkspaceData`, `UNDO_LIMIT`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type), `WorkspacePatchOptions` (type)
 - `restore.ts`: `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `planRestore`, `restoreVersion`, `RecoverySnapshot` (type), `listRecoverySnapshots`, `restoreRecoverySnapshot`
 - `reuse.ts`: `ContinueTarget` (type), `continueSavedTool`, `UseAgainRefusal` (type), `UseAgainResult` (type), `UseAgainOptions` (type), `useAgain`
 - `routes.ts`: `activationRoutes`
