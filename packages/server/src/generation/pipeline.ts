@@ -140,7 +140,13 @@ export async function generate(
     repairUsage,
   });
   if (created.kind === "cannot")
-    return { kind: "answer", answer: "cannot", reason: created.reason };
+    // The model's own words, when the plain reason replaced them, stay for the details (GEN-10).
+    return {
+      kind: "answer",
+      answer: "cannot",
+      reason: created.reason,
+      ...(created.detail ? { findings: [created.detail] } : {}),
+    };
   if (created.kind === "failed") {
     return {
       kind: "failed",

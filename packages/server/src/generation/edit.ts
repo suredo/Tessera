@@ -13,6 +13,8 @@ import { ProviderError, runStage, type Provider, type Routes } from "../provider
 import {
   dataProblems,
   GENERATION_TIME_LIMIT_MS,
+  plainRefusal,
+  plainWordProblems,
   REPAIR_BUDGETS,
   REPAIR_TIME_LIMIT_MS,
   type CreateResult,
@@ -174,10 +176,15 @@ export async function editTool(
         diagnostics: repair?.diagnostics,
       });
       if (response.value.outcome === "cannot")
-        result = { kind: "cannot", reason: response.value.reason };
+        result = plainRefusal(response.value.reason, input.request);
       else {
         attempt = response.value;
-        result = editedCandidate(input, attempt);
+        // The summary the person reads is in plain words too (GEN-12).
+        const words = plainWordProblems("The change's summary", attempt.summary, input.request);
+        result =
+          words.length > 0
+            ? { kind: "failed", failure: "schema-shape", findings: words }
+            : editedCandidate(input, attempt);
       }
     } catch (error) {
       if (!(error instanceof ProviderError)) throw error;

@@ -12,6 +12,7 @@ import {
   candidateFrom,
   editedCandidate,
   editTool,
+  PLAIN_CANNOT_REASON,
   type EditInput,
 } from "../src/generation/index.ts";
 import { assemblePrompt, PROMPT_BUDGETS } from "../src/prompts/index.ts";
@@ -211,6 +212,37 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
         data: { mode: "unchanged" },
       }),
     ).toMatchObject({ kind: "unchanged" });
+  });
+
+  it("GEN-12: an edit's refusal in Tessera's own words reaches the person as a plain sentence", async () => {
+    const { provider } = scripted(
+      reply({ outcome: "cannot", reason: "The capability manifest has no payload for that." }),
+    );
+    expect(await editTool(provider, DEFAULT_ROUTES, input)).toEqual({
+      kind: "cannot",
+      reason: PLAIN_CANNOT_REASON,
+      detail: "The capability manifest has no payload for that.",
+    });
+  });
+
+  it("GEN-12: a change's summary in Tessera's own words is repaired before the person reads it", async () => {
+    const plain = {
+      outcome: "edit",
+      summary: "It is dark now.",
+      files: { mode: "style", css: "body{background:#111}" },
+      data: { mode: "unchanged" },
+    };
+    const { provider, calls } = scripted(
+      reply({ ...plain, summary: "Updated the CSS payload and the runtime state." }),
+      reply(plain, "repair"),
+    );
+    const look = { ...input, intent: { ...intent, lookOnly: true, behaviorChange: false } };
+    expect(await editTool(provider, DEFAULT_ROUTES, look)).toMatchObject({
+      kind: "candidate",
+      summary: "It is dark now.",
+      repairs: 1,
+    });
+    expect(calls[1]!.prompt).toContain("(state, payload, runtime)");
   });
 
   it("GEN-14, GEN-09: a look-only edit refused for replacing its page is repaired without its JavaScript coming back into the prompt", async () => {

@@ -8,6 +8,7 @@ import {
   checkedDataPlan,
   commitDataPlan,
   planDataChange,
+  PLAIN_CANNOT_REASON,
 } from "../src/generation/index.ts";
 import { assembleDataPrompt, DATA_PROMPT_BUDGET } from "../src/prompts/index.ts";
 import { createScriptedProvider, type Provider } from "../src/providers/index.ts";
@@ -245,6 +246,25 @@ describe("chat data planning", () => {
       failure: "provider",
     });
   });
+  it("GEN-12, GEN-10: a data plan's refusal in Tessera's own words is said plainly, its words kept for the details", async () => {
+    const f = await fixture();
+    const refusing = (reason: string) =>
+      createScriptedProvider({
+        name: "refusing",
+        replies: [{ kind: "value", stage: "data", value: { outcome: "cannot", reason } }],
+      });
+    expect(
+      await planDataChange(refusing("The schema has no payload field."), DEFAULT_ROUTES, f.input),
+    ).toEqual({
+      kind: "cannot",
+      reason: PLAIN_CANNOT_REASON,
+      detail: "The schema has no payload field.",
+    });
+    expect(
+      await planDataChange(refusing("Prices aren't kept here."), DEFAULT_ROUTES, f.input),
+    ).toEqual({ kind: "cannot", reason: "Prices aren't kept here." });
+  });
+
   it("GEN-03 GEN-04 SEC-02: only data context is quoted, and oversized contexts spend no call", async () => {
     const f = await fixture();
     const prompt = assembleDataPrompt({

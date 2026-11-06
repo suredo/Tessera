@@ -4,6 +4,7 @@ import {
   collectionName,
   creationSchema,
   fieldName,
+  internalTerms,
   recordIdSchema,
   TOOL_DATA_LIMIT_BYTES,
   type Artifact,
@@ -52,7 +53,8 @@ export type Candidate = {
 
 export type CreateResult = (
   | ({ kind: "candidate" } & Candidate)
-  | { kind: "cannot"; reason: string }
+  /** `detail`: the model's own words, kept for the details view when `reason` replaced them. */
+  | { kind: "cannot"; reason: string; detail?: string }
   | {
       kind: "failed";
       /** Which repair, if any, can fix it; a provider failure is never repaired (GEN-09). */
@@ -278,6 +280,35 @@ type Repair = {
   attempt?: Extract<Creation, { outcome: "tool" }>;
 };
 
+/**
+ * Why a generated name or summary isn't plain (GEN-12): each internal term it uses that the
+ * person's request doesn't, as a finding for its repair. None when it is plain.
+ */
+export function plainWordProblems(what: string, text: string, request: string): string[] {
+  const terms = internalTerms(text, request);
+  return terms.length === 0
+    ? []
+    : [
+        `${what} uses words for Tessera's own parts (${terms.join(", ")}), which the person never asked about. Use the person's own words for what the tool is and does.`,
+      ];
+}
+
+/** What the person reads when a model's reason for not making something isn't in plain words. */
+export const PLAIN_CANNOT_REASON = "It isn't something a tool here can do.";
+
+/**
+ * A model's refusal, as the person will read it (GEN-12): its own reason when it is plain,
+ * otherwise the host's plain sentence, with the model's words kept as `detail` for the details
+ * view (GEN-10). A refusal is final, so it isn't repaired.
+ */
+export const plainRefusal = (
+  reason: string,
+  request: string,
+): { kind: "cannot"; reason: string; detail?: string } =>
+  internalTerms(reason, request).length === 0
+    ? { kind: "cannot", reason }
+    : { kind: "cannot", reason: PLAIN_CANNOT_REASON, detail: reason };
+
 /** One call, creation or a repair, and the host's checks on its answer. */
 async function ask(
   provider: Provider,
@@ -318,7 +349,18 @@ async function ask(
     };
   }
   if (creation.outcome === "cannot") {
-    return { outcome: { kind: "cannot", reason: creation.reason } };
+    return { outcome: plainRefusal(creation.reason, input.request) };
+  }
+  // Plain words first: a name like "Capability declaration fix" never becomes a tool (L-36).
+  const words = [
+    ...plainWordProblems("The tool's name", creation.name, input.request),
+    ...plainWordProblems("The tool's summary", creation.summary, input.request),
+  ];
+  if (words.length > 0) {
+    return {
+      outcome: { kind: "failed", failure: "schema-shape", findings: words },
+      answer: creation,
+    };
   }
   return { outcome: candidateFrom(creation), answer: creation };
 }

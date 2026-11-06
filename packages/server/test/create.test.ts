@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   candidateFrom,
   createTool,
+  PLAIN_CANNOT_REASON,
   REPAIR_BUDGETS,
   REPAIR_TIME_LIMIT_MS,
   startingDataOf,
@@ -360,6 +361,75 @@ describe("the create stage (CLI-09, GEN-11)", () => {
       kind: "cannot",
       reason: "Booking a table needs the internet.",
     });
+  });
+
+  it("GEN-12: a name or summary in Tessera's own words is repaired, and never becomes the tool's name (L-36)", async () => {
+    const { provider, calls } = answering(
+      {
+        kind: "value",
+        stage: "create",
+        value: tool({ name: "Capability declaration fix", summary: "A schema for the list." }),
+      },
+      { kind: "value", stage: "repair", value: tool() },
+    );
+    const result = await createTool(provider, DEFAULT_ROUTES, { request: "A shopping list" });
+    expect(result).toMatchObject({ kind: "candidate", name: tool().name, repairs: 1 });
+    expect(calls[1]!.stage).toBe("repair");
+    expect(calls[1]!.prompt).toContain("(capability, declaration)");
+    expect(calls[1]!.prompt).toContain("(schema)");
+  });
+
+  it("GEN-12: a refusal's reason in Tessera's own words reaches the person as a plain sentence, from creation or its repair", async () => {
+    const refusal = {
+      kind: "value",
+      stage: "create",
+      value: { outcome: "cannot", reason: "The runtime cannot read this JSON schema." },
+    };
+    const first = answering(refusal);
+    expect(
+      await createTool(first.provider, DEFAULT_ROUTES, { request: "A shopping list" }),
+    ).toEqual({
+      kind: "cannot",
+      reason: PLAIN_CANNOT_REASON,
+      // The model's own words, kept for the details view (GEN-10).
+      detail: "The runtime cannot read this JSON schema.",
+    });
+    // A refusal is final: no repair is spent on its words.
+    expect(first.calls).toHaveLength(1);
+    // The same from a repair, after an answer of the wrong shape.
+    const repaired = answering(
+      { kind: "value", stage: "create", value: { outcome: "tool" } },
+      { ...refusal, stage: "repair" },
+    );
+    expect(
+      await createTool(repaired.provider, DEFAULT_ROUTES, { request: "A shopping list" }),
+    ).toMatchObject({
+      kind: "cannot",
+      reason: PLAIN_CANNOT_REASON,
+      detail: "The runtime cannot read this JSON schema.",
+    });
+    // A plain reason, or one in words the person used, is theirs to read as it is.
+    const plain = answering({
+      ...refusal,
+      value: { outcome: "cannot", reason: "Booking a table needs the internet." },
+    });
+    expect(await createTool(plain.provider, DEFAULT_ROUTES, { request: "Book a table" })).toEqual({
+      kind: "cannot",
+      reason: "Booking a table needs the internet.",
+    });
+  });
+
+  it("GEN-12: a term the person asked for by name is kept", async () => {
+    const { provider, calls } = answering({
+      kind: "value",
+      stage: "create",
+      value: tool({ name: "JSON formatter", summary: "Formats JSON so it is easy to read." }),
+    });
+    const result = await createTool(provider, DEFAULT_ROUTES, {
+      request: "I need a JSON formatter",
+    });
+    expect(result).toMatchObject({ kind: "candidate", name: "JSON formatter" });
+    expect(calls).toHaveLength(1);
   });
 
   it("GEN-09: an answer of the wrong shape is repaired, from the request, as nothing of it can be quoted", async () => {
