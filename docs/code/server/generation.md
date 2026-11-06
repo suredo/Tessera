@@ -3,11 +3,11 @@ type: Code Module
 title: "Generation stages"
 description: "A request becomes a checked candidate tool: the create stage's answer, a discriminated union, with the tool's data shape, reusable defaults and the request's own entries apart, checked by the host before anything is stored or run, every failure classed, and a failure of the host's checks repaired by its class within its budget; and the pipeline that carries a request through intent and creation to a stored candidate with its workspace, ready to stage."
 resource: ../../../packages/server/src/generation/
-implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11, GEN-16, CLI-07, GEN-12, GEN-13]
+implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11, GEN-16, CLI-07, GEN-12, GEN-13, GEN-09]
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T15:11:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T21:41:30Z }
 ---
 
 # Purpose
@@ -55,7 +55,7 @@ The core of generation (#146): interface requests create or edit a candidate too
   - static: findings with the part and line;
   - provider: any other failure of the call (sign-in, limits, time), which is never repaired.
 
-  Smoke failures come from browser staging; behavior failures wait for M3.
+  Smoke failures come from browser staging. Behavior failures wait for M3: the class exists in the contract, but until M3's behavior checks nothing produces it, so nothing repairs it (`GEN-09`'s M2 limit).
 - **A failure of the host's checks is repaired by its class** (`GEN-09`). Schema-shape and static failures go to the repair stage, on its own route (Sonnet medium, `CLI-09`), with their class's prompt part, what the checks found and the failed answer quoted, or, for an answer of the wrong shape, the request alone. The repair answers as creation does, and its answer goes through the same checks. Each class has its own budget in one request, one repair each for now, so a static failure after a shape repair still gets its own, and the result says how many repairs it took (A40). A provider failure, in creation or in a repair, is never repaired. A repair may also answer "cannot".
 - **The prompt's schema keywords are the host's own list,** the one the data shape is checked against, so the model is told exactly what passes.
 

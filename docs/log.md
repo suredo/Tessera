@@ -2,6 +2,8 @@
 
 ## 2026-11-06
 
+* **Update**: Repair by failure class: the [generation](code/server/generation.md) doc claims `GEN-09`. Schema-shape, static and smoke failures each have their own repair budget and prompt part, an answer of the wrong shape is repaired from the request, and a provider failure is never repaired, each tested. Its M2 limit: behavior failures have a class but nothing produces one until M3's behavior checks. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T21:41:30Z.
+
 * **Update**: Honest messages and keeping what wasn't asked ([issue 150](https://github.com/suredo/Tessera/issues/150)): the [browser](code/web/package.md) doc claims `GEN-08`, outcomes composed by the host from verified facts, and [generation](code/server/generation.md) claims `GEN-13`, what edits keep, each with its M2 limit: what a tool's controls do isn't checked, or mentioned, until M3's behavior checks, as the owner chose. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T15:11:22Z.
 
 * **Update**: [L-82](lessons/tessera-issues.md): the staging deadline timer is capped at the longest a browser timer keeps, as a longer one fires at once; from 2026-11-06 08:31 UTC this cancelled every scenario replay's staging, its browser clock being 25 days behind the server's. The [browser](code/web/package.md) doc says so. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T09:12:49Z.
