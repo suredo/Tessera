@@ -362,6 +362,35 @@ describe("the create stage (CLI-09, GEN-11)", () => {
     });
   });
 
+  it("GEN-12: a name or summary in Tessera's own words is repaired, and never becomes the tool's name (L-36)", async () => {
+    const { provider, calls } = answering(
+      {
+        kind: "value",
+        stage: "create",
+        value: tool({ name: "Capability declaration fix", summary: "A schema for the list." }),
+      },
+      { kind: "value", stage: "repair", value: tool() },
+    );
+    const result = await createTool(provider, DEFAULT_ROUTES, { request: "A shopping list" });
+    expect(result).toMatchObject({ kind: "candidate", name: tool().name, repairs: 1 });
+    expect(calls[1]!.stage).toBe("repair");
+    expect(calls[1]!.prompt).toContain("(capability, declaration)");
+    expect(calls[1]!.prompt).toContain("(schema)");
+  });
+
+  it("GEN-12: a term the person asked for by name is kept", async () => {
+    const { provider, calls } = answering({
+      kind: "value",
+      stage: "create",
+      value: tool({ name: "JSON formatter", summary: "Formats JSON so it is easy to read." }),
+    });
+    const result = await createTool(provider, DEFAULT_ROUTES, {
+      request: "I need a JSON formatter",
+    });
+    expect(result).toMatchObject({ kind: "candidate", name: "JSON formatter" });
+    expect(calls).toHaveLength(1);
+  });
+
   it("GEN-09: an answer of the wrong shape is repaired, from the request, as nothing of it can be quoted", async () => {
     const { provider, calls } = answering(
       { kind: "value", stage: "create", value: { outcome: "tool" } },

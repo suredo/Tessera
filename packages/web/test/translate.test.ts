@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { internalTerms } from "@tessera/contracts";
 import { createTranslator, en, t, type MessageKey } from "../src/index.ts";
 
 describe("translation layer", () => {
@@ -26,5 +27,14 @@ describe("translation layer", () => {
       "home.intro": "{count} tools, saved by {owner}",
     });
     expect(translate("home.intro", { count: 3 })).toBe("3 tools, saved by {owner}");
+  });
+});
+
+describe("plain language (GEN-12)", () => {
+  it("GEN-12: no host message uses a word for Tessera's own parts", () => {
+    const leaks = Object.entries(en).flatMap(([key, text]) =>
+      internalTerms(text).map((term) => `${key}: ${term}`),
+    );
+    expect(leaks).toEqual([]);
   });
 });

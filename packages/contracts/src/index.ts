@@ -144,6 +144,7 @@ export {
   type PatchBatch,
   type PatchOperation,
 } from "./patch.ts";
+export { INTERNAL_TERMS, internalTerms } from "./plain-language.ts";
 export {
   EFFORTS,
   effortSchema,

@@ -4,6 +4,7 @@ import {
   collectionName,
   creationSchema,
   fieldName,
+  internalTerms,
   recordIdSchema,
   TOOL_DATA_LIMIT_BYTES,
   type Artifact,
@@ -278,6 +279,19 @@ type Repair = {
   attempt?: Extract<Creation, { outcome: "tool" }>;
 };
 
+/**
+ * Why a generated name or summary isn't plain (GEN-12): each internal term it uses that the
+ * person's request doesn't, as a finding for its repair. None when it is plain.
+ */
+export function plainWordProblems(what: string, text: string, request: string): string[] {
+  const terms = internalTerms(text, request);
+  return terms.length === 0
+    ? []
+    : [
+        `${what} uses words for Tessera's own parts (${terms.join(", ")}), which the person never asked about. Use the person's own words for what the tool is and does.`,
+      ];
+}
+
 /** One call, creation or a repair, and the host's checks on its answer. */
 async function ask(
   provider: Provider,
@@ -319,6 +333,17 @@ async function ask(
   }
   if (creation.outcome === "cannot") {
     return { outcome: { kind: "cannot", reason: creation.reason } };
+  }
+  // Plain words first: a name like "Capability declaration fix" never becomes a tool (L-36).
+  const words = [
+    ...plainWordProblems("The tool's name", creation.name, input.request),
+    ...plainWordProblems("The tool's summary", creation.summary, input.request),
+  ];
+  if (words.length > 0) {
+    return {
+      outcome: { kind: "failed", failure: "schema-shape", findings: words },
+      answer: creation,
+    };
   }
   return { outcome: candidateFrom(creation), answer: creation };
 }

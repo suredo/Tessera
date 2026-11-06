@@ -213,6 +213,26 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
     ).toMatchObject({ kind: "unchanged" });
   });
 
+  it("GEN-12: a change's summary in Tessera's own words is repaired before the person reads it", async () => {
+    const plain = {
+      outcome: "edit",
+      summary: "It is dark now.",
+      files: { mode: "style", css: "body{background:#111}" },
+      data: { mode: "unchanged" },
+    };
+    const { provider, calls } = scripted(
+      reply({ ...plain, summary: "Updated the CSS payload and the runtime state." }),
+      reply(plain, "repair"),
+    );
+    const look = { ...input, intent: { ...intent, lookOnly: true, behaviorChange: false } };
+    expect(await editTool(provider, DEFAULT_ROUTES, look)).toMatchObject({
+      kind: "candidate",
+      summary: "It is dark now.",
+      repairs: 1,
+    });
+    expect(calls[1]!.prompt).toContain("(state, payload, runtime)");
+  });
+
   it("GEN-14, GEN-09: a look-only edit refused for replacing its page is repaired without its JavaScript coming back into the prompt", async () => {
     // A tool with behavior worth keeping out of the prompt.
     const js = 'document.title = "Shopping list";';
