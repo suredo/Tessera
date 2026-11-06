@@ -13,6 +13,7 @@ export {
   PROMPT_BUDGETS,
   PROMPT_PARTS,
   partVersion,
+  quoteTag,
   REPAIR_CLASSES,
   type AssembledPrompt,
   type OpenTool,

@@ -99,6 +99,20 @@ export const partVersion = (text: string): string =>
   createHash("sha256").update(text).digest("hex").slice(0, 12);
 
 /**
+ * The tag every marker of a prompt's quoted material carries (SEC-02): a short hash of that
+ * material, skipping any tag that appears in it, so no quoted text can hold the marker that ends
+ * its quote and have what follows read as instructions. The same material always gets the same
+ * tag, so a prompt stays the same for the same call.
+ */
+export function quoteTag(quoted: readonly string[]): string {
+  for (let attempt = 0; ; attempt++) {
+    const hash = createHash("sha256").update(JSON.stringify([attempt, ...quoted]));
+    const tag = `q${hash.digest("hex").slice(0, 8)}`;
+    if (!quoted.some((text) => text.includes(tag))) return tag;
+  }
+}
+
+/**
  * A part with its placeholders filled. Every placeholder must have a value and every value a
  * placeholder, so a part and its caller can't drift apart.
  */
@@ -261,6 +275,19 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
         ? "repair-edit-smoke"
         : `repair-${input.failure!}`,
     );
+  // One tag for every marker in this prompt, from all it quotes as raw text (SEC-02).
+  const tag = quoteTag([
+    ...(input.source ? [input.source.html, input.source.css, input.source.js] : []),
+    ...(stage === "repair" && input.attempt
+      ? [
+          input.attempt.name,
+          input.attempt.summary,
+          ...Object.values(input.attempt.code),
+          JSON.stringify(input.attempt.data, null, 2),
+        ]
+      : []),
+    ...(input.diagnostics ?? []),
+  ]);
   const request: [PromptPart, string, string][] = [];
   const addRequest = (part: PromptPart, values: Record<string, string>) =>
     request.push([part, fillPart(part, values), partVersion(partText(part))]);
@@ -271,8 +298,8 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // A look-only edit needs the page's structure for its selectors and the style it changes, never
   // the behavior, which stays identical (GEN-14).
   if (input.source && input.intent?.lookOnly) {
-    addRequest("source-style", { html: input.source.html, css: input.source.css });
-  } else if (input.source) addRequest("source", { ...input.source });
+    addRequest("source-style", { html: input.source.html, css: input.source.css, tag });
+  } else if (input.source) addRequest("source", { ...input.source, tag });
   if (input.editArtifact) {
     const { data, capabilities, pins, ui } = input.editArtifact;
     addRequest("edit-declarations", {
@@ -306,11 +333,13 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       ...code,
       data: JSON.stringify(data, null, 2),
       settings: JSON.stringify({ capabilities, uiMode }),
+      tag,
     });
   }
   if (stage === "repair") {
     addRequest("diagnostics", {
       diagnostics: input.diagnostics!.map((line) => `- ${line}`).join("\n"),
+      tag,
     });
   }
   const joined = (parts: [PromptPart, string, string][]) =>
@@ -363,7 +392,12 @@ export function assembleDataPrompt(input: {
       }),
     }),
     ...(input.diagnostics
-      ? [use("diagnostics", { diagnostics: input.diagnostics.join("\n") })]
+      ? [
+          use("diagnostics", {
+            diagnostics: input.diagnostics.join("\n"),
+            tag: quoteTag(input.diagnostics),
+          }),
+        ]
       : []),
     ...(input.attempt ? [use("data-attempt", { attempt: JSON.stringify(input.attempt) })] : []),
   ].join("\n\n");
