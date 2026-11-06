@@ -131,6 +131,16 @@ describe("host facts (EVAL-02)", () => {
     const grouped = at({ items: items.map((i) => ({ ...i, aisle: "" })).reverse() }, "v2");
     expect(checkFacts(before, grouped, changed, kept)).toEqual([]);
     expect(checkFacts(before, at({ items }, "v2"), changed, kept)).toEqual([]);
+    // Overlapping matches, in either order: each earlier item still finds its own later one.
+    const milk = { name: "milk" };
+    const dairy = { name: "milk", aisle: "dairy" };
+    const other = { name: "milk", aisle: "other" };
+    const both = at({ items: [milk, dairy] });
+    expect(checkFacts(both, at({ items: [dairy, other] }, "v2"), changed, kept)).toEqual([]);
+    expect(checkFacts(both, at({ items: [other, dairy] }, "v2"), changed, kept)).toEqual([]);
+    expect(checkFacts(both, at({ items: [other, other] }, "v2"), changed, kept)).toEqual([
+      "Some of the earlier data is gone or changed.",
+    ]);
     const renamed = at({ items: [items[0], { id: "b", name: "bread" }] }, "v2");
     expect(checkFacts(before, renamed, changed, kept)).toEqual([
       "Some of the earlier data is gone or changed.",

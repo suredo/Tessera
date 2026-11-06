@@ -55,13 +55,20 @@ const hash = (value: unknown) =>
 export function keeps(earlier: unknown, later: unknown): boolean {
   if (Array.isArray(earlier)) {
     if (!Array.isArray(later)) return false;
-    const left: unknown[] = [...(later as unknown[])];
-    return earlier.every((item) => {
-      const at = left.findIndex((candidate) => keeps(item, candidate));
-      if (at === -1) return false;
-      left.splice(at, 1);
-      return true;
-    });
+    // Each earlier item needs its own later item that keeps it. A greedy first match can take the
+    // item a later one needs, so this finds a full one-to-one match (augmenting paths).
+    const items: unknown[] = later;
+    const owner: (number | undefined)[] = items.map(() => undefined);
+    const place = (i: number, tried: Set<number>): boolean =>
+      items.some((candidate, j) => {
+        if (tried.has(j) || !keeps(earlier[i], candidate)) return false;
+        tried.add(j);
+        const held = owner[j];
+        if (held !== undefined && !place(held, tried)) return false;
+        owner[j] = i;
+        return true;
+      });
+    return earlier.every((_, i) => place(i, new Set()));
   }
   if (earlier !== null && typeof earlier === "object") {
     if (later === null || typeof later !== "object" || Array.isArray(later)) return false;
