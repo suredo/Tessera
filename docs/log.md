@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-06
+
+* **Update**: The [scenario runner](code/evals/runner.md) waits, before each step's screenshot, for the open tool to show something, so the screenshots after Use again and Continue no longer show an empty panel, the M2 live run's fourth defect. The [Tessera issues](lessons/tessera-issues.md) record it as L-81. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T03:46:30Z.
+
 ## 2026-11-05
 
 * **Update**: An edit that changes nothing says why, in the model's words, after "The tool wasn't changed.", as the M2 live run's T13 needed ([generation](code/server/generation.md), [contracts](code/contracts/package.md), [browser](code/web/package.md), `GEN-08`). The [Tessera issues](lessons/tessera-issues.md) record it as L-79. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:52:33Z.
