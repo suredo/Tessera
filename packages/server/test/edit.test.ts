@@ -183,6 +183,70 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
     ).toMatchObject({ kind: "failed", failure: "schema-shape" });
   });
 
+  it("GEN-14: a style answer changes only the CSS: the HTML and JavaScript stay as they were, by construction", () => {
+    const look = { ...input, intent: { ...intent, lookOnly: true, behaviorChange: false } };
+    const result = editedCandidate(look, {
+      outcome: "edit",
+      summary: "It is dark now.",
+      files: { mode: "style", css: "body{background:#111;color:#eee}" },
+      data: { mode: "unchanged" },
+    });
+    expect(result).toMatchObject({
+      kind: "candidate",
+      artifact: {
+        code: {
+          html: artifact.code.html,
+          js: artifact.code.js,
+          css: "body{background:#111;color:#eee}",
+        },
+        data: artifact.data,
+      },
+    });
+    // The same CSS as before is no change at all (GEN-07).
+    expect(
+      editedCandidate(look, {
+        outcome: "edit",
+        summary: "Same look.",
+        files: { mode: "style", css: artifact.code.css },
+        data: { mode: "unchanged" },
+      }),
+    ).toMatchObject({ kind: "unchanged" });
+  });
+
+  it("GEN-14, GEN-09: a look-only edit refused for replacing its page is repaired without its JavaScript coming back into the prompt", async () => {
+    // A tool with behavior worth keeping out of the prompt.
+    const js = 'document.title = "Shopping list";';
+    const withJs = { ...artifact, code: { ...artifact.code, js } };
+    const replaced = {
+      outcome: "edit",
+      summary: "Made it darker.",
+      files: { mode: "replace", code: { ...withJs.code, html: "<h1>Different</h1>" } },
+      data: { mode: "unchanged" },
+    };
+    const restyled = {
+      outcome: "edit",
+      summary: "Made it darker.",
+      files: { mode: "style", css: "body{background:#111}" },
+      data: { mode: "unchanged" },
+    };
+    const { provider, calls } = scripted(reply(replaced), reply(restyled, "repair"));
+    const look = {
+      ...input,
+      artifact: withJs,
+      intent: { ...intent, lookOnly: true, behaviorChange: false },
+    };
+    expect(await editTool(provider, DEFAULT_ROUTES, look)).toMatchObject({
+      kind: "candidate",
+      artifact: { code: { html: withJs.code.html, js } },
+      repairs: 1,
+    });
+    expect(calls.map((c) => c.stage)).toEqual(["edit", "repair"]);
+    for (const call of calls) expect(call.prompt).not.toContain(js);
+    // The failed answer is quoted as its style, never with the page and behavior it replaced.
+    expect(calls[1]!.prompt).toContain('"files":{"mode":"style"');
+    expect(calls[1]!.prompt).not.toContain("<h1>Different</h1>");
+  });
+
   it("DATA-03, GEN-13: invalid or lossy migrations and changed defaults are refused without changing entries", () => {
     if (quantity.data.mode !== "migrate") throw new Error("Expected migration fixture");
     const change = quantity.data;

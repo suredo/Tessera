@@ -34,6 +34,25 @@
               "properties": {
                 "mode": {
                   "type": "string",
+                  "const": "style"
+                },
+                "css": {
+                  "type": "string",
+                  "description": "The complete new CSS."
+                }
+              },
+              "required": [
+                "mode",
+                "css"
+              ],
+              "additionalProperties": false,
+              "description": "A change to the look only: the HTML and JavaScript stay exactly as they are (GEN-14)."
+            },
+            {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
                   "const": "replace"
                 },
                 "code": {

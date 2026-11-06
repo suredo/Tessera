@@ -68,7 +68,9 @@ export async function repairSmoke(
             attempt: {
               outcome: "edit",
               summary: context.reply.summary,
-              files: { mode: "replace", code: artifact.code },
+              files: context.intent?.lookOnly
+                ? { mode: "style", css: artifact.code.css }
+                : { mode: "replace", code: artifact.code },
               data:
                 canonicalJson(artifact.data) === canonicalJson(original.artifact.data)
                   ? { mode: "unchanged" }

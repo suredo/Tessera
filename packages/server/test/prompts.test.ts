@@ -172,6 +172,26 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     }
   });
 
+  it("GEN-14: a look-only edit is shown the page and its style, never the JavaScript, and its prompt is smaller", () => {
+    const edit = (lookOnly: boolean) =>
+      assemblePrompt({
+        stage: "edit",
+        request: "Make it dark",
+        uiMode: "standard",
+        source: shoppingList,
+        intent: intent({ lookOnly }),
+      });
+    const look = edit(true);
+    const full = edit(false);
+    expect(look.prompt).toContain(shoppingList.html.trim());
+    expect(look.prompt).toContain(shoppingList.css.trim());
+    expect(look.prompt).not.toContain(shoppingList.js.trim());
+    expect(look.prompt).toContain("answer files with mode style");
+    expect(full.prompt).toContain(shoppingList.js.trim());
+    // Without the JavaScript and the bridge manifest, the narrow edit's prompt is much smaller.
+    expect(look.size).toBeLessThan(full.size * 0.6);
+  });
+
   it("GEN-02: parts follow the intent's structured fields and the tool's mode, never the request's words", () => {
     const edit = (fields: Partial<PromptInput>) =>
       names(
@@ -183,14 +203,15 @@ describe("assembling a stage's prompt (GEN-03)", () => {
           ...fields,
         }).parts,
       );
-    // A request that only changes the look needs no bridge manifest.
+    // A request that only changes the look needs no bridge manifest, and sees only the page and
+    // its style (GEN-14).
     expect(edit({ intent: intent({ lookOnly: true }) })).toEqual([
       "base",
       "ui-standard",
       "accessibility",
       "request",
       "language",
-      "source",
+      "source-style",
     ]);
     // A tool in custom mode gets no UI standard.
     expect(edit({ uiMode: "custom" })).toEqual([

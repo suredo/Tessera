@@ -158,6 +158,59 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
     expect(workspaceVersions(store, workspace.id)).toHaveLength(1);
   });
 
+  it("GEN-14, GEN-09: a look-only edit's smoke repair is shown only the page and its style, and its failed answer as a style answer", async () => {
+    const { store, workspace, artifact } = await setup();
+    let context: SmokeRepairContext | undefined;
+    const look = intent({ lookOnly: true, behaviorChange: false });
+    const style = {
+      ...noEdit,
+      summary: "Made it darker.",
+      files: { mode: "style", css: "body{background:#111;color:#eee}" },
+    };
+    const candidate = await generate(
+      store,
+      provider(reply(look, "intent"), reply(style, "edit")),
+      DEFAULT_ROUTES,
+      { request: "Make it darker", workspaceId: workspace.id },
+      undefined,
+      (c) => {
+        context = c;
+      },
+    );
+    if (candidate.kind !== "candidate" || !context) throw new Error("Expected continuation");
+    const prompts: string[] = [];
+    const scripted = provider(
+      reply(
+        { ...style, files: { mode: "style", css: "body{background:#222;color:#eee}" } },
+        "repair",
+      ),
+    );
+    const watched: Provider = {
+      ...scripted,
+      run: (spec) => {
+        prompts.push(spec.prompt);
+        return scripted.run(spec);
+      },
+    };
+    const repaired = await repairSmoke(
+      store,
+      watched,
+      DEFAULT_ROUTES,
+      { workspaceId: workspace.id, hash: candidate.hash, findings: ["The text is hard to read."] },
+      context,
+    );
+    expect(repaired).toMatchObject({ kind: "candidate", operation: "edit" });
+    // The repair never sees the behavior it must keep, nor gets it back to rewrite.
+    expect(prompts[0]).not.toContain(artifact.code.js.trim());
+    expect(prompts[0]).toContain('"mode":"style"');
+    if (repaired.kind !== "candidate") throw new Error("Expected repaired candidate");
+    const version = loadVersion(store.db, repaired.hash);
+    expect(version?.kind === "ok" && version.artifact.code).toEqual({
+      ...artifact.code,
+      css: "body{background:#222;color:#eee}",
+    });
+  });
+
   it("GEN-09: smoke repair continues an edit against the still-active original version and preserves its migration", async () => {
     const { store, workspace } = await setup();
     let context: SmokeRepairContext | undefined;

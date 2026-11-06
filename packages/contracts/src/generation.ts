@@ -78,6 +78,14 @@ export const editSchema = z.discriminatedUnion("outcome", [
     summary: creationSchema.options[0].shape.summary,
     files: z.discriminatedUnion("mode", [
       z.strictObject({ mode: z.literal("unchanged") }),
+      z
+        .strictObject({
+          mode: z.literal("style"),
+          css: z.string().describe("The complete new CSS."),
+        })
+        .describe(
+          "A change to the look only: the HTML and JavaScript stay exactly as they are (GEN-14).",
+        ),
       z.strictObject({ mode: z.literal("replace"), code }),
     ]),
     data: z.discriminatedUnion("mode", [

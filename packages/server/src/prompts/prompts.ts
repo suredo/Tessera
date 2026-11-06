@@ -31,6 +31,7 @@ export const PROMPT_PARTS = [
   "accessibility",
   "request",
   "source",
+  "source-style",
   "attempt",
   "diagnostics",
   "create",
@@ -267,7 +268,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // The language the intent stage found, given as a fact, so the tool's words never depend on the
   // model guessing it (GEN-15).
   if (input.intent) addRequest("language", { language: input.intent.language });
-  if (input.source) addRequest("source", { ...input.source });
+  // A look-only edit needs the page's structure for its selectors and the style it changes, never
+  // the behavior, which stays identical (GEN-14).
+  if (input.source && input.intent?.lookOnly) {
+    addRequest("source-style", { html: input.source.html, css: input.source.css });
+  } else if (input.source) addRequest("source", { ...input.source });
   if (input.editArtifact) {
     const { data, capabilities, pins, ui } = input.editArtifact;
     addRequest("edit-declarations", {
@@ -283,7 +288,16 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       }),
     });
   }
-  if (input.editAttempt) addRequest("edit-attempt", { attempt: JSON.stringify(input.editAttempt) });
+  if (input.editAttempt) {
+    // A look-only edit's failed answer is quoted as its style alone, whatever mode it came in, so
+    // no repair path brings the JavaScript back into the prompt (GEN-14).
+    const attempt = input.editAttempt;
+    const scoped =
+      input.intent?.lookOnly && attempt.files.mode === "replace"
+        ? { ...attempt, files: { mode: "style" as const, css: attempt.files.code.css } }
+        : attempt;
+    addRequest("edit-attempt", { attempt: JSON.stringify(scoped) });
+  }
   if (stage === "repair" && input.attempt) {
     const { name, summary, code, data, capabilities, uiMode } = input.attempt;
     addRequest("attempt", {
