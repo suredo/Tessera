@@ -47,5 +47,9 @@ for (const [id, failed] of Object.entries(failedLive)) {
     expect(
       report.steps.filter((s) => s.outcome !== "passed").map((s) => [s.index, s.problems]),
     ).toEqual(failed);
+    // Every screenshot shows the tool whenever one is open, never an empty panel (L-81).
+    expect(report.steps.map((s) => [s.index, s.screenshot])).toEqual(
+      report.steps.map((s) => [s.index, s.screenshot === "no tool" ? "no tool" : "tool"]),
+    );
   });
 }
