@@ -20,6 +20,7 @@ import { DataChangeOffer } from "./DataChangeOffer.tsx";
 import { Details } from "./Details.tsx";
 import { RequestControl } from "./request-control.ts";
 import { RequestBox } from "./RequestBox.tsx";
+import { Split } from "./Split.tsx";
 import { useRequestProgress, type Progress } from "./progress.ts";
 import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
@@ -140,6 +141,8 @@ export function App() {
   // The open workspace's chat, and what was said with none open (APP-01, APP-03).
   const chat = useChat(openId);
   const [view, showView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
+  // The tool taking the chat's place too (APP-01); only an open tool can, and only beside a chat.
+  const [expanded, setExpanded] = useState(false);
   // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
   const [setup, setSetup] = useState<SetupReport | null>(null);
   // A request running, and a saved tool a request matched, waiting for the person's choice.
@@ -153,13 +156,16 @@ export function App() {
   // Stage and elapsed time while the request runs, until a cancel has settled it (GEN-16).
   const progress = useRequestProgress(control, requesting && !settled);
   // Whose chat is on screen: the open workspace's on the workspaces, the first-run screen's (null)
-  // in their place, and none (undefined) on the other screens.
+  // in their place, and none (undefined) on the other screens or behind an expanded tool.
+  const toolExpanded =
+    expanded && !!workspaces?.find((w) => w.id === openId)?.currentVersion && !!setup?.ready;
+  // An expanded tool takes the chat's place, so its chat is not on screen then.
   const chatShown: string | null | undefined =
     workspaces?.length === 0
       ? view === "trash" || view === "status"
         ? undefined
         : null
-      : view === "workspaces"
+      : view === "workspaces" && !toolExpanded
         ? openId
         : undefined;
   // A reply is said in its workspace's chat, and in the notice too, so it reaches the person
@@ -612,21 +618,34 @@ export function App() {
             <ImportFile onImport={importFile} />
           </aside>
           <main>
-            {/* The kept conversation shows whatever the setup; asking needs it (PLAT-03). */}
-            {(setup?.ready || chat.messages(openId).length > 0) && (
-              <Chat messages={chat.messages(openId)}>
-                {setup?.ready && (
-                  <RequestBox working={requesting} progress={progress} onRequest={request} />
-                )}
-              </Chat>
-            )}
-            {current && (
-              <ToolPanel
-                key={`${current.id}:${reloads}`}
-                workspace={current}
-                onDataChanged={() => setToolChanges((n) => n + 1)}
-              />
-            )}
+            {(() => {
+              // The chat beside the tool, with the divider between them, where both are shown. The
+              // kept conversation shows whatever the setup; asking needs it (PLAT-03).
+              const chatPane = (setup?.ready || chat.messages(openId).length > 0) && (
+                <Chat messages={chat.messages(openId)}>
+                  {setup?.ready && (
+                    <RequestBox working={requesting} progress={progress} onRequest={request} />
+                  )}
+                </Chat>
+              );
+              const toolPane = current && (
+                <ToolPanel
+                  key={`${current.id}:${reloads}`}
+                  workspace={current}
+                  onDataChanged={() => setToolChanges((n) => n + 1)}
+                  expanded={toolExpanded}
+                  onExpand={chatPane ? setExpanded : undefined}
+                />
+              );
+              return chatPane && toolPane ? (
+                <Split first={chatPane} second={toolPane} expanded={toolExpanded} />
+              ) : (
+                <>
+                  {chatPane}
+                  {toolPane}
+                </>
+              );
+            })()}
             {current?.currentVersion && (
               <History
                 key={current.id}

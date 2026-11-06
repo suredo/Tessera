@@ -6,8 +6,9 @@ import { rememberedState, rememberState, startTool } from "./tool-start.ts";
 
 // The tool panel (APP-01): the open workspace's tool, running in the sandbox through the runtime,
 // with its data served by the server's bridge route (RUN-04). Exactly one tool runs: opening
-// another workspace closes this one first (RUN-02). It can be minimized and shown full screen,
-// and a minimized or stopped tool stays so after a reload (UX-07).
+// another workspace closes this one first (RUN-02). It is inline beside the chat, expanded over
+// the chat's place, or full screen, and can be minimized; a minimized or stopped tool stays so
+// after a reload (UX-07). Every control here is the host's, never the tool's.
 
 type Mode = "starting" | "running" | "minimized" | "stopped";
 
@@ -15,9 +16,13 @@ type Props = {
   workspace: Workspace;
   /** Called after each change the tool saved to its data. */
   onDataChanged?: () => void;
+  /** Whether the tool takes the chat's place too; the app lays it out. */
+  expanded?: boolean;
+  /** Expands the tool, or puts it back beside the chat; none where there is no chat beside it. */
+  onExpand?: (expanded: boolean) => void;
 };
 
-export function ToolPanel({ workspace, onDataChanged }: Props) {
+export function ToolPanel({ workspace, onDataChanged, expanded = false, onExpand }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const runtime = useRef<ToolRuntime | null>(null);
   const starting = useRef<AbortController | null>(null);
@@ -106,6 +111,11 @@ export function ToolPanel({ workspace, onDataChanged }: Props) {
         {hasTool && (mode === "minimized" || mode === "stopped") && (
           <button type="button" onClick={restore}>
             {t("tool.restore")}
+          </button>
+        )}
+        {hasTool && onExpand && !fullScreen && (
+          <button type="button" aria-pressed={expanded} onClick={() => onExpand(!expanded)}>
+            {expanded ? t("tool.leaveExpanded") : t("tool.expand")}
           </button>
         )}
         {hasTool && (

@@ -101,6 +101,8 @@ button.primary {
   grid-area: main;
   padding: var(--ui-padding);
   min-width: 0;
+  /* The chat and tool lay out by the room main has, not the window's (APP-01). */
+  container: work / inline-size;
 }
 .notice {
   grid-area: notice;
@@ -396,6 +398,63 @@ button.primary {
 }
 .status h3 {
   margin: var(--ui-space-4) 0 var(--ui-space-2);
+}
+
+/* The chat beside the tool, with the divider between them (APP-01); stacked, chat first, where
+   they don't fit side by side. Expanded, the tool takes the chat's place too. */
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, var(--chat-share)) auto minmax(0, 1fr);
+  align-items: start;
+  margin-bottom: var(--ui-space-4);
+}
+.split-first {
+  padding-right: var(--ui-space-2);
+  min-width: 0;
+}
+.split-second {
+  padding-left: var(--ui-space-2);
+  min-width: 0;
+}
+.split-divider {
+  align-self: stretch;
+  width: var(--ui-space-3);
+  min-height: var(--ui-target);
+  cursor: col-resize;
+  touch-action: none;
+  border-radius: var(--ui-radius-control);
+  background: linear-gradient(var(--ui-divider), var(--ui-divider)) center / 2px 100% no-repeat;
+}
+.split-divider:hover,
+.split-divider:focus-visible {
+  background-color: var(--ui-accent-soft);
+}
+.split.dragging .split-first,
+.split.dragging .split-second {
+  pointer-events: none;
+  user-select: none;
+}
+.split.expanded {
+  grid-template-columns: minmax(0, 1fr);
+}
+.split.expanded .split-first,
+.split.expanded .split-divider {
+  display: none;
+}
+.split.expanded .split-second {
+  padding-left: 0;
+}
+@container work (max-width: 44rem) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .split-divider {
+    display: none;
+  }
+  .split-first,
+  .split-second {
+    padding: 0;
+  }
 }
 
 /* The chat (APP-01): the conversation, newest last, scrolling on its own, the request box under it. */
