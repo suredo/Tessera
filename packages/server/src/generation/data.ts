@@ -163,6 +163,7 @@ export async function planDataChange(
         schema: dataPlanSchema,
         timeLimitMs: DATA_TIME_LIMIT_MS,
         signal: input.signal,
+        diagnostics,
       });
       const answer = response.value;
       attempt = answer;
