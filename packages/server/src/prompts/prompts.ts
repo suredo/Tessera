@@ -288,7 +288,16 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       }),
     });
   }
-  if (input.editAttempt) addRequest("edit-attempt", { attempt: JSON.stringify(input.editAttempt) });
+  if (input.editAttempt) {
+    // A look-only edit's failed answer is quoted as its style alone, whatever mode it came in, so
+    // no repair path brings the JavaScript back into the prompt (GEN-14).
+    const attempt = input.editAttempt;
+    const scoped =
+      input.intent?.lookOnly && attempt.files.mode === "replace"
+        ? { ...attempt, files: { mode: "style" as const, css: attempt.files.code.css } }
+        : attempt;
+    addRequest("edit-attempt", { attempt: JSON.stringify(scoped) });
+  }
   if (stage === "repair" && input.attempt) {
     const { name, summary, code, data, capabilities, uiMode } = input.attempt;
     addRequest("attempt", {
