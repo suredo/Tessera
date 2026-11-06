@@ -78,6 +78,32 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       vi.useRealTimers();
     }
   });
+  it("GEN-11: a deadline beyond the longest browser timer never cancels staging at once (L-82)", async () => {
+    vi.useFakeTimers();
+    try {
+      // 30 days ahead: the browser's clock far behind the server's, as in a scenario replay.
+      const reply = {
+        ...candidate,
+        activation: { ...candidate.activation, expiresAt: Date.now() + 30 * 24 * 3600_000 },
+      };
+      const { fake, seen } = deps(reply, { outcome: "activated", workspace: {} } as never);
+      let abortedEarly: boolean | undefined;
+      fake.stage = async (options) => {
+        seen.stagings.push(options);
+        await vi.advanceTimersByTimeAsync(1_000);
+        abortedEarly = options.signal?.aborted;
+        return { outcome: "check-failed", check: "smoke", reason: "x" };
+      };
+      fake.repairSmoke = () =>
+        Promise.resolve({ kind: "answer", answer: "unchanged" } as GenerateReply);
+      await carryOut("A list", null, fake);
+      expect(abortedEarly).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("GEN-11 GEN-08: a confirmed activation remains applied when its response arrives after expiry", async () => {
     const reply = {
       ...candidate,
