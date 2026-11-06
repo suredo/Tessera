@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04]
 tests: [../../../evals/test/runner.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T03:58:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T22:57:00Z }
 ---
 
 # Purpose
@@ -50,6 +50,7 @@ Depends on the [harness](harness.md), the [scenario files and host facts](scenar
 - **A recorded run is reviewed before it is kept.** `answers.json` holds what the model answered; it is copied into `evals/scenarios/replays/` only after a person checks it holds nothing private (`ENG-19`).
 - **Continue and Use again wait for the workspace they open** (L-80): Continue's own, or one that didn't exist before Use again, for up to 30 s, never just any tool panel, since the one already showing would pass on a slow machine. If it never opens, the host facts report it.
 - **Each screenshot waits for the tool to show something** (L-81): after a workspace opens, its nested frames load again, so a screenshot taken at once showed an empty panel. The wait is at most 5 s and only for the picture; the facts are read before it, and each step's result records what its screenshot shows (`tool`, `empty` or `no tool`), and the replay spec fails on an `empty` one.
+- **A request's outcome is read from the chat** (`APP-01`): after a `say` or `cancel` step, the report's message is Tessera's newest reply in the chat; after the other steps, the notice.
 - **A notice can be stale.** A step that shows no new message, such as `next-day`, reports the last one (Continue from my tools has its own since L-77); the facts never rely on a notice alone.
 
 # Symbols (generated)

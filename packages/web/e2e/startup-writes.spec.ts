@@ -4,7 +4,7 @@ import { RequestLedger } from "../../server/src/ledger/index.ts";
 import { UNKNOWN_USAGE, type Provider, type StageSpec } from "../../server/src/providers/index.ts";
 import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 // A made tool never writes the person's data as it starts (GEN-06), end to end (TEST-03): the
 // request goes through the real pipeline to a scripted provider (ENG-11) whose first tool writes
@@ -99,7 +99,7 @@ test("TEST-03, GEN-06, GEN-09: a made tool that writes data as it starts is refu
   await page.goto(app.url);
   await page.getByRole("textbox", { name: en["request.label"] }).fill("A shopping list with milk");
   await page.getByRole("button", { name: en["request.send"] }).click();
-  await expect(page.getByText("Shopping list is ready. A list of what to buy.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Shopping list is ready. A list of what to buy.", {
     timeout: 30_000,
   });
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk"]);

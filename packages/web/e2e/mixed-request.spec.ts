@@ -4,7 +4,7 @@ import { ProviderError, UNKNOWN_USAGE, type Provider } from "../../server/src/pr
 import { listWorkspaces, workspaceVersions } from "../../server/src/workspaces/index.ts";
 import { editFixture, noEdit, styleEdit } from "../../server/test/fixtures/edit-tool.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 test.describe.configure({ mode: "serial" });
 const mixed = (interfacePart: string, dataPart: string): Intent => ({
@@ -149,10 +149,8 @@ test("GEN-04 DATA-02: activate and display the edited interface before its separ
     releaseData();
   }
   await finished(page);
-  await expect(page.locator(".notice [role=status]").first()).toContainText(
-    "Shopping list was updated.",
-  );
-  await expect(page.locator(".notice [role=status]").first()).toContainText("Changed one entry");
+  await expect(newestReply(page)).toContainText("Shopping list was updated.");
+  await expect(newestReply(page)).toContainText("Changed one entry");
   await expect(page.getByRole("button", { name: en["tool.minimize"] })).toBeVisible();
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs", "Bread"]);
   const items = workspace().data?.["items"];
@@ -182,12 +180,10 @@ test("GEN-04 GEN-08: an unchanged interface still offers data review, and cancel
   await send(page, "Keep it dark and Rename Bread to Rye");
   await finished(page);
   await expect(page.getByRole("region", { name: en["request.dataReview"] })).toContainText("Rye");
-  await expect(page.locator(".notice [role=status]").first()).toContainText(
-    "The tool wasn't changed.",
-  );
+  await expect(newestReply(page)).toContainText("The tool wasn't changed.");
   expect(workspace()).toEqual(before);
   await page.getByRole("button", { name: en["request.reviewCancel"] }).click();
-  await expect(page.locator(".notice [role=status]").first()).toContainText(
+  await expect(newestReply(page)).toContainText(
     "The tool wasn't changed. The proposed changes were cancelled.",
   );
   expect(workspace()).toEqual(before);
@@ -199,12 +195,8 @@ test("GEN-04 GEN-08: failed data planning keeps the activated interface and says
   const before = workspace();
   await send(page, "Make it blue and Add Cheese");
   await finished(page);
-  await expect(page.locator(".notice [role=status]").first()).toContainText(
-    "Shopping list was updated. Made it blue.",
-  );
-  await expect(page.locator(".notice [role=status]").first()).toContainText(
-    "The entry changes weren't applied.",
-  );
+  await expect(newestReply(page)).toContainText("Shopping list was updated. Made it blue.");
+  await expect(newestReply(page)).toContainText("The entry changes weren't applied.");
   await expect(frame(page).locator("body")).toHaveCSS("background-color", "rgb(221, 238, 255)");
   expect(workspace().data).toEqual(before.data);
   expect(workspaceVersions(app.folder, before.id)).toHaveLength(3);

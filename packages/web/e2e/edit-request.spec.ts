@@ -10,7 +10,7 @@ import {
   styleEdit,
 } from "../../server/test/fixtures/edit-tool.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 const intent = (kind: "create" | "edit", lookOnly = false): Intent => ({
   kind,
@@ -100,7 +100,7 @@ async function ask(page: Page, text: string) {
 test("GEN-05: create the tool and entries used by subsequent edits", async ({ page }) => {
   await page.goto(app.url);
   await ask(page, "A shopping list with milk and eggs");
-  await expect(page.getByText("Shopping list is ready. A list of what to buy.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Shopping list is ready. A list of what to buy.", {
     timeout: 30_000,
   });
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
@@ -114,7 +114,7 @@ test("GEN-13, GEN-14, DATA-10: a style edit sees only the page and its style, ch
   const original = loadVersion(app.folder.db, before.currentVersion!);
   if (original?.kind !== "ok") throw new Error("Expected the current version");
   await ask(page, "Make it darker");
-  await expect(page.getByText("Shopping list was updated. Made it darker.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Shopping list was updated. Made it darker.", {
     timeout: 30_000,
   });
   await expect(frame(page).locator("body")).toHaveCSS("background-color", "rgb(17, 17, 17)");
@@ -140,7 +140,7 @@ test("GEN-07, GEN-08: identical output adds no version and never claims an updat
   await page.goto(app.url);
   const before = workspace();
   await ask(page, "Keep it as it is");
-  await expect(page.getByText(en["request.unchanged"])).toBeVisible({ timeout: 30_000 });
+  await expect(newestReply(page)).toContainText(en["request.unchanged"], { timeout: 30_000 });
   expect(workspace()).toMatchObject({
     currentVersion: before.currentVersion,
     dataRevision: before.dataRevision,
@@ -154,7 +154,7 @@ test("GEN-07, DATA-03: add quantities through a migration and keep all original 
 }) => {
   await page.goto(app.url);
   await ask(page, "Add quantities");
-  await expect(page.getByText("Shopping list was updated. Added quantities.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Shopping list was updated. Added quantities.", {
     timeout: 30_000,
   });
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk: 1", "Eggs: 1"]);
@@ -173,7 +173,7 @@ test("GEN-09, GEN-08: a repeated smoke failure keeps the working tool and its da
   await page.goto(app.url);
   const before = workspace();
   await ask(page, "Add a note field");
-  await expect(page.getByText(en["request.editCheckFailed"])).toBeVisible({ timeout: 30_000 });
+  await expect(newestReply(page)).toContainText(en["request.editCheckFailed"], { timeout: 30_000 });
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk: 1", "Eggs: 1"]);
   expect(workspace()).toMatchObject({
     currentVersion: before.currentVersion,
@@ -188,7 +188,7 @@ test("GEN-09: a smoke-repaired edit stages again against defaults and activates 
 }) => {
   await page.goto(app.url);
   await ask(page, "Add a labelled note field");
-  await expect(page.getByText("Shopping list was updated. Added a note field.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Shopping list was updated. Added a note field.", {
     timeout: 30_000,
   });
   await expect(frame(page).getByRole("textbox", { name: "Note" })).toBeVisible();

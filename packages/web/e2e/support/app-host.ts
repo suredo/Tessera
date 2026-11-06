@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -86,3 +87,11 @@ export function workspaceWith(folder: DataFolder, title: string, tool: Artifact)
   if (!result.ok) throw new Error(result.message);
   return id;
 }
+
+/**
+ * Tessera's newest reply in the chat, where a request's outcome is said (APP-01). A reply can
+ * repeat an earlier one in the same chat, so a test waits on the newest, not on any text that
+ * matches.
+ */
+export const newestReply = (page: Page) =>
+  page.locator(".chat-log .from-tessera .chat-text").last();
