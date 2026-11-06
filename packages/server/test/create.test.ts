@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   candidateFrom,
   createTool,
+  PLAIN_CANNOT_REASON,
   REPAIR_BUDGETS,
   REPAIR_TIME_LIMIT_MS,
   startingDataOf,
@@ -376,6 +377,37 @@ describe("the create stage (CLI-09, GEN-11)", () => {
     expect(calls[1]!.stage).toBe("repair");
     expect(calls[1]!.prompt).toContain("(capability, declaration)");
     expect(calls[1]!.prompt).toContain("(schema)");
+  });
+
+  it("GEN-12: a refusal's reason in Tessera's own words reaches the person as a plain sentence, from creation or its repair", async () => {
+    const refusal = {
+      kind: "value",
+      stage: "create",
+      value: { outcome: "cannot", reason: "The runtime cannot read this JSON schema." },
+    };
+    const first = answering(refusal);
+    expect(
+      await createTool(first.provider, DEFAULT_ROUTES, { request: "A shopping list" }),
+    ).toEqual({ kind: "cannot", reason: PLAIN_CANNOT_REASON });
+    // A refusal is final: no repair is spent on its words.
+    expect(first.calls).toHaveLength(1);
+    // The same from a repair, after an answer of the wrong shape.
+    const repaired = answering(
+      { kind: "value", stage: "create", value: { outcome: "tool" } },
+      { ...refusal, stage: "repair" },
+    );
+    expect(
+      await createTool(repaired.provider, DEFAULT_ROUTES, { request: "A shopping list" }),
+    ).toMatchObject({ kind: "cannot", reason: PLAIN_CANNOT_REASON });
+    // A plain reason, or one in words the person used, is theirs to read as it is.
+    const plain = answering({
+      ...refusal,
+      value: { outcome: "cannot", reason: "Booking a table needs the internet." },
+    });
+    expect(await createTool(plain.provider, DEFAULT_ROUTES, { request: "Book a table" })).toEqual({
+      kind: "cannot",
+      reason: "Booking a table needs the internet.",
+    });
   });
 
   it("GEN-12: a term the person asked for by name is kept", async () => {

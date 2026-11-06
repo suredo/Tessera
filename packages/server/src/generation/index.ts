@@ -4,6 +4,7 @@ export {
   candidateFrom,
   dataProblems,
   createTool,
+  PLAIN_CANNOT_REASON,
   GENERATION_TIME_LIMIT_MS,
   REPAIR_BUDGETS,
   REPAIR_TIME_LIMIT_MS,

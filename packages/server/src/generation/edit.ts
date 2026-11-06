@@ -13,6 +13,7 @@ import { ProviderError, runStage, type Provider, type Routes } from "../provider
 import {
   dataProblems,
   GENERATION_TIME_LIMIT_MS,
+  plainReason,
   plainWordProblems,
   REPAIR_BUDGETS,
   REPAIR_TIME_LIMIT_MS,
@@ -175,7 +176,7 @@ export async function editTool(
         diagnostics: repair?.diagnostics,
       });
       if (response.value.outcome === "cannot")
-        result = { kind: "cannot", reason: response.value.reason };
+        result = { kind: "cannot", reason: plainReason(response.value.reason, input.request) };
       else {
         attempt = response.value;
         // The summary the person reads is in plain words too (GEN-12).

@@ -25,8 +25,10 @@ export const INTERNAL_TERMS = [
 ] as const;
 
 const asWord = (term: string) => new RegExp(`(?<![\\p{L}\\p{N}_])${term}(?![\\p{L}\\p{N}_])`, "iu");
-// The person's words allow a term in any form they wrote it: "repairs" allows "repair".
-const startingAWord = (term: string) => new RegExp(`(?<![\\p{L}\\p{N}_])${term}`, "iu");
+// The person's words allow a term as they wrote it, or its plural: "repairs" allows "repair", but
+// "statement" doesn't allow "state".
+const asTheirWord = (term: string) =>
+  new RegExp(`(?<![\\p{L}\\p{N}_])${term}(?:e?s)?(?![\\p{L}\\p{N}_])`, "iu");
 
 /**
  * The internal terms `text` uses, each once, in the list's order, leaving out any that `allowed`
@@ -34,6 +36,6 @@ const startingAWord = (term: string) => new RegExp(`(?<![\\p{L}\\p{N}_])${term}`
  */
 export function internalTerms(text: string, allowed = ""): string[] {
   return INTERNAL_TERMS.filter(
-    (term) => asWord(term).test(text) && !startingAWord(term).test(allowed),
+    (term) => asWord(term).test(text) && !asTheirWord(term).test(allowed),
   );
 }

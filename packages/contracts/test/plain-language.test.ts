@@ -20,6 +20,9 @@ describe("plain language (GEN-12)", () => {
     expect(internalTerms("JSON formatter", "I need a JSON formatter")).toEqual([]);
     expect(internalTerms("Bike repair log", "A log of my bike repairs")).toEqual([]);
     expect(internalTerms("States of matter", "A quiz on the states of matter")).toEqual([]);
+    // Only the term itself or its plural: "statement" is another word, and allows nothing.
+    expect(internalTerms("State tracker", "A statement tracker")).toEqual(["state"]);
+    expect(internalTerms("Repair log", "A log of repairmen")).toEqual(["repair"]);
     expect(internalTerms("Bike repair log", "Help me keep track of each bike repair")).toEqual([]);
   });
 

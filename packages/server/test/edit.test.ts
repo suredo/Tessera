@@ -12,6 +12,7 @@ import {
   candidateFrom,
   editedCandidate,
   editTool,
+  PLAIN_CANNOT_REASON,
   type EditInput,
 } from "../src/generation/index.ts";
 import { assemblePrompt, PROMPT_BUDGETS } from "../src/prompts/index.ts";
@@ -211,6 +212,16 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
         data: { mode: "unchanged" },
       }),
     ).toMatchObject({ kind: "unchanged" });
+  });
+
+  it("GEN-12: an edit's refusal in Tessera's own words reaches the person as a plain sentence", async () => {
+    const { provider } = scripted(
+      reply({ outcome: "cannot", reason: "The capability manifest has no payload for that." }),
+    );
+    expect(await editTool(provider, DEFAULT_ROUTES, input)).toEqual({
+      kind: "cannot",
+      reason: PLAIN_CANNOT_REASON,
+    });
   });
 
   it("GEN-12: a change's summary in Tessera's own words is repaired before the person reads it", async () => {
