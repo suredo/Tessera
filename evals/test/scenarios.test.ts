@@ -117,6 +117,32 @@ describe("host facts (EVAL-02)", () => {
     expect(checkFacts(before, before, none, { workspace: "same" })).toEqual([]);
   });
 
+  it("EVAL-02: data kept allows added fields and items, not a changed or lost value", () => {
+    const items = [
+      { id: "a", name: "milk" },
+      { id: "b", name: "eggs" },
+    ];
+    const at = (data: unknown, version = "v1") =>
+      state("w1", { ...list, version, dataHash: JSON.stringify(data), data }, notes);
+    const before = at({ items });
+    const changed: StepOutcome = { claim: "changed" };
+    const kept = { version: "new", data: "kept" } as const;
+    // The M2 live run's T1 step 2: grouping by aisle added an empty aisle to every item.
+    const grouped = at({ items: items.map((i) => ({ ...i, aisle: "" })).reverse() }, "v2");
+    expect(checkFacts(before, grouped, changed, kept)).toEqual([]);
+    expect(checkFacts(before, at({ items }, "v2"), changed, kept)).toEqual([]);
+    const renamed = at({ items: [items[0], { id: "b", name: "bread" }] }, "v2");
+    expect(checkFacts(before, renamed, changed, kept)).toEqual([
+      "Some of the earlier data is gone or changed.",
+    ]);
+    expect(checkFacts(before, at({ items: [items[0]] }, "v2"), changed, kept)).toEqual([
+      "Some of the earlier data is gone or changed.",
+    ]);
+    expect(checkFacts(before, at({}, "v2"), changed, kept)).toEqual([
+      "Some of the earlier data is gone or changed.",
+    ]);
+  });
+
   it("EVAL-02: nothing unrelated changes, and no success is claimed that wasn't applied (GEN-08)", () => {
     const before = state("w1", list, notes);
     const elsewhere = state("w1", { ...list, version: "v2" }, { ...notes, dataHash: "e2" });

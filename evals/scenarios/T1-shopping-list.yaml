@@ -12,8 +12,9 @@ profiles: [item-list]
 steps:
   - say: "I need a shopping list I can tick off at the store. We need milk, eggs, bread and apples."
     expect: { created: true, workspace: new }
+  # Grouping may add an aisle to every item; what matters is that every item and value stays.
   - say: "Group them by aisle."
-    expect: { version: new, data: unchanged }
+    expect: { version: new, data: kept }
   - say: "Add cheese and take the apples off."
     expect: { version: unchanged, data: changed }
   - undo: data
