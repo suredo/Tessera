@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/scenarios.test.ts]
 tags: [code, evals, scenarios]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T08:43:21Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T03:36:07Z }
 ---
 
 # Purpose
@@ -34,7 +34,7 @@ The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01
   - No success claimed that wasn't applied (`GEN-08`): "made" needs a workspace that gained a tool, "changed" needs a changed version or data.
 - **A tool is made when a workspace gains one:** a new workspace, or the empty one that was open, which a creation takes over (`GEN-01`).
 - **Continue's "original" is the named saved tool's workspace before the step,** so a Use again or anything else that moved its link can't make a later Continue pass (`DATA-07`).
-- **Data is compared by content,** as a hash of its canonical JSON: for tools that match no verification profile, a step can only expect it changed or unchanged.
+- **Data is compared by content,** as a hash of its canonical JSON: for tools that match no verification profile, a step can expect it changed, unchanged or `kept`. `kept` passes when every earlier value is still there, with added fields and items allowed, so a change that adds a field to every record (a migration) counts as keeping the data, while a changed or removed value fails ("Some of the earlier data is gone or changed.").
 - **A `cancel` step follows the request it cancels,** a `say` step that expects nothing of its own; the schema refuses any other order.
 
 # Depends on / used by
@@ -50,6 +50,6 @@ Depends on `yaml` (2.9.1, already in the lockfile through other packages) to rea
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `facts.ts`: `WorkspaceFacts` (type), `HostState` (type), `StepOutcome` (type), `StepTarget` (type), `readHostState`, `checkFacts`
+- `facts.ts`: `WorkspaceFacts` (type), `HostState` (type), `StepOutcome` (type), `StepTarget` (type), `keeps`, `readHostState`, `checkFacts`
 - `index.ts`: `expectationSchema`, `loadScenario`, `loadScenarios`, `M2_STEPS`, `m2Problems`, `ScenarioError`, `scenarioSchema`, `stepKind`, `stepSchema`, `Expectation` (type), `Scenario` (type), `Step` (type), `checkFacts`, `readHostState`, `HostState` (type), `StepOutcome` (type), `StepTarget` (type), `WorkspaceFacts` (type)
 - `scenario.ts`: `expectationSchema`, `Expectation` (type), `stepSchema`, `Step` (type), `M2_STEPS`, `scenarioSchema`, `Scenario` (type), `stepKind`, `ScenarioError`, `loadScenario`, `loadScenarios`, `m2Problems`

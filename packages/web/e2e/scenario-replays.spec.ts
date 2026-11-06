@@ -16,13 +16,15 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const scenarios = path.resolve(here, "../../../evals/scenarios");
 const replays = path.join(scenarios, "replays");
 
-// The steps each live run failed, as its report records them; every other step passed. The M2
-// run's two were the scenario's expectation, not the model (evals/reports/2026-11-05-m2-live-run.md).
+// The steps each recorded run fails against today's scenario files; every other step passes. The
+// M2 run's two failures were the scenario's expectation, not the model, and the files were
+// corrected after it (T1 step 2 expects its data kept, T13 step 3 no new version), so they pass
+// now. The run's score stays as its report froze it (evals/reports/2026-11-05-m2-live-run.md).
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "J6-limits": [],
-  "T1-shopping-list": [[2, ["The data changed."]]],
+  "T1-shopping-list": [],
   "T6-tip-calculator": [],
-  "T13-drawing-board": [[3, ["The tool didn't change."]]],
+  "T13-drawing-board": [],
 };
 
 test("EVAL-07: every recorded live run has its expected steps listed here", () => {

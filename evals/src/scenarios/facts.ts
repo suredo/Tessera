@@ -8,12 +8,14 @@ import type { Expectation } from "./scenario.ts";
 // it against what the step expects, and against what every step must keep: nothing unrelated
 // changed, and no success claimed that the host didn't apply (GEN-08). No model is asked.
 
-/** One workspace as the facts see it: its tool version and a hash of its data. */
+/** One workspace as the facts see it: its tool version, a hash of its data, and the data. */
 export type WorkspaceFacts = {
   id: string;
   title: string;
   version: string | null;
   dataHash: string;
+  /** The data itself, for the `kept` fact; left out, nothing counts as kept unless unchanged. */
+  data?: unknown;
 };
 
 /** What Tessera has stored at one moment, and which workspace is open. */
@@ -45,6 +47,37 @@ const hash = (value: unknown) =>
     .update(canonicalJson(value ?? null))
     .digest("hex");
 
+/**
+ * Whether `later` still holds everything in `earlier`: the same values, every key of an object
+ * and a match for every item of a list, in any order. Added keys and items are allowed, so a
+ * migration that adds a field keeps the data; a changed or removed value doesn't.
+ */
+export function keeps(earlier: unknown, later: unknown): boolean {
+  if (Array.isArray(earlier)) {
+    if (!Array.isArray(later)) return false;
+    // Each earlier item needs its own later item that keeps it. A greedy first match can take the
+    // item a later one needs, so this finds a full one-to-one match (augmenting paths).
+    const items: unknown[] = later;
+    const owner: (number | undefined)[] = items.map(() => undefined);
+    const place = (i: number, tried: Set<number>): boolean =>
+      items.some((candidate, j) => {
+        if (tried.has(j) || !keeps(earlier[i], candidate)) return false;
+        tried.add(j);
+        const held = owner[j];
+        if (held !== undefined && !place(held, tried)) return false;
+        owner[j] = i;
+        return true;
+      });
+    return earlier.every((_, i) => place(i, new Set()));
+  }
+  if (earlier !== null && typeof earlier === "object") {
+    if (later === null || typeof later !== "object" || Array.isArray(later)) return false;
+    const now = later as Record<string, unknown>;
+    return Object.entries(earlier).every(([k, v]) => k in now && keeps(v, now[k]));
+  }
+  return Object.is(earlier, later);
+}
+
 /** Reads what Tessera has stored, with the workspace the host app has open. */
 export function readHostState(store: Store, open: string | null): HostState {
   return {
@@ -53,6 +86,7 @@ export function readHostState(store: Store, open: string | null): HostState {
       title: w.title,
       version: w.currentVersion,
       dataHash: hash(w.data),
+      data: w.data,
     })),
     savedTools: listSavedTools(store).map(({ id, name, workspaceId }) => ({
       id,
@@ -96,6 +130,9 @@ export function checkFacts(
   if (expected.version === "unchanged" && versionChanged) problems.push("The tool changed.");
   if (expected.data === "changed" && !dataChanged) problems.push("The data didn't change.");
   if (expected.data === "unchanged" && dataChanged) problems.push("The data changed.");
+  if (expected.data === "kept" && dataChanged && !keeps(was.data, now.data)) {
+    problems.push("Some of the earlier data is gone or changed.");
+  }
   if (expected.workspace === "new" && (now === undefined || earlier.has(now.id))) {
     problems.push("No new workspace is open.");
   }

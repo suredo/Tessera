@@ -4,6 +4,8 @@
 
 * **Update**: The [scenario runner](code/evals/runner.md) waits, before each step's screenshot, for the open tool to show something, so the screenshots after Use again and Continue no longer show an empty panel, the M2 live run's fourth defect. The [Tessera issues](lessons/tessera-issues.md) record it as L-81. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T03:46:30Z.
 
+* **Update**: Corrected the two M2 scenario expectations the [live run](../evals/reports/2026-11-05-m2-live-run.md) found wrong: T1's "Group them by aisle." now expects its data kept, a new host fact that allows added fields and items but no changed or lost value ([scenario files and host facts](code/evals/scenarios.md), [scenario format](testing/scenario-format.md), `EVAL-02`), and T13's "Add an eraser." no longer requires a new version, since the board may already have one. Every recorded run now replays with no failed step ([runner](code/evals/runner.md)); the live run's score stays as recorded. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T03:36:07Z.
+
 ## 2026-11-05
 
 * **Update**: An edit that changes nothing says why, in the model's words, after "The tool wasn't changed.", as the M2 live run's T13 needed ([generation](code/server/generation.md), [contracts](code/contracts/package.md), [browser](code/web/package.md), `GEN-08`). The [Tessera issues](lessons/tessera-issues.md) record it as L-79. Recorded by `claude-code/claude-opus-5-5` at 2026-11-05T21:52:33Z.

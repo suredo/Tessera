@@ -17,9 +17,11 @@ export const expectationSchema = z
       .optional()
       .describe("The open workspace's tool version changed, or stayed as it was."),
     data: z
-      .enum(["changed", "unchanged"])
+      .enum(["changed", "unchanged", "kept"])
       .optional()
-      .describe("The open workspace's data changed, or stayed exactly as it was."),
+      .describe(
+        "The open workspace's data changed, stayed exactly as it was, or kept every earlier value while it may have gained some.",
+      ),
     workspace: z
       .enum(["new", "same", "original"])
       .optional()
