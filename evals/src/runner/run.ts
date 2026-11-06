@@ -238,11 +238,11 @@ export async function runScenario(
           },
         });
         const after = readHostState(store, await openWorkspace(page));
-        result.notice = cancelledNext ? "Sent; the next step cancels it." : await notice(page);
+        result.notice = cancelledNext ? "Sent; the next step cancels it." : await said(page, s);
         result.problems = cancelledNext ? [] : checkFacts(before, after, outcome, s.expect, target);
       } catch (error) {
         result.problems = [error instanceof Error ? error.message.split("\n")[0]! : String(error)];
-        result.notice = await notice(page).catch(() => "");
+        result.notice = await said(page, s).catch(() => "");
       }
       // Answers that didn't fit fail the step whatever the host showed (TEST-04).
       result.problems.push(...misfits().slice(misfitsBefore));
@@ -315,6 +315,15 @@ async function toolShown(page: Page): Promise<Screenshot> {
     );
 }
 
+/** Tessera's newest reply in the chat, where a request's outcome is said (APP-01), as text. */
+async function reply(page: Page): Promise<string> {
+  const shown = page.locator(".chat-log .from-tessera .chat-text");
+  return (await shown.count()) === 0 ? "" : (await shown.last().innerText()).trim();
+}
+
+/** What the host said after a step: a request's reply in the chat, or the notice for the rest. */
+const said = (page: Page, s: Step) => ("say" in s || "cancel" in s ? reply(page) : notice(page));
+
 /** The newest notice the host app shows, as text. */
 async function notice(page: Page): Promise<string> {
   // The main screen's notice, or the first-run screen's before any workspace exists.
@@ -348,7 +357,7 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
       await review.waitFor({ state: "detached", timeout: STEP_LIMIT_MS });
       await settled(page);
     }
-    const shown = await notice(page);
+    const shown = await reply(page);
     const offer = page.locator(".offer");
     const offeredName = (await offer.count())
       ? listSavedTools(store).find((t) =>
@@ -360,7 +369,7 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
   if ("cancel" in s) {
     await button(page, say("request.cancel")).click();
     await settled(page);
-    return outcomeOf(await notice(page));
+    return outcomeOf(await reply(page));
   }
   if ("save" in s) {
     const id = await openWorkspace(page);

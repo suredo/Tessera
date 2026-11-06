@@ -3,7 +3,7 @@ import { createScriptedProvider } from "../../server/src/providers/index.ts";
 import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { editFixture } from "../../server/test/fixtures/edit-tool.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp } from "./support/app-host.ts";
+import { startApp, newestReply } from "./support/app-host.ts";
 
 test("GEN-11 GEN-08: staging stops at the original request deadline and never activates or repairs", async ({
   page,
@@ -46,7 +46,7 @@ test("GEN-11 GEN-08: staging stops at the original request deadline and never ac
     await page.getByRole("button", { name: en["request.send"] }).click();
     await expect(page.locator("[data-tessera=staging]")).toHaveCount(1);
     await page.clock.fastForward(420_001);
-    await expect(page.getByText(en["request.timedOut"], { exact: true })).toBeVisible();
+    await expect(newestReply(page)).toContainText(en["request.timedOut"]);
     await expect(page.locator("[data-tessera=staging]")).toHaveCount(0);
     await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeEnabled();
     expect(requests).not.toContain("/api/activate");

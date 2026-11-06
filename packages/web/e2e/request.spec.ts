@@ -3,7 +3,7 @@ import type { Creation, Intent } from "../../contracts/src/index.ts";
 import { UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.ts";
 import { listWorkspaces, saveTool } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 // A request through the real pipeline, end to end (TEST-03, GEN-01): the person types what they
 // need, the server runs the intent and create stages, the app stages the candidate behind the
@@ -150,7 +150,7 @@ test("TEST-03, GEN-05: a request becomes a running tool, staged and activated, h
 }) => {
   await page.goto(app.url);
   await ask(page, "I need a shopping list with milk and eggs");
-  await expect(page.getByText("Shopping list is ready. A list of what to buy.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Shopping list is ready. A list of what to buy.", {
     timeout: 30_000,
   });
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
@@ -162,7 +162,7 @@ test("GEN-08: an unclear request is answered in plain words, and nothing is made
 }) => {
   await page.goto(app.url);
   await ask(page, "Do the thing");
-  await expect(page.getByText(en["request.clarify"])).toBeVisible({ timeout: 30_000 });
+  await expect(newestReply(page)).toContainText(en["request.clarify"], { timeout: 30_000 });
   expect(listWorkspaces(app.folder)).toHaveLength(1);
 });
 
@@ -177,11 +177,10 @@ test("GEN-09, GEN-08, GEN-10: a tool that fails its checks, even after its repai
   const unattached = details.locator(".details-requests").last().locator(":scope > li");
   const before = await unattached.count();
   await ask(page, "A page that shows a website");
-  await expect(
-    page.getByText(
-      "That didn't work. The tool Tessera made didn't pass its checks, so nothing was changed.",
-    ),
-  ).toBeVisible({ timeout: 30_000 });
+  await expect(newestReply(page)).toContainText(
+    "That didn't work. The tool Tessera made didn't pass its checks, so nothing was changed.",
+    { timeout: 30_000 },
+  );
   expect(listWorkspaces(app.folder)).toHaveLength(1);
   // The failed creation made no workspace, and its reasons are still there to see (GEN-10).
   await expect(unattached).toHaveCount(before + 1);
@@ -209,7 +208,7 @@ test("GEN-01, GEN-16, UX-02, APP-10: a request keeps running when the person goe
   const box = page.locator(".request");
   await expect(box.getByRole("status")).toHaveText(en["request.stage.intent"]);
   await expect(box.locator(".request-elapsed")).toHaveText(/^[1-9]\d* s$/);
-  await expect(page.getByText(en["request.clarify"])).toBeVisible({ timeout: 30_000 });
+  await expect(newestReply(page)).toContainText(en["request.clarify"], { timeout: 30_000 });
   await expect(box.getByRole("status")).toHaveText("");
   await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeEnabled();
 });
@@ -223,7 +222,7 @@ test("GEN-18: a request matching a saved tool offers Continue or Use again, and 
   const before = listWorkspaces(app.folder).length;
 
   await ask(page, "My weekly shop");
-  await expect(page.getByText(/^That sounds like your saved tool Weekly shop\./)).toBeVisible({
+  await expect(newestReply(page)).toContainText(/^That sounds like your saved tool Weekly shop\./, {
     timeout: 30_000,
   });
   expect(listWorkspaces(app.folder)).toHaveLength(before);
@@ -245,7 +244,7 @@ test("GEN-09, GEN-05, APP-09, UX-06: a smoke failure gets one repair, staged aga
   await page.goto(app.url);
   const before = listWorkspaces(app.folder).length;
   await ask(page, "A new shopping list with milk and eggs");
-  await expect(page.getByText("Shopping list is ready. A list of what to buy.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Shopping list is ready. A list of what to buy.", {
     timeout: 30_000,
   });
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
@@ -280,7 +279,7 @@ test("GEN-09, GEN-08: a repeated smoke failure is never activated or called read
 }) => {
   await page.goto(app.url);
   await ask(page, "Another shopping list");
-  await expect(page.getByText(en["request.checkFailed"])).toBeVisible({ timeout: 30_000 });
+  await expect(newestReply(page)).toContainText(en["request.checkFailed"], { timeout: 30_000 });
   expect(listWorkspaces(app.folder).filter((w) => w.currentVersion === null)).toHaveLength(1);
   expect(steps).toHaveLength(0);
 });

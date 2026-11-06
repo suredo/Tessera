@@ -5,7 +5,7 @@ import { INTENT_PROMPT_BUDGET, PROMPT_BUDGETS } from "../../server/src/prompts/i
 import { UNKNOWN_USAGE, type Provider, type StageSpec } from "../../server/src/providers/index.ts";
 import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 // What reaches the model, end to end (TEST-03): a request typed in the app, through the real
 // pipeline, to a provider that answers from a script chosen by test configuration, never by the
@@ -127,9 +127,12 @@ test("TEST-03, GEN-15: a request in Portuguese makes a tool in Portuguese, and i
   const request = "Preciso de uma lista de compras com leite e ovos";
   await page.goto(app.url);
   await ask(page, request);
-  await expect(page.getByText("Lista de compras is ready. Uma lista do que comprar.")).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(newestReply(page)).toContainText(
+    "Lista de compras is ready. Uma lista do que comprar.",
+    {
+      timeout: 30_000,
+    },
+  );
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Leite", "Ovos"]);
   await page.screenshot({ path: test.info().outputPath("portuguese-tool.png") });
 
@@ -150,11 +153,11 @@ test("GEN-02, GEN-03: a request's words never switch a prompt part on or off, an
   await page.goto(app.url);
   // L-20: the POC added its engine section only for words like "simulation" or "will it work".
   await ask(page, "Will my party layout work? I want to simulate where everyone sits.");
-  await expect(page.getByText("Party layout is ready. Where each guest sits.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Party layout is ready. Where each guest sits.", {
     timeout: 30_000,
   });
   await ask(page, "A list of books to read");
-  await expect(page.getByText("Reading list is ready. Books to read next.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Reading list is ready. Books to read next.", {
     timeout: 30_000,
   });
 

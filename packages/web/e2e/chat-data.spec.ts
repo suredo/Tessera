@@ -9,7 +9,7 @@ import {
 } from "../../server/src/workspaces/index.ts";
 import { editFixture } from "../../server/test/fixtures/edit-tool.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 // This file is one shared scenario; a failed step must not restart later steps from creation.
 test.describe.configure({ mode: "serial" });
@@ -93,9 +93,9 @@ test("DATA-02 GEN-08: add through chat, refresh the same tool and retain one ver
   await page.goto(app.url);
   const before = workspace();
   await ask(page, "Add Bread");
-  await expect(
-    page.getByText("Changed one entry in Shopping list. Prepared the entry change."),
-  ).toBeVisible();
+  await expect(newestReply(page)).toContainText(
+    "Changed one entry in Shopping list. Prepared the entry change.",
+  );
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs", "Bread"]);
   expect(workspace().id).toBe(before.id);
   expect(workspace().dataRevision).toBe(before.dataRevision + 1);
@@ -116,16 +116,16 @@ test("GEN-01 DATA-02: review exact before/after facts and cancel without a write
   );
   expect(workspace()).toEqual(before);
   await page.getByRole("button", { name: en["request.reviewCancel"] }).click();
-  await expect(page.getByText(en["request.dataCancelled"])).toBeVisible();
+  await expect(newestReply(page)).toContainText(en["request.dataCancelled"]);
   expect(workspace()).toEqual(before);
 });
 test("DATA-02 DATA-04: confirm the host plan and undo its one data change", async ({ page }) => {
   await page.goto(app.url);
   await ask(page, "Rename Milk to Oat milk");
   await page.getByRole("button", { name: en["request.reviewApply"] }).click();
-  await expect(
-    page.getByText("Changed one entry in Shopping list. Prepared the entry change."),
-  ).toBeVisible();
+  await expect(newestReply(page)).toContainText(
+    "Changed one entry in Shopping list. Prepared the entry change.",
+  );
   await expect(page.getByRole("button", { name: en["tool.minimize"], exact: true })).toBeVisible();
   await expect(frame(page).getByRole("listitem")).toHaveText(["Oat milk", "Eggs", "Bread"]);
   await page.getByRole("button", { name: en["history.undo"] }).click();
@@ -154,7 +154,7 @@ test("DATA-02 GEN-08: a newer target edit wins over a reviewed removal", async (
   ).toBe(true);
   const before = workspace();
   await page.getByRole("button", { name: en["request.reviewApply"] }).click();
-  await expect(page.getByText(en["request.dataStale"])).toBeVisible();
+  await expect(newestReply(page)).toContainText(en["request.dataStale"]);
   expect(workspace()).toEqual(before);
   await page.reload();
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Duck eggs", "Bread"]);
@@ -163,7 +163,7 @@ test("GEN-07 GEN-08: unchanged data creates no revision or version", async ({ pa
   await page.goto(app.url);
   const before = workspace();
   await ask(page, "Keep the entries as they are");
-  await expect(page.getByText(en["request.dataUnchanged"])).toBeVisible();
+  await expect(newestReply(page)).toContainText(en["request.dataUnchanged"]);
   expect(workspace()).toEqual(before);
   expect(workspaceVersions(app.folder, before.id)).toHaveLength(1);
 });

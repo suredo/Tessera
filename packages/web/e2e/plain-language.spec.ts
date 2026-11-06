@@ -3,7 +3,7 @@ import { internalTerms, type Creation, type Intent } from "../../contracts/src/i
 import { UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.ts";
 import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp, type AppHost } from "./support/app-host.ts";
+import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 // Plain language end to end (GEN-12, TEST-03): a request through the real pipeline to a scripted
 // provider (ENG-11) whose first tool is named in Tessera's own words, as the POC's "Capability
@@ -106,7 +106,7 @@ test("TEST-03, GEN-12: a tool named in Tessera's own words is renamed before any
   const request = "A shopping list with milk";
   await page.getByRole("textbox", { name: en["request.label"] }).fill(request);
   await page.getByRole("button", { name: en["request.send"] }).click();
-  await expect(page.getByText("Shopping list is ready. A list of what to buy.")).toBeVisible({
+  await expect(newestReply(page)).toContainText("Shopping list is ready. A list of what to buy.", {
     timeout: 30_000,
   });
   await page.screenshot({ path: test.info().outputPath("plain-tool.png") });

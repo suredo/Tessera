@@ -398,6 +398,41 @@ button.primary {
   margin: var(--ui-space-4) 0 var(--ui-space-2);
 }
 
+/* The chat (APP-01): the conversation, newest last, scrolling on its own, the request box under it. */
+.chat-log {
+  list-style: none;
+  margin: 0 0 var(--ui-space-3);
+  padding: 0;
+  max-height: 24rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-space-2);
+}
+.chat-log:empty {
+  display: none;
+}
+.chat-log li {
+  padding: var(--ui-space-2) var(--ui-space-3);
+  border-radius: var(--ui-radius-control);
+  border: 1px solid var(--ui-control-border);
+  overflow-wrap: anywhere;
+}
+.chat-log .from-person {
+  align-self: flex-end;
+  max-width: 85%;
+  background: var(--ui-surface);
+}
+.chat-speaker {
+  display: block;
+  font-size: var(--ui-size-secondary);
+  color: var(--ui-text-secondary);
+}
+.chat-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 /* The request box (GEN-01): a field and its button, wrapping at narrow widths. */
 .request {
   display: flex;

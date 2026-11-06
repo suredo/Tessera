@@ -8,7 +8,7 @@ import {
 import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { editFixture } from "../../server/test/fixtures/edit-tool.ts";
 import { en } from "../src/i18n/en.ts";
-import { startApp } from "./support/app-host.ts";
+import { startApp, newestReply } from "./support/app-host.ts";
 
 const intent = {
   kind: "create",
@@ -64,6 +64,7 @@ for (const phase of ["create", "repair"] as const) {
       await expect(cancel).toBeVisible();
       await cancel.focus();
       await page.keyboard.press("Enter");
+      // On the status screen the chat is out of sight, so the reply is in the notice.
       await expect(page.getByText(/The request was stopped\./)).toBeVisible();
       await expect(cancel).toHaveCount(0);
       expect(listWorkspaces(host.folder).every((w) => w.currentVersion === null)).toBe(true);
@@ -99,7 +100,7 @@ test("CLI-06 RUN-03: Cancel removes a stalled staging frame without activation o
     await page.getByRole("button", { name: en["request.send"] }).click();
     await expect(page.locator("[data-tessera=staging]")).toHaveCount(1);
     await page.getByRole("button", { name: en["request.cancel"] }).click();
-    await expect(page.getByText(en["request.stopped"], { exact: true })).toBeVisible();
+    await expect(newestReply(page)).toContainText(en["request.stopped"]);
     await expect(page.locator("[data-tessera=staging]")).toHaveCount(0);
     expect(paths).not.toContain("/api/activate");
     expect(paths).not.toContain("/api/generate/repair-smoke");
@@ -148,11 +149,11 @@ test("CLI-06: a queued browser request can be cancelled without another provider
     await other.getByRole("button", { name: en["request.send"] }).click();
     await expect.poll(() => generated).toBe(true);
     await other.getByRole("button", { name: en["request.cancel"] }).click();
-    await expect(other.getByText(/The request was stopped\./)).toBeVisible();
+    await expect(newestReply(other)).toContainText(/The request was stopped\./);
     expect(calls).toBe(1);
     await page.bringToFront();
     await page.getByRole("button", { name: en["request.cancel"] }).click();
-    await expect(page.getByText(/The request was stopped\./)).toBeVisible();
+    await expect(newestReply(page)).toContainText(/The request was stopped\./);
     expect(calls).toBe(1);
   } finally {
     await other.close();
@@ -192,7 +193,7 @@ test("CLI-06 GEN-08: the stop is said at once, while the lists still refresh", a
       await route.continue();
     });
     await page.getByRole("button", { name: en["request.cancel"] }).click();
-    await expect(page.getByText(/The request was stopped\./)).toBeVisible();
+    await expect(newestReply(page)).toContainText(/The request was stopped\./);
     await expect(page.getByRole("button", { name: en["request.cancel"] })).toHaveCount(0);
     await expect(page.getByText(en["request.stopping"])).toHaveCount(0);
     // A new request still waits for the refresh to finish.

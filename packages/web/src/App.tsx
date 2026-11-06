@@ -1,6 +1,8 @@
 import type { SavedTool, SetupReport, Trash as TrashList, Workspace } from "@tessera/contracts";
 import { useEffect, useRef, useState } from "react";
 import { exportArchive, importArchive, saveFile } from "./archives.ts";
+import { Chat } from "./Chat.tsx";
+import { useChat, type ShownMessage } from "./chat.ts";
 import { ask, HostError, problemText } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import { History } from "./History.tsx";
@@ -24,8 +26,9 @@ import { Trash } from "./Trash.tsx";
 import { Workspaces } from "./Workspaces.tsx";
 
 // The host's main screen (APP-01, APP-02, APP-03): the workspaces beside the open workspace's
-// tool. With no workspaces it invites the person to describe what they need, with no example
-// tools (A12). The chat that makes tools comes with M2.
+// chat and tool. With no workspaces it invites the person to describe what they need, with no
+// example tools (A12). A request's reply is said in the chat, kept with its workspace (ADR 0011);
+// the notice says what the person's other actions did.
 
 /** The first-run screen, shown while there are no workspaces (APP-02). */
 type EmptyProps = {
@@ -47,6 +50,8 @@ type EmptyProps = {
   cancelControl?: React.ReactNode;
   /** The details view, for requests that made no tool (APP-09, GEN-10). */
   details?: React.ReactNode;
+  /** What was asked and answered here, with no workspace to keep it in (APP-01). */
+  chat?: readonly ShownMessage[];
 };
 
 export function EmptyState({
@@ -61,13 +66,18 @@ export function EmptyState({
   progress,
   cancelControl,
   details,
+  chat = [],
 }: EmptyProps) {
   return (
     <main className="empty">
       <h1>{t("home.heading")}</h1>
       <p>{t("home.intro")}</p>
-      {onRequest && setup?.ready && (
-        <RequestBox working={requesting} progress={progress} onRequest={onRequest} />
+      {((onRequest && setup?.ready) || chat.length > 0) && (
+        <Chat messages={chat}>
+          {onRequest && setup?.ready && (
+            <RequestBox working={requesting} progress={progress} onRequest={onRequest} />
+          )}
+        </Chat>
       )}
       {/* Such as the trash notice after the last workspace is deleted. */}
       <p role="status">{notice}</p>
@@ -127,7 +137,9 @@ export function App() {
   const [lastUsed, setLastUsed] = useState<Record<string, string>>({});
   const [openId, setOpenId] = useState<string | null>(remembered);
   const [notice, setNotice] = useState("");
-  const [view, setView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
+  // The open workspace's chat, and what was said with none open (APP-01, APP-03).
+  const chat = useChat(openId);
+  const [view, showView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
   // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
   const [setup, setSetup] = useState<SetupReport | null>(null);
   // A request running, and a saved tool a request matched, waiting for the person's choice.
@@ -140,6 +152,39 @@ export function App() {
   const [dataOffer, setDataOffer] = useState<RequestOutcome["dataOffer"]>();
   // Stage and elapsed time while the request runs, until a cancel has settled it (GEN-16).
   const progress = useRequestProgress(control, requesting && !settled);
+  // Whose chat is on screen: the open workspace's on the workspaces, the first-run screen's (null)
+  // in their place, and none (undefined) on the other screens.
+  const chatShown: string | null | undefined =
+    workspaces?.length === 0
+      ? view === "trash" || view === "status"
+        ? undefined
+        : null
+      : view === "workspaces"
+        ? openId
+        : undefined;
+  // A reply is said in its workspace's chat, and in the notice too, so it reaches the person
+  // wherever they are. The notice leaves it out while that chat is on screen, and drops it when
+  // the person moves on from that chat, so it is never on the page twice (APP-01, GEN-08).
+  const [replyNotice, setReplyNotice] = useState<{ text: string; target: string | null } | null>(
+    null,
+  );
+  const replyInView =
+    replyNotice !== null && chatShown !== undefined && replyNotice.target === chatShown;
+  const shownNotice = replyInView && notice === replyNotice.text ? "" : notice;
+  // Moving on from the chat that showed the reply: it has been read there, so the notice drops it.
+  const movingOn = () => {
+    if (!replyInView || !replyNotice) return;
+    setNotice((shown) => (shown === replyNotice.text ? "" : shown));
+    setReplyNotice(null);
+  };
+  const setView = (next: typeof view) => {
+    movingOn();
+    showView(next);
+  };
+  const tellReply = (text: string, target: string | null) => {
+    setNotice(text);
+    setReplyNotice({ text, target });
+  };
   const cancelRequest = async () => {
     const owner = control.current;
     if (!owner || stopping) return;
@@ -148,10 +193,13 @@ export function App() {
     // A waiting review has no active carryOut to settle it; discard its local proposal now.
     if (!requesting) {
       setDataOffer(undefined);
-      setNotice(
-        withInterfaceOutcome(dataOffer?.interfaceMessage, { message: t("request.stopped") })
-          .message,
-      );
+      const said = withInterfaceOutcome(dataOffer?.interfaceMessage, {
+        message: t("request.stopped"),
+      }).message;
+      // The review's own workspace, wherever the person is now (APP-03).
+      const reviewed = dataOffer?.workspaceId ?? openId;
+      void chat.said(reviewed, said);
+      tellReply(said, reviewed);
     }
     try {
       const confirmed = await owner.cancel();
@@ -260,6 +308,7 @@ export function App() {
   }, [usedId]);
 
   const open = (id: string | null) => {
+    movingOn();
     setOpenId(id);
     remember(id);
   };
@@ -303,6 +352,19 @@ export function App() {
   // or to use again, and nothing opens until the person chooses (GEN-18).
   const request = async (text: string) => {
     if (requesting) return;
+    // The request shows in the chat at once; its reply goes with it, once, into the workspace the
+    // request made or opened, such as a new tool's staged before its checks end, or else the one
+    // open when it was sent (APP-03).
+    const askedIn = openId;
+    let madeIn: string | null = null;
+    const asked = chat.asking(askedIn, text);
+    let replied = false;
+    const reply = (message: string, target: string | null = madeIn ?? askedIn) => {
+      if (replied) return;
+      replied = true;
+      void chat.answered(asked, target, message);
+      tellReply(message, target);
+    };
     const owner = new RequestControl();
     control.current = owner;
     setStopping(false);
@@ -317,6 +379,7 @@ export function App() {
         openId,
         undefined,
         async (id) => {
+          madeIn = id;
           await refresh();
           open(id);
           setView("workspaces");
@@ -326,7 +389,10 @@ export function App() {
       setDataOffer(owner.stopped ? undefined : outcome.dataOffer);
       // After Cancel the outcome is already known: say it now, not after the bounded refresh.
       if (owner.stopped && !outcome.savedToolId) {
-        setNotice(outcome.message || t("request.failedPlain"));
+        reply(
+          outcome.message || t("request.failedPlain"),
+          outcome.openWorkspaceId ?? madeIn ?? askedIn,
+        );
         setSettled(true);
       }
       const { savedTools: saved } = await owner
@@ -336,7 +402,7 @@ export function App() {
         const tool = saved.find((s) => s.id === outcome.savedToolId);
         if (tool) {
           setOffer({ id: tool.id, name: tool.name });
-          setNotice(t("request.offerSaved", { name: tool.name }));
+          reply(t("request.offerSaved", { name: tool.name }));
           return;
         }
       }
@@ -348,9 +414,16 @@ export function App() {
         setReloads((n) => n + 1);
         setToolChanges((n) => n + 1);
       }
-      setNotice(outcome.message || t("request.failedPlain"));
+      reply(
+        outcome.message || t("request.failedPlain"),
+        outcome.openWorkspaceId ?? madeIn ?? askedIn,
+      );
     } catch (error) {
-      say(error);
+      reply(
+        error instanceof HostError
+          ? error.message
+          : t("app.problem", { message: problemText(error) }),
+      );
     } finally {
       setRequesting(false);
       setSettledRequests((n) => n + 1);
@@ -383,7 +456,7 @@ export function App() {
     setRequesting(true);
     setStopping(false);
     setCancelProblem("");
-    const { token, interfaceMessage } = dataOffer;
+    const { token, interfaceMessage, workspaceId: reviewed } = dataOffer;
     setDataOffer(undefined);
     try {
       const outcome = await confirmDataChoice(token, approve, interfaceMessage, owner ?? undefined);
@@ -396,7 +469,9 @@ export function App() {
         setReloads((n) => n + 1);
         setToolChanges((n) => n + 1);
       }
-      setNotice(outcome.message);
+      // The reviewed workspace's chat, though the person may have opened another meanwhile.
+      void chat.said(outcome.openWorkspaceId ?? reviewed, outcome.message);
+      tellReply(outcome.message, outcome.openWorkspaceId ?? reviewed);
     } finally {
       setRequesting(false);
       setSettledRequests((n) => n + 1);
@@ -430,7 +505,7 @@ export function App() {
     const inTrash = (trash?.entries.length ?? 0) > 0;
     return (
       <EmptyState
-        notice={notice}
+        notice={shownNotice}
         onTrash={inTrash ? () => setView("trash") : undefined}
         onImport={importFile}
         setup={setup}
@@ -441,6 +516,7 @@ export function App() {
         progress={progress}
         cancelControl={cancelControl}
         details={<Details workspace={null} changes={settledRequests} />}
+        chat={chat.messages(null)}
       />
     );
   }
@@ -536,8 +612,13 @@ export function App() {
             <ImportFile onImport={importFile} />
           </aside>
           <main>
-            {setup?.ready && (
-              <RequestBox working={requesting} progress={progress} onRequest={request} />
+            {/* The kept conversation shows whatever the setup; asking needs it (PLAT-03). */}
+            {(setup?.ready || chat.messages(openId).length > 0) && (
+              <Chat messages={chat.messages(openId)}>
+                {setup?.ready && (
+                  <RequestBox working={requesting} progress={progress} onRequest={request} />
+                )}
+              </Chat>
             )}
             {current && (
               <ToolPanel
@@ -675,7 +756,7 @@ export function App() {
       )}
       <div className="notice">
         {/* The outcome notice stays the first status; Cancel's own status follows it. */}
-        <p role="status">{notice}</p>
+        <p role="status">{shownNotice}</p>
         {cancelControl}
         {dataOffer && (
           <DataChangeOffer offer={dataOffer} working={requesting} onChoose={takeDataOffer} />
