@@ -136,17 +136,24 @@ export const HOST_ACTIONS = {
     result: z.strictObject({ entry: trashEntrySchema }),
   },
   "details.get": {
-    args: z.strictObject({ workspaceId: id }),
+    args: z.strictObject({
+      workspaceId: id.nullable().describe("The open workspace; null when none is open."),
+    }),
     result: z
       .strictObject({
         source: z
           .strictObject({ html: z.string(), css: z.string(), js: z.string() })
           .nullable()
-          .describe("The current tool's code; none without a tool."),
+          .describe("The current tool's code; none without a tool or a workspace."),
         capabilities: z.array(z.string()).describe("What the current tool declares (CAP-01)."),
         requests: z
           .array(ledgerRequestSchema)
           .describe("The workspace's newest requests first, from the call ledger (OBS-01)."),
+        unattached: z
+          .array(ledgerRequestSchema)
+          .describe(
+            "The newest requests that made no workspace, such as a failed creation, so their reasons can be seen too (GEN-10).",
+          ),
       })
       .describe("What the details view shows, out of the person's way (APP-09, UX-06)."),
   },

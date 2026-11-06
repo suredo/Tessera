@@ -74,14 +74,20 @@ const run: {
   "workspaces.delete": (store, { id }) => ({ entry: deleteWorkspace(store, id) }),
   // The details view (APP-09, UX-06, OBS-01): the current tool's code and what it declares, and
   // the workspace's newest requests from the call ledger, with their calls and failure reasons.
+  // Requests that made no workspace, such as a failed first creation, are listed too, so their
+  // reasons can be seen from any screen, the empty one included (GEN-10).
   "details.get": (store, { workspaceId }) => {
+    const ledger = new RequestLedger(store);
+    const unattached = ledger.unattached(DETAILS_REQUESTS);
+    if (workspaceId === null) return { source: null, capabilities: [], requests: [], unattached };
     const workspace = existingWorkspace(store, workspaceId);
     const version = workspace.currentVersion && loadVersion(store.db, workspace.currentVersion);
     const artifact = version && version.kind === "ok" ? version.artifact : undefined;
     return {
       source: artifact ? artifact.code : null,
       capabilities: artifact ? artifact.capabilities : [],
-      requests: new RequestLedger(store).forWorkspace(workspaceId, DETAILS_REQUESTS),
+      requests: ledger.forWorkspace(workspaceId, DETAILS_REQUESTS),
+      unattached,
     };
   },
   "versions.list": (store, { workspaceId }) => ({

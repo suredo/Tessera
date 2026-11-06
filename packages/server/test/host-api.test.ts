@@ -116,13 +116,14 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     folder.close();
   });
 
-  it("APP-09 UX-06 OBS-01: the details give the tool's code, what it declares and the workspace's ledger, newest first", async () => {
+  it("APP-09 UX-06 OBS-01 GEN-10: the details give the tool's code, what it declares, the workspace's ledger newest first, and the requests that made no workspace", async () => {
     const folder = await newFolder();
     const { workspace } = ask(folder, "workspaces.create", { title: "Clock" });
     expect(ask(folder, "details.get", { workspaceId: workspace.id })).toEqual({
       source: null,
       capabilities: [],
       requests: [],
+      unattached: [],
     });
     const clock = saveVersion(folder.db, { ...tool, capabilities: ["clock"] });
     expect(activateVersion(folder, workspace.id, clock, 0).ok).toBe(true);
@@ -136,7 +137,24 @@ describe("the host app's API (APP-03 to APP-08)", () => {
       message: "The tool didn't pass its checks.",
       findings: ["A button has no name."],
     });
+    // A failed creation made no workspace; its reasons are listed with or without one (GEN-10).
+    const failed = ledger.start("generate");
+    ledger.finish(failed, {
+      kind: "failed",
+      failure: "static",
+      message: "That didn't work.",
+      findings: ["The tool reads the clock at startup."],
+    });
     const details = ask(folder, "details.get", { workspaceId: workspace.id });
+    expect(details.unattached.map((r) => [r.id, r.findings])).toEqual([
+      [failed, ["The tool reads the clock at startup."]],
+    ]);
+    expect(ask(folder, "details.get", { workspaceId: null })).toEqual({
+      source: null,
+      capabilities: [],
+      requests: [],
+      unattached: details.unattached,
+    });
     expect(details.source).toEqual(tool.code);
     expect(details.capabilities).toEqual(["clock"]);
     expect(details.requests.map((r) => [r.id, r.kind, r.outcome, r.findings])).toEqual([

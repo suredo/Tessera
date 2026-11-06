@@ -166,6 +166,17 @@ export class RequestLedger {
       .map((row) => this.#request(row));
   }
 
+  /** The newest requests that made no workspace, such as a failed creation (GEN-10). */
+  unattached(limit = 50): LedgerRequest[] {
+    return this.#store.db
+      .all(
+        requestRow,
+        "SELECT * FROM requests WHERE workspace_id IS NULL ORDER BY rowid DESC LIMIT ?",
+        limit,
+      )
+      .map((row) => this.#request(row));
+  }
+
   /** One request, with its calls (OBS-01: per request). */
   request(id: string): LedgerRequest | undefined {
     const row = this.#store.db.get(requestRow, "SELECT * FROM requests WHERE id = ?", id);
