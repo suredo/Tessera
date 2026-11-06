@@ -10,6 +10,16 @@ export {
   type ActivationRequest,
 } from "./activation.ts";
 export {
+  CHAT_MESSAGES_KEPT,
+  CHAT_SPEAKERS,
+  CHAT_TEXT_LIMIT,
+  chatEntrySchema,
+  chatMessageSchema,
+  type ChatEntry,
+  type ChatMessage,
+  type ChatSpeaker,
+} from "./chat.ts";
+export {
   HOST_ACTIONS,
   HOST_ERROR_CODES,
   HOST_REQUEST_LIMIT_BYTES,
