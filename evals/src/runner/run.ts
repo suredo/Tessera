@@ -53,7 +53,14 @@ export type StepResult = {
   notice: string;
   problems: string[];
   seconds: number;
+  /**
+   * What the step's screenshot shows of the tool (L-81): the tool, an empty panel after waiting
+   * for it, or no tool at all; left out for a step that didn't run.
+   */
+  screenshot?: Screenshot;
 };
+
+export type Screenshot = "tool" | "empty" | "no tool";
 
 export type RunReport = {
   scenario: string;
@@ -241,7 +248,7 @@ export async function runScenario(
       result.problems.push(...misfits().slice(misfitsBefore));
       result.outcome = result.problems.length === 0 ? "passed" : "failed";
       result.seconds = (Date.now() - began) / 1000;
-      await toolShown(page);
+      result.screenshot = await toolShown(page);
       await page.screenshot({ path: path.join(folder, `step-${result.index}.png`) });
       // Everything after depends on the first step, so a failed first step ends the run.
       if (index === 0 && result.outcome === "failed") {
@@ -292,17 +299,20 @@ async function openWorkspace(page: Page): Promise<string | null> {
  * panel (L-81). Only the screenshot waits; the facts are already read, and a tool that never
  * shows anything is left for the smoke check and the person reading the screenshots to see.
  */
-async function toolShown(page: Page): Promise<void> {
-  if ((await page.locator(".tool-frame iframe").count()) === 0) return;
+async function toolShown(page: Page): Promise<Screenshot> {
+  if ((await page.locator(".tool-frame iframe").count()) === 0) return "no tool";
   const tool = page
     .frameLocator(".tool-frame iframe")
     .frameLocator("iframe")
     .frameLocator("iframe");
-  await tool
+  return tool
     .locator("body *:visible")
     .first()
     .waitFor({ timeout: 5_000 })
-    .catch(() => undefined);
+    .then(
+      () => "tool" as const,
+      () => "empty" as const,
+    );
 }
 
 /** The newest notice the host app shows, as text. */
