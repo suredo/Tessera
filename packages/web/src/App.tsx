@@ -15,6 +15,7 @@ import {
   type RequestOutcome,
 } from "./generate.ts";
 import { DataChangeOffer } from "./DataChangeOffer.tsx";
+import { Details } from "./Details.tsx";
 import { RequestControl } from "./request-control.ts";
 import { RequestBox } from "./RequestBox.tsx";
 import { useRequestProgress, type Progress } from "./progress.ts";
@@ -547,6 +548,9 @@ export function App() {
                   setNotice(done);
                 }}
               />
+            )}
+            {current && (
+              <Details key={`details-${current.id}`} workspace={current} changes={toolChanges} />
             )}
           </main>
         </>

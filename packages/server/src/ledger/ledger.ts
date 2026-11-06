@@ -1,7 +1,7 @@
 // Docs: docs/code/server/ledger.md
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { GenerateReply, Usage } from "@tessera/contracts";
+import type { GenerateReply, LedgerCall, LedgerRequest, Usage } from "@tessera/contracts";
 import { ProviderError, UNKNOWN_USAGE, type Provider } from "../providers/index.ts";
 import type { Store } from "../workspaces/index.ts";
 
@@ -44,43 +44,6 @@ const callRow = z.object({
   message: z.string().nullable(),
   detail: z.string().nullable(),
 });
-
-/** One model call as the ledger keeps it. `null` usage is unknown, never 0 (CLI-04). */
-export type LedgerCall = {
-  index: number;
-  stage: string;
-  provider: string;
-  model: string;
-  effort: string;
-  promptChars: number;
-  systemChars: number;
-  promptParts: string[];
-  /** For a repair: the host's findings it was asked to fix (GEN-10). */
-  diagnostics: string[];
-  startedAt: string;
-  durationMs: number | null;
-  inputTokens: number | null;
-  cachedInputTokens: number | null;
-  outputTokens: number | null;
-  outcome: "ok" | "failed" | "crashed";
-  /** For a failure: its kind, the plain message, and what the provider itself said. */
-  error: string | null;
-  message: string | null;
-  detail: string | null;
-};
-
-/** One request as the ledger keeps it, with its calls in order. */
-export type LedgerRequest = {
-  id: string;
-  workspaceId: string | null;
-  kind: RequestKind;
-  startedAt: string;
-  endedAt: string | null;
-  outcome: string | null;
-  message: string | null;
-  findings: string[];
-  calls: LedgerCall[];
-};
 
 type Failure = { error?: string; message?: string; detail?: string };
 

@@ -222,7 +222,7 @@ test("GEN-18: a request matching a saved tool offers Continue or Use again, and 
   expect(listWorkspaces(app.folder)).toHaveLength(before + 1);
 });
 
-test("GEN-09, GEN-05: a smoke failure gets one repair, staged again, without losing or duplicating starting entries", async ({
+test("GEN-09, GEN-05, APP-09, UX-06: a smoke failure gets one repair, staged again, without losing or duplicating starting entries, and the details view keeps why", async ({
   page,
 }) => {
   await page.goto(app.url);
@@ -233,6 +233,27 @@ test("GEN-09, GEN-05: a smoke failure gets one repair, staged again, without los
   });
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
   expect(listWorkspaces(app.folder)).toHaveLength(before + 1);
+  // The details view, closed until asked for, keeps what the person's message leaves out: the
+  // repair after the smoke check, with what it was asked to fix, then the request that made it,
+  // and usage nobody reported as unknown, never 0 (APP-09, UX-06, OBS-01, GEN-10, CLI-04).
+  const details = page.getByRole("region", { name: en["details.heading"] });
+  await expect(details.getByRole("table")).toHaveCount(0);
+  await details.getByRole("button", { name: en["details.show"] }).click();
+  const requests = details.locator(".details-requests > li");
+  await expect(requests).toHaveCount(2);
+  await expect(requests.nth(0)).toContainText(en["details.kind.repair"]);
+  await expect(requests.nth(0).getByRole("row").nth(1)).toContainText("repair");
+  await expect(requests.nth(0)).toContainText("Asked to fix:");
+  await expect(requests.nth(1)).toContainText(en["details.kind.generate"]);
+  await expect(requests.nth(1).getByRole("rowheader").allTextContents()).resolves.toEqual([
+    "intent",
+    "create",
+  ]);
+  await expect(requests.nth(1).getByRole("row").nth(1)).toContainText(en["details.unknown"]);
+  await details.getByText(en["details.source.html"]).click();
+  await expect(details.locator("pre code").first()).toContainText("<h1>Shopping list</h1>");
+  await details.getByRole("button", { name: en["details.hide"] }).click();
+  await expect(details.locator(".details-requests")).toHaveCount(0);
 });
 
 test("GEN-09, GEN-08: a repeated smoke failure is never activated or called ready", async ({

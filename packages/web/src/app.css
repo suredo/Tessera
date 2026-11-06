@@ -260,6 +260,59 @@ button.primary {
   border: 0;
 }
 
+/* The details view, under the history and closed until asked for (APP-09, UX-06). */
+.details {
+  margin-top: var(--ui-space-6);
+}
+.details h3 {
+  font-size: var(--ui-size-body);
+  font-weight: 600;
+  margin: var(--ui-space-4) 0 var(--ui-space-2);
+}
+.details-requests {
+  margin: 0;
+  padding-left: var(--ui-space-4);
+  display: grid;
+  gap: var(--ui-space-4);
+}
+.details-requests p {
+  margin: var(--ui-space-1) 0;
+  overflow-wrap: anywhere;
+}
+/* Wide tables scroll inside their own box, never the page, down to 320 px. */
+.details table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--ui-size-secondary);
+}
+.details caption {
+  text-align: left;
+  color: var(--ui-text-secondary);
+}
+.details th,
+.details td {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--ui-space-1) var(--ui-space-2);
+  border-bottom: 1px solid var(--ui-divider);
+}
+.details td ul {
+  margin: var(--ui-space-1) 0 0;
+  padding-left: var(--ui-space-4);
+  overflow-wrap: anywhere;
+}
+.details pre {
+  max-height: 20rem;
+  overflow: auto;
+  padding: var(--ui-space-2);
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-control);
+  font-size: var(--ui-size-secondary);
+}
+
 /* The open workspace's history, under its tool (APP-05). */
 .history {
   margin-top: var(--ui-space-6);

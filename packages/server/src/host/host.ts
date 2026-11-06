@@ -20,6 +20,7 @@ import {
   restoreWorkspace,
 } from "../trash/index.ts";
 import {
+  existingWorkspace,
   continueSavedTool,
   createWorkspace,
   listRecoverySnapshots,
@@ -42,12 +43,15 @@ import {
   type Store,
 } from "../workspaces/index.ts";
 import { loadVersion } from "../versions/index.ts";
+import { RequestLedger } from "../ledger/index.ts";
 
 // The host app's API (APP-03 to APP-08): one route, HOST_ROUTE, answering every action the
 // contracts list, each with its arguments checked before it runs and its result checked before it
 // is sent (CON-01). The work is the existing modules'; this only connects them to the app.
 
 const FAILED = "Tessera couldn't do that. Nothing was changed.";
+/** How many of a workspace's newest requests the details view shows. */
+const DETAILS_REQUESTS = 20;
 
 // One handler per action in the contract: TypeScript refuses this object if one is missing.
 const run: {
@@ -68,6 +72,18 @@ const run: {
   "workspaces.create": (store, { title }) => ({ workspace: createWorkspace(store, title) }),
   "workspaces.rename": (store, { id, title }) => ({ workspace: renameWorkspace(store, id, title) }),
   "workspaces.delete": (store, { id }) => ({ entry: deleteWorkspace(store, id) }),
+  // The details view (APP-09, UX-06, OBS-01): the current tool's code and what it declares, and
+  // the workspace's newest requests from the call ledger, with their calls and failure reasons.
+  "details.get": (store, { workspaceId }) => {
+    const workspace = existingWorkspace(store, workspaceId);
+    const version = workspace.currentVersion && loadVersion(store.db, workspace.currentVersion);
+    const artifact = version && version.kind === "ok" ? version.artifact : undefined;
+    return {
+      source: artifact ? artifact.code : null,
+      capabilities: artifact ? artifact.capabilities : [],
+      requests: new RequestLedger(store).forWorkspace(workspaceId, DETAILS_REQUESTS),
+    };
+  },
   "versions.list": (store, { workspaceId }) => ({
     versions: workspaceVersions(store, workspaceId),
   }),

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { jsonValueSchema } from "./json.ts";
+import { ledgerRequestSchema } from "./ledger.ts";
 import { trashEntrySchema, trashSchema } from "./trash.ts";
 import {
   savedToolSchema,
@@ -133,6 +134,21 @@ export const HOST_ACTIONS = {
   "workspaces.delete": {
     args: z.strictObject({ id }),
     result: z.strictObject({ entry: trashEntrySchema }),
+  },
+  "details.get": {
+    args: z.strictObject({ workspaceId: id }),
+    result: z
+      .strictObject({
+        source: z
+          .strictObject({ html: z.string(), css: z.string(), js: z.string() })
+          .nullable()
+          .describe("The current tool's code; none without a tool."),
+        capabilities: z.array(z.string()).describe("What the current tool declares (CAP-01)."),
+        requests: z
+          .array(ledgerRequestSchema)
+          .describe("The workspace's newest requests first, from the call ledger (OBS-01)."),
+      })
+      .describe("What the details view shows, out of the person's way (APP-09, UX-06)."),
   },
   "versions.list": {
     args: z.strictObject({ workspaceId: id }),

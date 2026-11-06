@@ -126,9 +126,13 @@ export {
 } from "./json-schema.ts";
 export {
   ledgerEntrySchema,
+  ledgerCallSchema,
+  ledgerRequestSchema,
   requestLogEntrySchema,
   RUN_MODES,
+  type LedgerCall,
   type LedgerEntry,
+  type LedgerRequest,
   type RequestLogEntry,
 } from "./ledger.ts";
 export {
