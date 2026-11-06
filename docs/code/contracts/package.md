@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T05:11:01Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T07:05:55Z }
 ---
 
 # Purpose
@@ -49,7 +49,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 - **Public bridge method metadata is shared** (`CON-03`). `BRIDGE_METHODS` defines method names, argument roles, action selection and the existing page-value isolation classification. The runtime object must implement exactly those keys; the generated manifest and prompt projection derive from it, and the server static check validates direct calls against it. This preserves the DOM check's existing exceptions for `call`, `send` and `assetUrl`; it does not claim that every return is JSON (`assetUrl` returns a blob address, and `onMessage` returns an unsubscribe function).
 - **Candidate replies identify creation versus editing.** `generateReplySchema` carries `operation` so the host can word the verified activation result appropriately. Its answer kinds also include unchanged and stale; neither is a candidate and neither starts staging. An answer's optional `reason` is the model's own words, for cannot and for unchanged.
 
-- **Edit output is explicit and bounded by existing contracts** (`CON-02`, `GEN-07`). `editSchema` (`Edit`) is edit or cannot; an edit has a plain summary, independent unchanged/replace file modes and unchanged/migrate data modes. Migration uses the existing migration contract; code and cannot/summary fields reuse creation's definitions. Name, capabilities, pins, UI mode and session entries cannot be supplied by an edit. The committed `edit.schema.json` is generated from the same zod definition.
+- **Edit output is explicit and bounded by existing contracts** (`CON-02`, `GEN-07`). `editSchema` (`Edit`) is edit or cannot; an edit has a plain summary, independent unchanged/style/replace file modes (style carries the complete CSS alone, so the HTML and JavaScript stay as they are, `GEN-14`) and unchanged/migrate data modes. Migration uses the existing migration contract; code and cannot/summary fields reuse creation's definitions. Name, capabilities, pins, UI mode and session entries cannot be supplied by an edit. The committed `edit.schema.json` is generated from the same zod definition.
 
 - **Smoke repair reports are bounded** (`GEN-09`). `SMOKE_REPAIR_ROUTE` takes `smokeRepairRequestSchema` (`SmokeRepairRequest`): a workspace UUID, the stored version hash and one to twenty nonempty findings, each at most 8,000 characters. It answers with `generateReplySchema`; original requests, language and repair counts stay on the server. The HTTP request also has the generation route's 16 KB byte limit.
 

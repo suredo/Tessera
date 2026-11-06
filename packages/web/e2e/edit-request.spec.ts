@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Edit, Intent } from "@tessera/contracts";
-import { UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.ts";
+import { UNKNOWN_USAGE, type Provider, type StageSpec } from "../../server/src/providers/index.ts";
+import { loadVersion } from "../../server/src/versions/index.ts";
 import { listWorkspaces, workspaceVersions } from "../../server/src/workspaces/index.ts";
 import {
   editFixture,
@@ -22,6 +23,12 @@ const intent = (kind: "create" | "edit", lookOnly = false): Intent => ({
   lookOnly,
 });
 if (quantityEdit.files.mode !== "replace") throw new Error("Expected file fixture");
+if (styleEdit.files.mode !== "replace") throw new Error("Expected file fixture");
+// A look-only edit is shown the page and its style, and answers with the new CSS alone (GEN-14).
+const styleOnly: Extract<Edit, { outcome: "edit" }> = {
+  ...styleEdit,
+  files: { mode: "style", css: styleEdit.files.code.css },
+};
 const quantityCode = quantityEdit.files.code;
 const broken: Extract<Edit, { outcome: "edit" }> = {
   ...noEdit,
@@ -45,7 +52,7 @@ const steps = [
   { stage: "intent", value: intent("create") },
   { stage: "create", value: editFixture },
   { stage: "intent", value: intent("edit", true) },
-  { stage: "edit", value: styleEdit },
+  { stage: "edit", value: styleOnly },
   { stage: "intent", value: intent("edit", true) },
   { stage: "edit", value: noEdit },
   { stage: "intent", value: intent("edit") },
@@ -57,10 +64,13 @@ const steps = [
   { stage: "edit", value: broken },
   { stage: "repair", value: fixed },
 ];
+/** Every call the pipeline made, as it reached the provider. */
+const calls: StageSpec<unknown>[] = [];
 const provider: Provider = {
   name: "scripted:edit-request",
   live: false,
   run(spec) {
+    calls.push(spec);
     const step = steps.shift();
     if (step?.stage !== spec.stage) throw new Error(`Unexpected ${spec.stage} stage`);
     return Promise.resolve({
@@ -70,6 +80,9 @@ const provider: Provider = {
     });
   },
 };
+// The tests share one script and one Tessera, so a failure skips the later ones (#186).
+test.describe.configure({ mode: "serial" });
+
 let app: AppHost;
 test.beforeAll(async () => {
   app = await startApp(undefined, provider);
@@ -93,11 +106,13 @@ test("GEN-05: create the tool and entries used by subsequent edits", async ({ pa
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
 });
 
-test("GEN-13, DATA-10: edit the current tool's style, reload its version and keep its entries", async ({
+test("GEN-13, GEN-14, DATA-10: a style edit sees only the page and its style, changes only the CSS, and keeps the entries", async ({
   page,
 }) => {
   await page.goto(app.url);
   const before = workspace();
+  const original = loadVersion(app.folder.db, before.currentVersion!);
+  if (original?.kind !== "ok") throw new Error("Expected the current version");
   await ask(page, "Make it darker");
   await expect(page.getByText("Shopping list was updated. Made it darker.")).toBeVisible({
     timeout: 30_000,
@@ -107,6 +122,16 @@ test("GEN-13, DATA-10: edit the current tool's style, reload its version and kee
   expect(workspace()).toMatchObject({ id: before.id, title: before.title, data: before.data });
   expect(history()).toHaveLength(2);
   expect(listWorkspaces(app.folder)).toHaveLength(1);
+  // The edit call never carried the behavior, and the new version keeps it, and the page, exactly.
+  const edit = calls.filter((spec) => spec.stage === "edit").at(-1)!;
+  expect(edit.prompt).toContain(original.artifact.code.css);
+  expect(edit.prompt).not.toContain(original.artifact.code.js);
+  const now = loadVersion(app.folder.db, workspace().currentVersion!);
+  if (now?.kind !== "ok") throw new Error("Expected the new version");
+  expect(now.artifact.code).toEqual({
+    ...original.artifact.code,
+    css: styleOnly.files.mode === "style" ? styleOnly.files.css : "",
+  });
 });
 
 test("GEN-07, GEN-08: identical output adds no version and never claims an update", async ({

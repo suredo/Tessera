@@ -72,7 +72,12 @@ export function editedCandidate(input: EditInput, answer: Answer): EditResult {
   const built = artifactSchema.safeParse({
     ...before,
     data,
-    code: answer.files.mode === "replace" ? answer.files.code : before.code,
+    code:
+      answer.files.mode === "replace"
+        ? answer.files.code
+        : answer.files.mode === "style"
+          ? { ...before.code, css: answer.files.css }
+          : before.code,
   });
   if (!built.success)
     return shapeFailure(built.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`));
