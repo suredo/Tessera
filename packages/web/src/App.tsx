@@ -72,9 +72,11 @@ export function EmptyState({
     <main className="empty">
       <h1>{t("home.heading")}</h1>
       <p>{t("home.intro")}</p>
-      {onRequest && setup?.ready && (
+      {((onRequest && setup?.ready) || chat.length > 0) && (
         <Chat messages={chat}>
-          <RequestBox working={requesting} progress={progress} onRequest={onRequest} />
+          {onRequest && setup?.ready && (
+            <RequestBox working={requesting} progress={progress} onRequest={onRequest} />
+          )}
         </Chat>
       )}
       {/* Such as the trash notice after the last workspace is deleted. */}
@@ -137,7 +139,7 @@ export function App() {
   const [notice, setNotice] = useState("");
   // The open workspace's chat, and what was said with none open (APP-01, APP-03).
   const chat = useChat(openId);
-  const [view, setView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
+  const [view, showView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
   // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
   const [setup, setSetup] = useState<SetupReport | null>(null);
   // A request running, and a saved tool a request matched, waiting for the person's choice.
@@ -150,22 +152,39 @@ export function App() {
   const [dataOffer, setDataOffer] = useState<RequestOutcome["dataOffer"]>();
   // Stage and elapsed time while the request runs, until a cancel has settled it (GEN-16).
   const progress = useRequestProgress(control, requesting && !settled);
-  // Whether the chat is on screen: on the workspaces, or the first-run screen in their place. A
-  // reply said while the person is elsewhere goes in the notice too, and is hidden there again
-  // once the chat shows it, so it is never on the page twice (APP-01, GEN-08).
-  const chatVisible =
-    view === "workspaces" || (workspaces?.length === 0 && view !== "trash" && view !== "status");
-  const chatOnScreen = useRef(chatVisible);
-  useEffect(() => {
-    chatOnScreen.current = chatVisible;
-  });
-  const [replyNotice, setReplyNotice] = useState("");
-  const tellElsewhere = (message: string) => {
-    if (chatOnScreen.current) return;
-    setNotice(message);
-    setReplyNotice(message);
+  // Whose chat is on screen: the open workspace's on the workspaces, the first-run screen's (null)
+  // in their place, and none (undefined) on the other screens.
+  const chatShown: string | null | undefined =
+    workspaces?.length === 0
+      ? view === "trash" || view === "status"
+        ? undefined
+        : null
+      : view === "workspaces"
+        ? openId
+        : undefined;
+  // A reply is said in its workspace's chat, and in the notice too, so it reaches the person
+  // wherever they are. The notice leaves it out while that chat is on screen, and drops it when
+  // the person moves on from that chat, so it is never on the page twice (APP-01, GEN-08).
+  const [replyNotice, setReplyNotice] = useState<{ text: string; target: string | null } | null>(
+    null,
+  );
+  const replyInView =
+    replyNotice !== null && chatShown !== undefined && replyNotice.target === chatShown;
+  const shownNotice = replyInView && notice === replyNotice.text ? "" : notice;
+  // Moving on from the chat that showed the reply: it has been read there, so the notice drops it.
+  const movingOn = () => {
+    if (!replyInView || !replyNotice) return;
+    setNotice((shown) => (shown === replyNotice.text ? "" : shown));
+    setReplyNotice(null);
   };
-  const shownNotice = chatVisible && notice === replyNotice ? "" : notice;
+  const setView = (next: typeof view) => {
+    movingOn();
+    showView(next);
+  };
+  const tellReply = (text: string, target: string | null) => {
+    setNotice(text);
+    setReplyNotice({ text, target });
+  };
   const cancelRequest = async () => {
     const owner = control.current;
     if (!owner || stopping) return;
@@ -177,8 +196,10 @@ export function App() {
       const said = withInterfaceOutcome(dataOffer?.interfaceMessage, {
         message: t("request.stopped"),
       }).message;
-      void chat.said(openId, said);
-      tellElsewhere(said);
+      // The review's own workspace, wherever the person is now (APP-03).
+      const reviewed = dataOffer?.workspaceId ?? openId;
+      void chat.said(reviewed, said);
+      tellReply(said, reviewed);
     }
     try {
       const confirmed = await owner.cancel();
@@ -287,6 +308,7 @@ export function App() {
   }, [usedId]);
 
   const open = (id: string | null) => {
+    movingOn();
     setOpenId(id);
     remember(id);
   };
@@ -341,7 +363,7 @@ export function App() {
       if (replied) return;
       replied = true;
       void chat.answered(asked, target, message);
-      tellElsewhere(message);
+      tellReply(message, target);
     };
     const owner = new RequestControl();
     control.current = owner;
@@ -434,7 +456,7 @@ export function App() {
     setRequesting(true);
     setStopping(false);
     setCancelProblem("");
-    const { token, interfaceMessage } = dataOffer;
+    const { token, interfaceMessage, workspaceId: reviewed } = dataOffer;
     setDataOffer(undefined);
     try {
       const outcome = await confirmDataChoice(token, approve, interfaceMessage, owner ?? undefined);
@@ -447,8 +469,9 @@ export function App() {
         setReloads((n) => n + 1);
         setToolChanges((n) => n + 1);
       }
-      void chat.said(outcome.openWorkspaceId ?? openId, outcome.message);
-      tellElsewhere(outcome.message);
+      // The reviewed workspace's chat, though the person may have opened another meanwhile.
+      void chat.said(outcome.openWorkspaceId ?? reviewed, outcome.message);
+      tellReply(outcome.message, outcome.openWorkspaceId ?? reviewed);
     } finally {
       setRequesting(false);
       setSettledRequests((n) => n + 1);
@@ -589,9 +612,12 @@ export function App() {
             <ImportFile onImport={importFile} />
           </aside>
           <main>
-            {setup?.ready && (
+            {/* The kept conversation shows whatever the setup; asking needs it (PLAT-03). */}
+            {(setup?.ready || chat.messages(openId).length > 0) && (
               <Chat messages={chat.messages(openId)}>
-                <RequestBox working={requesting} progress={progress} onRequest={request} />
+                {setup?.ready && (
+                  <RequestBox working={requesting} progress={progress} onRequest={request} />
+                )}
               </Chat>
             )}
             {current && (
