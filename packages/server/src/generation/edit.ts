@@ -166,6 +166,7 @@ export async function editTool(
         schema: editSchema,
         signal: input.signal,
         timeLimitMs: repair ? REPAIR_TIME_LIMIT_MS : GENERATION_TIME_LIMIT_MS,
+        diagnostics: repair?.diagnostics,
       });
       if (response.value.outcome === "cannot")
         result = { kind: "cannot", reason: response.value.reason };

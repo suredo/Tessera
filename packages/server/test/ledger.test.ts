@@ -134,6 +134,59 @@ describe("the call ledger (OBS-01, GEN-10)", () => {
     });
   });
 
+  it("GEN-10: the findings a repair fixed are kept, though the request ends well", async () => {
+    const store = await folder();
+    const unsafe = {
+      ...editFixture,
+      code: { ...editFixture.code, js: `${editFixture.code.js}\neval("1");` },
+    };
+    const ask = await serve(store, [
+      { kind: "value", stage: "intent", value: intent("create") },
+      { kind: "value", stage: "create", value: unsafe },
+      { kind: "value", stage: "repair", value: editFixture },
+    ]);
+    expect((await ask("A shopping list")).kind).toBe("candidate");
+    const workspace = listWorkspaces(store)[0]!;
+    const [request] = new RequestLedger(store).forWorkspace(workspace.id);
+    expect(request).toMatchObject({ outcome: "candidate", findings: [] });
+    expect(request!.calls.map((c) => [c.stage, c.outcome])).toEqual([
+      ["intent", "ok"],
+      ["create", "ok"],
+      ["repair", "ok"],
+    ]);
+    // The static check's reason for the repair, in its own words, on the repair call.
+    expect(request!.calls[0]!.diagnostics).toEqual([]);
+    expect(request!.calls[2]!.diagnostics.join("\n")).toMatch(/eval/);
+  });
+
+  it("GEN-10: a mixed request keeps its entry part's outcome, message and findings", () => {
+    return folder().then((store) => {
+      const ledger = new RequestLedger(store);
+      const workspace = createWorkspace(store, "List");
+      const id = ledger.start("generate", workspace.id);
+      ledger.finish(id, {
+        kind: "mixed_data",
+        workspaceId: workspace.id,
+        name: "List",
+        interface: { outcome: "unchanged" },
+        data: {
+          kind: "failed",
+          failure: "static",
+          message: "The entry changes weren't applied.",
+          findings: ["items[2].title must be a string"],
+        },
+      });
+      expect(ledger.request(id)).toMatchObject({
+        outcome: "mixed_data:failed",
+        message: "The entry changes weren't applied.",
+        findings: ["items[2].title must be a string"],
+      });
+      const answered = ledger.start("data", workspace.id);
+      ledger.finish(answered, { kind: "answer", answer: "clarify", reason: "Which list?" });
+      expect(ledger.request(answered)).toMatchObject({ outcome: "answer", message: "Which list?" });
+    });
+  });
+
   it("CLI-04 GEN-10: unknown usage stays unknown, a crash is kept apart from a model failure, and a bad write never stops the call", async () => {
     const store = await folder();
     const errors: unknown[] = [];

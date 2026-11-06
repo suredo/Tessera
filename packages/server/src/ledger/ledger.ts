@@ -33,6 +33,7 @@ const callRow = z.object({
   prompt_chars: z.number(),
   system_chars: z.number(),
   prompt_parts: z.string(),
+  diagnostics: z.string(),
   started_at: z.string(),
   duration_ms: z.number().nullable(),
   input_tokens: z.number().nullable(),
@@ -54,6 +55,8 @@ export type LedgerCall = {
   promptChars: number;
   systemChars: number;
   promptParts: string[];
+  /** For a repair: the host's findings it was asked to fix (GEN-10). */
+  diagnostics: string[];
   startedAt: string;
   durationMs: number | null;
   inputTokens: number | null;
@@ -118,10 +121,10 @@ export class RequestLedger {
             this.#store.db.run(
               // Numbered in the order the calls end, across every wrapper of the request.
               `INSERT INTO request_calls (request_id, call_index, stage, provider, model, effort,
-                 prompt_chars, system_chars, prompt_parts, started_at, duration_ms, input_tokens,
-                 cached_input_tokens, output_tokens, outcome, error, message, detail)
+                 prompt_chars, system_chars, prompt_parts, diagnostics, started_at, duration_ms,
+                 input_tokens, cached_input_tokens, output_tokens, outcome, error, message, detail)
                SELECT ?1, COALESCE(MAX(call_index) + 1, 0), ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10,
-                 ?11, ?12, ?13, ?14, ?15, ?16, ?17
+                 ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18
                FROM request_calls WHERE request_id = ?1`,
               id,
               spec.stage,
@@ -131,6 +134,7 @@ export class RequestLedger {
               spec.prompt.length,
               spec.system.length,
               JSON.stringify(spec.promptParts ?? []),
+              JSON.stringify(spec.diagnostics ?? []),
               startedAt,
               usage.durationMs,
               usage.inputTokens,
@@ -163,19 +167,26 @@ export class RequestLedger {
     };
   }
 
-  /** Records how the request ended: the reply's kind, its message and findings, and its workspace. */
+  /**
+   * Records how the request ended: the reply's kind, its message and findings, and its workspace.
+   * A mixed request's entry part can fail after its interface part is done, so its outcome, message
+   * and findings are the ones kept (GEN-10).
+   */
   finish(id: string, reply: GenerateReply): void {
     this.#safely(() => {
+      const told = reply.kind === "mixed_data" ? reply.data : reply;
+      const outcome = reply.kind === "mixed_data" ? `mixed_data:${reply.data.kind}` : reply.kind;
+      const message =
+        "message" in told ? told.message : "reason" in told ? (told.reason ?? null) : null;
       this.#store.db.run(
         "UPDATE requests SET ended_at = ?, outcome = ?, message = ?, findings = ? WHERE id = ?",
         this.#store.now().toISOString(),
-        reply.kind,
-        "message" in reply && typeof reply.message === "string" ? reply.message : null,
-        JSON.stringify("findings" in reply ? reply.findings : []),
+        outcome,
+        message,
+        JSON.stringify("findings" in told ? told.findings : []),
         id,
       );
-      if ("workspaceId" in reply && typeof reply.workspaceId === "string")
-        this.#attach(id, reply.workspaceId);
+      if ("workspaceId" in reply) this.#attach(id, reply.workspaceId);
       this.#prune();
     });
   }
@@ -222,6 +233,7 @@ export class RequestLedger {
         promptChars: c.prompt_chars,
         systemChars: c.system_chars,
         promptParts: strings.parse(JSON.parse(c.prompt_parts)),
+        diagnostics: strings.parse(JSON.parse(c.diagnostics)),
         startedAt: c.started_at,
         durationMs: c.duration_ms,
         inputTokens: c.input_tokens,

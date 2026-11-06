@@ -104,6 +104,8 @@ export type StageCall<T> = {
   schema: z.ZodType<T>;
   timeLimitMs: number;
   signal?: AbortSignal;
+  /** The findings a repair call is asked to fix, for the ledger (GEN-10). */
+  diagnostics?: readonly string[];
 };
 
 /**

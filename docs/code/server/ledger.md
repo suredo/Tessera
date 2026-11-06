@@ -7,7 +7,7 @@ implements: [OBS-01, GEN-10]
 tests: [../../../packages/server/test/ledger.test.ts]
 tags: [code, server, ledger, observability]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T04:38:08Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T04:47:14Z }
 ---
 
 # Purpose
@@ -23,7 +23,7 @@ Keeps what the host learns from each request instead of throwing it away (`OBS-0
 
 - **Unknown usage stays unknown** (`CLI-04`): tokens and time are stored as the provider gave them, `NULL` when it didn't know, never 0.
 - **What the person asked isn't kept,** only the prompt's and the instructions' sizes in characters and the prompt parts with their versions (`ENG-16`).
-- **A failure keeps its reasons** (`GEN-10`): a model failure keeps its kind, its plain message and what the provider itself said; a crash, an error that isn't a model failure, is kept apart as `crashed`; the request keeps the reply's message and its check findings.
+- **A failure keeps its reasons** (`GEN-10`), even when the request ends well: a model failure keeps its kind, its plain message and what the provider itself said; a crash, an error that isn't a model failure, is kept apart as `crashed`; a repair call keeps the host's findings it was asked to fix, from the stage call's diagnostics, so a static or smoke check that a repair then satisfied is still on record; and the request keeps the reply's message and its check findings. A mixed request's are its entry part's, which can fail after the interface part is done, with an outcome such as `mixed_data:failed`.
 - **The ledger never changes a request.** A write that fails goes to the error handler the ledger was given (the console by default) and the call or reply goes on as if it had been recorded.
 - **Calls are numbered per request** in the order they end, across every provider wrapper the request used.
 - **A request goes with its workspace:** the rows are deleted with it, when it leaves the trash for good. A request for a workspace that doesn't exist stays unattached; the newest `UNATTACHED_REQUESTS_KEPT` unattached ones are kept and older ones go.

@@ -303,6 +303,7 @@ async function ask(
       schema: creationSchema,
       timeLimitMs: stage === "repair" ? REPAIR_TIME_LIMIT_MS : GENERATION_TIME_LIMIT_MS,
       signal: input.signal,
+      diagnostics: repair.diagnostics,
     });
     creation = result.value;
   } catch (error) {

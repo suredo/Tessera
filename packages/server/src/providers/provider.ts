@@ -21,6 +21,11 @@ export type StageSpec<T> = {
   tools: "none" | "web";
   timeLimitMs: number;
   signal?: AbortSignal;
+  /**
+   * The host's findings this call is asked to fix, kept in the ledger (GEN-10) so they outlive a
+   * repair that succeeds. The prompt already quotes them; a provider doesn't use this.
+   */
+  diagnostics?: readonly string[];
 };
 
 export type StageResult<T> = { value: T; usage: Usage; raw: string };

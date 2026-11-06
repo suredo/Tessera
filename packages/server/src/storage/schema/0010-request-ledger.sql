@@ -10,9 +10,11 @@ CREATE TABLE requests (
   kind TEXT NOT NULL CHECK (kind IN ('generate', 'repair', 'data')),
   started_at TEXT NOT NULL,
   ended_at TEXT,
-  -- The reply's kind, such as candidate, answer or failed; NULL while it runs.
+  -- The reply's kind, such as candidate, answer or failed, and for a mixed request its entry
+  -- part's after a colon, such as mixed_data:failed; NULL while it runs.
   outcome TEXT,
-  -- The plain message the person read, when the reply carried one.
+  -- The plain message the person read, when the reply carried one; for a mixed request, its entry
+  -- part's, which is where it can fail after the interface part is done.
   message TEXT,
   -- Why it failed, for the details view and never shown as it is: the checks' findings.
   findings TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(findings))
@@ -30,6 +32,8 @@ CREATE TABLE request_calls (
   prompt_chars INTEGER NOT NULL CHECK (prompt_chars >= 0),
   system_chars INTEGER NOT NULL CHECK (system_chars >= 0),
   prompt_parts TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(prompt_parts)),
+  -- For a repair: the host's findings it was asked to fix, kept even when the repair works.
+  diagnostics TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(diagnostics)),
   started_at TEXT NOT NULL,
   duration_ms REAL,
   input_tokens INTEGER,
