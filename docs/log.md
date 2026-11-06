@@ -2,6 +2,8 @@
 
 ## 2026-11-06
 
+* **Update**: Honest messages and keeping what wasn't asked ([issue 150](https://github.com/suredo/Tessera/issues/150)): the [browser](code/web/package.md) doc claims `GEN-08`, outcomes composed by the host from verified facts, and [generation](code/server/generation.md) claims `GEN-13`, what edits keep, each with its M2 limit: what a tool's controls do isn't checked, or mentioned, until M3's behavior checks, as the owner chose. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T15:11:22Z.
+
 * **Update**: [L-82](lessons/tessera-issues.md): the staging deadline timer is capped at the longest a browser timer keeps, as a longer one fires at once; from 2026-11-06 08:31 UTC this cancelled every scenario replay's staging, its browser clock being 25 days behind the server's. The [browser](code/web/package.md) doc says so. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T09:12:49Z.
 
 * **Update**: Plain language (`GEN-12`, [issue 150](https://github.com/suredo/Tessera/issues/150)): the [contracts](code/contracts/package.md) hold the one list of words for Tessera's own parts; [generation](code/server/generation.md) repairs a name or summary that uses one the request didn't, and replaces such a refusal reason with a plain sentence; and the [browser](code/web/package.md) doc says how every message and an end-to-end request are checked. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T07:40:39Z.

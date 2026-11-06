@@ -58,7 +58,7 @@ const provider = (...replies: unknown[]) =>
   createScriptedProvider({ name: "edit-pipeline", replies: replies as never });
 
 describe("edits through the pipeline (GEN-07, GEN-09)", () => {
-  it("GEN-07, DATA-10: an edit candidate leaves the current version and entries intact until activation", async () => {
+  it("GEN-07, GEN-13, DATA-10: an edit candidate leaves the current version and entries intact until activation, and keeps the name and declarations", async () => {
     const { store, workspace, artifact } = await setup();
     const result = await generate(
       store,
@@ -78,7 +78,13 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
     if (result.kind !== "candidate") throw new Error("Expected edit candidate");
     expect(loadVersion(store.db, result.hash)).toMatchObject({
       kind: "ok",
-      artifact: { data: { schemaVersion: 2 }, ui: artifact.ui },
+      // The host keeps what the edit contract can't change: declarations and UI settings (GEN-13).
+      artifact: {
+        data: { schemaVersion: 2 },
+        ui: artifact.ui,
+        capabilities: artifact.capabilities,
+        pins: artifact.pins,
+      },
     });
     expect(
       activateVersion(store, workspace.id, result.hash, result.expectedDataRevision),
@@ -94,6 +100,8 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
       },
     });
     expect(workspaceVersions(store, workspace.id)).toHaveLength(2);
+    // And its name: an edit never renames the tool (GEN-13, L-36).
+    expect(getWorkspace(store, workspace.id)?.title).toBe(workspace.title);
   });
 
   it("GEN-07: identical output never stores or activates a new history entry", async () => {
