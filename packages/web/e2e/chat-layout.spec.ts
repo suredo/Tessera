@@ -54,8 +54,7 @@ const box = async (page: Page, which: "chat" | "tool") => {
   return found;
 };
 
-async function open(page: Page, width: number) {
-  await page.setViewportSize({ width, height: 900 });
+async function open(page: Page) {
   await page.goto(app.url);
   await expect(
     page
@@ -66,95 +65,109 @@ async function open(page: Page, width: number) {
   ).toBeVisible(TOOL_START);
 }
 
-test("APP-01, APP-11: on a wide screen the chat sits beside the tool, and the divider moves by keyboard, kept after a reload", async ({
-  page,
-}) => {
-  await open(page, 1280);
-  const [left, right] = [await box(page, "chat"), await box(page, "tool")];
-  expect(left.x + left.width).toBeLessThanOrEqual(right.x);
-  await expect(divider(page)).toHaveAttribute("aria-valuenow", "40");
-  await divider(page).focus();
-  await page.keyboard.press("ArrowRight");
-  await expect(divider(page)).toHaveAttribute("aria-valuenow", "45");
-  await expect(divider(page)).toHaveAttribute("aria-valuetext", "The chat takes 45% of the width");
-  expect((await box(page, "chat")).width).toBeGreaterThan(left.width);
-  await page.keyboard.press("End");
-  await expect(divider(page)).toHaveAttribute("aria-valuenow", "75");
-  await page.keyboard.press("ArrowRight");
-  await expect(divider(page)).toHaveAttribute("aria-valuenow", "75");
-  await page.keyboard.press("Home");
-  await expect(divider(page)).toHaveAttribute("aria-valuenow", "25");
-  await page.reload();
-  await expect(divider(page)).toHaveAttribute("aria-valuenow", "25");
-});
+// Each width is set when the test's page is made, never by resizing it (ENG-14).
+test.describe("on a wide screen", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
 
-test("APP-01: the divider follows the pointer, within its limits", async ({ page }) => {
-  await open(page, 1280);
-  const handle = await divider(page).boundingBox();
-  if (!handle) throw new Error("The divider isn't on screen.");
-  const y = handle.y + handle.height / 2;
-  await page.mouse.move(handle.x + handle.width / 2, y);
-  await page.mouse.down();
-  await page.mouse.move(handle.x + 200, y, { steps: 5 });
-  await page.mouse.up();
-  const moved = Number(await divider(page).getAttribute("aria-valuenow"));
-  expect(moved).toBeGreaterThan(40);
-  // From where it is now, far past its limit.
-  const now = await divider(page).boundingBox();
-  if (!now) throw new Error("The divider isn't on screen.");
-  await page.mouse.move(now.x + now.width / 2, y);
-  await page.mouse.down();
-  await page.mouse.move(5000, y, { steps: 5 });
-  await page.mouse.up();
-  await expect(divider(page)).toHaveAttribute("aria-valuenow", "75");
-});
-
-test("APP-01: the tool can be inline, expanded over the chat's place, or full screen, by the host's controls", async ({
-  page,
-}) => {
-  await open(page, 1280);
-  const inline = await box(page, "tool");
-  const expand = tool(page).getByRole("button", { name: en["tool.expand"] });
-  await expand.click();
-  await expect(chat(page)).toBeHidden();
-  await expect(divider(page)).toBeHidden();
-  const back = tool(page).getByRole("button", { name: en["tool.leaveExpanded"] });
-  await expect(back).toHaveAttribute("aria-pressed", "true");
-  expect((await box(page, "tool")).width).toBeGreaterThan(inline.width);
-  await back.click();
-  await expect(chat(page)).toBeVisible();
-  await tool(page).getByRole("button", { name: en["tool.fullScreen"] }).click();
-  // Full screen covers the window; expanding isn't offered there.
-  await expect(tool(page).getByRole("button", { name: en["tool.expand"] })).toHaveCount(0);
-  const full = await box(page, "tool");
-  expect(full.width).toBeGreaterThanOrEqual(1280 - 1);
-  await tool(page).getByRole("button", { name: en["tool.leaveFullScreen"] }).click();
-  await expect(tool(page).getByRole("button", { name: en["tool.expand"] })).toBeVisible();
-});
-
-test("APP-01, TEST-06: on a narrow screen the chat stacks above the tool, with no divider", async ({
-  page,
-}) => {
-  await open(page, 320);
-  const [above, below] = [await box(page, "chat"), await box(page, "tool")];
-  expect(above.y + above.height).toBeLessThanOrEqual(below.y);
-  await expect(divider(page)).toBeHidden();
-  // Nothing wider than the screen.
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
-  await page.screenshot({ path: test.info().outputPath("chat-layout-320.png"), fullPage: true });
-});
-
-test("APP-01, GEN-08: a reply that comes while the tool is expanded is said in the notice, as the chat is out of sight", async ({
-  page,
-}) => {
-  await open(page, 1280);
-  await page.getByRole("textbox", { name: en["request.label"] }).fill("Something");
-  await page.getByRole("button", { name: en["request.send"] }).click();
-  await tool(page).getByRole("button", { name: en["tool.expand"] }).click();
-  await expect(page.locator(".notice [role=status]").first()).toHaveText(en["request.clarify"], {
-    timeout: 30_000,
+  test("APP-01, APP-11: on a wide screen the chat sits beside the tool, and the divider moves by keyboard, kept after a reload", async ({
+    page,
+  }) => {
+    await open(page);
+    const [left, right] = [await box(page, "chat"), await box(page, "tool")];
+    expect(left.x + left.width).toBeLessThanOrEqual(right.x);
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "40");
+    await divider(page).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "45");
+    await expect(divider(page)).toHaveAttribute(
+      "aria-valuetext",
+      "The chat takes 45% of the width",
+    );
+    expect((await box(page, "chat")).width).toBeGreaterThan(left.width);
+    await page.keyboard.press("End");
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "75");
+    await page.keyboard.press("ArrowRight");
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "75");
+    await page.keyboard.press("Home");
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "25");
+    await page.reload();
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "25");
   });
-  await tool(page).getByRole("button", { name: en["tool.leaveExpanded"] }).click();
-  // Back beside the chat: the reply is there, and on the page once.
-  await expect(page.getByText(en["request.clarify"])).toHaveCount(1);
+
+  test("APP-01: the divider follows the pointer, within its limits", async ({ page }) => {
+    await open(page);
+    const handle = await divider(page).boundingBox();
+    if (!handle) throw new Error("The divider isn't on screen.");
+    const y = handle.y + handle.height / 2;
+    await page.mouse.move(handle.x + handle.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(handle.x + 200, y, { steps: 5 });
+    await page.mouse.up();
+    const moved = Number(await divider(page).getAttribute("aria-valuenow"));
+    expect(moved).toBeGreaterThan(40);
+    // From where it is now, far past its limit.
+    const now = await divider(page).boundingBox();
+    if (!now) throw new Error("The divider isn't on screen.");
+    await page.mouse.move(now.x + now.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(5000, y, { steps: 5 });
+    await page.mouse.up();
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "75");
+  });
+
+  test("APP-01: the tool can be inline, expanded over the chat's place, or full screen, by the host's controls", async ({
+    page,
+  }) => {
+    await open(page);
+    const inline = await box(page, "tool");
+    const expand = tool(page).getByRole("button", { name: en["tool.expand"] });
+    await expand.click();
+    await expect(chat(page)).toBeHidden();
+    await expect(divider(page)).toBeHidden();
+    const back = tool(page).getByRole("button", { name: en["tool.leaveExpanded"] });
+    await expect(back).toHaveAttribute("aria-pressed", "true");
+    expect((await box(page, "tool")).width).toBeGreaterThan(inline.width);
+    await back.click();
+    await expect(chat(page)).toBeVisible();
+    await tool(page).getByRole("button", { name: en["tool.fullScreen"] }).click();
+    // Full screen covers the window; expanding isn't offered there.
+    await expect(tool(page).getByRole("button", { name: en["tool.expand"] })).toHaveCount(0);
+    const full = await box(page, "tool");
+    expect(full.width).toBeGreaterThanOrEqual(1280 - 1);
+    await tool(page).getByRole("button", { name: en["tool.leaveFullScreen"] }).click();
+    await expect(tool(page).getByRole("button", { name: en["tool.expand"] })).toBeVisible();
+  });
+
+  test("APP-01, GEN-08: a reply that comes while the tool is expanded is said in the notice, as the chat is out of sight", async ({
+    page,
+  }) => {
+    await open(page);
+    await page.getByRole("textbox", { name: en["request.label"] }).fill("Something");
+    await page.getByRole("button", { name: en["request.send"] }).click();
+    await tool(page).getByRole("button", { name: en["tool.expand"] }).click();
+    await expect(page.locator(".notice [role=status]").first()).toHaveText(en["request.clarify"], {
+      timeout: 30_000,
+    });
+    await tool(page).getByRole("button", { name: en["tool.leaveExpanded"] }).click();
+    // Back beside the chat: the reply is there, and on the page once.
+    await expect(page.getByText(en["request.clarify"])).toHaveCount(1);
+  });
+});
+
+test.describe("on a narrow screen", () => {
+  test.use({ viewport: { width: 320, height: 900 } });
+
+  test("APP-01, TEST-06: on a narrow screen the chat stacks above the tool, with no divider", async ({
+    page,
+  }) => {
+    await open(page);
+    const [above, below] = [await box(page, "chat"), await box(page, "tool")];
+    expect(above.y + above.height).toBeLessThanOrEqual(below.y);
+    await expect(divider(page)).toBeHidden();
+    // Nothing wider than the screen.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      320,
+    );
+    await page.screenshot({ path: test.info().outputPath("chat-layout-320.png"), fullPage: true });
+  });
 });

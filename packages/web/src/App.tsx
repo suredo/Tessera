@@ -157,8 +157,8 @@ export function App() {
   const progress = useRequestProgress(control, requesting && !settled);
   // Whose chat is on screen: the open workspace's on the workspaces, the first-run screen's (null)
   // in their place, and none (undefined) on the other screens or behind an expanded tool.
-  const toolExpanded =
-    expanded && !!workspaces?.find((w) => w.id === openId)?.currentVersion && !!setup?.ready;
+  // A host control, so it needs no model: an open tool beside its chat can expand, setup or not.
+  const toolExpanded = expanded && !!workspaces?.find((w) => w.id === openId)?.currentVersion;
   // An expanded tool takes the chat's place, so its chat is not on screen then.
   const chatShown: string | null | undefined =
     workspaces?.length === 0
