@@ -7,12 +7,12 @@ implements: [DATA-01, PLAT-04, ENG-18, ENG-19, CON-01, CON-04, PLAT-01]
 tests: [../../../packages/server/test/storage.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, storage, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:21:45Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T04:38:08Z }
 ---
 
 # Purpose
 
-The one way the local server reads and writes its SQLite database (`DATA-01`), chosen in [ADR 0003](../../decisions/adr/0003-sqlite-access-layer.md): Node's built-in `node:sqlite`, plain SQL, rows checked against the zod contracts (`CON-01`), and numbered migration files (`ENG-18`). The database lives in the user data folder with assets, exports, logs and the backups made before migrating (`PLAT-04`). Tessera's own schema is the numbered migrations in `src/storage/schema/`: `0001-tool-versions.sql` holds [tool versions](versions.md), `0002-workspaces.sql` holds [workspaces and saved tools](workspaces.md), `0003-trash.sql` marks what is in the [trash](trash.md), `0004-record-revisions.sql` keeps each record's revision count with a [workspace's](workspaces.md) data, `0005-recovery-snapshots.sql` keeps the units that lossy restores replaced, `0006-assets.sql` keeps one row per stored [asset](assets.md), `0007-data-undo.sql` keeps each data change a [workspace](workspaces.md) can undo, `0008-workspace-use.sql` keeps when each workspace was last opened, and `0009-descriptions.sql` adds each workspace's and saved tool's description (`APP-04`). The rest of the data model comes with M1's data issues.
+The one way the local server reads and writes its SQLite database (`DATA-01`), chosen in [ADR 0003](../../decisions/adr/0003-sqlite-access-layer.md): Node's built-in `node:sqlite`, plain SQL, rows checked against the zod contracts (`CON-01`), and numbered migration files (`ENG-18`). The database lives in the user data folder with assets, exports, logs and the backups made before migrating (`PLAT-04`). Tessera's own schema is the numbered migrations in `src/storage/schema/`: `0001-tool-versions.sql` holds [tool versions](versions.md), `0002-workspaces.sql` holds [workspaces and saved tools](workspaces.md), `0003-trash.sql` marks what is in the [trash](trash.md), `0004-record-revisions.sql` keeps each record's revision count with a [workspace's](workspaces.md) data, `0005-recovery-snapshots.sql` keeps the units that lossy restores replaced, `0006-assets.sql` keeps one row per stored [asset](assets.md), `0007-data-undo.sql` keeps each data change a [workspace](workspaces.md) can undo, `0008-workspace-use.sql` keeps when each workspace was last opened, `0009-descriptions.sql` adds each workspace's and saved tool's description (`APP-04`), and `0010-request-ledger.sql` keeps the [call ledger](ledger.md) (`OBS-01`). The rest of the data model comes with M1's data issues.
 
 # Entry points
 

@@ -2,6 +2,8 @@
 
 ## 2026-11-06
 
+* **New**: The [call ledger](code/server/ledger.md), the first part of [issue 151](https://github.com/suredo/Tessera/issues/151) (`OBS-01`, `GEN-10`): every request the host carries out and every model call it made are kept in the data folder, with stage, route, sizes, prompt parts, usage, outcome and failure reasons, unknown usage left unknown and the person's words not kept. Migration `0010-request-ledger.sql` ([storage](code/server/storage.md)); the [generation routes](code/server/generation.md) record through it. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T04:38:08Z.
+
 * **Update**: A running request shows its stage in plain words and the seconds since it was sent, as [ADR 0010](decisions/adr/0010-generation-progress.md) decided ([issue 152](https://github.com/suredo/Tessera/issues/152), `GEN-16`, `CLI-07`, `UX-02`, `APP-10`): the server records each model call's stage on the request's control and answers a new progress route ([generation](code/server/generation.md), [contracts](code/contracts/package.md)), and the request box announces the stage and shows the seconds beside it ([browser](code/web/package.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T04:07:43Z.
 
 * **Update**: The [scenario runner](code/evals/runner.md) waits, before each step's screenshot, for the open tool to show something, so the screenshots after Use again and Continue no longer show an empty panel, the M2 live run's fourth defect. The [Tessera issues](lessons/tessera-issues.md) record it as L-81. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T03:46:30Z.

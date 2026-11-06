@@ -28,6 +28,7 @@ import { generate } from "./pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
 import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
 import { applyDataOffer, changeData, type DataOffer } from "./data-action.ts";
+import { RequestLedger } from "../ledger/index.ts";
 import { RequestControls } from "./control.ts";
 
 // The host app's route for a request (GEN-01): it runs as a job, one at a time (CLI-06), and
@@ -46,10 +47,13 @@ export type GenerationOptions = {
   routes: () => Routes;
   /** Total stage time after a queued request starts, including later smoke repair (GEN-11). */
   requestTimeLimitMs?: number;
+  /** Where each request and its model calls are recorded (OBS-01); the store's own by default. */
+  ledger?: RequestLedger;
 };
 
 export function generationRoutes(options: GenerationOptions): Record<string, Handler> {
   const limit = options.requestTimeLimitMs ?? REQUEST_TIME_LIMIT_MS;
+  const ledger = options.ledger ?? new RequestLedger(options.store);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2_147_483_647)
     throw new RangeError("requestTimeLimitMs must be a positive timer-sized integer.");
   // Short-lived continuations, bounded in memory and consumed before a repair call. Restarting
@@ -165,36 +169,46 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       } catch {
         return text(res, 409, "The request was stopped or expired. Please ask again.");
       }
+      // From here every reply is recorded with the request, and each model call too (OBS-01).
+      const recorded = ledger.start(
+        mode === "smoke" ? "repair" : mode === "data" ? "data" : "generate",
+        input.workspaceId,
+      );
+      const answer = (value: unknown) => {
+        const reply = generateReplySchema.parse(value);
+        ledger.finish(recorded, reply);
+        return json(res, reply);
+      };
       const found = await options.provider();
       if ("problem" in found) {
-        return json(
-          res,
-          generateReplySchema.parse({
-            kind: "failed",
-            failure: "provider",
-            message: found.problem,
-            findings: [],
-          }),
-        );
+        return answer({
+          kind: "failed",
+          failure: "provider",
+          message: found.problem,
+          findings: [],
+        });
       }
       // Each model call names its stage, for the request's progress (GEN-16, ADR 0010).
-      const provider = controls.watch(control, found);
+      const provider = controls.watch(control, ledger.record(recorded, found));
       let routes: Routes;
       try {
         routes = options.routes();
       } catch (error) {
         // Such as a routes file Tessera can't use: its own plain words (CLI-09).
         const message = error instanceof RoutesError ? error.message : FAILED;
-        return json(
-          res,
-          generateReplySchema.parse({ kind: "failed", failure: "provider", message, findings: [] }),
-        );
+        return answer({ kind: "failed", failure: "provider", message, findings: [] });
       }
       // Cancellation during asynchronous discovery must win before a job can be submitted.
       if (control) {
         try {
           controls.check(control);
         } catch {
+          ledger.finish(recorded, {
+            kind: "failed",
+            failure: "provider",
+            message: "The request was stopped.",
+            findings: [],
+          });
           return text(res, 409, "The request was stopped or expired. Please ask again.");
         }
         if ("request" in input) control.expires = Infinity; // Queue waiting precedes the deadline.
@@ -325,24 +339,21 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                 findings: [],
               }
             : grant(ended.value, expires, nextToken);
-        return json(res, generateReplySchema.parse(reply));
+        return answer(reply);
       }
-      return json(
-        res,
-        generateReplySchema.parse({
-          kind: "failed",
-          failure: "provider",
-          message:
-            ended.state === "cancelled"
-              ? "The request was stopped."
-              : ended.state === "failed" && ended.error instanceof ProviderError
-                ? ended.error.message
-                : mode === "data"
-                  ? "The entry changes weren't applied."
-                  : FAILED,
-          findings: [],
-        }),
-      );
+      return answer({
+        kind: "failed",
+        failure: "provider",
+        message:
+          ended.state === "cancelled"
+            ? "The request was stopped."
+            : ended.state === "failed" && ended.error instanceof ProviderError
+              ? ended.error.message
+              : mode === "data"
+                ? "The entry changes weren't applied."
+                : FAILED,
+        findings: [],
+      });
     };
   const confirm: Handler = async (req, res) => {
     if (req.method !== "POST") return text(res, 405, "Send a confirmation with POST.");
