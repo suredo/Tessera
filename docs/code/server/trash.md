@@ -7,7 +7,7 @@ implements: [DATA-09]
 tests: [../../../packages/server/test/trash.test.ts]
 tags: [code, server, data, trash]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-19T07:58:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T22:22:19Z }
 ---
 
 # Purpose
@@ -29,7 +29,7 @@ Makes deleting safe (`DATA-09`, A31): deleting a [workspace or saved tool](works
 - **A workspace takes its saved tools with it** (they would have nothing to open): they share its trash entry, named in it, and come back with it. A saved tool deleted on its own has its own entry; restoring it brings its workspace back too if that is in the trash, so Continue always has a workspace to open.
 - **30 days, by the store's clock.** An entry can be restored until 30 days after it was deleted, to the millisecond; from then on it is no longer listed, restoring it is refused plainly, and the next sweep removes it. Tests move the clock instead of waiting, and the P3 scenario does it across a real restart.
 - **Emptying early is confirmed against the list shown.** `listTrash`'s confirmation is a hash of the entries it lists. `emptyTrash` removes them only if the trash still lists exactly those; if anything was deleted or restored since, it removes nothing and says so. It returns the entries it removed, by name.
-- **Removing for good takes what only it used**: a removed workspace's version history and saved tools (a cascade), and the tool versions it used that no workspace refers to any more. A version saved for work in progress, which no workspace refers to yet, is never touched.
+- **Removing for good takes what only it used**: a removed workspace's version history, saved tools and [chat](chat.md) (a cascade), and the tool versions it used that no workspace refers to any more. A version saved for work in progress, which no workspace refers to yet, is never touched.
 - **Every change is one transaction**, so a crash leaves the trash as it was before or after, never in between.
 
 # Depends on / used by

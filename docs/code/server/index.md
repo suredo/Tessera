@@ -22,3 +22,4 @@
 * [Asset store](assets.md) - Images stored once by the SHA-256 of their bytes, checked by content and size, swept of interrupted writes at start, and removed only when nothing stored refers to them any more.
 * [Host API](host-api.md) - The host app's one route to the server: every action its screens ask for (workspaces, the library, versions and restore, undo and the trash), checked against the contracts at both ends, and the tools its mounts show.
 * [Call ledger](ledger.md) - Every request the host carries out and every model call it made, kept in the data folder: stage, route, sizes, prompt parts, usage, outcome and the failure reasons, with unknown usage left unknown.
+* [Workspace chat](chat.md) - Each workspace's conversation, kept with it in the data folder: the person's requests and Tessera's replies in order, the newest 200, through the trash and back, removed with it for good, and never in an export.

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { chatEntrySchema, chatMessageSchema } from "./chat.ts";
 import { jsonValueSchema } from "./json.ts";
 import { ledgerRequestSchema } from "./ledger.ts";
 import { trashEntrySchema, trashSchema } from "./trash.ts";
@@ -156,6 +157,25 @@ export const HOST_ACTIONS = {
           ),
       })
       .describe("What the details view shows, out of the person's way (APP-09, UX-06)."),
+  },
+  "chat.list": {
+    args: z.strictObject({ workspaceId: id }),
+    result: z.strictObject({
+      messages: z
+        .array(chatMessageSchema)
+        .describe("The workspace's kept messages, oldest first (APP-03)."),
+    }),
+  },
+  "chat.add": {
+    args: z.strictObject({
+      workspaceId: id,
+      messages: z
+        .array(chatEntrySchema)
+        .min(1)
+        .max(2)
+        .describe("A turn: the person's request, Tessera's reply, or both, in that order."),
+    }),
+    result: z.strictObject({ messages: z.array(chatMessageSchema).describe("As kept.") }),
   },
   "versions.list": {
     args: z.strictObject({ workspaceId: id }),

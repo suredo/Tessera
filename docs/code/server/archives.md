@@ -7,7 +7,7 @@ implements: [DATA-05, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07]
 tests: [../../../packages/server/test/archives.test.ts]
 tags: [code, server, data, archives, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:09:47Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T22:22:19Z }
 ---
 
 # Purpose
@@ -35,6 +35,7 @@ Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), wit
 - **The container is a strict subset of ZIP** (IMP-01, IMP-02), read here rather than by a general-purpose library: every entry is listed and checked before any is unpacked, so limits, names and ratios are refused without unpacking. Names that could escape (`..`, empty parts, absolute paths, drive letters, backslashes, NUL) are refused, as are repeated names, links, encryption, ZIP64 and any compression but none or deflate. Each entry is unpacked by `node:zlib` with a hard cap at the size it declares, and its size and CRC must match.
 - **Only tool code and images, stored as data** (IMP-05, `SEC-01`): the manifest, tool versions and, from format 2, images as `assets/<id>` are the only files, and every shape is strict, so a migration, script or engine is refused. Tool code is stored and only ever runs in the sandbox; an image is only ever bytes a tool shows through a `blob:` URL.
 - **Existing work is never changed** (IMP-06). If any workspace or saved tool ID in the archive is already here, in use or in the trash, everything comes in as a copy with new IDs. Tool versions are named by their content, so one already here is the same version and is kept as it is.
+- **An export never holds a chat** ([ADR 0011](../../decisions/adr/0011-workspace-chat.md)). The [workspace chat](chat.md) stays in the data folder: an archive carries the tool, its versions, data, assets and saved tools, so an imported workspace starts with no chat.
 - **A file over the limit is refused before it is read.** The import route refuses a body whose declared length is over the archive limit without reading it, and stops reading one that grows past it (IMP-02, `DATA-06`).
 - **No network, no process, and files only in the asset store** (IMP-07): an import reads only the bytes it is given, writes the database, and writes an image's file only through the [asset store](assets.md), inside its folder. One test runs an archive without images with the tripwires on and no folder allowed; another runs one with an image with only the asset store's folder allowed.
 
