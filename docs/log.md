@@ -2,7 +2,7 @@
 
 ## 2026-11-06
 
-* **Update**: The [browser](code/web/package.md) doc names `e2e/prompts.spec.ts`, the end-to-end tests of what reaches the model ([issue 157](https://github.com/suredo/Tessera/issues/157)): a Portuguese request and its language reach creation as written (`GEN-15`), a request's words never switch prompt parts on or off (`GEN-02`), and every call's parts and size are in the ledger within budget (`GEN-03`). Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T06:20:44Z.
+* **Update**: The [browser](code/web/package.md) doc names `e2e/prompts.spec.ts`, the end-to-end tests of what reaches the model ([issue 157](https://github.com/suredo/Tessera/issues/157)): a Portuguese request and its language reach creation as written (`GEN-15`), a request's words never switch prompt parts on or off (`GEN-02`), and every call's parts and size are in the ledger within budget (`GEN-03`). `e2e/startup-writes.spec.ts` follows a tool that writes data as it starts through the checks and repair to a tool with only its starting data (`GEN-06`). Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T06:20:44Z.
 
 * **New**: The basic details view, the second part of [issue 151](https://github.com/suredo/Tessera/issues/151) (`APP-09`, `UX-06`, `OBS-01`): under a workspace's history, a Show details button opens its recent requests from the [call ledger](code/server/ledger.md), each model call with its time, tokens and result and why anything failed, and the tool's code ([browser](code/web/package.md)). A new host action, `details.get` ([host API](code/server/host-api.md)), answers it, with the ledger's shape now defined once in the [contracts](code/contracts/package.md). Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T05:11:01Z.
 

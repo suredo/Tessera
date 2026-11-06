@@ -99,6 +99,10 @@ const provider: Provider = {
   },
 };
 
+// The tests share one script and one Tessera: if one fails, the later ones are skipped, never run
+// on a fresh worker against answers meant for the steps before them (#186).
+test.describe.configure({ mode: "serial" });
+
 let app: AppHost;
 test.beforeAll(async () => {
   app = await startApp(undefined, provider);
