@@ -2,6 +2,8 @@
 
 ## 2026-11-07
 
+* **New**: The [plan for comparing two passes with one](../evals/reports/2026-11-07-two-pass-plan.md), live ([issue 153](https://github.com/suredo/Tessera/issues/153), `GEN-17`): three big requests from the catalogue, each made both ways, the measures and the decision rule frozen, a 30-call hard cap and stop rules, for the owner to approve. No call was made. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T04:42:49Z.
+
 * **New**: The second part of two passes for big tools ([issue 153](https://github.com/suredo/Tessera/issues/153), `GEN-17`), still off by default: once a big tool's core is active, each feature still to come is its own edit request on a new follow-up route, with the host's own intent and a request's time limit ([generation](code/server/generation.md), [contracts](code/contracts/package.md)); the [browser](code/web/package.md) stages and activates each in turn and says what was added; the [launcher](code/server/launcher.md) takes the option. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T04:10:25Z.
 
 * **New**: The first part of two passes for big tools ([issue 153](https://github.com/suredo/Tessera/issues/153), `GEN-17`), off by default: the [generation stages](code/server/generation.md) decide from the intent's features with a fixed threshold, the core pass gets its own [prompt part](code/server/prompts.md), and the candidate names the features still to come ([contracts](code/contracts/package.md)). The follow-up edits and the measurement against one pass come later. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T03:55:30Z.
