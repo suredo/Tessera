@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03, GEN-14, SEC-02]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T21:49:54Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T03:55:30Z }
 ---
 
 # Purpose
@@ -30,6 +30,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 - **The edit stage receives original code and declarations, never workspace entries.** `edit.md` describes explicit file/data modes and preservation; `edit-declarations.md` quotes original data shape/defaults, capabilities, pins, UI and structured change flags. `edit-attempt.md` quotes a failed edit separately. `repair-edit-smoke.md` requires an edit answer, keeping the failed candidate's data change, rather than using creation's smoke part. Edits and edit repairs in standard mode use `ui-edit.md`, a concise preservation guide with the same complete runtime token list; base sandbox rules and the full accessibility part remain. Real edit and repair fixture prompts stay inside the existing 18,500 / 23,500 budgets. The rehearsed [live edit check](../../../evals/reports/2026-10-29-edit-check.md) passed both darken and quantity cases in two of four approved calls, preserving entries. Its sanitized sequential replay is deterministic; no edit repair prompt ran live.
 
 - **Smoke repair has its own part** (`GEN-09`): `repair-smoke.md` asks for startup, display and accessibility fixes at 320 px using defaults. It preserves the data declaration, requests empty initial state because starting data is already installed, and uses the creation answer contract. Its assembly and fixture size are tested alongside the existing repair parts. The [budgeted live check](../../../evals/reports/2026-10-28-smoke-repair.md) repaired one missing label in one call, staged it again and preserved the request's entries.
+- **A big tool's core pass has its own part** (`GEN-17`): `core.md` tells creation, and the repair of a creation, to build a complete tool with only the features it quotes first, and to leave out, without placeholders, those it quotes second; both lists are JSON, quoted as data (`SEC-02`). Assembly adds it only when a two-pass plan is given.
 
 - **Every prompt's words are in a part file** (`ENG-16`), never an inline string; a test fails if a file isn't a listed part or a listed part has no file. The probe's words moved there too.
 - **A part's version is a hash of its text.** For an instruction part it covers what was generated into it (the manifest, the UI tokens), so a change to either changes the version. For a request part it covers only the wording, since what it quotes changes with every call. A stage call carries them, and the [evaluation harness](../evals/harness.md)'s ledger records them with the instructions' size.

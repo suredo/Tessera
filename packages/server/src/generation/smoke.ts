@@ -8,6 +8,7 @@ import { loadVersion, saveVersion } from "../versions/index.ts";
 import { getWorkspace, type Store } from "../workspaces/index.ts";
 import { createTool } from "./create.ts";
 import { editTool } from "./edit.ts";
+import type { TwoPassPlan } from "./two-pass.ts";
 
 /** Server-owned continuation of creation or editing, never supplied by the browser (GEN-09). */
 export type SmokeRepairContext = {
@@ -19,6 +20,8 @@ export type SmokeRepairContext = {
   baseVersion: string | null;
   /** Isolated from the edit stage; only planned after this candidate activates. */
   dataPart?: string;
+  /** A big new tool's core pass: its repair keeps to the core, and the rest comes later (GEN-17). */
+  plan?: TwoPassPlan;
 };
 
 /** Repairs a stored candidate; its workspace's starting data is never installed again (GEN-05). */
@@ -88,6 +91,7 @@ export async function repairSmoke(
           intent: context.intent,
           signal,
           repairUsage: context.repairUsage,
+          ...(context.plan ? { core: context.plan } : {}),
           repair: {
             failure: "smoke",
             diagnostics: input.findings,

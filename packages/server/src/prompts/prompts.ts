@@ -35,6 +35,7 @@ export const PROMPT_PARTS = [
   "attempt",
   "diagnostics",
   "create",
+  "core",
   "edit",
   "edit-declarations",
   "edit-attempt",
@@ -191,6 +192,14 @@ export type PromptInput = {
   stage: GenerationStage;
   /** What the person asked, in their words. */
   request: string;
+  /**
+   * A big new tool's two-pass plan (GEN-17): what the core pass builds now and what comes later,
+   * quoted as JSON. Creation and its repairs keep to the core.
+   */
+  core?: {
+    core: readonly { name: string; request: string }[];
+    later: readonly { name: string; request: string }[];
+  };
   /** The intent stage's answer, when there is one: its fields choose parts (GEN-02). */
   intent?: Intent;
   /** The tool's UI mode: the UI standard's part goes only to a tool in standard mode. */
@@ -295,6 +304,13 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // The language the intent stage found, given as a fact, so the tool's words never depend on the
   // model guessing it (GEN-15).
   if (input.intent) addRequest("language", { language: input.intent.language });
+  // The core pass's scope, as data: what to build now and what to leave for later (GEN-17).
+  if (input.core && creating) {
+    addRequest("core", {
+      core: JSON.stringify(input.core.core),
+      later: JSON.stringify(input.core.later),
+    });
+  }
   // A look-only edit needs the page's structure for its selectors and the style it changes, never
   // the behavior, which stays identical (GEN-14).
   if (input.source && input.intent?.lookOnly) {

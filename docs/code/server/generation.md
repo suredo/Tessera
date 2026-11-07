@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11, GEN-16, CLI-07, GEN-12, GEN
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T21:41:30Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T03:55:30Z }
 ---
 
 # Purpose
@@ -31,6 +31,7 @@ The core of generation (#146): interface requests create or edit a candidate too
 - `src/generation/result.ts`: `GenerationResult` separates internal candidates from public replies: stages cannot mint activation authority. The route adds a one-use token and original expiry to initial and repaired candidates.
 - `src/generation/deadline.ts`: `REQUEST_TIME_LIMIT_MS` defaults to seven minutes. `withinRequestDeadline` shares an absolute expiry across server stages, aborts calls at expiry, caps each call by the smaller of its stage limit and remaining time, and checks again before an answer or candidate can be stored.
 - `src/generation/smoke.ts`: `repairSmoke` loads the failed stored version and repairs it using the original interface request, intent language, diagnostics and remaining class budgets. `SmokeRepairContext` is the server-owned continuation remembered by the route.
+- `src/generation/two-pass.ts`: two passes for big tools (`GEN-17`, A17), off unless `GenerationOptions.twoPass` is given. `twoPassPlan` decides from the intent's features with `TwoPassOptions` (`TWO_PASS_STARTING_POINT`: at least 4 features, a core of the first 2), never from a model's flag (L-37), and gives a `TwoPassPlan` (`Feature`s for now and for later); `checkTwoPassOptions` refuses options with no core or nothing left for later.
 - The answer's contract is the contracts' creation schema, with the failure classes beside it ([contracts](../contracts/package.md)). The stage's prompt adds the create part to the [prompt assembly](prompts.md).
 
 # Invariants
@@ -57,6 +58,7 @@ The core of generation (#146): interface requests create or edit a candidate too
 
   Smoke failures come from browser staging. Behavior failures wait for M3: the class exists in the contract, but until M3's behavior checks nothing produces it, so nothing repairs it (`GEN-09`'s M2 limit).
 - **A failure of the host's checks is repaired by its class** (`GEN-09`). Schema-shape and static failures go to the repair stage, on its own route (Sonnet medium, `CLI-09`), with their class's prompt part, what the checks found and the failed answer quoted, or, for an answer of the wrong shape, the request alone. The repair answers as creation does, and its answer goes through the same checks. Each class has its own budget in one request, one repair each for now, so a static failure after a shape repair still gets its own, and the result says how many repairs it took (A40). A provider failure, in creation or in a repair, is never repaired. A repair may also answer "cannot".
+- **A big new tool can be made in two passes** (`GEN-17`, in part). With `twoPass` set, a create or new-tool request with enough features gets the `core` prompt part: the core pass builds a complete tool with only the first features, and its smoke repair keeps to them. The candidate's `followUps` names the features still to come, in order, and the server keeps them with the request's continuation. Making them as edits, and the measurement against one pass that decides the default, come in later pull requests; until then the option stays off.
 - **The prompt's schema keywords are the host's own list,** the one the data shape is checked against, so the model is told exactly what passes.
 
 - **Mixed instructions stay apart** (`GEN-04`). Only the interface instruction reaches editing and its repairs. A server-owned continuation retains the data instruction, language, original expiry and shared per-class repair counts. Smoke and finish-data requests require the candidate's opaque token; maps key continuations by that identity, with workspace/hash checked before consumption. Activation consumes its own authority while leaving the independent data continuation eligible until the same original expiry. An expired old POST cannot consume a later same-workspace/hash request's instructions or budget. After staging/activation, finish-data consumes its continuation and checks the active version before planning against its new shape. Identical interfaces still run the separate data part; failed interfaces never do. Smoke repair revokes the old continuations and transfers remaining data work to the repaired candidate's fresh token, without another smoke allowance. Outstanding equal workspace/hash candidates are refused before replacing instructions. Continuations are bounded to 100 and disappear on restart/expiry. Missing, premature and replayed follow-ups spend no model call or write.
@@ -101,3 +103,4 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `result.ts`: `GenerationResult` (type)
 - `routes.ts`: `GenerationOptions` (type), `generationRoutes`
 - `smoke.ts`: `SmokeRepairContext` (type), `repairSmoke`
+- `two-pass.ts`: `TwoPassOptions` (type), `TWO_PASS_STARTING_POINT`, `Feature` (type), `TwoPassPlan` (type), `checkTwoPassOptions`, `twoPassPlan`
