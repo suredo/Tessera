@@ -137,6 +137,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
   const stop = () => controller.abort();
   options.signal?.addEventListener("abort", stop, { once: true });
   let verdict: { check: string; outcome: CheckOutcome } | undefined;
+  // The checks that ran on the mounted candidate and passed, by name.
+  const passed: string[] = [];
   try {
     let tool;
     try {
@@ -163,6 +165,7 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
             verdict = { check: outcome === CANCELLED ? "cancelled" : check.name, outcome };
             break;
           }
+          passed.push(check.name);
         }
       } finally {
         bridge.stop();
@@ -187,6 +190,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
     hash: candidate.hash,
     expectedDataRevision: options.expectedDataRevision,
     token: options.activationToken,
+    // Said only when the start check (smoke) ran here and passed, so the version's history can say so.
+    ...(!verdict && passed.includes("smoke") ? { startChecked: true as const } : {}),
   });
   return reply.ok
     ? { outcome: "activated", workspace: reply.workspace, migrationCount: reply.migrationCount }

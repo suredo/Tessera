@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   savedToolSchema,
   workspaceSchema,
+  versionNoteSchema,
   workspaceVersionSchema,
   type SavedTool,
   type Workspace,
@@ -217,11 +218,27 @@ export function addWorkspaceVersion(store: Store, id: string, hash: string): Wor
 }
 
 /**
+ * The note this workspace's own history last kept for a version, if any: what a restore keeps.
+ * Another workspace's note for the same code is never taken: the same code can come from other
+ * requests, with other summaries and checks.
+ */
+export function noteOf(store: Store, workspaceId: string, hash: string): VersionNote | undefined {
+  const row = store.db.get(
+    noteRow,
+    "SELECT summary, checks FROM workspace_versions WHERE workspace_id = ? AND hash = ? ORDER BY number DESC LIMIT 1",
+    workspaceId,
+    hash,
+  );
+  return row
+    ? versionNoteSchema.parse({ summary: row.summary, checks: JSON.parse(row.checks) as unknown })
+    : undefined;
+}
+
+/**
  * Inside the caller's transaction: makes a stored version the workspace's current one, as the
  * next entry of its history. Module-internal: activation (`activation.ts`) uses it too. `note` is
- * what the version was made for and the checks it passed (APP-05); without one, as on a restore or
- * Use again, the same code's earliest note is kept, since it is the same code; a version written
- * by hand has none.
+ * what the version was made for and the checks it passed (APP-05); without one, as on a restore,
+ * this workspace's own last note for that version is kept; a version written by hand has none.
  */
 export function appendVersion(
   store: Store,
@@ -229,13 +246,7 @@ export function appendVersion(
   hash: string,
   note?: VersionNote,
 ): WorkspaceVersion {
-  const kept =
-    note ??
-    store.db.get(
-      noteRow,
-      "SELECT summary, checks FROM workspace_versions WHERE hash = ? AND (summary IS NOT NULL OR checks <> '[]') ORDER BY created_at LIMIT 1",
-      hash,
-    );
+  const kept = note ?? noteOf(store, id, hash);
   const summary = kept?.summary ?? null;
   const checks =
     kept === undefined
