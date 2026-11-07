@@ -14,6 +14,7 @@ import { generationRoutes } from "../src/generation/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
 import { RequestLedger, UNATTACHED_REQUESTS_KEPT } from "../src/ledger/index.ts";
+import { answerCode } from "../src/ledger/ledger.ts";
 import { createScriptedProvider, type Provider } from "../src/providers/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { createWorkspace, listWorkspaces } from "../src/workspaces/index.ts";
@@ -157,6 +158,54 @@ describe("the call ledger (OBS-01, GEN-10)", () => {
     // The static check's reason for the repair, in its own words, on the repair call.
     expect(request!.calls[0]!.diagnostics).toEqual([]);
     expect(request!.calls[2]!.diagnostics.join("\n")).toMatch(/eval/);
+  });
+
+  it("GEN-10: a refused answer's code is kept with its call, never the entries it starts with", async () => {
+    const store = await folder();
+    const unsafe = {
+      ...editFixture,
+      code: {
+        ...editFixture.code,
+        js: `${editFixture.code.js}
+eval("1");`,
+      },
+    };
+    const ask = await serve(store, [
+      { kind: "value", stage: "intent", value: intent("create") },
+      { kind: "value", stage: "create", value: unsafe },
+      { kind: "value", stage: "repair", value: unsafe },
+    ]);
+    expect((await ask("A shopping list")).kind).toBe("failed");
+    const [request] = new RequestLedger(store).unattached();
+    expect(request!.calls.map((c) => [c.stage, c.code === null])).toEqual([
+      ["intent", true],
+      ["create", false],
+      ["repair", false],
+    ]);
+    // The code the checks refused, as it was: what the person needs to see why.
+    expect(request!.calls[2]!.code).toEqual(unsafe.code);
+    // Only the code: the request's own entries never reach the ledger.
+    const kept = store.db.all(
+      z.object({ code: z.string().nullable() }),
+      "SELECT code FROM request_calls",
+    );
+    expect(JSON.stringify(kept)).not.toContain("Milk");
+  });
+
+  it("GEN-10: a style edit keeps its CSS, a replace its code, and a data plan or an answer without code nothing", () => {
+    expect(answerCode({ outcome: "edit", files: { mode: "style", css: "p{}" } })).toEqual({
+      css: "p{}",
+    });
+    expect(
+      answerCode({
+        outcome: "edit",
+        files: { mode: "replace", code: { html: "<p>", css: "", js: "1" } },
+      }),
+    ).toEqual({ html: "<p>", css: "", js: "1" });
+    expect(answerCode({ outcome: "edit", files: { mode: "unchanged" } })).toBeNull();
+    expect(answerCode({ outcome: "patch", summary: "x", patch: { operations: [] } })).toBeNull();
+    expect(answerCode({ outcome: "cannot", reason: "No." })).toBeNull();
+    expect(answerCode("text")).toBeNull();
   });
 
   it("GEN-10: a mixed request keeps its entry part's outcome, message and findings", () => {
