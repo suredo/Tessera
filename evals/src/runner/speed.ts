@@ -26,6 +26,12 @@ export type Speed = {
   stages: Record<string, Figures>;
   /** Each kind of request, timed as the person waited: sent until the host had said what happened. */
   requests: Partial<Record<RequestKind, Figures>>;
+  /**
+   * Runs whose requests couldn't be matched to their calls, so none of their requests is timed: an
+   * older report without each step's calls whose intent calls don't pair one to one with its
+   * requests, as after an intent retry.
+   */
+  unmatched: number;
   targets: {
     name: string;
     measure: string;
@@ -54,13 +60,41 @@ export function figures(seconds: readonly number[]): Figures | undefined {
 type Run = { report: Pick<RunReport, "steps">; calls: readonly LedgerEntry[] };
 
 /**
- * The speed of one or more runs. Each request step takes, in order, one intent call and the calls
- * after it up to the next intent call: what it did is the stage among them. A request sent only to
- * be cancelled by the next step isn't timed, and neither is a step that didn't run.
+ * Each request step's own calls. A report that records each step's calls (`StepResult.calls`) is
+ * matched by them. An older one is matched in order, one intent call and the calls after it up to
+ * the next, but only when it has exactly one intent call per request step: an intent retry (a
+ * mixed split asked twice) would shift every later request, so such a run is left unmatched.
+ */
+function callsBySay(run: Run): (LedgerEntry[] | undefined)[] | undefined {
+  const { report, calls } = run;
+  const says = report.steps.filter((step) => step.kind === "say");
+  if (says.every((step) => step.calls)) {
+    return report.steps.map((step) =>
+      step.kind === "say" && step.calls
+        ? calls.filter((c) => c.callIndex >= step.calls!.from && c.callIndex < step.calls!.to)
+        : undefined,
+    );
+  }
+  if (calls.filter((c) => c.stage === "intent").length !== says.length) return undefined;
+  let next = 0;
+  return report.steps.map((step) => {
+    if (step.kind !== "say") return undefined;
+    const mine: LedgerEntry[] = [];
+    if (calls[next]?.stage === "intent") mine.push(calls[next++]!);
+    while (next < calls.length && calls[next]!.stage !== "intent") mine.push(calls[next++]!);
+    return mine;
+  });
+}
+
+/**
+ * The speed of one or more runs: each stage's model time, and each request's time by what its own
+ * calls did. A request sent only to be cancelled by the next step isn't timed, and neither is a
+ * step that didn't run.
  */
 export function speedOf(runs: readonly Run[]): Speed {
   const stageSeconds = new Map<string, number[]>();
   const requestSeconds = new Map<RequestKind, number[]>();
+  let unmatched = 0;
   const add = <K>(map: Map<K, number[]>, key: K, value: number) =>
     map.set(key, [...(map.get(key) ?? []), value]);
   for (const { report, calls } of runs) {
@@ -69,12 +103,14 @@ export function speedOf(runs: readonly Run[]): Speed {
         add(stageSeconds, call.stage, call.usage.durationMs / 1000);
       }
     }
-    let next = 0;
+    const matched = callsBySay({ report, calls });
+    if (!matched) {
+      unmatched += 1;
+      continue;
+    }
     report.steps.forEach((step, index) => {
-      if (step.kind !== "say") return;
-      const mine: LedgerEntry[] = [];
-      if (calls[next]?.stage === "intent") mine.push(calls[next++]!);
-      while (next < calls.length && calls[next]!.stage !== "intent") mine.push(calls[next++]!);
+      const mine = matched[index];
+      if (!mine) return;
       if (step.outcome === "blocked" || report.steps[index + 1]?.kind === "cancel") return;
       const stages = new Set(mine.map((call) => call.stage));
       const kind: RequestKind = stages.has("create")
@@ -101,6 +137,7 @@ export function speedOf(runs: readonly Run[]): Speed {
   return {
     stages,
     requests,
+    unmatched,
     targets: SPEED_TARGETS.map((target) => {
       const found = measured[target.measure];
       return {
@@ -136,6 +173,12 @@ export function speedMarkdown(speed: Speed): string {
     "",
     "## Requests, as the person waited",
     "",
+    ...(speed.unmatched > 0
+      ? [
+          `${speed.unmatched === 1 ? "One run's" : `${speed.unmatched} runs'`} requests couldn't be matched to their calls, so they aren't timed here.`,
+          "",
+        ]
+      : []),
     ...head,
     ...Object.entries(speed.requests).map(([kind, f]) => row(kind, f)),
     "",

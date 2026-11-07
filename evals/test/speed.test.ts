@@ -94,4 +94,35 @@ describe("a run's speed (OBS-04)", () => {
     expect(text).toContain("| Intent | intent call | 10.0 s | 1 | 12.0 s | missed |");
     expect(text).toContain("| A chat data change | data request | 15.0 s | 0 | – | not measured |");
   });
+
+  it("OBS-04: matches a request to its own calls, an intent retry included, and doesn't shift the next one", () => {
+    index = 0;
+    const timed = (kind: StepResult["kind"], seconds: number, from: number, to: number) => ({
+      ...step(kind, seconds),
+      calls: { from, to },
+    });
+    const calls = [
+      call("intent", 3),
+      call("intent", 3),
+      call("edit", 12),
+      call("data", 3),
+      call("intent", 2),
+    ];
+    const speed = speedOf([
+      { report: { steps: [timed("say", 20, 0, 4), timed("say", 5, 4, 5)] }, calls },
+    ]);
+    expect(speed.requests).toEqual({
+      edit: { count: 1, p50: 20, p95: 20, slowest: 20 },
+      answer: { count: 1, p50: 5, p95: 5, slowest: 5 },
+    });
+    expect(speed.unmatched).toBe(0);
+    // An older report with no calls per step can't be matched past the retry, so it isn't timed.
+    const older = speedOf([{ report: { steps: [step("say", 20), step("say", 5)] }, calls }]);
+    expect(older.requests).toEqual({});
+    expect(older.unmatched).toBe(1);
+    expect(older.stages["intent"]).toMatchObject({ count: 3 });
+    expect(speedMarkdown(older)).toContain(
+      "One run's requests couldn't be matched to their calls, so they aren't timed here.",
+    );
+  });
 });
