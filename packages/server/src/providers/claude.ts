@@ -267,8 +267,10 @@ export function createClaudeProvider(options: ClaudeOptions): Provider {
       if (envelope.is_error || envelope.subtype !== "success") throw failure(envelope);
       const usage = toUsage(envelope);
       const wrapped = wrappedAnswer.safeParse(envelope.structured_output);
-      const checked = spec.schema.safeParse(wrapped.success ? wrapped.data[ANSWER_KEY] : undefined);
-      if (!checked.success) throw new ProviderError("schema", FAILURE_MESSAGES.schema, usage);
+      const answer = wrapped.success ? wrapped.data[ANSWER_KEY] : undefined;
+      const checked = spec.schema.safeParse(answer);
+      if (!checked.success)
+        throw new ProviderError("schema", FAILURE_MESSAGES.schema, usage, undefined, answer);
       return { value: checked.data, usage, raw: result.stdout };
     } finally {
       removeFolder(cwd);

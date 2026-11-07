@@ -52,7 +52,13 @@ export function createScriptedProvider(script: ProviderScript): ScriptedProvider
     // The host checks the answer as it would a model's, so a script can test a bad answer too.
     const checked = spec.schema.safeParse(reply.value);
     if (!checked.success) {
-      throw new ProviderError("schema", "The answer did not have the expected shape.", usage);
+      throw new ProviderError(
+        "schema",
+        "The answer did not have the expected shape.",
+        usage,
+        undefined,
+        reply.value,
+      );
     }
     return { value: checked.data, usage, raw: JSON.stringify(reply.value) };
   };

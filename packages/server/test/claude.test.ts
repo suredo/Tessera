@@ -261,6 +261,8 @@ describe("answers and usage (CLI-01, CLI-04)", () => {
     const error = await provider.run(spec()).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ProviderError);
     expect(error).toMatchObject({ kind: "schema", usage: { outputTokens: 50 } });
+    // The answer as it came, unchecked, for the ledger to keep its code (GEN-10).
+    expect((error as ProviderError).answer).toEqual({ name: "not a title" });
   });
 });
 

@@ -14,7 +14,7 @@ import { generationRoutes } from "../src/generation/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
 import { RequestLedger, UNATTACHED_REQUESTS_KEPT } from "../src/ledger/index.ts";
-import { answerCode } from "../src/ledger/ledger.ts";
+import { answerCode, CALL_CODE_LIMIT, keptCode } from "../src/ledger/ledger.ts";
 import { createScriptedProvider, type Provider } from "../src/providers/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { createWorkspace, listWorkspaces } from "../src/workspaces/index.ts";
@@ -206,6 +206,34 @@ eval("1");`,
     expect(answerCode({ outcome: "patch", summary: "x", patch: { operations: [] } })).toBeNull();
     expect(answerCode({ outcome: "cannot", reason: "No." })).toBeNull();
     expect(answerCode("text")).toBeNull();
+  });
+
+  it("GEN-10: an answer refused for its shape keeps its code too, and still fails", async () => {
+    const store = await folder();
+    const ask = await serve(store, [
+      { kind: "value", stage: "intent", value: intent("create") },
+      { kind: "value", stage: "create", value: { ...editFixture, name: "" } },
+      { kind: "value", stage: "repair", value: { ...editFixture, name: "" } },
+    ]);
+    expect((await ask("A shopping list")).kind).toBe("failed");
+    const [request] = new RequestLedger(store).unattached();
+    const create = request!.calls.find((c) => c.stage === "create")!;
+    expect(create).toMatchObject({ outcome: "failed", error: "schema" });
+    expect(create.code).toEqual(editFixture.code);
+  });
+
+  it("GEN-10: the code kept is capped in UTF-8 bytes, so a page in another script is measured as stored", () => {
+    const sized = (html: string) => ({ html, css: "", js: "" });
+    const overhead = JSON.stringify(sized("")).length;
+    const ascii = sized("a".repeat(CALL_CODE_LIMIT - overhead));
+    expect(keptCode(ascii)).toBe(JSON.stringify(ascii));
+    expect(keptCode(sized("a".repeat(CALL_CODE_LIMIT - overhead + 1)))).toBeNull();
+    // Three bytes each: about a third as many characters fit.
+    const wide = String.fromCharCode(0x754c);
+    const fits = Math.floor((CALL_CODE_LIMIT - overhead) / 3);
+    expect(keptCode(sized(wide.repeat(fits)))).not.toBeNull();
+    expect(keptCode(sized(wide.repeat(fits + 1)))).toBeNull();
+    expect(keptCode(null)).toBeNull();
   });
 
   it("GEN-10: a mixed request keeps its entry part's outcome, message and findings", () => {

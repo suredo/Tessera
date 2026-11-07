@@ -55,8 +55,15 @@ const callRow = z.object({
 type Failure = { error?: string; message?: string; detail?: string };
 type Code = NonNullable<LedgerCall["code"]>;
 
-/** The most code a call keeps, in characters; a larger answer keeps none rather than a part. */
+/** The most code a call keeps, in UTF-8 bytes; a larger answer keeps none rather than a part. */
 export const CALL_CODE_LIMIT = 256 * 1024;
+
+/** The code as stored: its JSON when within `CALL_CODE_LIMIT` bytes, or nothing. */
+export function keptCode(code: Code | null): string | null {
+  if (!code) return null;
+  const json = JSON.stringify(code);
+  return Buffer.byteLength(json, "utf8") <= CALL_CODE_LIMIT ? json : null;
+}
 
 /**
  * The code an answer holds (GEN-10): a created tool's, an edit's replaced code, or a style edit's
@@ -146,7 +153,7 @@ export class RequestLedger {
               failure.error ?? null,
               failure.message ?? null,
               failure.detail ?? null,
-              code && JSON.stringify(code).length <= CALL_CODE_LIMIT ? JSON.stringify(code) : null,
+              keptCode(code),
             ),
           );
         try {
@@ -155,11 +162,13 @@ export class RequestLedger {
           return result;
         } catch (error) {
           if (error instanceof ProviderError) {
-            write(error.usage, "failed", {
-              error: error.kind,
-              message: error.message,
-              detail: error.detail,
-            });
+            // An answer refused for its shape keeps its code too, unchecked, for reading (GEN-10).
+            write(
+              error.usage,
+              "failed",
+              { error: error.kind, message: error.message, detail: error.detail },
+              answerCode(error.answer),
+            );
           } else {
             const message = error instanceof Error ? error.message : String(error);
             write(UNKNOWN_USAGE, "crashed", { message });

@@ -55,16 +55,24 @@ export class ProviderError extends Error {
    */
   readonly detail: string | undefined;
 
+  /**
+   * For a "schema" failure: the answer as it came, unchecked, so the ledger can keep its code
+   * (GEN-10). Never used as an answer: the call still fails.
+   */
+  readonly answer: unknown;
+
   constructor(
     kind: ProviderErrorKind,
     message: string,
     usage: Usage = UNKNOWN_USAGE,
     detail?: string,
+    answer?: unknown,
   ) {
     super(message);
     this.name = "ProviderError";
     this.kind = kind;
     this.usage = usage;
     this.detail = detail;
+    this.answer = answer;
   }
 }
