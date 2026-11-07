@@ -2,6 +2,7 @@ import type { GenerateReply } from "@tessera/contracts";
 import type { StagingResult } from "@tessera/runtime";
 import { describe, expect, it, vi } from "vitest";
 import { carryOut, dataOutcome, withInterfaceOutcome, type RequestDeps } from "../src/generate.ts";
+import { HostError } from "../src/host-api.ts";
 import { en } from "../src/i18n/en.ts";
 
 // The host app's side of a request (GEN-01, GEN-08): a candidate is staged behind the smoke check
@@ -29,6 +30,7 @@ function deps(reply: GenerateReply, staged?: StagingResult) {
   const fake: RequestDeps = {
     finishData: () => Promise.resolve({ kind: "answer", answer: "data_unchanged" }),
     repairSmoke: () => Promise.resolve(reply),
+    followUp: () => Promise.reject(new Error("No follow-up is scripted.")),
     generate: (request) => {
       seen.requests.push(request);
       return Promise.resolve(reply);
@@ -349,5 +351,86 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
     // GEN-18: a matched saved tool is handed to the app to offer, never opened here.
     expect(await carryOut("x", null, saved.fake)).toEqual({ message: "", savedToolId: "t-1" });
     expect(saved.seen.stagings).toEqual([]);
+  });
+});
+
+describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
+  const activated = { outcome: "activated", workspace: {} as never, migrationCount: 0 } as const;
+  const failedCheck = { outcome: "check-failed", check: "static", reason: "No." } as const;
+  const edited = (summary: string, followUps?: string[], n = "b"): GenerateReply => ({
+    ...candidate,
+    operation: "edit",
+    hash: n.repeat(64),
+    mountId: `v-${n.repeat(64)}`,
+    summary,
+    activation: {
+      ...candidate.activation,
+      token: `00000000-0000-4000-8000-00000000000${n === "b" ? 3 : 4}`,
+    },
+    ...(followUps ? { followUps } : {}),
+  });
+
+  it("GEN-17, GEN-08: says the core is ready, then each feature as its version activates, and opens the tool after each", async () => {
+    const core = { ...candidate, followUps: ["Aisles", "Prices"] } as GenerateReply;
+    const { fake } = deps(core, activated);
+    const asked: unknown[] = [];
+    const replies = [edited("Added aisles.", ["Prices"]), edited("Added prices.", undefined, "c")];
+    fake.followUp = (request) => {
+      asked.push(request);
+      return Promise.resolve(replies.shift()!);
+    };
+    const shown: string[] = [];
+    const outcome = await carryOut("A big list", null, fake, (id) => {
+      shown.push(id);
+      return Promise.resolve();
+    });
+    expect(outcome).toEqual({
+      message:
+        "Shopping list is ready. A list to tick off at the store. Aisles was added. Added aisles. Prices was added. Added prices.",
+      openWorkspaceId: candidate.workspaceId,
+    });
+    // Each follow-up names the version just activated, by its own token.
+    expect(asked).toEqual([
+      {
+        workspaceId: candidate.workspaceId,
+        hash: "a".repeat(64),
+        token: candidate.activation.token,
+      },
+      {
+        workspaceId: candidate.workspaceId,
+        hash: "b".repeat(64),
+        token: "00000000-0000-4000-8000-000000000003",
+      },
+    ]);
+    expect(shown).toEqual([candidate.workspaceId, candidate.workspaceId]);
+  });
+
+  it("GEN-17, GEN-08: a feature that fails its checks is said as not added, and what came before still stands", async () => {
+    const core = { ...candidate, followUps: ["Aisles", "Prices"] } as GenerateReply;
+    const { fake } = deps(core, activated);
+    const replies = [edited("Added aisles.", ["Prices"]), edited("Added prices.", undefined, "c")];
+    fake.followUp = () => Promise.resolve(replies.shift()!);
+    let stagings = 0;
+    fake.stage = () => Promise.resolve(++stagings === 3 ? failedCheck : activated);
+    const outcome = await carryOut("A big list", null, fake);
+    expect(outcome.message).toBe(
+      `Shopping list is ready. A list to tick off at the store. Aisles was added. Added aisles. Prices wasn't added: ${en["request.editCheckFailed"]}`,
+    );
+    expect(outcome.openWorkspaceId).toBe(candidate.workspaceId);
+  });
+
+  it("GEN-17: a refused follow-up says the core stands and the feature wasn't added", async () => {
+    const core = { ...candidate, followUps: ["Aisles"] } as GenerateReply;
+    const { fake } = deps(core, activated);
+    fake.followUp = () =>
+      Promise.reject(
+        new HostError("The rest of the tool wasn't added. Please ask for it again.", 409),
+      );
+    const outcome = await carryOut("A big list", null, fake);
+    expect(outcome).toEqual({
+      message:
+        "Shopping list is ready. A list to tick off at the store. Aisles wasn't added: The rest of the tool wasn't added. Please ask for it again.",
+      openWorkspaceId: candidate.workspaceId,
+    });
   });
 });

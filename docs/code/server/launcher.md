@@ -7,7 +7,7 @@ implements: [PLAT-02]
 tests: [../../../packages/server/test/launcher.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: codex/gpt-6.1-sol, at: 2026-10-30T11:27:04Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:10:25Z }
 ---
 
 # Purpose
@@ -25,6 +25,7 @@ Starts Tessera with one double-click (`PLAT-02`): it opens the data folder ([sto
 # Invariants
 
 - **Development and tests choose their own data folder** with `TESSERA_DATA_DIR` (`ENG-19`). `TESSERA_OPEN_BROWSER=0` starts Tessera without a browser, for tests.
+- **Two passes for big tools are off unless asked for** (`GEN-17`): `LaunchOptions.twoPass` passes `TwoPassOptions` to the [generation routes](generation.md); nothing sets it outside tests until the measurement against one pass decides the default.
 
 - **One copy per data folder.** The copy that runs holds an exclusive lock on `tessera.lock` in the data folder for as long as it runs, through `tryLockFile` from [storage](storage.md). A launch that can't take the lock starts nothing: it waits up to 10 seconds for the holder's address and opens the browser there, or says that Tessera is already starting in another window.
 - **The system releases the lock** when its holder ends, however it ends, so a copy that was killed, or a computer that lost power, leaves nothing that blocks the next start. There is no stale lock to check and remove, so two launches recovering at the same moment can't both start: whichever takes the lock is the only one.

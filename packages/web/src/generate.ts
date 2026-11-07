@@ -3,6 +3,7 @@ import {
   SMOKE_REPAIR_ROUTE,
   CONFIRM_DATA_ROUTE,
   FINISH_DATA_ROUTE,
+  FOLLOW_UP_ROUTE,
   dataReplySchema,
   generateReplySchema,
   type GenerateReply,
@@ -10,6 +11,7 @@ import {
   type SmokeRepairRequest,
   type ConfirmDataRequest,
   type FinishDataRequest,
+  type FollowUpRequest,
   type DataReply,
 } from "@tessera/contracts";
 import { smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
@@ -55,9 +57,15 @@ export async function askToFinishData(request: FinishDataRequest, send?: Send): 
   return checked.data;
 }
 
+/** Asks for a big tool's next feature once the version before it is active (GEN-17). */
+export const askToFollowUp = (request: FollowUpRequest, send?: Send): Promise<GenerateReply> =>
+  askForCandidate(FOLLOW_UP_ROUTE, request, send ?? ((url, init) => fetch(url, init)));
+
 async function askForCandidate(
   route: string,
-  request: GenerateRequest | SmokeRepairRequest | ConfirmDataRequest | FinishDataRequest,
+  request:
+    // A follow-up asks the way finishing data does: the same shape (GEN-17).
+    GenerateRequest | SmokeRepairRequest | ConfirmDataRequest | FinishDataRequest,
   send: Send,
 ): Promise<GenerateReply> {
   const response = await send(route, {
@@ -191,6 +199,7 @@ export type RequestDeps = {
   generate: (request: GenerateRequest) => Promise<GenerateReply>;
   repairSmoke: (request: SmokeRepairRequest) => Promise<GenerateReply>;
   finishData: (request: FinishDataRequest) => Promise<DataReply>;
+  followUp: (request: FollowUpRequest) => Promise<GenerateReply>;
   stage: (options: Parameters<typeof stageCandidate>[0]) => Promise<StagingResult>;
 };
 
@@ -198,6 +207,7 @@ const defaultDeps: RequestDeps = {
   generate: (r) => askToGenerate(r),
   repairSmoke: (r) => askToRepairSmoke(r),
   finishData: (r) => askToFinishData(r),
+  followUp: (r) => askToFollowUp(r),
   stage: stageCandidate,
 };
 
@@ -287,139 +297,181 @@ export async function carryOut(
   }
   let repaired = false;
   let mixed = false;
-  for (;;) {
-    switch (reply.kind) {
-      case "data_changed":
-      case "data_confirmation":
-      case "mixed_data":
-        return reviewed(dataOutcome(reply));
-      case "candidate": {
-        if (control?.stopped) return stopped();
-        mixed ||= reply.dataPending === true;
-        let staged: StagingResult;
-        try {
-          staged = await wait(stageRequest(reply, deps, control));
-        } catch {
-          // Activation may have committed before its response was lost (GEN-08, DATA-10).
-          return { message: t("request.activationUnknown"), reloadData: true };
-        }
-        if (staged.outcome === "activated") {
-          if (reply.dataPending) {
-            const interfaceMessage = t("request.edited", {
-              name: reply.name,
-              summary: reply.summary,
-            });
-            try {
-              await onInterfaceApplied?.(reply.workspaceId);
-              if (control?.stopped)
-                return {
-                  ...withInterfaceOutcome(interfaceMessage, stopped()),
-                  openWorkspaceId: reply.workspaceId,
-                };
-              return reviewed(
-                dataOutcome({
-                  kind: "mixed_data",
-                  workspaceId: reply.workspaceId,
-                  name: reply.name,
-                  interface: { outcome: "updated", summary: reply.summary },
-                  data: await wait(
-                    deps.finishData({
-                      workspaceId: reply.workspaceId,
-                      hash: reply.hash,
-                      token: reply.activation.token,
-                    }),
-                  ),
-                }),
-              );
-            } catch (error) {
-              if (isRefusal(error))
-                return {
-                  ...(control?.stopped
-                    ? withInterfaceOutcome(interfaceMessage, stopped())
-                    : withInterfaceOutcome(interfaceMessage, { message: "" }, error.message)),
-                  openWorkspaceId: reply.workspaceId,
-                };
-              return {
-                message: t("request.mixedUnknown", { interfaceMessage }),
-                openWorkspaceId: reply.workspaceId,
-                reloadData: true,
-              };
-            }
+  // A big tool made in two passes (GEN-17): what has been said of the versions already active,
+  // the feature being added now, and the tool's workspace.
+  const said: string[] = [];
+  let feature: string | undefined;
+  let made: string | undefined;
+  let addedLast = false;
+  const outcome = await loop();
+  if (said.length === 0) return outcome;
+  // The core and each feature already added stand; the one being added now is said as it went.
+  const last = addedLast
+    ? outcome.message
+    : t("request.followUpNotAdded", { feature: feature!, message: outcome.message });
+  return { ...outcome, message: [...said, last].join(" "), openWorkspaceId: made };
+
+  async function loop(): Promise<RequestOutcome> {
+    for (;;) {
+      switch (reply.kind) {
+        case "data_changed":
+        case "data_confirmation":
+        case "mixed_data":
+          return reviewed(dataOutcome(reply));
+        case "candidate": {
+          if (control?.stopped) return stopped();
+          mixed ||= reply.dataPending === true;
+          let staged: StagingResult;
+          try {
+            staged = await wait(stageRequest(reply, deps, control));
+          } catch {
+            // Activation may have committed before its response was lost (GEN-08, DATA-10).
+            return { message: t("request.activationUnknown"), reloadData: true };
           }
-          return {
-            message: t(reply.operation === "edit" ? "request.edited" : "request.made", {
-              name: reply.name,
-              summary: reply.summary,
-            }),
-            openWorkspaceId: reply.workspaceId,
-          };
-        }
-        if (control?.stopped) return stopped();
-        if (Date.now() >= reply.activation.expiresAt) return { message: t("request.timedOut") };
-        if (staged.outcome === "check-failed") {
-          if (!repaired && (staged.check === "smoke" || staged.check === "start")) {
-            repaired = true;
+          if (staged.outcome === "activated") {
+            if (reply.dataPending) {
+              const interfaceMessage = t("request.edited", {
+                name: reply.name,
+                summary: reply.summary,
+              });
+              try {
+                await onInterfaceApplied?.(reply.workspaceId);
+                if (control?.stopped)
+                  return {
+                    ...withInterfaceOutcome(interfaceMessage, stopped()),
+                    openWorkspaceId: reply.workspaceId,
+                  };
+                return reviewed(
+                  dataOutcome({
+                    kind: "mixed_data",
+                    workspaceId: reply.workspaceId,
+                    name: reply.name,
+                    interface: { outcome: "updated", summary: reply.summary },
+                    data: await wait(
+                      deps.finishData({
+                        workspaceId: reply.workspaceId,
+                        hash: reply.hash,
+                        token: reply.activation.token,
+                      }),
+                    ),
+                  }),
+                );
+              } catch (error) {
+                if (isRefusal(error))
+                  return {
+                    ...(control?.stopped
+                      ? withInterfaceOutcome(interfaceMessage, stopped())
+                      : withInterfaceOutcome(interfaceMessage, { message: "" }, error.message)),
+                    openWorkspaceId: reply.workspaceId,
+                  };
+                return {
+                  message: t("request.mixedUnknown", { interfaceMessage }),
+                  openWorkspaceId: reply.workspaceId,
+                  reloadData: true,
+                };
+              }
+            }
+            const message = feature
+              ? t("request.followUpAdded", { feature, summary: reply.summary })
+              : t(reply.operation === "edit" ? "request.edited" : "request.made", {
+                  name: reply.name,
+                  summary: reply.summary,
+                });
+            if (!reply.followUps?.length) {
+              if (feature) addedLast = true;
+              return { message, openWorkspaceId: reply.workspaceId };
+            }
+            // More to come: this version stands and is shown, and the next feature is asked for.
+            said.push(message);
+            made = reply.workspaceId;
+            const next = reply.followUps[0]!;
+            await onInterfaceApplied?.(reply.workspaceId);
+            if (control?.stopped) return stopped();
             try {
               reply = await wait(
-                deps.repairSmoke({
+                deps.followUp({
                   workspaceId: reply.workspaceId,
                   hash: reply.hash,
                   token: reply.activation.token,
-                  findings: [staged.reason],
                 }),
               );
             } catch (error) {
-              if (isRefusal(error)) {
-                if (control?.stopped) return stopped();
-                throw error;
-              }
+              feature = next;
+              if (isRefusal(error))
+                return control?.stopped ? stopped() : { message: error.message };
               return { message: t("request.requestUnknown"), reloadData: true };
             }
+            feature = next;
+            repaired = false;
             continue;
           }
-          return {
-            message: t(
-              reply.operation === "edit" ? "request.editCheckFailed" : "request.checkFailed",
-            ),
-          };
+          if (control?.stopped) return stopped();
+          if (Date.now() >= reply.activation.expiresAt) return { message: t("request.timedOut") };
+          if (staged.outcome === "check-failed") {
+            if (!repaired && (staged.check === "smoke" || staged.check === "start")) {
+              repaired = true;
+              try {
+                reply = await wait(
+                  deps.repairSmoke({
+                    workspaceId: reply.workspaceId,
+                    hash: reply.hash,
+                    token: reply.activation.token,
+                    findings: [staged.reason],
+                  }),
+                );
+              } catch (error) {
+                if (isRefusal(error)) {
+                  if (control?.stopped) return stopped();
+                  throw error;
+                }
+                return { message: t("request.requestUnknown"), reloadData: true };
+              }
+              continue;
+            }
+            return {
+              message: t(
+                reply.operation === "edit" ? "request.editCheckFailed" : "request.checkFailed",
+              ),
+            };
+          }
+          return { message: t("request.refused", { message: staged.message }) };
         }
-        return { message: t("request.refused", { message: staged.message }) };
+        case "answer":
+          switch (reply.answer) {
+            case "clarify":
+              return { message: t("request.clarify") };
+            case "unsupported":
+              return { message: t("request.unsupported") };
+            case "cannot":
+              return { message: t("request.cannot", { reason: reply.reason ?? "" }) };
+            case "ask_to_split":
+              return { message: t("request.split") };
+            case "not_yet":
+              return { message: t("request.notYet") };
+            case "unchanged":
+              // The model's own reason, such as that the tool already does it (GEN-08).
+              if (!mixed && reply.reason)
+                return { message: t("request.unchangedBecause", { reason: reply.reason }) };
+              return { message: t(mixed ? "request.mixedKept" : "request.unchanged") };
+            case "stale":
+              return { message: t("request.stale") };
+            case "data_unchanged":
+            case "data_cancelled":
+            case "data_stale":
+            case "data_clarify":
+            case "data_cannot":
+              return dataOutcome(reply);
+          }
+          break;
+        case "open_saved":
+          return { message: "", savedToolId: reply.savedToolId };
+        case "failed":
+          // A failed reply applied nothing; after Cancel it is the stop the person asked for, not
+          // something that went wrong (GEN-08, GEN-12; the M2 live run's J6).
+          if (control?.stopped) return stopped();
+          return { message: t("request.failed", { message: reply.message }) };
       }
-      case "answer":
-        switch (reply.answer) {
-          case "clarify":
-            return { message: t("request.clarify") };
-          case "unsupported":
-            return { message: t("request.unsupported") };
-          case "cannot":
-            return { message: t("request.cannot", { reason: reply.reason ?? "" }) };
-          case "ask_to_split":
-            return { message: t("request.split") };
-          case "not_yet":
-            return { message: t("request.notYet") };
-          case "unchanged":
-            // The model's own reason, such as that the tool already does it (GEN-08).
-            if (!mixed && reply.reason)
-              return { message: t("request.unchangedBecause", { reason: reply.reason }) };
-            return { message: t(mixed ? "request.mixedKept" : "request.unchanged") };
-          case "stale":
-            return { message: t("request.stale") };
-          case "data_unchanged":
-          case "data_cancelled":
-          case "data_stale":
-          case "data_clarify":
-          case "data_cannot":
-            return dataOutcome(reply);
-        }
-        break;
-      case "open_saved":
-        return { message: "", savedToolId: reply.savedToolId };
-      case "failed":
-        // A failed reply applied nothing; after Cancel it is the stop the person asked for, not
-        // something that went wrong (GEN-08, GEN-12; the M2 live run's J6).
-        if (control?.stopped) return stopped();
-        return { message: t("request.failed", { message: reply.message }) };
+      return { message: t("request.failedPlain") };
     }
-    return { message: t("request.failedPlain") };
   }
 }

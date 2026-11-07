@@ -40,6 +40,7 @@ function deps(): RequestDeps {
   return {
     generate: vi.fn(() => Promise.resolve(candidate)),
     repairSmoke: vi.fn(() => Promise.resolve(candidate)),
+    followUp: vi.fn(() => Promise.reject(new Error("No follow-up is scripted."))),
     finishData: vi.fn<RequestDeps["finishData"]>(() =>
       Promise.resolve({ kind: "answer", answer: "data_unchanged" }),
     ),

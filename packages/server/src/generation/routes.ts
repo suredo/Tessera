@@ -10,6 +10,8 @@ import {
   type ActivationRequest,
   FINISH_DATA_ROUTE,
   finishDataRequestSchema,
+  FOLLOW_UP_ROUTE,
+  followUpRequestSchema,
   REGISTER_REQUEST_ROUTE,
   CANCEL_REQUEST_ROUTE,
   requestControlSchema,
@@ -25,6 +27,7 @@ import { ProviderError, RoutesError, type Provider, type Routes } from "../provi
 import { activationRoutes, getWorkspace, type Store } from "../workspaces/index.ts";
 import type { GenerationResult } from "./result.ts";
 import { generate } from "./pipeline.ts";
+import { generateEdit } from "./edit-pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
 import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
 import { applyDataOffer, changeData, type DataOffer } from "./data-action.ts";
@@ -64,11 +67,14 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   // loses eligibility, never resets it; a replay or a parallel POST cannot spend another call.
   const pending = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const waitingData = new Map<string, { context: SmokeRepairContext; expires: number }>();
+  // A big tool's features still to come (GEN-17), for after the version before them activates.
+  const waitingFollowUps = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const offers = new Map<string, { offer: DataOffer; expires: number }>();
   const activations = new Map<string, Omit<ActivationRequest, "token"> & { expires: number }>();
   const controls = new RequestControls(options.jobs, (token) => {
     pending.delete(token);
     waitingData.delete(token);
+    waitingFollowUps.delete(token);
     offers.delete(token);
     activations.delete(token);
   });
@@ -113,12 +119,13 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   };
   const available = (context: SmokeRepairContext) => {
     const workspace = getWorkspace(options.store, context.reply.workspaceId);
-    for (const [token, entry] of [...pending, ...waitingData]) {
+    for (const [token, entry] of [...pending, ...waitingData, ...waitingFollowUps]) {
       if (
         entry.context.reply.workspaceId === context.reply.workspaceId &&
         entry.context.reply.hash === context.reply.hash &&
         entry.expires > Date.now() &&
         (waitingData.has(token) ||
+          waitingFollowUps.has(token) ||
           (workspace?.currentVersion === entry.context.baseVersion &&
             workspace.dataRevision === entry.context.reply.expectedDataRevision))
       )
@@ -143,9 +150,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     available(context);
     retain(pending, token, context, expires);
     if (context.dataPart) retain(waitingData, token, context, expires);
+    // A follow-up is its own request with its own time limit, so its continuation outlives this
+    // request's deadline by one request's limit, and no more (GEN-11).
+    if (context.plan?.later.length) retain(waitingFollowUps, token, context, expires + limit);
   };
   const handle =
-    (mode: "generate" | "smoke" | "data"): Handler =>
+    (mode: "generate" | "smoke" | "data" | "follow-up"): Handler =>
     async (req, res) => {
       if (req.method !== "POST") return text(res, 405, "Send a request with POST.");
       const body = await readJson(req, REQUEST_LIMIT_BYTES);
@@ -157,7 +167,9 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
               ? smokeRepairRequestSchema
               : mode === "data"
                 ? finishDataRequestSchema
-                : generateRequestSchema
+                : mode === "follow-up"
+                  ? followUpRequestSchema
+                  : generateRequestSchema
             ).safeParse(body.json);
       if (!request?.success) return text(res, 400, "Say what you need, in a few words.");
       const input = request.data;
@@ -221,7 +233,13 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       let expires = 0;
       controls.waiting(control);
       const { job, outcome } = options.jobs.submit(
-        "request" in input ? input.request : "findings" in input ? "Repair tool" : "Change entries",
+        "request" in input
+          ? input.request
+          : "findings" in input
+            ? "Repair tool"
+            : mode === "follow-up"
+              ? "Add a feature"
+              : "Change entries",
         (jobSignal) => {
           const signal = control
             ? AbortSignal.any([jobSignal, control.controller.signal])
@@ -255,6 +273,76 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
           const matches = (entry: { context: SmokeRepairContext } | undefined) =>
             entry?.context.reply.workspaceId === input.workspaceId &&
             entry.context.reply.hash === input.hash;
+          if (mode === "follow-up") {
+            const entry = waitingFollowUps.get(id);
+            const plan = entry?.context.plan;
+            if (!entry || !plan?.later.length || !matches(entry) || entry.expires <= Date.now())
+              return Promise.resolve<GenerateReply>({
+                kind: "failed",
+                failure: "provider",
+                message: "The rest of the tool wasn't added. Please ask for it again.",
+                findings: [],
+              });
+            // Consumed before any call: a replay or a parallel POST can't add a feature twice.
+            waitingFollowUps.delete(id);
+            pending.delete(id);
+            waitingData.delete(id);
+            // Each feature is its own request, with a request's whole time limit (GEN-11).
+            expires = Date.now() + limit;
+            if (control) control.expires = expires;
+            const [feature, ...rest] = plan.later as [
+              (typeof plan.later)[number],
+              ...typeof plan.later,
+            ];
+            const next = { core: [...plan.core, feature], later: rest };
+            const followUps = rest.map((later) => later.name);
+            return withinRequestDeadline<GenerationResult>(
+              provider,
+              expires,
+              async (bounded, stopped, check) => {
+                const baseline = getWorkspace(options.store, input.workspaceId);
+                if (baseline?.currentVersion !== input.hash)
+                  return { kind: "answer", answer: "stale" } as const;
+                // The host's own intent for the feature: an edit of the tool now open, in the
+                // request's language, with what it adds; no intent call is spent on it (L-37).
+                const edited = await generateEdit(
+                  options.store,
+                  bounded,
+                  routes,
+                  baseline,
+                  feature.request,
+                  {
+                    ...entry.context.intent,
+                    kind: "edit",
+                    interfacePart: feature.request,
+                    dataPart: null,
+                    targetsCurrentTool: true,
+                    behaviorChange: true,
+                    lookOnly: false,
+                    features: [feature],
+                  },
+                  stopped,
+                  (context) => {
+                    controls.bind(control, nextToken);
+                    remember(
+                      nextToken,
+                      {
+                        ...context,
+                        plan: next,
+                        reply: { ...context.reply, ...(rest.length ? { followUps } : {}) },
+                      },
+                      expires,
+                    );
+                  },
+                  check,
+                );
+                return edited.kind === "candidate" && rest.length
+                  ? { ...edited, followUps }
+                  : edited;
+              },
+              signal,
+            );
+          }
           if (!("findings" in input)) {
             const entry = waitingData.get(id);
             if (!entry?.context.dataPart || !matches(entry))
@@ -311,6 +399,15 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
               );
               if (control?.controller.signal.aborted) return repaired;
               if (repaired.kind === "candidate") controls.bind(control, nextToken);
+              if (repaired.kind === "candidate" && entry.context.plan?.later.length) {
+                available({ ...entry.context, reply: repaired });
+                retain(
+                  waitingFollowUps,
+                  nextToken,
+                  { ...entry.context, reply: repaired },
+                  entry.expires + limit,
+                );
+              }
               if (repaired.kind === "candidate" && entry.context.dataPart) {
                 available({ ...entry.context, reply: repaired });
                 retain(
@@ -442,6 +539,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     [GENERATE_ROUTE]: handle("generate"),
     [SMOKE_REPAIR_ROUTE]: handle("smoke"),
     [FINISH_DATA_ROUTE]: handle("data"),
+    [FOLLOW_UP_ROUTE]: handle("follow-up"),
     [CONFIRM_DATA_ROUTE]: confirm,
     [REGISTER_REQUEST_ROUTE]: register,
     [CANCEL_REQUEST_ROUTE]: cancel,

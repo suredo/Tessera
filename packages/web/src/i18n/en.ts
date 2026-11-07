@@ -42,6 +42,8 @@ export const en = {
     "The entry result couldn't be confirmed. Check the entries before asking again.",
   "request.made": "{name} is ready. {summary}",
   "request.edited": "{name} was updated. {summary}",
+  "request.followUpAdded": "{feature} was added. {summary}",
+  "request.followUpNotAdded": "{feature} wasn't added: {message}",
   "request.unchanged": "The tool wasn't changed.",
   "request.unchangedBecause": "The tool wasn't changed. {reason}",
   "request.dataChanged": "Changed {count} entries in {name}. {summary}",
