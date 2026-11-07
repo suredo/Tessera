@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-07
+
+* **New**: Speed measured against the targets ([issue 154](https://github.com/suredo/Tessera/issues/154), `OBS-04`, `GEN-11`). The [scenario runner](code/evals/runner.md) gains `speed.ts`, which reads a run's report and harness ledger and gives each stage's and each request's times against the speed targets. The [M2 speed report](../evals/reports/2026-11-07-m2-speed.md) applies it to the live run: every measurable target met, on small samples, and two screen targets not measured. [ADR 0012](decisions/adr/0012-time-limits-after-m2.md) records the owner's choice to keep the time limits until M3's runs. No call was made. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T03:22:48Z.
+
 ## 2026-11-06
 
 * **New**: The chat beside the request box, the second part of [issue 132](https://github.com/suredo/Tessera/issues/132) (`APP-01`, `APP-03`): the [browser](code/web/package.md) shows the open workspace's conversation, adds each request and its reply to the workspace it made or acted on, and says a reply in the chat once, and in the notice too until its own chat has shown it; a review's outcome goes to the reviewed workspace, and a kept chat shows even while setup fails. The [scenario runner](code/evals/runner.md) reads a request's outcome from the chat, and the browser tests wait for the newest reply. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T22:57:00Z.
