@@ -183,6 +183,41 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     folder.close();
   });
 
+  it("GEN-08: a made tool's reply says what it leaves out, and a smoke repair's answer replaces it", async () => {
+    const folder = await newFolder();
+    let context: SmokeRepairContext | undefined;
+    const reply = await generate(
+      folder,
+      script(
+        intentReply({ kind: "create" }),
+        createReply({ ...tool, leftOut: ["Playing videos"] }),
+      ),
+      DEFAULT_ROUTES,
+      { request: "A video playlist" },
+      undefined,
+      (c) => {
+        context = c;
+      },
+    );
+    expect(reply).toMatchObject({ kind: "candidate", leftOut: ["Playing videos"] });
+    if (!context) throw new Error("Expected continuation");
+    const fixed = {
+      ...tool,
+      code: { ...tool.code, html: "<h1>Fixed</h1>" },
+      data: { ...tool.data, initialState: {} },
+    };
+    const repaired = await repairSmoke(
+      folder,
+      script(repairReply(fixed)),
+      DEFAULT_ROUTES,
+      { workspaceId: context.reply.workspaceId, hash: context.reply.hash, findings: ["Blank"] },
+      context,
+    );
+    expect(repaired.kind).toBe("candidate");
+    expect(repaired).not.toHaveProperty("leftOut");
+    folder.close();
+  });
+
   it("GEN-09, GEN-05: changed workspaces and data declarations are refused, and provider failures get no repair", async () => {
     for (const scenario of ["stale", "data", "provider"] as const) {
       const folder = await newFolder();

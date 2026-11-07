@@ -81,6 +81,7 @@ export async function generateEdit(
     expectedDataRevision: baseline.dataRevision,
     name: baseline.title,
     summary: result.summary,
+    ...(result.leftOut ? { leftOut: result.leftOut } : {}),
   };
   remember?.({ reply, request, intent, repairUsage, baseVersion: baseline.currentVersion });
   return reply;

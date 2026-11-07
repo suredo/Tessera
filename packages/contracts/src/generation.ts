@@ -24,6 +24,14 @@ const code = z
   .strictObject({ html: z.string(), css: z.string(), js: z.string() })
   .describe("The tool: the HTML inside its page's body, its CSS and its JavaScript.");
 
+/** What a tool doesn't do because no tool here can, said to the person by the host (GEN-08). */
+const leftOut = z
+  .array(z.string().min(1).max(200))
+  .max(5)
+  .describe(
+    "The parts of the request this tool doesn't do because no tool here can, such as reaching the internet or playing videos, each in plain words for the person. Left out when the tool does all of it.",
+  );
+
 export const creationSchema = z
   .discriminatedUnion("outcome", [
     z.strictObject({
@@ -38,6 +46,7 @@ export const creationSchema = z
         .min(1)
         .max(400)
         .describe("What the tool does, in one or two plain sentences for the person."),
+      leftOut: leftOut.optional(),
       code,
       data: z.strictObject({
         schema: jsonObjectSchema.describe(
@@ -76,6 +85,7 @@ export const editSchema = z.discriminatedUnion("outcome", [
   z.strictObject({
     outcome: z.literal("edit"),
     summary: creationSchema.options[0].shape.summary,
+    leftOut: creationSchema.options[0].shape.leftOut,
     files: z.discriminatedUnion("mode", [
       z.strictObject({ mode: z.literal("unchanged") }),
       z
@@ -258,6 +268,7 @@ export const generateReplySchema = z
         z.strictObject({
           outcome: z.literal("updated"),
           summary: creationSchema.options[0].shape.summary,
+          leftOut: creationSchema.options[0].shape.leftOut,
         }),
         z.strictObject({ outcome: z.literal("unchanged") }),
       ]),
@@ -275,6 +286,7 @@ export const generateReplySchema = z
       activation: z.strictObject({ token: z.uuid(), expiresAt: z.int().nonnegative() }),
       name: z.string().min(1),
       summary: z.string().min(1),
+      leftOut: creationSchema.options[0].shape.leftOut,
       dataPending: z
         .boolean()
         .optional()

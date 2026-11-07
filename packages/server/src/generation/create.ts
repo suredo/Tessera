@@ -51,6 +51,8 @@ export type Candidate = {
   startingData: ToolData;
   name: string;
   summary: string;
+  /** What the request asked that no tool here can do, said to the person (GEN-08). */
+  leftOut?: string[];
 };
 
 export type CreateResult = (
@@ -217,6 +219,7 @@ export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>):
     startingData,
     name: creation.name,
     summary: creation.summary,
+    ...(creation.leftOut?.length ? { leftOut: creation.leftOut } : {}),
   };
 }
 
@@ -285,6 +288,10 @@ type Repair = {
   diagnostics?: readonly string[];
   attempt?: Extract<Creation, { outcome: "tool" }>;
 };
+
+/** Why what a tool leaves out isn't said plainly (GEN-12): it is shown to the person as written. */
+export const leftOutProblems = (leftOut: readonly string[] | undefined, request: string) =>
+  (leftOut ?? []).flatMap((part) => plainWordProblems("What the tool leaves out", part, request));
 
 /**
  * Why a generated name or summary isn't plain (GEN-12): each internal term it uses that the
@@ -365,6 +372,7 @@ async function ask(
   const words = [
     ...plainWordProblems("The tool's name", creation.name, input.request),
     ...plainWordProblems("The tool's summary", creation.summary, input.request),
+    ...leftOutProblems(creation.leftOut, input.request),
   ];
   if (words.length > 0) {
     return {

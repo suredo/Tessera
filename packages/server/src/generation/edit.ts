@@ -14,6 +14,7 @@ import type { StageTimeLimits } from "./time-limits.ts";
 import {
   dataProblems,
   GENERATION_TIME_LIMIT_MS,
+  leftOutProblems,
   plainRefusal,
   plainWordProblems,
   REPAIR_BUDGETS,
@@ -35,7 +36,7 @@ export type EditInput = {
   timeLimits?: Pick<StageTimeLimits, "edit" | "repair">;
 };
 export type EditResult = (
-  | { kind: "candidate"; artifact: Artifact; summary: string }
+  | { kind: "candidate"; artifact: Artifact; summary: string; leftOut?: string[] }
   // The model's summary says why, such as that the tool already does it (GEN-08).
   | { kind: "unchanged"; summary?: string }
   | Extract<CreateResult, { kind: "failed" | "cannot" }>
@@ -127,7 +128,12 @@ export function editedCandidate(input: EditInput, answer: Answer): EditResult {
     };
   return canonicalJson(artifact) === canonicalJson(before)
     ? { kind: "unchanged", summary: answer.summary }
-    : { kind: "candidate", artifact, summary: answer.summary };
+    : {
+        kind: "candidate",
+        artifact,
+        summary: answer.summary,
+        ...(answer.leftOut?.length ? { leftOut: answer.leftOut } : {}),
+      };
 }
 
 /** Edit and per-class repair use the same output contract and host checks (CON-02, GEN-09). */
@@ -185,7 +191,10 @@ export async function editTool(
       else {
         attempt = response.value;
         // The summary the person reads is in plain words too (GEN-12).
-        const words = plainWordProblems("The change's summary", attempt.summary, input.request);
+        const words = [
+          ...plainWordProblems("The change's summary", attempt.summary, input.request),
+          ...leftOutProblems(attempt.leftOut, input.request),
+        ];
         result =
           words.length > 0
             ? { kind: "failed", failure: "schema-shape", findings: words }

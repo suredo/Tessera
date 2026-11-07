@@ -379,6 +379,37 @@ describe("the create stage (CLI-09, GEN-11)", () => {
     expect(calls[1]!.prompt).toContain("(schema)");
   });
 
+  it("GEN-08: what a tool leaves out, because no tool here can do it, comes with the candidate", async () => {
+    const leftOut = ["Finding videos on the internet", "Playing videos"];
+    const { provider, calls } = answering({
+      kind: "value",
+      stage: "create",
+      value: tool({ leftOut }),
+    });
+    const result = await createTool(provider, DEFAULT_ROUTES, { request: "A video playlist" });
+    expect(result).toMatchObject({ kind: "candidate", leftOut });
+    expect(calls[0]!.system).toContain("name each part it leaves out in leftOut");
+    const { provider: none } = answering({ kind: "value", stage: "create", value: tool() });
+    expect(await createTool(none, DEFAULT_ROUTES, { request: "A list" })).not.toHaveProperty(
+      "leftOut",
+    );
+  });
+
+  it("GEN-12, GEN-08: what a tool leaves out, in Tessera's own words, is repaired before the person reads it", async () => {
+    const { provider, calls } = answering(
+      { kind: "value", stage: "create", value: tool({ leftOut: ["A network capability"] }) },
+      { kind: "value", stage: "repair", value: tool({ leftOut: ["Finding videos online"] }) },
+    );
+    expect(
+      await createTool(provider, DEFAULT_ROUTES, { request: "A video playlist" }),
+    ).toMatchObject({
+      kind: "candidate",
+      leftOut: ["Finding videos online"],
+      repairs: 1,
+    });
+    expect(calls[1]!.prompt).toContain("What the tool leaves out");
+  });
+
   it("GEN-12: a refusal's reason in Tessera's own words reaches the person as a plain sentence, from creation or its repair", async () => {
     const refusal = {
       kind: "value",

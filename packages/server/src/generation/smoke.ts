@@ -74,6 +74,7 @@ export async function repairSmoke(
             attempt: {
               outcome: "edit",
               summary: context.reply.summary,
+              ...(context.reply.leftOut ? { leftOut: context.reply.leftOut } : {}),
               files: context.intent?.lookOnly
                 ? { mode: "style", css: artifact.code.css }
                 : { mode: "replace", code: artifact.code },
@@ -103,6 +104,7 @@ export async function repairSmoke(
               outcome: "tool",
               name: context.reply.name,
               summary: context.reply.summary,
+              ...(context.reply.leftOut ? { leftOut: context.reply.leftOut } : {}),
               code: artifact.code,
               data: {
                 schema: artifact.data.schema,
@@ -143,8 +145,12 @@ export async function repairSmoke(
   if (!current()) return failed(["The workspace changed during repair."]);
   beforeStore();
   const hash = saveVersion(store.db, repaired.artifact);
+  // What the repaired answer leaves out replaces what the failed one did (GEN-08).
+  const reply = { ...context.reply };
+  delete reply.leftOut;
   return {
-    ...context.reply,
+    ...reply,
+    ...(repaired.leftOut ? { leftOut: repaired.leftOut } : {}),
     hash,
     mountId: candidateMount(hash),
     capabilities: repaired.artifact.capabilities,

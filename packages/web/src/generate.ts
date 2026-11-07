@@ -145,12 +145,27 @@ export async function confirmDataChoice(
   }
 }
 
+/**
+ * A made or changed tool's message, with what it leaves out because no tool here can do it, as
+ * the model said it (GEN-08): a smaller tool is never presented as the whole request.
+ */
+export const withLeftOut = (message: string, leftOut: readonly string[] | undefined) =>
+  leftOut?.length
+    ? t("request.leftOut", {
+        message,
+        parts: leftOut.map((part) => part.replace(/[.\s]+$/, "")).join("; "),
+      })
+    : message;
+
 /** Data success is reported only after its transaction, never for a proposed patch. */
 export function dataOutcome(reply: GenerateReply): RequestOutcome {
   if (reply.kind === "mixed_data") {
     const message =
       reply.interface.outcome === "updated"
-        ? t("request.edited", { name: reply.name, summary: reply.interface.summary })
+        ? withLeftOut(
+            t("request.edited", { name: reply.name, summary: reply.interface.summary }),
+            reply.interface.leftOut,
+          )
         : t("request.unchanged");
     return {
       ...withInterfaceOutcome(
@@ -336,10 +351,10 @@ export async function carryOut(
           }
           if (staged.outcome === "activated") {
             if (reply.dataPending) {
-              const interfaceMessage = t("request.edited", {
-                name: reply.name,
-                summary: reply.summary,
-              });
+              const interfaceMessage = withLeftOut(
+                t("request.edited", { name: reply.name, summary: reply.summary }),
+                reply.leftOut,
+              );
               try {
                 await onInterfaceApplied?.(reply.workspaceId);
                 if (control?.stopped)
@@ -352,7 +367,11 @@ export async function carryOut(
                     kind: "mixed_data",
                     workspaceId: reply.workspaceId,
                     name: reply.name,
-                    interface: { outcome: "updated", summary: reply.summary },
+                    interface: {
+                      outcome: "updated",
+                      summary: reply.summary,
+                      ...(reply.leftOut ? { leftOut: reply.leftOut } : {}),
+                    },
                     data: await wait(
                       deps.finishData({
                         workspaceId: reply.workspaceId,
@@ -377,12 +396,15 @@ export async function carryOut(
                 };
               }
             }
-            const message = feature
-              ? t("request.followUpAdded", { feature, summary: reply.summary })
-              : t(reply.operation === "edit" ? "request.edited" : "request.made", {
-                  name: reply.name,
-                  summary: reply.summary,
-                });
+            const message = withLeftOut(
+              feature
+                ? t("request.followUpAdded", { feature, summary: reply.summary })
+                : t(reply.operation === "edit" ? "request.edited" : "request.made", {
+                    name: reply.name,
+                    summary: reply.summary,
+                  }),
+              reply.leftOut,
+            );
             if (!reply.followUps?.length) {
               if (feature) addedLast = true;
               return { message, openWorkspaceId: reply.workspaceId };

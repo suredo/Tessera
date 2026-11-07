@@ -197,6 +197,7 @@ export async function generate(
     expectedDataRevision: workspace.dataRevision,
     name: created.name,
     summary: created.summary,
+    ...(created.leftOut ? { leftOut: created.leftOut } : {}),
     ...(plan ? { followUps: plan.later.map((feature) => feature.name) } : {}),
   };
   remember?.({

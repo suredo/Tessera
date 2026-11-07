@@ -286,6 +286,18 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       message: "That didn't work. The request was stopped.",
     });
   });
+  it("GEN-08: a made tool's message says what it leaves out, because no tool here can do it", async () => {
+    if (candidate.kind !== "candidate") throw new Error("Expected candidate");
+    const { fake } = deps(
+      { ...candidate, leftOut: ["Finding videos on the internet.", "Playing videos"] },
+      { outcome: "activated", workspace: {} as never, migrationCount: 0 },
+    );
+    expect(await carryOut("A video playlist", null, fake)).toEqual({
+      message:
+        "Shopping list is ready. A list to tick off at the store. Not included, because tools here can't do it: Finding videos on the internet; Playing videos.",
+      openWorkspaceId: candidate.workspaceId,
+    });
+  });
   it("RUN-03, VER-02: a candidate is staged behind the smoke check, and only an activated one is called ready", async () => {
     const { fake, seen } = deps(candidate, {
       outcome: "activated",
