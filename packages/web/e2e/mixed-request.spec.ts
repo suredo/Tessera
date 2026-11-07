@@ -43,6 +43,8 @@ const patch = (operation: unknown) => ({
 });
 let breadId = "";
 let dataBegan = false;
+/** Every call's stage and what it was sent, to check each step sees only its own part (GEN-04). */
+const asked: { stage: string; system: string; prompt: string }[] = [];
 let releaseData: () => void = () => {};
 type Step = {
   stage: "intent" | "create" | "edit" | "data" | "repair";
@@ -91,6 +93,7 @@ const provider: Provider = {
   name: "scripted:mixed-request",
   live: false,
   async run(spec) {
+    asked.push({ stage: spec.stage, system: spec.system, prompt: spec.prompt });
     const step = steps.shift();
     if (step?.stage !== spec.stage) throw new Error(`Unexpected ${spec.stage}`);
     if (step.defer) {
@@ -136,6 +139,7 @@ test("GEN-04 DATA-02: activate and display the edited interface before its separ
 }) => {
   await page.goto(app.url);
   const before = workspace();
+  const from = asked.length;
   await send(page, "Make it dark and Add Bread");
   try {
     // Data planning starts only after generation, staging, smoke and activation finish.
@@ -149,6 +153,16 @@ test("GEN-04 DATA-02: activate and display the edited interface before its separ
     releaseData();
   }
   await finished(page);
+  // Neither step sees the other's instruction: the edit only the interface part, the data plan
+  // only the data part, and neither the request as a whole (GEN-04).
+  const calls = asked.slice(from);
+  const edit = calls.find((c) => c.stage === "edit")!;
+  const data = calls.find((c) => c.stage === "data")!;
+  const sent = (call: (typeof asked)[number]) => `${call.system}\n${call.prompt}`;
+  expect(sent(edit)).toContain("Make it dark");
+  expect(sent(edit)).not.toContain("Add Bread");
+  expect(sent(data)).toContain("Add Bread");
+  expect(sent(data)).not.toContain("Make it dark");
   await expect(newestReply(page)).toContainText("Shopping list was updated.");
   await expect(newestReply(page)).toContainText("Changed one entry");
   await expect(page.getByRole("button", { name: en["tool.minimize"] })).toBeVisible();
