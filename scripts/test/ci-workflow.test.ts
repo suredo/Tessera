@@ -87,12 +87,13 @@ describe("the CI workflow", () => {
     expect(JSON.parse(read("package.json")).scripts["e2e:local"]).toContain("--workers=1");
   });
 
-  it("records every browser test's video on CI, where the CI variable is set, and nothing locally (ENG-10, ENG-31)", () => {
+  it("records every browser test's video on CI, where the CI variable is set, and locally only when asked (ENG-10, ENG-31)", () => {
     const config = read("playwright.config.ts");
-    expect(config).toContain(`video: process.env["CI"] ? "on" : "off"`);
-    expect(config).toMatch(
-      /trace: process\.env\["CI"\]\s*\?\s*\{ mode: "retain-on-failure"[^}]*\}\s*:\s*"off"/,
+    expect(config).toContain(
+      `const record = !!process.env["CI"] || process.env["TESSERA_E2E_RECORD"] === "1";`,
     );
+    expect(config).toContain(`video: record ? "on" : "off"`);
+    expect(config).toMatch(/trace: record\s*\?\s*\{ mode: "retain-on-failure"[^}]*\}\s*:\s*"off"/);
   });
 
   it("gives no job a secret, such as a provider's key, and only read access (ENG-02)", () => {

@@ -2,7 +2,7 @@
 
 ## 2026-11-07
 
-* **Update**: Local tests run one at a time and record nothing, as the owner asked ([testing](practices/testing.md), `AGENTS.md`): `pnpm e2e:local` uses one worker and Vitest one test file at a time locally; Playwright keeps no video or trace locally, while CI still keeps every test's video and a trace of each failure (`ENG-10`); and no heavy job runs beside another, a review included. Measured first: one browser spec took about 700 MB and the server unit suite about 600 MB, with about 5.5 GB free before any test. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T10:47:11Z.
+* **Update**: Local tests run one at a time and record nothing, as the owner asked ([testing](practices/testing.md), `AGENTS.md`): `pnpm e2e:local` uses one worker and Vitest one test file at a time locally; Playwright keeps no video or trace locally unless `TESSERA_E2E_RECORD=1` is set, while CI still keeps every test's video and a trace of each failure (`ENG-10`, the [CI workflow](code/ci/workflow.md)); and no heavy job runs beside another, a review included. Measured first: one browser spec took about 700 MB and the server unit suite about 600 MB, with about 5.5 GB free before any test. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T10:47:11Z.
 
 * **Update**: The [browser](code/web/package.md) doc claims `TEST-03`: every generation rule, `GEN-01` to `GEN-18`, has a scripted end-to-end test through the real pipeline and the host app, M2's first exit criterion ([issue 157](https://github.com/suredo/Tessera/issues/157)); `GEN-17`'s came with two passes, and `mixed-request.spec.ts` now checks that each step of a mixed request sees only its own part (`GEN-04`). Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T06:36:42Z.
 

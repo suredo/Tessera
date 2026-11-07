@@ -4,7 +4,7 @@ title: "Testing"
 description: "The five-layer test pyramid and test rules (ENG-11, ENG-13, ENG-14, ENG-17, ENG-20, ENG-31)."
 tags: [practices, testing]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T10:47:11Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T10:57:23Z }
 ---
 # Testing
 
@@ -40,7 +40,7 @@ How `ENG-31` chooses and reports local checks. It applies to the author before s
 
 **Docs only.** For a change to documentation and nothing else (Markdown, including `AGENTS.md` and the GitHub templates), the OKF check as above and `pnpm format:check` are enough; the code checks can't be affected. Run `node --test scripts/okf-check.test.mjs` too if the checker changed, and `pnpm coverage` if IDs or claims changed.
 
-**Browser tests locally: only the affected specs, in one browser and one width.** Run them with `pnpm e2e:local <spec files>`: Chrome at 1280 px, one spec file at a time (1 worker). Add Edge or the 320 px width (`pnpm e2e --project=<name> <spec files>`) only when the change depends on them, such as layout at narrow widths or a fix for one browser. Locally nothing is recorded, no video and no trace, to keep the machine free; CI records every test's video and a trace of each failure. To see a local failure, rerun its spec with `--video on` or `--trace on`. Never run the whole browser suite to cover a change's reach: when a change reaches every browser test (the runtime's wrapper and preamble, the browser test host and other test support, the Playwright configuration), run its own specs and one or two that depend most on it, and leave the rest to CI.
+**Browser tests locally: only the affected specs, in one browser and one width.** Run them with `pnpm e2e:local <spec files>`: Chrome at 1280 px, one spec file at a time (1 worker). Add Edge or the 320 px width (`pnpm e2e --project=<name> <spec files>`) only when the change depends on them, such as layout at narrow widths or a fix for one browser. Locally nothing is recorded, no video and no trace, to keep the machine free; CI records every test's video and a trace of each failure. To see a local failure, rerun its spec with `--trace on`, or with `TESSERA_E2E_RECORD=1` set to record as CI does. Never run the whole browser suite to cover a change's reach: when a change reaches every browser test (the runtime's wrapper and preamble, the browser test host and other test support, the Playwright configuration), run its own specs and one or two that depend most on it, and leave the rest to CI.
 
 **Broaden the other layers when the impact is wide or unclear.** Run the full unit suite, or every layer the change can reach other than the browser tests, when it touches a shared contract (`packages/contracts` and its generated schemas), shared infrastructure (storage and migrations, the local server and its guard, the runtime's wrapper and preamble), dependencies or the lockfile, test or tool configuration (Vitest, TypeScript, ESLint, Prettier), or when you can't tell what it reaches. When in doubt, broaden.
 
