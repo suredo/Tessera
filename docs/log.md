@@ -2,6 +2,8 @@
 
 ## 2026-11-07
 
+* **New**: The [M2 closing report](../evals/reports/2026-11-07-m2-report.md), waiting for the owner's visual testing and sign-off. As the owner chose, the two-pass measurement (#153) and the clean-setup run in Windows Sandbox (P1) move to [M3](roadmap/m3-verification-and-codex.md), with the four Windows CI trackers; changes to the host app's own screens go to [M4](roadmap/m4-first-release.md), once real tools can be tested in the app. The [M2 roadmap](roadmap/m2-generation-pipeline.md) says what moved, and [L-85](lessons/tessera-issues.md) records the video playlist that came back smaller without saying so. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T15:36:26Z.
+
 * **New**: The details view shows the code each create, edit or repair call answered with, also when the checks refused it (`GEN-10`), so a refusal such as a startup write can be read rather than guessed. The [call ledger](code/server/ledger.md) keeps only the code, never the request or its entries (migration `0013-call-code.sql`, [storage](code/server/storage.md)); the [contracts](code/contracts/package.md) and the [browser](code/web/package.md) carry and show it. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T19:23:34Z.
 
 * **Update**: A startup write's finding now says why ([static check](code/server/checks.md), `GEN-09`, [L-84](lessons/tessera-issues.md)): the value the analysis couldn't name, such as `parts[0]`, and its line, with the fix the base prompt gives, or the line startup reaches the write from. Found when a calendar the owner asked for failed after its one repair, with the repair told only the write's line. What counts as startup is unchanged. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T16:06:17Z.

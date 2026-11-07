@@ -4,7 +4,7 @@ title: "M2: Generation pipeline"
 description: "The Claude Code adapter and generation pipeline, ending in the internal alpha."
 tags: [roadmap, generation-pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T13:38:21Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T15:34:41Z }
 ---
 # M2: Generation pipeline (size L, live budget about 75 calls) → internal alpha
 
@@ -26,7 +26,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T13:38:21Z }
 | Host-composed outcome messages, plain-language lint, name and declaration preservation, scoped CSS edits | GEN-08, GEN-12, GEN-13, GEN-14 |
 | Ledger with diagnostics; details view (basic) | OBS-01, GEN-10, UX-06, APP-09 |
 | Progress display (per decision D7) and cancel | GEN-16, CLI-07, UX-02, APP-10 |
-| Two-pass generation for big tools, measured against single-pass; default model routing recorded per stage | GEN-17, CLI-09 |
+| Two-pass generation for big tools, built and off by default (its measurement against single-pass moved to [M3](m3-verification-and-codex.md) on 2026-11-07, [#153](https://github.com/suredo/Tessera/issues/153)); default model routing recorded per stage | GEN-17, CLI-09 |
 | Speed targets measured and reported | OBS-04 |
 | Scenario runner: scenario files (the scenarios move to `evals/` with the runner, moved from M0), automatic host facts, live and replay modes, evaluation report | EVAL-01, EVAL-02, EVAL-07 |
 | Replay tests from the POC's recorded failures, where exports exist. None exist: the POC's raw evidence isn't carried over (owner's decision, 2026-10-12, `ENG-10`). Its routing failures were run live again in the [intent spike](../code/evals/intent-spike.md); the answers kept from that run (three requests, and L-75's) replay in CI, next to Tessera's own live runs (`e2e/scenario-replays.spec.ts`), and the live evaluation measures the rest | TEST-04 |
@@ -38,7 +38,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T13:38:21Z }
 
 **Exit criteria:**
 - Every GEN rule has a scripted end-to-end test.
-- The setup check guides a fresh machine to a working connection: the clean-setup scenario (P1) passes once in Windows Sandbox (A43).
+- The setup check guides a fresh machine to a working connection: the clean-setup scenario (P1) passes once in Windows Sandbox (A43). **Moved to [M3](m3-verification-and-codex.md) on 2026-11-07** (owner's choice), so one run covers Claude Code and Codex.
 - Finding a saved tool by asking works in scripted tests and in the live run.
 - The live run shows no false success messages and no data loss.
 - The first-attempt pass rate, stage time p95 and speed targets are recorded, and the time limits are updated from them.
