@@ -84,7 +84,9 @@ describe("the CI workflow", () => {
 
   it("runs four unit workers on CI and one test file at a time locally (ENG-31, #188)", () => {
     expect(read("vitest.config.ts")).toContain(`maxWorkers: process.env["CI"] ? 4 : 1`);
-    expect(JSON.parse(read("package.json")).scripts["e2e:local"]).toContain("--workers=1");
+    const scripts = (JSON.parse(read("package.json")) as { scripts: Record<string, string> })
+      .scripts;
+    expect(scripts["e2e:local"]).toContain("--workers=1");
   });
 
   it("records every browser test's video on CI, where the CI variable is set, and locally only when asked (ENG-10, ENG-31)", () => {
