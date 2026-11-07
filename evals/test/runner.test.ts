@@ -6,7 +6,7 @@ import { intentSchema, type Intent } from "@tessera/contracts";
 import { listWorkspaces, ProviderError, ScriptError, type Store } from "@tessera/server";
 import { afterAll, describe, expect, it } from "vitest";
 import { loadScenario } from "../src/scenarios/index.ts";
-import { outcomeOf, say } from "../src/runner/messages.ts";
+import { featuresMissed, outcomeOf, say } from "../src/runner/messages.ts";
 import { reportMarkdown } from "../src/runner/report.ts";
 import { runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
 import { answersProvider, loadAnswers, type Answers } from "../src/runner/script.ts";
@@ -48,6 +48,22 @@ const ask = (stage: "intent" | "create", signal?: AbortSignal) => ({
 });
 
 describe("what a notice claims (EVAL-02, GEN-08)", () => {
+  it("GEN-17, EVAL-02: a big tool whose core stands but whose feature wasn't added, or may have been, isn't a pass", () => {
+    const made = say("request.made", { name: "Reading list", summary: "A list and ratings." });
+    const missed = `${made} ${say("request.followUpNotAdded", { feature: "Genre", message: "The model is unavailable." })}`;
+    expect(outcomeOf(missed)).toEqual({ claim: "created" });
+    expect(featuresMissed(missed)).toEqual([
+      "A feature wasn't added, so not every feature asked for is in place.",
+    ]);
+    const unsure = `${made} ${say("request.followUpUncertain", { feature: "Genre", message: "Lost." })}`;
+    expect(featuresMissed(unsure)).toEqual([
+      "A feature may have been added, so not every feature asked for is in place.",
+    ]);
+    const all = `${made} ${say("request.followUpAdded", { feature: "Genre", summary: "Added genres." })}`;
+    expect(featuresMissed(all)).toEqual([]);
+    expect(featuresMissed(made)).toEqual([]);
+  });
+
   it("EVAL-02: reads a claim or an answer from the app's own words", () => {
     const made = say("request.made", { name: "Shopping list", summary: "A list." });
     expect(outcomeOf(made)).toEqual({ claim: "created" });
@@ -123,11 +139,17 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
     await expect(running).rejects.toThrow(ProviderError);
   });
 
-  it("EVAL-01: every M2 scenario has a rehearsal, for it, within its budget", () => {
+  it("EVAL-01: every M2 scenario has a rehearsal, for it, within its budget, and each big request one for two passes too", () => {
     const ids = fs
       .readdirSync(path.join(scenarios, "rehearsals"))
       .map((f) => path.basename(f, ".json"));
     expect(ids.sort()).toEqual([
+      "B10-study-planner",
+      "B10-study-planner.two-pass",
+      "B2-reading-list",
+      "B2-reading-list.two-pass",
+      "B4-habit-tracker",
+      "B4-habit-tracker.two-pass",
       "J6-limits",
       "T1-shopping-list",
       "T13-drawing-board",
@@ -135,10 +157,9 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
     ]);
     for (const id of ids) {
       const rehearsal = loadAnswers(path.join(scenarios, "rehearsals", `${id}.json`));
-      expect(rehearsal.scenario).toBe(loadScenario(path.join(scenarios, `${id}.yaml`)).id);
-      expect(rehearsal.answers.length).toBeLessThanOrEqual(
-        loadScenario(path.join(scenarios, `${id}.yaml`)).budget.calls,
-      );
+      const scenario = loadScenario(path.join(scenarios, `${id.replace(/\.two-pass$/, "")}.yaml`));
+      expect(rehearsal.scenario).toBe(scenario.id);
+      expect(rehearsal.answers.length).toBeLessThanOrEqual(scenario.budget.calls);
     }
   });
 });
@@ -238,6 +259,21 @@ describe("live runs become replays (EVAL-07, ENG-07)", () => {
 });
 
 describe("the run's clock and its failures (RUN-07, EVAL-02)", () => {
+  it("RUN-07, L-83: a scenario whose clock starts after now is refused before anything starts", async () => {
+    const t1 = loadScenario(path.join(scenarios, "T1-shopping-list.yaml"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-clock-"));
+    roots.push(root);
+    const ahead = { ...t1, clock: { start: "2099-01-01T09:00:00", zone: "Europe/Lisbon" } };
+    await expect(
+      runScenario(ahead, {
+        mode: "live",
+        provider: createScriptedProvider({ name: "never", replies: [] }),
+        folder: path.join(root, "run"),
+      }),
+    ).rejects.toThrow(/clock starts at 2099-01-01T09:00:00, after now/);
+    expect(fs.existsSync(path.join(root, "run"))).toBe(false);
+  });
+
   const roots: string[] = [];
   afterAll(() => roots.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 

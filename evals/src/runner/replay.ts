@@ -4,6 +4,7 @@
 import type { Browser } from "@playwright/test";
 import { listSavedTools, type Store } from "@tessera/server";
 import type { Scenario } from "../scenarios/index.ts";
+import type { TwoPassOptions } from "@tessera/server";
 import { runScenario, type RunReport } from "./run.ts";
 import { answersProvider, loadAnswers } from "./script.ts";
 
@@ -16,6 +17,7 @@ export async function replayScenario(
     folder: string;
     webRoot?: string;
     launchBrowser?: () => Promise<Browser>;
+    twoPass?: TwoPassOptions;
   },
 ): Promise<RunReport> {
   const loaded = loadAnswers(options.file);
@@ -37,5 +39,6 @@ export async function replayScenario(
     stale: () => answers.stale(),
     ...(options.webRoot ? { webRoot: options.webRoot } : {}),
     ...(options.launchBrowser ? { launchBrowser: options.launchBrowser } : {}),
+    ...(options.twoPass ? { twoPass: options.twoPass } : {}),
   });
 }

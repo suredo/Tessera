@@ -1,0 +1,22 @@
+# B4-habit-tracker, a big request from T4 (docs/testing/app-catalogue.md), asking for several separate
+# things at once, for comparing two passes with one (GEN-17,
+# evals/reports/2026-11-07-two-pass-plan.md). It runs once in each mode, on its own data folder.
+# The budget fits the two-pass run (intent, core, three features, two repairs); the one-pass run
+# is capped at 3.
+id: B4-habit-tracker
+tier: advanced
+language: en
+person: "Someone building three daily habits"
+goal: "See each habit's streak, the week at a glance and a note per day"
+clock: { start: "2026-11-02T19:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 7 }
+steps:
+  - say: "Help me track three habits every day: walk, read, drink water. Show my streaks, a weekly chart and let me add notes to each day."
+    expect: { created: true, workspace: new }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - accessibility
+  - messages
+  - coherence

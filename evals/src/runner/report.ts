@@ -14,7 +14,7 @@ export function reportMarkdown(report: RunReport): string {
   const { ledger } = report;
   const cell = (text: string) => text.replace(/\|/g, "\\|").replace(/\s+/g, " ").trim() || "—";
   const lines = [
-    `# ${report.scenario}: ${report.mode}`,
+    `# ${report.scenario}: ${report.mode}${report.twoPass ? ", two passes" : ""}`,
     "",
     `Started at the scenario's time ${report.startedAt}; took ${report.seconds.toFixed(0)} s.`,
     "",

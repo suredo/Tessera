@@ -34,6 +34,9 @@ describe("scenario files (EVAL-01)", () => {
   it("EVAL-01: every scenario loads, starts with a request, and the M2 set plays without the tool's own controls", () => {
     const all = loadScenarios(scenarios);
     expect(all.map((s) => s.id)).toEqual([
+      "B10-study-planner",
+      "B2-reading-list",
+      "B4-habit-tracker",
       "J6-limits",
       "T1-shopping-list",
       "T13-drawing-board",
@@ -44,8 +47,12 @@ describe("scenario files (EVAL-01)", () => {
       expect(stepKind(scenario.steps[0]!)).toBe("say");
       expect(m2Problems(scenario)).toEqual([]);
     }
-    // The M2 live set's budgets (docs/roadmap/m2-generation-pipeline.md).
+    // The M2 live set's budgets (docs/roadmap/m2-generation-pipeline.md), and the two-pass
+    // comparison's, each fitting its two-pass run (evals/reports/2026-11-07-two-pass-plan.md).
     expect(Object.fromEntries(all.map((s) => [s.id, s.budget.calls]))).toEqual({
+      "B10-study-planner": 7,
+      "B2-reading-list": 7,
+      "B4-habit-tracker": 7,
       "J6-limits": 5,
       "T1-shopping-list": 10,
       "T13-drawing-board": 7,

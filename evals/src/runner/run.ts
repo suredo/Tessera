@@ -13,6 +13,7 @@ import {
   listWorkspaces,
   type Provider,
   type Store,
+  type TwoPassOptions,
 } from "@tessera/server";
 import { refuseRealDataFolder, startHarness, type LedgerSummary } from "../harness/index.ts";
 import {
@@ -25,7 +26,7 @@ import {
   type StepOutcome,
   type StepTarget,
 } from "../scenarios/index.ts";
-import { outcomeOf, say } from "./messages.ts";
+import { featuresMissed, outcomeOf, say } from "./messages.ts";
 
 // The scenario runner (EVAL-01, EVAL-02): it starts an empty Tessera on the run's own data folder,
 // with every model call going through the harness (cap and ledger), and plays a scenario's steps
@@ -79,6 +80,8 @@ export type RunReport = {
   callCap: number;
   /** A replay recorded with other prompt parts: it ran, but its evidence is stale (ENG-16). */
   stale: string[];
+  /** Whether big tools were made in two passes (GEN-17); missing in reports from before it. */
+  twoPass?: boolean;
   ledger: LedgerSummary;
   folder: string;
 };
@@ -148,6 +151,8 @@ export async function runScenario(
     /** The browser's web build and launcher; tests pass their own. */
     webRoot?: string;
     launchBrowser?: () => Promise<Browser>;
+    /** Makes big tools in two passes (GEN-17), for comparing them with one pass. */
+    twoPass?: TwoPassOptions;
   },
 ): Promise<RunReport> {
   const unplayable = m2Problems(scenario);
@@ -157,6 +162,13 @@ export async function runScenario(
   if (!Number.isInteger(callCap) || callCap < 1 || callCap > scenario.budget.calls) {
     throw new Error(
       `The cap must be a whole number from 1 to ${scenario.id}'s budget of ${scenario.budget.calls}, not ${callCap}.`,
+    );
+  }
+  // A clock ahead of the real one makes the browser judge every deadline the server set as past,
+  // so each request would time out (L-83). Refused before anything starts or is spent.
+  if (zonedInstant(scenario.clock.start, scenario.clock.zone) > Date.now()) {
+    throw new Error(
+      `${scenario.id}'s clock starts at ${scenario.clock.start}, after now; start it in the past.`,
     );
   }
   const webRoot = options.webRoot ?? WEB_ROOT;
@@ -183,6 +195,7 @@ export async function runScenario(
     provider: harness.provider,
     now,
     openBrowser: () => Promise.resolve(),
+    ...(options.twoPass ? { twoPass: options.twoPass } : {}),
     ...(options.mode === "live"
       ? {}
       : {
@@ -246,6 +259,8 @@ export async function runScenario(
         const after = readHostState(store, await openWorkspace(page));
         result.notice = cancelledNext ? "Sent; the next step cancels it." : await said(page, s);
         result.problems = cancelledNext ? [] : checkFacts(before, after, outcome, s.expect, target);
+        // A big tool's core standing isn't a pass when a feature after it wasn't added (GEN-17).
+        if (!cancelledNext && "say" in s) result.problems.push(...featuresMissed(result.notice));
       } catch (error) {
         result.problems = [error instanceof Error ? error.message.split("\n")[0]! : String(error)];
         result.notice = await said(page, s).catch(() => "");
@@ -284,6 +299,7 @@ export async function runScenario(
     ...(stopped ? { stopped } : {}),
     callCap,
     stale: [...(options.stale?.() ?? [])],
+    twoPass: options.twoPass !== undefined,
     ledger: harness.finish(),
     folder,
   };

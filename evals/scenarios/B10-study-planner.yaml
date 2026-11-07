@@ -1,0 +1,22 @@
+# B10-study-planner, a big request from T10 (docs/testing/app-catalogue.md), asking for several separate
+# things at once, for comparing two passes with one (GEN-17,
+# evals/reports/2026-11-07-two-pass-plan.md). It runs once in each mode, on its own data folder.
+# The budget fits the two-pass run (intent, core, three features, two repairs); the one-pass run
+# is capped at 3.
+id: B10-study-planner
+tier: advanced
+language: en
+person: "A student two weeks from an exam"
+goal: "Plan the topics by day, keep Fridays free and see what is left"
+clock: { start: "2026-11-02T19:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 7 }
+steps:
+  - say: "My exam is in two weeks. Help me organize topics by day, never on Fridays, mark each one done, and show how much is left."
+    expect: { created: true, workspace: new }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - accessibility
+  - messages
+  - coherence
