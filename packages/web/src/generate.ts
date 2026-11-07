@@ -166,7 +166,7 @@ export function dataOutcome(reply: GenerateReply): RequestOutcome {
             t("request.edited", { name: reply.name, summary: reply.interface.summary }),
             reply.interface.leftOut,
           )
-        : t("request.unchanged");
+        : withLeftOut(t("request.unchanged"), reply.interface.leftOut);
     return {
       ...withInterfaceOutcome(
         message,
@@ -484,9 +484,14 @@ export async function carryOut(
               return { message: t("request.notYet") };
             case "unchanged":
               // The model's own reason, such as that the tool already does it (GEN-08).
-              if (!mixed && reply.reason)
-                return { message: t("request.unchangedBecause", { reason: reply.reason }) };
-              return { message: t(mixed ? "request.mixedKept" : "request.unchanged") };
+              return {
+                message: withLeftOut(
+                  !mixed && reply.reason
+                    ? t("request.unchangedBecause", { reason: reply.reason })
+                    : t(mixed ? "request.mixedKept" : "request.unchanged"),
+                  reply.leftOut,
+                ),
+              };
             case "stale":
               return { message: t("request.stale") };
             case "data_unchanged":

@@ -270,7 +270,10 @@ export const generateReplySchema = z
           summary: creationSchema.options[0].shape.summary,
           leftOut: creationSchema.options[0].shape.leftOut,
         }),
-        z.strictObject({ outcome: z.literal("unchanged") }),
+        z.strictObject({
+          outcome: z.literal("unchanged"),
+          leftOut: creationSchema.options[0].shape.leftOut,
+        }),
       ]),
       data: dataReplySchema,
     }),
@@ -305,6 +308,9 @@ export const generateReplySchema = z
         .string()
         .optional()
         .describe("The model's own plain reason, for cannot, and for unchanged when it gave one."),
+      leftOut: creationSchema.options[0].shape.leftOut.describe(
+        "For unchanged: what the request asked that no tool here can do (GEN-08).",
+      ),
       findings: z
         .array(z.string())
         .optional()

@@ -235,6 +235,28 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
     );
     expect(untouched.seen.stagings).toHaveLength(0);
   });
+  it("GEN-08: an unchanged edit, or a mixed request's unchanged interface, still says what no tool here can do", async () => {
+    const leftOut = ["Finding videos on the internet"];
+    const untouched = deps({
+      kind: "answer",
+      answer: "unchanged",
+      reason: "You can already keep video titles here.",
+      leftOut,
+    });
+    expect((await carryOut("Find videos", null, untouched.fake)).message).toBe(
+      "The tool wasn't changed. You can already keep video titles here. Not included, because tools here can't do it: Finding videos on the internet.",
+    );
+    expect(untouched.seen.stagings).toHaveLength(0);
+    expect(
+      dataOutcome({
+        kind: "mixed_data",
+        workspaceId: candidate.kind === "candidate" ? candidate.workspaceId : "",
+        name: "Videos",
+        interface: { outcome: "unchanged", leftOut },
+        data: { kind: "answer", answer: "data_unchanged" },
+      }).message,
+    ).toContain("Not included, because tools here can't do it: Finding videos on the internet.");
+  });
   it("GEN-09: stages a smoke repair once, reports its own outcome, and never repairs a cancellation or refusal", async () => {
     const { fake, seen } = deps(candidate);
     const repair = vi

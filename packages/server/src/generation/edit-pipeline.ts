@@ -57,6 +57,7 @@ export async function generateEdit(
       kind: "answer",
       answer: "unchanged",
       ...(result.summary ? { reason: result.summary } : {}),
+      ...(result.leftOut ? { leftOut: result.leftOut } : {}),
     };
   if (result.kind === "failed")
     return {

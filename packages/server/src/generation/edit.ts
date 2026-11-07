@@ -38,7 +38,7 @@ export type EditInput = {
 export type EditResult = (
   | { kind: "candidate"; artifact: Artifact; summary: string; leftOut?: string[] }
   // The model's summary says why, such as that the tool already does it (GEN-08).
-  | { kind: "unchanged"; summary?: string }
+  | { kind: "unchanged"; summary?: string; leftOut?: string[] }
   | Extract<CreateResult, { kind: "failed" | "cannot" }>
 ) & { repairs?: number };
 const shapeFailure = (findings: string[]): EditResult => ({
@@ -127,7 +127,11 @@ export function editedCandidate(input: EditInput, answer: Answer): EditResult {
       ),
     };
   return canonicalJson(artifact) === canonicalJson(before)
-    ? { kind: "unchanged", summary: answer.summary }
+    ? {
+        kind: "unchanged",
+        summary: answer.summary,
+        ...(answer.leftOut?.length ? { leftOut: answer.leftOut } : {}),
+      }
     : {
         kind: "candidate",
         artifact,

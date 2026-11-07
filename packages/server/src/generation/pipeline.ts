@@ -126,7 +126,10 @@ export async function generate(
         kind: "mixed_data",
         workspaceId: baseline!.id,
         name: baseline!.title,
-        interface: { outcome: "unchanged" },
+        interface: {
+          outcome: "unchanged",
+          ...(edited.leftOut ? { leftOut: edited.leftOut } : {}),
+        },
         data: await changeData(
           store,
           provider,
