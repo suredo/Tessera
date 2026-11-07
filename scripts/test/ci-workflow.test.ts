@@ -82,14 +82,20 @@ describe("the CI workflow", () => {
     expect(playwright).toContain('edge: "msedge"');
   });
 
-  it("runs four unit workers on CI and two locally (ENG-31, #188)", () => {
-    expect(read("vitest.config.ts")).toContain(`maxWorkers: process.env["CI"] ? 4 : 2`);
+  it("runs four unit workers on CI and one test file at a time locally (ENG-31, #188)", () => {
+    expect(read("vitest.config.ts")).toContain(`maxWorkers: process.env["CI"] ? 4 : 1`);
+    const scripts = (JSON.parse(read("package.json")) as { scripts: Record<string, string> })
+      .scripts;
+    expect(scripts["e2e:local"]).toContain("--workers=1");
   });
 
-  it("records every browser test's video on CI, where the CI variable is set (ENG-10, ENG-31)", () => {
-    expect(read("playwright.config.ts")).toContain(
-      `video: process.env["CI"] ? "on" : "retain-on-failure"`,
+  it("records every browser test's video on CI, where the CI variable is set, and locally only when asked (ENG-10, ENG-31)", () => {
+    const config = read("playwright.config.ts");
+    expect(config).toContain(
+      `const record = !!process.env["CI"] || process.env["TESSERA_E2E_RECORD"] === "1";`,
     );
+    expect(config).toContain(`video: record ? "on" : "off"`);
+    expect(config).toMatch(/trace: record\s*\?\s*\{ mode: "retain-on-failure"[^}]*\}\s*:\s*"off"/);
   });
 
   it("gives no job a secret, such as a provider's key, and only read access (ENG-02)", () => {
