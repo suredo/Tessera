@@ -4,7 +4,7 @@ title: "Two passes against one: live comparison plan and results"
 description: "The plan for measuring two passes for big tools (GEN-17) against one pass, live, and what happened: the run stopped after three of six runs on its own stop rule, the same check failing twice, a likely false positive of the startup-write check (L-84); 10 of 30 calls used, and the comparison inconclusive."
 tags: [reports, live-evaluation, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T05:51:10Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T06:10:11Z }
 ---
 
 # Two passes against one: live comparison plan, 2026-11-07
@@ -102,4 +102,5 @@ The run started at `0a02a94`, with Claude Code 2.1.319, on the default routes. *
 - **The B2 two-pass run was said honestly:** "Reading list is ready. … Genre was added. … Genre filter wasn't added: … Your tool and entries were kept." The runner scored it failed, as #253 made it do.
 - **The same check failed both runs:** the static check's startup-write rule. It said `data.patch` "writes data during startup" for every write in the code. In both tools each write is in a function that runs only when the person acts: a function passed to `addEventListener`, or called from a handler's closure, never from the startup code. **This looks like a false positive of the check, not a faulty tool** ([L-84](../../docs/lessons/tessera-issues.md)). B4's creation also tripped the rules on property names computed at run time and on `Object.assign`, there on plain objects. Those rules are deliberately conservative (ADR 0009), but their message says "an element or the page".
 - **The comparison is inconclusive:** only one pair (B2) ran both ways, below the two exercised pairs the decision needs. One pass stays the default, and `GEN-17` stays unmeasured.
+- **What came next:** the owner chose on 2026-11-07 to keep the check as strict. A narrower rule ([#255](https://github.com/suredo/Tessera/pull/255)) let real startup writes through, and was closed. The base prompt now steers the code the check can verify instead. A new run of the comparison needs a new plan and the owner's word; this run's unused 20 calls authorize nothing.
 

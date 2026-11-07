@@ -492,6 +492,16 @@ describe("assembling a stage's prompt (GEN-03)", () => {
   });
 });
 
+describe("the base rules steer what the static check can verify (L-84)", () => {
+  it("L-84, GEN-06: tells the model to name a value before passing it to a call, and not to use Object.assign", () => {
+    const base = partText("base");
+    expect(base).toContain("Name a value before passing it to a call");
+    expect(base).toContain("`const [y, m] = parts`, not `parts[0]`");
+    expect(base).toContain("no `Object.assign`");
+    expect(base).toContain("Never write data while the tool starts");
+  });
+});
+
 describe("quoted material can't close its own quote (SEC-02)", () => {
   // Text that pretends its quote has ended, then gives an instruction: the forged marker carries
   // no tag, or the tag its author guessed, never the prompt's own.
