@@ -26,19 +26,20 @@ import { ProviderError, type Provider, type StageResult, type StageSpec } from "
 // `web_search` mode, cached unless set; `model_instructions_file` replaces the model's own
 // instructions; the settings in LOCKED_SETTINGS take away what no feature switch reaches.
 //
-// Two gaps that settings can't close, waiting for the owner's choice before this is used (#266):
-// - The model's own metadata adds `apply_patch`, a file-editing tool, whatever is disabled. Only a
-//   catalog of models given with `model_catalog_json` removes it; the read-only sandbox refuses
-//   its writes, but the tool is still offered (CLI-03).
-// - Codex reads the person's global AGENTS.md from its home folder in every call; only another
-//   home folder, with its own sign-in, keeps it out (CLI-08).
-// Also from the model's metadata: some models add code-mode, MCP-resource and clock tools; the
-// routes must name a model that doesn't.
+// Two things no setting reaches, closed as the owner chose (#266):
+// - Codex reads the global AGENTS.md (or AGENTS.override.md) in its home folder in every call. So
+//   Tessera gives Codex a home folder of its own, with its own sign-in, and refuses to start while
+//   such a file is in it (CLI-08). `codex debug prompt-input` showed that with the locked settings
+//   that file is the only thing besides the request that reaches the model.
+// - The model's metadata adds tools whatever is disabled: `apply_patch` (file editing) for every
+//   model, and code-mode and clock tools for some. So each call is given its own catalog of
+//   models, `model_catalog_json`, built from the installed Codex's bundled one with those taken
+//   out (`restrictCatalog`, CLI-03).
 //
 // Open until the first approved live calls: whether `--output-schema` takes the wrapped schema;
 // whether `input_tokens` includes cached input and `output_tokens` the reasoning (assumed, so
-// nothing is added); the shapes of failures (see `codexFailureKind`); and the tools a real call is
-// offered with these flags.
+// nothing is added); the shapes of failures (see `codexFailureKind`); and that a real call is
+// offered no tool with these flags and this catalog.
 
 /** The version the locked flags were tested on. An older codex is refused. */
 export const TESTED_CODEX_VERSION = "0.166.0";
@@ -65,6 +66,12 @@ export const DISABLED_FEATURES = [
   "sleep_tool",
   "hooks",
   "goals",
+  // Off by default at the tested version, still in development; each would add a tool.
+  "current_time_reminder",
+  "deferred_executor",
+  "request_permissions_tool",
+  "send_message_to_user_async",
+  "token_budget",
 ] as const;
 
 /**
@@ -75,6 +82,7 @@ export const DISABLED_FEATURES = [
  */
 export const LOCKED_SETTINGS = [
   "tools.experimental_request_user_input.enabled=false",
+  "tools.update_plan.enabled=false",
   "agents.enabled=false",
   "cloud.skills.enabled=false",
   "skills.include_instructions=false",
@@ -89,6 +97,51 @@ export const LOCKED_SETTINGS = [
 /** The stage's system prompt, in the call's folder; it replaces the model's own instructions. */
 export const INSTRUCTIONS_FILE = "instructions.md";
 
+/** The restricted catalog of models, in Tessera's Codex home folder, written by `findCodex`. */
+export const MODEL_CATALOG_FILE = "tessera-models.json";
+
+/** The files Codex reads from its home folder as instructions for every call (CLI-08). */
+export const HOME_INSTRUCTION_FILES = ["AGENTS.override.md", "AGENTS.md"] as const;
+
+const catalogSchema = z.looseObject({
+  models: z.array(z.looseObject({ slug: z.string() })).min(1),
+});
+
+/**
+ * The catalog given to every call (CLI-03): the installed Codex's bundled catalog
+ * (`codex debug models --bundled`) with what adds a tool taken out of each model. The file
+ * editing tool and the extra tools the metadata names are removed, and so is code mode, which
+ * hands the model its tools through a script. Search tooling is marked unsupported, and Codex's
+ * notes on skills, plugins and apps are left out. Throws when the text isn't a catalog.
+ */
+export function restrictCatalog(bundled: string): { models: Record<string, unknown>[] } {
+  const catalog = catalogSchema.parse(JSON.parse(bundled));
+  return {
+    models: catalog.models.map((model) => {
+      const restricted: Record<string, unknown> = {
+        ...model,
+        apply_patch_tool_type: null,
+        experimental_supported_tools: [],
+        supports_search_tool: false,
+        include_skills_usage_instructions: false,
+        include_plugin_usage_instructions: false,
+        include_apps_usage_instructions: false,
+      };
+      delete restricted.tool_mode;
+      return restricted;
+    }),
+  };
+}
+
+/**
+ * The command that signs Codex in for Tessera alone: `codex login` with Tessera's home folder,
+ * written for the terminal the platform opens (PowerShell on Windows).
+ */
+export const codexSignInCommand = (home: string, platform: NodeJS.Platform): string =>
+  platform === "win32"
+    ? `$env:CODEX_HOME = '${home.replaceAll("'", "''")}'; codex login`
+    : `CODEX_HOME='${home.replaceAll("'", `'\\''`)}' codex login`;
+
 /** Where the answer's JSON Schema is written, in the call's own empty working folder. */
 export const OUTPUT_SCHEMA_FILE = "output-schema.json";
 
@@ -101,9 +154,10 @@ export const inputText = (spec: Pick<StageSpec<unknown>, "prompt">): string => s
 /**
  * The locked flags of a stage (CLI-03), in this order. The text goes on standard input (`-`), so
  * it does not count toward the command line's limit, about 32,000 characters on Windows. `folder`
- * is the call's own empty working folder, where the schema file was written.
+ * is the call's own empty working folder, where the schema file was written; `home` is Tessera's
+ * Codex home folder, where the restricted catalog is.
  */
-export function buildArgs(spec: StageSpec<unknown>, folder: string): string[] {
+export function buildArgs(spec: StageSpec<unknown>, folder: string, home: string): string[] {
   return [
     // The non-interactive command: one request in, one answer out.
     "exec",
@@ -126,6 +180,9 @@ export function buildArgs(spec: StageSpec<unknown>, folder: string): string[] {
     // The stage's system prompt replaces the model's own instructions, as Claude's file does.
     "-c",
     `model_instructions_file=${JSON.stringify(path.join(folder, INSTRUCTIONS_FILE))}`,
+    // The models as Tessera restricted them: no tool comes from a model's own metadata.
+    "-c",
+    `model_catalog_json=${JSON.stringify(path.join(home, MODEL_CATALOG_FILE))}`,
     // And should a tool remain, it may not write files: the sandbox is read-only.
     "-s",
     "read-only",
@@ -206,7 +263,8 @@ export function toUsage(events: readonly CodexEvent[], durationMs: number): Usag
 
 /** What the person reads for each failure (CLI-05, GEN-12): plain, and with what to do. */
 export const CODEX_FAILURE_MESSAGES: Record<ProviderErrorKind, string> = {
-  sign_in: "Codex isn't signed in. Open a terminal, run `codex login`, then try again.",
+  sign_in:
+    "Codex isn't signed in for Tessera, which keeps a Codex sign-in of its own. Tessera's setup check shows how to sign in; then try again.",
   usage_limit:
     "Your Codex plan's usage limit is reached for now. Try again when it resets; nothing was changed.",
   unavailable_model: "The model chosen for this step isn't available to your Codex plan.",
@@ -259,14 +317,34 @@ export type CodexOptions = {
   leadingArgs?: string[];
   /** True only for the real CLI. */
   live: boolean;
+  /** Tessera's own Codex home folder (CLI-08), checked and given its catalog by `findCodex`. */
+  home: string;
   env?: NodeJS.ProcessEnv;
 };
+
+/** The clean environment, with Codex pointed at Tessera's own home folder (CLI-08). */
+const codexEnvironment = (env: NodeJS.ProcessEnv, home: string): NodeJS.ProcessEnv => ({
+  ...cleanEnvironment(env),
+  CODEX_HOME: home,
+});
 
 /** The Codex adapter for the program given; see `findCodex` for the real one. */
 export function createCodexProvider(options: CodexOptions): Provider {
   const run = async <T>(spec: StageSpec<T>): Promise<StageResult<T>> => {
     if (spec.signal?.aborted) {
       throw new ProviderError("cancelled", CODEX_FAILURE_MESSAGES.cancelled);
+    }
+    // Never a call without the restricted catalog, or with instructions in the home folder.
+    if (!fs.existsSync(path.join(options.home, MODEL_CATALOG_FILE))) {
+      throw new Error("Tessera's Codex folder isn't ready: run the setup check first.");
+    }
+    const homeInstructions = HOME_INSTRUCTION_FILES.find((file) =>
+      fs.existsSync(path.join(options.home, file)),
+    );
+    if (homeInstructions !== undefined) {
+      throw new Error(
+        `Tessera's Codex folder has ${homeInstructions}, which would reach every call; run the setup check.`,
+      );
     }
     // A new, empty working folder outside the repository for every call (CLI-08).
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-cli-"));
@@ -280,10 +358,10 @@ export function createCodexProvider(options: CodexOptions): Provider {
       const started = Date.now();
       const result = await runProcess(
         options.executable,
-        [...(options.leadingArgs ?? []), ...buildArgs(spec, cwd)],
+        [...(options.leadingArgs ?? []), ...buildArgs(spec, cwd, options.home)],
         {
           cwd,
-          env: cleanEnvironment(options.env ?? process.env),
+          env: codexEnvironment(options.env ?? process.env, options.home),
           timeoutMs: spec.timeLimitMs,
           signal: spec.signal,
           input: inputText(spec),
@@ -350,11 +428,14 @@ export function createCodexProvider(options: CodexOptions): Provider {
 export type CodexStatus = ClaudeStatus;
 
 /**
- * Finds the real Codex CLI and checks it, without spending a model call (CLI-02): it is on the
- * PATH as a program (not npm's `codex.cmd`), at least the tested version, and signed in, from
- * `codex login status`, which reaches no model.
+ * Finds the real Codex CLI and readies Tessera's Codex home folder, without spending a model call
+ * (CLI-02, CLI-08): Codex is on the PATH as a program (not npm's `codex.cmd`), at least the tested
+ * version; the home folder holds no instructions file; Codex is signed in there with a ChatGPT
+ * account, from `codex login status`, which reaches no model (an API key would bill the API, so it
+ * is refused); and the restricted catalog is written from `codex debug models --bundled`.
  */
 export async function findCodex(
+  home: string,
   env: NodeJS.ProcessEnv = process.env,
   platform: NodeJS.Platform = process.platform,
   run: typeof runProcess = runProcess,
@@ -404,20 +485,70 @@ export async function findCodex(
       message: `Codex ${version} is older than ${TESTED_CODEX_VERSION}, the version Tessera is tested with. Update it, then try again.`,
     };
   }
+  // Tessera's own home folder: made if new, and never with instructions for every call in it.
+  // A file found there is the person's to remove, so it is reported, not deleted.
+  try {
+    fs.mkdirSync(home, { recursive: true });
+  } catch {
+    return {
+      ok: false,
+      problem: "broken",
+      message: `Tessera couldn't make its Codex folder at ${home}. Check that your account may write there, then try again.`,
+    };
+  }
+  const instructions = HOME_INSTRUCTION_FILES.find((file) => fs.existsSync(path.join(home, file)));
+  if (instructions !== undefined) {
+    return {
+      ok: false,
+      problem: "broken",
+      message: `Tessera's Codex folder has an instructions file, ${path.join(home, instructions)}, that would reach every request. Remove it, then try again.`,
+    };
+  }
+  const inHome = { cwd: os.tmpdir(), env: codexEnvironment(env, home), timeoutMs: 30_000 };
   let status: Awaited<ReturnType<typeof runProcess>>;
   try {
-    status = await run(executable, ["login", "status"], {
-      cwd: os.tmpdir(),
-      env: clean,
-      timeoutMs: 30_000,
-    });
+    status = await run(executable, ["login", "status"], inHome);
   } catch {
     return cantStart;
   }
-  // "Logged in using ChatGPT", on either stream; "Not logged in" is the other answer.
+  // "Logged in using ChatGPT", on either stream; "Not logged in", or another way in, otherwise.
   const said = `${status.stdout}\n${status.stderr}`;
+  const signIn = codexSignInCommand(home, platform);
   if (!/Logged in/.test(said) || /not logged in/i.test(said)) {
-    return { ok: false, problem: "signed-out", message: CODEX_FAILURE_MESSAGES.sign_in };
+    return {
+      ok: false,
+      problem: "signed-out",
+      message: `Codex isn't signed in for Tessera, which keeps a Codex sign-in of its own. Open a terminal, run \`${signIn}\`, sign in with your ChatGPT account, then try again.`,
+    };
+  }
+  if (!/Logged in using ChatGPT/.test(said)) {
+    return {
+      ok: false,
+      problem: "signed-out",
+      message: `Codex is signed in for Tessera some other way than a ChatGPT account, which could be billed apart from your plan. Open a terminal, run \`${signIn}\`, sign in with your ChatGPT account, then try again.`,
+    };
+  }
+  // The catalog every call is given, from this Codex's own bundled one (no network).
+  const unreadable: CodexStatus = {
+    ok: false,
+    problem: "broken",
+    message: `Tessera couldn't read the list of models from Codex ${version}. Reinstall or update Codex, then try again.`,
+  };
+  let models: Awaited<ReturnType<typeof runProcess>>;
+  try {
+    models = await run(executable, ["debug", "models", "--bundled"], inHome);
+  } catch {
+    return cantStart;
+  }
+  if (models.exitCode !== 0) return unreadable;
+  try {
+    fs.writeFileSync(
+      path.join(home, MODEL_CATALOG_FILE),
+      JSON.stringify(restrictCatalog(models.stdout)),
+      "utf8",
+    );
+  } catch {
+    return unreadable;
   }
   return { ok: true, executable, version };
 }

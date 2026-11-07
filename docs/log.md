@@ -2,6 +2,8 @@
 
 ## 2026-11-07
 
+* **Update**: The [Codex adapter](code/server/providers.md) closes the two gaps its review found ([issue 266](https://github.com/suredo/Tessera/issues/266), `CLI-03`, `CLI-08`), as the owner chose: Codex gets a home folder and sign-in of Tessera's own, which the setup check makes, refusing while an `AGENTS.md` is in it and while the sign-in isn't a ChatGPT account; and every call is given a catalog of models with the tools their metadata adds taken out, written from the installed Codex's bundled one. The plan tool and the tools still in development are switched off too. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T22:52:22Z.
+
 * **New**: The Codex CLI adapter, first part of [issue 266](https://github.com/suredo/Tessera/issues/266) (M3, `CLI-01` to `CLI-08`): the [provider adapters](code/server/providers.md) gain `createCodexProvider` and `findCodex`, behind the same interface and contract tests as Claude Code's, with every Codex feature that grants a tool disabled by name and a read-only sandbox. Not wired into the app, and not run against a real model: its open questions wait for approved live calls. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T20:59:15Z.
 
 * **New**: The details view shows the code each create, edit or repair call answered with, also when the checks refused it (`GEN-10`), so a refusal such as a startup write can be read rather than guessed. The [call ledger](code/server/ledger.md) keeps only the code, never the request or its entries (migration `0013-call-code.sql`, [storage](code/server/storage.md)); the [contracts](code/contracts/package.md) and the [browser](code/web/package.md) carry and show it. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T19:23:34Z.

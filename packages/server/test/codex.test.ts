@@ -12,7 +12,10 @@ import {
   codexInputText,
   createCodexProvider,
   findCodex,
+  codexSignInCommand,
+  MODEL_CATALOG_FILE,
   ProviderError,
+  restrictCatalog,
   TESTED_CODEX_VERSION,
   versionOf,
   type StageSpec,
@@ -61,6 +64,28 @@ const finalMessage = (text: string) => ({
   type: "item.completed",
   item: { id: "item_9", type: "agent_message", text },
 });
+/** A small bundled catalog, shaped as `codex debug models --bundled` prints it. */
+const BUNDLED = JSON.stringify({
+  models: [
+    {
+      slug: "gpt-5.5",
+      apply_patch_tool_type: "freeform",
+      experimental_supported_tools: [],
+      supports_search_tool: true,
+      include_skills_usage_instructions: true,
+      include_plugin_usage_instructions: true,
+      include_apps_usage_instructions: true,
+      context_window: 272000,
+    },
+    {
+      slug: "gpt-6-sol",
+      apply_patch_tool_type: "freeform",
+      experimental_supported_tools: ["send_user_message_async", "clock"],
+      supports_search_tool: true,
+      tool_mode: "code_mode_only",
+    },
+  ],
+});
 const completed = (usage: Record<string, number> = USAGE) => ({ type: "turn.completed", usage });
 /** A reply that fails the way Codex is assumed to: an error event, then a failed turn. */
 const failed = (message: string) => ({
@@ -73,11 +98,16 @@ function withReplies(replies: unknown[], env: NodeJS.ProcessEnv = process.env) {
   const dir = tempDir();
   const repliesFile = path.join(dir, "replies.json");
   const calls = path.join(dir, "calls");
+  // Tessera's Codex home folder, as the setup check leaves it: a restricted catalog, nothing else.
+  const home = path.join(dir, "codex-home");
+  fs.mkdirSync(home);
+  fs.writeFileSync(path.join(home, MODEL_CATALOG_FILE), JSON.stringify(restrictCatalog(BUNDLED)));
   fs.writeFileSync(repliesFile, JSON.stringify(replies));
   const provider = createCodexProvider({
     executable: process.execPath,
     leadingArgs: [fake, repliesFile, calls],
     live: false,
+    home,
     env,
   });
   const made = () =>
@@ -91,18 +121,19 @@ function withReplies(replies: unknown[], env: NodeJS.ProcessEnv = process.env) {
                 args: string[];
                 cwd: string;
                 envNames: string[];
+                codexHome: string | undefined;
                 stdin: string;
                 schema: string;
                 instructions: string;
               },
           )
       : [];
-  return { provider, made };
+  return { provider, made, home };
 }
 
 describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
   it("CLI-03: passes the locked flags exactly, with the wrapped draft-07 schema in a file, and the system prompt and request on standard input", async () => {
-    const { provider, made } = withReplies([success({ title: "Shopping" })]);
+    const { provider, made, home } = withReplies([success({ title: "Shopping" })]);
     await provider.run(spec());
     const [call] = made();
     const folder = call!.args[call!.args.indexOf("-C") + 1]!;
@@ -148,9 +179,21 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
       "hooks",
       "--disable",
       "goals",
+      "--disable",
+      "current_time_reminder",
+      "--disable",
+      "deferred_executor",
+      "--disable",
+      "request_permissions_tool",
+      "--disable",
+      "send_message_to_user_async",
+      "--disable",
+      "token_budget",
       // What no feature switch reaches, and no instructions but the stage's.
       "-c",
       "tools.experimental_request_user_input.enabled=false",
+      "-c",
+      "tools.update_plan.enabled=false",
       "-c",
       "agents.enabled=false",
       "-c",
@@ -171,6 +214,8 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
       "include_environment_context=false",
       "-c",
       `model_instructions_file=${JSON.stringify(path.join(folder, "instructions.md"))}`,
+      "-c",
+      `model_catalog_json=${JSON.stringify(path.join(home, "tessera-models.json"))}`,
       "-s",
       "read-only",
       "-c",
@@ -198,13 +243,15 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
     expect(call!.stdin).toBe("I need a shopping list");
     expect(call!.instructions).toBe("Make the tool the person asks for.");
     // Only research gets web search, live.
-    expect(buildCodexArgs({ ...spec(), tools: "web" }, folder)).toContain('web_search="live"');
-    expect(buildCodexArgs({ ...spec(), tools: "web" }, folder)).not.toContain(
+    expect(buildCodexArgs({ ...spec(), tools: "web" }, folder, home)).toContain(
+      'web_search="live"',
+    );
+    expect(buildCodexArgs({ ...spec(), tools: "web" }, folder, home)).not.toContain(
       'web_search="disabled"',
     );
   });
 
-  it("CLI-08: starts the CLI with only the allowlisted environment, in a fresh empty folder it removes", async () => {
+  it("CLI-08: starts the CLI with only the allowlisted environment and Tessera's own Codex home, in a fresh empty folder it removes", async () => {
     const env = {
       ...process.env,
       OPENAI_API_KEY: "would-bill-the-api",
@@ -216,12 +263,13 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
       CLAUDE_CODE_SIMPLE: "1",
       TESSERA_SECRET: "x",
     };
-    const { provider, made } = withReplies([success({ title: "Shopping" })], env);
+    const { provider, made, home } = withReplies([success({ title: "Shopping" })], env);
     await provider.run(spec());
     const [call] = made();
+    // The person's own CODEX_HOME is replaced by Tessera's.
+    expect(call!.codexHome).toBe(home);
     for (const name of [
       "OPENAI_API_KEY",
-      "CODEX_HOME",
       "CODEX_API_KEY",
       "CODEX_SANDBOX",
       "ANTHROPIC_API_KEY",
@@ -234,6 +282,49 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
     expect(call!.envNames.map((name) => name.toUpperCase())).toContain("PATH");
     expect(path.basename(call!.cwd)).toMatch(/^tessera-cli-/);
     expect(fs.existsSync(call!.cwd)).toBe(false);
+  });
+});
+
+describe("Tessera's Codex home folder (CLI-03, CLI-08)", () => {
+  it("CLI-03: the catalog takes out every tool a model's metadata adds, and keeps the rest", () => {
+    const { models } = restrictCatalog(BUNDLED);
+    expect(models.map((model) => model.slug)).toEqual(["gpt-5.5", "gpt-6-sol"]);
+    for (const model of models) {
+      expect(model).toMatchObject({
+        apply_patch_tool_type: null,
+        experimental_supported_tools: [],
+        supports_search_tool: false,
+        include_skills_usage_instructions: false,
+        include_plugin_usage_instructions: false,
+        include_apps_usage_instructions: false,
+      });
+      expect(model).not.toHaveProperty("tool_mode");
+    }
+    expect(models[0]).toHaveProperty("context_window", 272000);
+    expect(() => restrictCatalog('{"models":[]}')).toThrow();
+    expect(() => restrictCatalog("not json")).toThrow();
+  });
+
+  it("CLI-08: never calls without the catalog, or with an instructions file in the home folder", async () => {
+    for (const ready of [
+      (home: string) => fs.rmSync(path.join(home, MODEL_CATALOG_FILE)),
+      (home: string) => fs.writeFileSync(path.join(home, "AGENTS.md"), "Always answer in French."),
+      (home: string) => fs.writeFileSync(path.join(home, "AGENTS.override.md"), "x"),
+    ]) {
+      const { provider, made, home } = withReplies([success({ title: "Shopping" })]);
+      ready(home);
+      await expect(provider.run(spec())).rejects.toThrow(/setup check/);
+      expect(made()).toHaveLength(0);
+    }
+  });
+
+  it("CLI-08: the sign-in command is quoted for the terminal each platform opens", () => {
+    expect(codexSignInCommand("C:\\Users\\o'neil\\Tessera\\codex", "win32")).toBe(
+      "$env:CODEX_HOME = 'C:\\Users\\o''neil\\Tessera\\codex'; codex login",
+    );
+    expect(codexSignInCommand("/home/o'neil/tessera/codex", "linux")).toBe(
+      "CODEX_HOME='/home/o'\\''neil/tessera/codex' codex login",
+    );
   });
 });
 
@@ -466,16 +557,22 @@ describe("time limit and cancellation (CLI-01, CLI-06)", () => {
 });
 
 describe("finding Codex (CLI-02, PLAT-03)", () => {
+  /** Codex answering the version, `login status` (on stderr, as Codex prints it) and the catalog. */
   const answering =
-    (version: string, login: string) =>
-    (_exe: string, args: readonly string[]): Promise<ProcessResult> =>
-      Promise.resolve({
+    (version: string, login: string, models: ProcessResult | string = BUNDLED) =>
+    (_exe: string, args: readonly string[]): Promise<ProcessResult> => {
+      if (args[0] === "debug" && typeof models !== "string") return Promise.resolve(models);
+      const said = { "--version": version, debug: models }[args[0] ?? ""];
+      return Promise.resolve({
         exitCode: 0,
-        stdout: args[0] === "--version" ? version : login,
-        stderr: "",
+        stdout: typeof said === "string" ? said : "",
+        stderr: args[0] === "login" ? login : "",
         timedOut: false,
         cancelled: false,
       });
+    };
+  const signedIn = answering("codex-cli 0.166.0", "Logged in using ChatGPT");
+  const home = () => path.join(tempDir(), "codex");
   /**
    * A PATH folder holding an empty `codex` program file. Its extension is spelled as PATHEXT
    * spells it: Windows ignores the case, but these tests also run on Linux, which doesn't.
@@ -496,11 +593,11 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
   });
 
   it("CLI-02: says plainly when Codex is missing, or only npm's batch file is found", async () => {
-    expect(await findCodex({ PATH: tempDir() }, "win32")).toMatchObject({
+    expect(await findCodex(home(), { PATH: tempDir() }, "win32")).toMatchObject({
       ok: false,
       problem: "missing",
     });
-    expect(await findCodex(pathWith("codex.CMD"), "win32")).toMatchObject({
+    expect(await findCodex(home(), pathWith("codex.CMD"), "win32")).toMatchObject({
       ok: false,
       problem: "batch-file",
       message: expect.stringContaining("codex.exe") as unknown,
@@ -509,20 +606,99 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
 
   it("CLI-02: refuses a version older than the tested one, and checks sign-in without a model call", async () => {
     const env = pathWith("codex.exe");
-    expect(await findCodex(env, "win32", answering("codex-cli 0.100.0", ""))).toMatchObject({
+    expect(await findCodex(home(), env, "win32", answering("codex-cli 0.100.0", ""))).toMatchObject(
+      { ok: false, problem: "old" },
+    );
+    const folder = home();
+    const signIn = codexSignInCommand(folder, "win32");
+    expect(
+      await findCodex(folder, env, "win32", answering("codex-cli 0.166.0", "Not logged in")),
+    ).toEqual({
       ok: false,
-      problem: "old",
+      problem: "signed-out",
+      message: `Codex isn't signed in for Tessera, which keeps a Codex sign-in of its own. Open a terminal, run \`${signIn}\`, sign in with your ChatGPT account, then try again.`,
     });
+    // Signed in with an API key: billed apart from the plan, so refused (CLI-02).
     expect(
-      await findCodex(env, "win32", answering("codex-cli 0.166.0", "Not logged in")),
-    ).toMatchObject({ ok: false, problem: "signed-out", message: CODEX_FAILURE_MESSAGES.sign_in });
-    expect(
-      await findCodex(env, "win32", answering("codex-cli 0.166.0", "Logged in using ChatGPT")),
+      await findCodex(
+        folder,
+        env,
+        "win32",
+        answering("codex-cli 0.166.0", "Logged in using an API key - sk-***"),
+      ),
     ).toMatchObject({
+      ok: false,
+      problem: "signed-out",
+      message: expect.stringContaining("some other way than a ChatGPT account") as unknown,
+    });
+    expect(await findCodex(folder, env, "win32", signedIn)).toMatchObject({
       ok: true,
       version: "0.166.0",
       executable: expect.stringMatching(/codex\.exe$/i) as unknown,
     });
+  });
+
+  it("CLI-08: checks and readies Tessera's own Codex folder, with Codex pointed at it", async () => {
+    const env = { ...pathWith("codex.exe"), CODEX_HOME: "/the-person's-own" };
+    const folder = home();
+    const seen: { args: readonly string[]; codexHome: string | undefined }[] = [];
+    const recording = (
+      exe: string,
+      args: readonly string[],
+      options: { env?: NodeJS.ProcessEnv },
+    ) => {
+      seen.push({ args, codexHome: options.env?.CODEX_HOME });
+      return signedIn(exe, args);
+    };
+    expect(await findCodex(folder, env, "win32", recording as typeof signedIn)).toMatchObject({
+      ok: true,
+    });
+    // The folder is made, and the catalog written there is the restricted one.
+    expect(JSON.parse(fs.readFileSync(path.join(folder, MODEL_CATALOG_FILE), "utf8"))).toEqual(
+      restrictCatalog(BUNDLED),
+    );
+    // Sign-in and the catalog are read from Tessera's folder, never the person's own.
+    expect(seen.map(({ args }) => args.join(" "))).toEqual([
+      "--version",
+      "login status",
+      "debug models --bundled",
+    ]);
+    expect(seen.slice(1).map(({ codexHome }) => codexHome)).toEqual([folder, folder]);
+    // An instructions file there is reported, never deleted, and nothing more is asked of Codex.
+    fs.writeFileSync(path.join(folder, "AGENTS.md"), "Always answer in French.");
+    expect(await findCodex(folder, env, "win32", signedIn)).toMatchObject({
+      ok: false,
+      problem: "broken",
+      message: expect.stringContaining("AGENTS.md") as unknown,
+    });
+    expect(fs.existsSync(path.join(folder, "AGENTS.md"))).toBe(true);
+  });
+
+  it("CLI-03: a catalog Codex can't give, or that isn't one, is a problem to explain", async () => {
+    const env = pathWith("codex.exe");
+    const failedRun = {
+      exitCode: 1,
+      stdout: "",
+      stderr: "boom",
+      timedOut: false,
+      cancelled: false,
+    };
+    for (const models of [failedRun, "not json", '{"models":[]}']) {
+      const folder = home();
+      expect(
+        await findCodex(
+          folder,
+          env,
+          "win32",
+          answering("codex-cli 0.166.0", "Logged in using ChatGPT", models),
+        ),
+      ).toMatchObject({
+        ok: false,
+        problem: "broken",
+        message: expect.stringContaining("list of models") as unknown,
+      });
+      expect(fs.existsSync(path.join(folder, MODEL_CATALOG_FILE))).toBe(false);
+    }
   });
 
   it("PLAT-03: a Codex that is found but can't start is a problem to explain, not an error", async () => {
@@ -532,7 +708,7 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
     const file = path.join(dir, process.platform === "win32" ? "codex.exe" : "codex");
     fs.writeFileSync(file, process.platform === "win32" ? "" : "#!/nonexistent/tessera-test\n");
     fs.chmodSync(file, 0o755);
-    const found = await findCodex({ PATH: dir, PATHEXT: ".COM;.EXE;.BAT;.CMD" });
+    const found = await findCodex(home(), { PATH: dir, PATHEXT: ".COM;.EXE;.BAT;.CMD" });
     expect(found).toEqual({
       ok: false,
       problem: "broken",
@@ -547,11 +723,11 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
     const failsOn =
       (failing: string) =>
       (exe: string, args: readonly string[]): Promise<ProcessResult> =>
-        args[0] === failing
-          ? Promise.reject(denied)
-          : answering("codex-cli 0.166.0", "Logged in using ChatGPT")(exe, args);
-    for (const failing of ["--version", "login"]) {
-      expect(await findCodex(pathWith("codex.exe"), "win32", failsOn(failing))).toMatchObject({
+        args[0] === failing ? Promise.reject(denied) : signedIn(exe, args);
+    for (const failing of ["--version", "login", "debug"]) {
+      expect(
+        await findCodex(home(), pathWith("codex.exe"), "win32", failsOn(failing)),
+      ).toMatchObject({
         ok: false,
         problem: "broken",
       });

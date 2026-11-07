@@ -43,6 +43,7 @@ fs.writeFileSync(
     args,
     cwd: process.cwd(),
     envNames: Object.keys(process.env).sort(),
+    codexHome: process.env.CODEX_HOME,
     stdin,
     schema: schemaText,
     instructions,
