@@ -32,6 +32,7 @@ import {
   saveWorkspaceData,
   workspaceVersions,
   type Store,
+  activateVersion,
 } from "../src/workspaces/index.ts";
 import { armTripwires, createCanary } from "./support/tripwires.ts";
 
@@ -621,9 +622,53 @@ describe("images in archives (DATA-05, DATA-11)", () => {
     into.close();
   });
 
+  it("CON-04, APP-05: an archive from before version notes, format 3, imports with none", async () => {
+    const { files, manifest } = await exportedFiles();
+    const older = {
+      ...manifest,
+      formatVersion: 3,
+      workspaces: manifest.workspaces.map((w) => ({
+        ...w,
+        versions: (w.versions as Record<string, unknown>[]).map(({ summary, checks, ...rest }) => {
+          void summary;
+          void checks;
+          return rest;
+        }),
+      })),
+    };
+    const into = await openDataFolder(newFolder());
+    const imported = await importArchive(into, pack(older, files));
+    expect(workspaceVersions(into, imported.workspaces[0]!.id)).toMatchObject([
+      { summary: null, checks: [] },
+      { summary: null, checks: [] },
+      { summary: null, checks: [] },
+    ]);
+    into.close();
+  });
+
+  it("DATA-05, APP-05: a version's summary and checks go out in an export and come back with it", async () => {
+    const from = await openDataFolder(newFolder());
+    const { id, dataRevision } = createWorkspace(from, "Steps");
+    const hash = saveVersion(from.db, artifact("<ol></ol>"));
+    const note = { summary: "Turned the list into steps.", checks: ["code", "start"] as const };
+    expect(
+      activateVersion(from, id, hash, dataRevision, { note: { ...note, checks: [...note.checks] } })
+        .ok,
+    ).toBe(true);
+    const bytes = exportWorkspace(from, id);
+    from.close();
+    const into = await openDataFolder(newFolder());
+    const imported = await importArchive(into, bytes);
+    expect(workspaceVersions(into, imported.workspaces[0]!.id)[0]).toMatchObject({
+      summary: "Turned the list into steps.",
+      checks: ["code", "start"],
+    });
+    into.close();
+  });
+
   it("CON-04, APP-04: an archive from before descriptions, format 2, imports with none", async () => {
     const { files, manifest } = await exportedFiles();
-    expect(manifest["formatVersion"]).toBe(3);
+    expect(manifest["formatVersion"]).toBe(4);
     const strip = (value: Record<string, unknown>) => {
       const rest = { ...value };
       delete rest["description"];

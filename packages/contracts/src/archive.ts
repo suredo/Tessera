@@ -9,17 +9,23 @@ import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./work
 
 export const ARCHIVE_FORMAT = "tessera-archive";
 /** Raised when the format changes; an archive from a newer format is refused (CON-04). */
-export const ARCHIVE_FORMAT_VERSION = 3;
+export const ARCHIVE_FORMAT_VERSION = 4;
 
 // Descriptions (APP-04) arrived in format 3: an older archive's workspaces and saved tools have none.
 const archivedDescription = workspaceSchema.shape.description.default("");
+
+// Version notes (APP-05) arrived in format 4: an older archive's versions have no summary or checks.
+const archivedVersionSchema = workspaceVersionSchema.extend({
+  summary: workspaceVersionSchema.shape.summary.default(null),
+  checks: workspaceVersionSchema.shape.checks.default([]),
+});
 
 export const archivedWorkspaceSchema = workspaceSchema
   .omit({ currentVersion: true })
   .extend({
     description: archivedDescription,
     versions: z
-      .array(workspaceVersionSchema)
+      .array(archivedVersionSchema)
       .describe("The version history, the first first; the last is the current version."),
   })
   .describe("A workspace as an archive holds it, with its whole version history.");

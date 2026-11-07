@@ -525,3 +525,8 @@ button.primary {
   color: var(--ui-text-secondary);
   font-variant-numeric: tabular-nums;
 }
+
+/* What a version was made for (APP-05), under its number in the history. */
+.version-summary {
+  margin: var(--ui-space-1) 0 0;
+}

@@ -7,7 +7,7 @@ implements: [DATA-08, DATA-07, DATA-04, DATA-02, DATA-10, CON-01, BRG-04, MIG-06
 tests: [../../../packages/server/test/workspaces.test.ts, ../../../packages/server/test/workspace-data.test.ts, ../../../packages/server/test/activation.test.ts, ../../../packages/server/test/restore.test.ts, ../../../packages/server/test/reuse.test.ts, ../../../packages/server/test/activation-route.test.ts, ../../../packages/server/test/undo.test.ts]
 tags: [code, server, data, workspaces]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T05:35:10Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T11:52:49Z }
 ---
 
 # Purpose
@@ -66,6 +66,7 @@ Depends on [storage](storage.md), [tool versions](versions.md) (through the fore
 - **Undo history doesn't travel in archives** either: an imported workspace starts with none, as with its revisions and snapshots.
 - **Revisions don't travel in archives.** An exported workspace keeps its data and its revision; after an import every record starts at revision 1, so a change planned before the export can't be applied after it only by luck of matching counts. Plans don't outlive an import.
 - **Two writers are module-internal.** `appendVersion` and `replaceData` write inside the caller's transaction; `addWorkspaceVersion`, `saveWorkspaceData` and `activateVersion` wrap them in one. They aren't exported from the module's index, and nothing outside it should call them. The same holds for `existingSavedTool` and `usableVersion`, the checks activation and Use again share.
+- **A version keeps its note** (`APP-05`). `appendVersion` stores what the version was made for and the checks it passed, when activation is given them (`ActivationOptions.note`, from the [generation routes](generation.md)). Without one, as on a restore or Use again, it keeps the earliest note of the same code, since the code is the same. A version added by hand (`addWorkspaceVersion`) or imported from an archive without notes has none. History rows are only added, never changed.
 - **`afterWrites` is for tests.** `activateVersion` and `useAgain` call it inside the transaction after its writes; a test throws there to stand for a crash. Production code never passes it.
 - **Deleting is the trash's job.** Nothing here deletes a workspace or saved tool; the [trash](trash.md) (`DATA-09`) does, so nothing is removed without passing through it.
 - **Errors for a missing ID are plain sentences**, but a title or name that breaks its contract (empty, or over 200 characters) throws zod's error; the API layer turns it into a plain message (#53).
@@ -78,7 +79,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `index.ts`: `activateVersion`, `ActivationOptions` (type), `ActivationRefusal` (type), `ActivationResult` (type), `activationRoutes`, `listUndo`, `undoDataChange`, `UndoEntry` (type), `UndoRefusal` (type), `UndoResult` (type), `continueSavedTool`, `useAgain`, `ContinueTarget` (type), `UseAgainOptions` (type), `UseAgainRefusal` (type), `UseAgainResult` (type), `listRecoverySnapshots`, `planRestore`, `restoreRecoverySnapshot`, `restoreVersion`, `RecoverySnapshot` (type), `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `addWorkspaceVersion`, `createWorkspace`, `getSavedTool`, `existingWorkspace`, `getWorkspace`, `lastUsed`, `recordUse`, `listSavedTools`, `recentSavedTools`, `listWorkspaces`, `patchWorkspaceData`, `readWorkspaceData`, `describeSavedTool`, `describeWorkspace`, `renameSavedTool`, `renameWorkspace`, `replaceData`, `saveTool`, `saveWorkspaceData`, `UNDO_LIMIT`, `workspaceVersions`, `Store` (type), `WorkspaceData` (type), `WorkspacePatchResult` (type), `WorkspacePatchOptions` (type)
 - `restore.ts`: `RestorePlan` (type), `RestoreRefusal` (type), `RestoreResult` (type), `planRestore`, `restoreVersion`, `RecoverySnapshot` (type), `listRecoverySnapshots`, `restoreRecoverySnapshot`
 - `reuse.ts`: `ContinueTarget` (type), `continueSavedTool`, `UseAgainRefusal` (type), `UseAgainResult` (type), `UseAgainOptions` (type), `useAgain`
-- `routes.ts`: `activationRoutes`
+- `routes.ts`: `ActivationAuthority` (type), `activationRoutes`
 - `undo-entries.ts`: `undoChangeSchema`, `UndoChange` (type), `changeOfPatch`, `Undone` (type), `undoRecords`
 - `undo.ts`: `UndoEntry` (type), `UndoRefusal` (type), `UndoResult` (type), `listUndo`, `undoDataChange`
 - `workspaces.ts`: `Store` (type), `getWorkspace`, `existingWorkspace`, `recordUse`, `lastUsed`, `listWorkspaces`, `createWorkspace`, `renameWorkspace`, `addWorkspaceVersion`, `appendVersion`, `workspaceVersions`, `saveWorkspaceData`, `UNDO_LIMIT`, `keepUndo`, `replaceData`, `savedRows`, `savedState`, `saveRevisions`, `WorkspaceData` (type), `readWorkspaceData`, `WorkspacePatchResult` (type), `WorkspacePatchOptions` (type), `patchWorkspaceData`, `getSavedTool`, `existingSavedTool`, `recentSavedTools`, `listSavedTools`, `saveTool`, `describeSavedTool`, `describeWorkspace`, `renameSavedTool`

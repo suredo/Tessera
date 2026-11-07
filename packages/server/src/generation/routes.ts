@@ -110,9 +110,10 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     const control = controls.owner(request.token);
     // The version keeps its summary and the checks its candidate passed (APP-05): the host's code
     // check before it was stored, and the start check the app's staging ran before asking this.
+    const note: VersionNote = { summary: entry.summary, checks: ["code", "start"] };
     return Object.assign(
       () => Date.now() < entry.expires && (!control || !control.controller.signal.aborted),
-      { note: { summary: entry.summary, checks: ["code", "start"] } as VersionNote },
+      { note },
     );
   });
   const offerData = (
