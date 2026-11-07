@@ -2,6 +2,8 @@
 
 ## 2026-11-07
 
+* **New**: The Codex CLI adapter, first part of [issue 266](https://github.com/suredo/Tessera/issues/266) (M3, `CLI-01` to `CLI-08`): the [provider adapters](code/server/providers.md) gain `createCodexProvider` and `findCodex`, behind the same interface and contract tests as Claude Code's, with every Codex feature that grants a tool disabled by name and a read-only sandbox. Not wired into the app, and not run against a real model: its open questions wait for approved live calls. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T20:59:15Z.
+
 * **New**: The details view shows the code each create, edit or repair call answered with, also when the checks refused it (`GEN-10`), so a refusal such as a startup write can be read rather than guessed. The [call ledger](code/server/ledger.md) keeps only the code, never the request or its entries (migration `0013-call-code.sql`, [storage](code/server/storage.md)); the [contracts](code/contracts/package.md) and the [browser](code/web/package.md) carry and show it. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T19:23:34Z.
 
 * **Update**: A startup write's finding now says why ([static check](code/server/checks.md), `GEN-09`, [L-84](lessons/tessera-issues.md)): the value the analysis couldn't name, such as `parts[0]`, and its line, with the fix the base prompt gives, or the line startup reaches the write from. Found when a calendar the owner asked for failed after its one repair, with the repair told only the write's line. What counts as startup is unchanged. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T16:06:17Z.

@@ -1,5 +1,5 @@
 // Docs: docs/code/server/providers.md
-// Model connections behind one interface (CLI-01): Claude Code, and the scripted provider (ENG-11).
+// Model connections behind one interface (CLI-01): Claude Code, Codex, and the scripted provider (ENG-11).
 export {
   ProviderError,
   UNKNOWN_USAGE,
@@ -32,6 +32,21 @@ export {
   type ClaudeStatus,
   type ResultEnvelope,
 } from "./claude.ts";
+export {
+  buildArgs as buildCodexArgs,
+  CODEX_FAILURE_MESSAGES,
+  codexFailureKind,
+  createCodexProvider,
+  findCodex,
+  inputText as codexInputText,
+  OUTPUT_SCHEMA_FILE,
+  parseEvents as parseCodexEvents,
+  TESTED_CODEX_VERSION,
+  toUsage as toCodexUsage,
+  type CodexEvent,
+  type CodexOptions,
+  type CodexStatus,
+} from "./codex.ts";
 export {
   loadRoutes,
   ROUTES_FILE,

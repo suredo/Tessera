@@ -1,13 +1,13 @@
 ---
 type: Code Module
 title: "Provider adapters"
-description: "The one interface every model connection implements: the Claude Code adapter, with locked flags, a clean environment, normalized usage and plain errors, and the scripted provider that answers from a script chosen by test configuration."
+description: "The one interface every model connection implements: the Claude Code adapter, with locked flags, a clean environment, normalized usage and plain errors; the Codex adapter behind the same contract, not yet wired into the app; and the scripted provider that answers from a script chosen by test configuration."
 resource: ../../../packages/server/src/providers/
 implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, CLI-09, TEST-02, ENG-11, OBS-02]
-tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/routing.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
+tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/codex.test.ts, ../../../packages/server/test/routing.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
 tags: [code, server, providers]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T19:35:20Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T20:59:15Z }
 ---
 # Purpose
 
@@ -21,12 +21,19 @@ Puts every model connection behind one interface (`CLI-01`): a stage's system pr
   - `buildArgs` gives the locked flags (`CLI-03`), `MAX_TURNS` the CLI's turn limit, `SYSTEM_PROMPT_FILE` the system prompt's file in the call's folder, and `wrapSchema` wraps a contract's JSON Schema as `{ answer: … }` (`ANSWER_KEY`). `removeFolder` removes a call's folder.
   - `cleanEnvironment` is the allowlisted environment (`CLI-08`); `resultEnvelopeSchema` reads the CLI's result (`ResultEnvelope`); `toUsage` normalizes usage (`CLI-04`).
   - `failureKind` reads which failure a result is, and `FAILURE_MESSAGES` is what the person reads for each (`CLI-05`); `versionOf` and `atLeast` read and compare versions.
+- `src/providers/codex.ts`: the Codex CLI adapter (#266, M3), mirroring the Claude Code one and sharing its environment allowlist, schema wrapping, folder removal and version helpers. Not yet wired into the setup check or the launcher, and not yet run against a real model.
+  - `createCodexProvider` runs a stage through `codex exec` (`CodexOptions`). `findCodex` finds the real program and checks it without a call: on the PATH as a program, at least `TESTED_CODEX_VERSION`, and signed in by `codex login status` (`CLI-02`). It answers a `CodexStatus`, the same check shape as Claude Code's.
+  - `buildArgs` gives the locked flags (`CLI-03`): JSON events, the answer's wrapped schema as a file (`OUTPUT_SCHEMA_FILE`), every feature that grants a tool disabled by name (`DISABLED_FEATURES`), a read-only sandbox, no approvals, the person's config and rules ignored, no session kept, no repository check, and web search only for research. `inputText` sends the system prompt and the request together on standard input, since Codex has no system-prompt flag.
+  - `parseEvents` reads the JSON events (`CodexEvent`); the answer is the last agent message's text, unwrapped and checked by the host. `toUsage` normalizes usage from the last completed turn, with the adapter's own duration (`CLI-04`). `codexFailureKind` reads a failure's kind from a failed turn or an error, and `CODEX_FAILURE_MESSAGES` is what the person reads (`CLI-05`).
 - `src/providers/routing.ts`: model routing (`CLI-09`). `runStage` runs a stage once on its route, from a `StageCall` without a model. `loadRoutes` reads the optional `ROUTES_FILE` (`routes.json`) over the defaults, giving `Routes`, and `RoutesError` is a file it can't use. The defaults and their contract are in `packages/contracts/src/routes.ts`.
 - `src/providers/scripted.ts`: `createScriptedProvider` answers from a script; `loadScript` reads one from a JSON fixture file; `ScriptError` means the script doesn't fit the calls made.
 - The shapes that cross the boundary (stages, efforts, error kinds, usage and the script itself) are in `packages/contracts/src/provider.ts`.
+- `test/support/fake-codex.ts`: the same for the codex program: it records the arguments, folder, environment, standard input and the `--output-schema` file, checks that schema as draft-07 with an object root, and prints canned JSON events by call order, failures included.
 - `test/support/fake-claude.ts`: a stand-in for the claude program. It records the arguments, working folder and environment it got, checks `--json-schema` as the real one does, and prints canned result envelopes by call order; it can also wait, print raw text or exit with an error, for the contract tests (`TEST-02`). The M0 spikes' dry runs use it too.
 
 # Invariants
+
+- **The Codex adapter is built on assumptions a probe must check** (#266). Codex's event and usage shapes come from one captured run (a code review, no schema); its failure shapes aren't captured, so an unrecognized failure is an error, never a guess. Open until the first approved live calls: whether Codex has a setting for system instructions, and whether the person's global `AGENTS.md` still reaches a call; whether `--output-schema` takes the wrapped schema; whether `input_tokens` includes cached input and `output_tokens` the reasoning; whether `tools.web_search` is the right setting; and whether the disabled features take away every tool, as `--tools ""` does for Claude Code (a read-only sandbox alone still lets the model run commands that read files). Feature names can change between versions.
 
 - **The locked flags, exactly** (`CLI-03`, ADR 0002): `--print --output-format json --json-schema <wrapped schema> --model --effort --tools "" --safe-mode --strict-mcp-config --no-session-persistence --permission-mode dontAsk --max-turns 3 --system-prompt-file system-prompt.md`. Only research gets web tools; no stage gets file tools. A contract test checks the whole argument list.
 - **The request and the system prompt stay off the command line**, which Windows limits to about 32,000 characters (ADR 0002): the request goes on standard input, and the system prompt in a file in the call's own folder. A contract test sends 40,000 characters of each. Checked live on Claude Code 2.1.310 (#159).
@@ -63,7 +70,8 @@ Depends on `@tessera/contracts`, zod, and the [platform](platform.md) helpers `r
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `claude.ts`: `TESTED_CLI_VERSION`, `MAX_TURNS`, `ANSWER_KEY`, `wrapSchema`, `SYSTEM_PROMPT_FILE`, `buildArgs`, `cleanEnvironment`, `resultEnvelopeSchema`, `ResultEnvelope` (type), `toUsage`, `FAILURE_MESSAGES`, `failureKind`, `removeFolder`, `ClaudeOptions` (type), `createClaudeProvider`, `versionOf`, `atLeast`, `ClaudeStatus` (type), `findClaude`
-- `index.ts`: `ProviderError`, `UNKNOWN_USAGE`, `Provider` (type), `StageResult` (type), `StageSpec` (type), `createScriptedProvider`, `loadScript`, `ScriptError`, `ScriptedProvider` (type), `ANSWER_KEY`, `atLeast`, `buildArgs`, `cleanEnvironment`, `createClaudeProvider`, `FAILURE_MESSAGES`, `failureKind`, `findClaude`, `MAX_TURNS`, `resultEnvelopeSchema`, `TESTED_CLI_VERSION`, `toUsage`, `versionOf`, `wrapSchema`, `ClaudeOptions` (type), `ClaudeStatus` (type), `ResultEnvelope` (type), `loadRoutes`, `ROUTES_FILE`, `RoutesError`, `runStage`, `Routes` (type), `StageCall` (type)
+- `codex.ts`: `TESTED_CODEX_VERSION`, `DISABLED_FEATURES`, `OUTPUT_SCHEMA_FILE`, `inputText`, `buildArgs`, `CodexEvent` (type), `parseEvents`, `toUsage`, `CODEX_FAILURE_MESSAGES`, `codexFailureKind`, `CodexOptions` (type), `createCodexProvider`, `CodexStatus` (type), `findCodex`
+- `index.ts`: `ProviderError`, `UNKNOWN_USAGE`, `Provider` (type), `StageResult` (type), `StageSpec` (type), `createScriptedProvider`, `loadScript`, `ScriptError`, `ScriptedProvider` (type), `ANSWER_KEY`, `atLeast`, `buildArgs`, `cleanEnvironment`, `createClaudeProvider`, `FAILURE_MESSAGES`, `failureKind`, `findClaude`, `MAX_TURNS`, `resultEnvelopeSchema`, `TESTED_CLI_VERSION`, `toUsage`, `versionOf`, `wrapSchema`, `ClaudeOptions` (type), `ClaudeStatus` (type), `ResultEnvelope` (type), `buildCodexArgs`, `CODEX_FAILURE_MESSAGES`, `codexFailureKind`, `createCodexProvider`, `findCodex`, `codexInputText`, `OUTPUT_SCHEMA_FILE`, `parseCodexEvents`, `TESTED_CODEX_VERSION`, `toCodexUsage`, `CodexEvent` (type), `CodexOptions` (type), `CodexStatus` (type), `loadRoutes`, `ROUTES_FILE`, `RoutesError`, `runStage`, `Routes` (type), `StageCall` (type)
 - `provider.ts`: `StageSpec` (type), `StageResult` (type), `Provider` (type), `UNKNOWN_USAGE`, `ProviderError`
 - `routing.ts`: `Routes` (type), `ROUTES_FILE`, `RoutesError`, `loadRoutes`, `StageCall` (type), `runStage`
 - `scripted.ts`: `ScriptError`, `ScriptedProvider` (type), `createScriptedProvider`, `loadScript`
