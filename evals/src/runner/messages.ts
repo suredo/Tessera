@@ -41,6 +41,22 @@ export function outcomeOf(notice: string): Pick<StepOutcome, "claim" | "answer">
   return answer ? { claim, answer } : { claim };
 }
 
+/**
+ * Each feature a big tool's reply says wasn't added, or may have been (GEN-17): its core standing
+ * doesn't make the request a pass, so the step fails with these, in the app's own words.
+ */
+export function featuresMissed(notice: string): string[] {
+  return (["request.followUpNotAdded", "request.followUpUncertain"] as const).flatMap((key) => {
+    const [before] = en[key].split("{message}");
+    const marker = before!.replace("{feature}", "");
+    return notice.includes(marker)
+      ? [
+          `A feature${marker.trimEnd().replace(/:$/, "")}, so not every feature asked for is in place.`,
+        ]
+      : [];
+  });
+}
+
 /** The app's words for a key, with its values filled, as a person reads them. */
 export const say = (key: Key, values: Record<string, string> = {}): string =>
   en[key].replace(/\{(\w+)\}/g, (_, name: string) => values[name] ?? `{${name}}`);

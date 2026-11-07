@@ -26,7 +26,7 @@ import {
   type StepOutcome,
   type StepTarget,
 } from "../scenarios/index.ts";
-import { outcomeOf, say } from "./messages.ts";
+import { featuresMissed, outcomeOf, say } from "./messages.ts";
 
 // The scenario runner (EVAL-01, EVAL-02): it starts an empty Tessera on the run's own data folder,
 // with every model call going through the harness (cap and ledger), and plays a scenario's steps
@@ -259,6 +259,8 @@ export async function runScenario(
         const after = readHostState(store, await openWorkspace(page));
         result.notice = cancelledNext ? "Sent; the next step cancels it." : await said(page, s);
         result.problems = cancelledNext ? [] : checkFacts(before, after, outcome, s.expect, target);
+        // A big tool's core standing isn't a pass when a feature after it wasn't added (GEN-17).
+        if (!cancelledNext && "say" in s) result.problems.push(...featuresMissed(result.notice));
       } catch (error) {
         result.problems = [error instanceof Error ? error.message.split("\n")[0]! : String(error)];
         result.notice = await said(page, s).catch(() => "");

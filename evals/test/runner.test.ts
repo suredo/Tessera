@@ -6,7 +6,7 @@ import { intentSchema, type Intent } from "@tessera/contracts";
 import { listWorkspaces, ProviderError, ScriptError, type Store } from "@tessera/server";
 import { afterAll, describe, expect, it } from "vitest";
 import { loadScenario } from "../src/scenarios/index.ts";
-import { outcomeOf, say } from "../src/runner/messages.ts";
+import { featuresMissed, outcomeOf, say } from "../src/runner/messages.ts";
 import { reportMarkdown } from "../src/runner/report.ts";
 import { runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
 import { answersProvider, loadAnswers, type Answers } from "../src/runner/script.ts";
@@ -48,6 +48,22 @@ const ask = (stage: "intent" | "create", signal?: AbortSignal) => ({
 });
 
 describe("what a notice claims (EVAL-02, GEN-08)", () => {
+  it("GEN-17, EVAL-02: a big tool whose core stands but whose feature wasn't added, or may have been, isn't a pass", () => {
+    const made = say("request.made", { name: "Reading list", summary: "A list and ratings." });
+    const missed = `${made} ${say("request.followUpNotAdded", { feature: "Genre", message: "The model is unavailable." })}`;
+    expect(outcomeOf(missed)).toEqual({ claim: "created" });
+    expect(featuresMissed(missed)).toEqual([
+      "A feature wasn't added, so not every feature asked for is in place.",
+    ]);
+    const unsure = `${made} ${say("request.followUpUncertain", { feature: "Genre", message: "Lost." })}`;
+    expect(featuresMissed(unsure)).toEqual([
+      "A feature may have been added, so not every feature asked for is in place.",
+    ]);
+    const all = `${made} ${say("request.followUpAdded", { feature: "Genre", summary: "Added genres." })}`;
+    expect(featuresMissed(all)).toEqual([]);
+    expect(featuresMissed(made)).toEqual([]);
+  });
+
   it("EVAL-02: reads a claim or an answer from the app's own words", () => {
     const made = say("request.made", { name: "Shopping list", summary: "A list." });
     expect(outcomeOf(made)).toEqual({ claim: "created" });
