@@ -23,8 +23,12 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: "http://127.0.0.1:4173",
-    video: process.env["CI"] ? "on" : "retain-on-failure",
-    trace: { mode: "retain-on-failure", screenshots: false, snapshots: false, sources: false },
+    // CI keeps every test's video and a trace of each failure (ENG-10). Locally nothing is recorded,
+    // to keep the owner's machine free: rerun a failing spec with --video on or --trace on to see it.
+    video: process.env["CI"] ? "on" : "off",
+    trace: process.env["CI"]
+      ? { mode: "retain-on-failure", screenshots: false, snapshots: false, sources: false }
+      : "off",
   },
   projects: Object.entries(browsers).flatMap(([browser, channel]) =>
     Object.entries(viewports).map(([width, viewport]) => ({

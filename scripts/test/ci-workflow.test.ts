@@ -82,13 +82,16 @@ describe("the CI workflow", () => {
     expect(playwright).toContain('edge: "msedge"');
   });
 
-  it("runs four unit workers on CI and two locally (ENG-31, #188)", () => {
-    expect(read("vitest.config.ts")).toContain(`maxWorkers: process.env["CI"] ? 4 : 2`);
+  it("runs four unit workers on CI and one test file at a time locally (ENG-31, #188)", () => {
+    expect(read("vitest.config.ts")).toContain(`maxWorkers: process.env["CI"] ? 4 : 1`);
+    expect(JSON.parse(read("package.json")).scripts["e2e:local"]).toContain("--workers=1");
   });
 
-  it("records every browser test's video on CI, where the CI variable is set (ENG-10, ENG-31)", () => {
-    expect(read("playwright.config.ts")).toContain(
-      `video: process.env["CI"] ? "on" : "retain-on-failure"`,
+  it("records every browser test's video on CI, where the CI variable is set, and nothing locally (ENG-10, ENG-31)", () => {
+    const config = read("playwright.config.ts");
+    expect(config).toContain(`video: process.env["CI"] ? "on" : "off"`);
+    expect(config).toMatch(
+      /trace: process\.env\["CI"\]\s*\?\s*\{ mode: "retain-on-failure"[^}]*\}\s*:\s*"off"/,
     );
   });
 
