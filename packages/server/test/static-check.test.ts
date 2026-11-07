@@ -418,6 +418,33 @@ describe("startup data writes (VER-01, GEN-06)", () => {
       ) as unknown,
     });
   });
+  it("VER-01, GEN-09: a write refused because a value couldn't be named says which value, where, and how to fix it (L-84)", () => {
+    // A calendar: the write runs only on click, but `parts[0]` at startup could be any function.
+    const js = [
+      "function save(day) { tessera.call('data.patch', { operations: [] }); }",
+      "document.getElementById('add').addEventListener('click', () => save(1));",
+      "const parts = '2026-11'.split('-');",
+      "const first = new Date(parts[0], 0, 1);",
+    ].join("\n");
+    const finding = checkJs(js).find((f) => f.message.includes("writes data during startup"));
+    expect(finding?.line).toBe(1);
+    expect(finding?.message).toContain("`parts[0]` on line 4 can't be named");
+    expect(finding?.message).toContain("`const [y, m] = parts`");
+    // Destructured as the message says, the same tool passes: the write stays deferred.
+    const fixed = js
+      .replace("const parts = ", "const [y] = ")
+      .replace("new Date(parts[0], 0, 1)", "new Date(y, 0, 1)");
+    expect(checkJs(fixed)).toEqual([]);
+  });
+  it("VER-01, GEN-09: a write reached through named startup calls says where startup reaches it", () => {
+    const js =
+      "\nfunction save() { tessera.call('data.patch', {}); }\nfunction load() { save(); }\nload();";
+    expect(checkJs(js)).toContainEqual({
+      part: "js",
+      line: 2,
+      message: expect.stringContaining("It is reached at startup from line 4.") as unknown,
+    });
+  });
   it("VER-01: exhausted startup analysis fails closed, including otherwise deferred handlers", () => {
     const js =
       "0;".repeat(26_000) +

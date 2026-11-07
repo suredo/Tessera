@@ -657,8 +657,12 @@ function isFunction(node: AnyNode | null | undefined): boolean {
  * across scopes and objects: ambiguity can refuse more code, never choose a convenient target.
  * This is bounded syntax analysis, not an interpreter or a proof of JavaScript execution.
  */
-function startupCalls(program: AnyNode): Set<AnyNode> {
+function startupCalls(program: AnyNode, js: string): Startup {
   const bindings = new Map<string, Set<AnyNode>>();
+  // Why each function counts as startup: the first call or value that reached it, and the part of
+  // it that couldn't be named, if any. Only explains a finding; it never decides one (GEN-06).
+  const causes = new Map<AnyNode, { site: AnyNode; vague?: AnyNode }>();
+  const enclosing = new Map<AnyNode, AnyNode | null>();
   const functions = new Set<AnyNode>();
   const accessors = new Set<AnyNode>();
   const listeners = new Set<AnyNode>();
@@ -697,7 +701,8 @@ function startupCalls(program: AnyNode): Set<AnyNode> {
       interaction.has(fixedText(args[0]) ?? "")
     );
   };
-  const collect = (node: AnyNode) => {
+  const collect = (node: AnyNode, within: AnyNode | null = null) => {
+    enclosing.set(node, within);
     if (node.type === "CallExpression" || node.type === "NewExpression") allCalls.add(node);
     if (["get", "set"].includes(node["kind"] as string) && isNode(node["value"]))
       accessors.add(node["value"]);
@@ -725,11 +730,16 @@ function startupCalls(program: AnyNode): Set<AnyNode> {
     }
     if (node.type === "CallExpression" && listener(node))
       listeners.add((node["arguments"] as AnyNode[])[1]!);
-    children(node).forEach(collect);
+    const inner = isFunction(node) ? node : within;
+    children(node).forEach((child) => collect(child, inner));
   };
   collect(program);
 
-  const resolve = (node: AnyNode | undefined, seen = new Set<AnyNode>()): Set<AnyNode> => {
+  const resolve = (
+    node: AnyNode | undefined,
+    seen = new Set<AnyNode>(),
+    vague: { node?: AnyNode } = {},
+  ): Set<AnyNode> => {
     if (!node || seen.has(node)) return new Set();
     seen.add(node);
     if (isFunction(node) || node.type === "ClassDeclaration" || node.type === "ClassExpression")
@@ -738,6 +748,7 @@ function startupCalls(program: AnyNode): Set<AnyNode> {
     if (node.type === "Identifier") values = [...(bindings.get(node["name"] as string) ?? [])];
     else if (node.type === "MemberExpression") {
       const name = propertyName(node);
+      if (name === undefined) vague.node ??= node;
       values = name === undefined ? [...functions] : [...(bindings.get(name) ?? [])];
       if (["call", "apply", "bind"].includes(name ?? "")) values.push(node["object"] as AnyNode);
     } else if (node.type === "ChainExpression" || node.type === "AwaitExpression")
@@ -757,10 +768,14 @@ function startupCalls(program: AnyNode): Set<AnyNode> {
       if (callee.type === "MemberExpression" && propertyName(callee) === "bind")
         values = [callee["object"] as AnyNode];
     }
-    return new Set(values.flatMap((value) => [...resolve(value, seen)]));
+    return new Set(values.flatMap((value) => [...resolve(value, seen, vague)]));
   };
-  const invoke = (value: AnyNode | undefined) => {
-    for (const fn of resolve(value)) {
+  const invoke = (value: AnyNode | undefined, site: AnyNode | undefined = value) => {
+    const vague: { node?: AnyNode } = {};
+    for (const fn of resolve(value, new Set(), vague)) {
+      // A named reach is the real reason, so it replaces one through a value that couldn't be named.
+      if (site && (!causes.has(fn) || (causes.get(fn)!.vague && !vague.node)))
+        causes.set(fn, { site, ...(vague.node ? { vague: vague.node } : {}) });
       if (executed.has(fn)) continue;
       executed.add(fn);
       if (isFunction(fn)) pending.push(...children(fn));
@@ -790,15 +805,15 @@ function startupCalls(program: AnyNode): Set<AnyNode> {
         for (const [i, param] of ((fn["params"] as AnyNode[] | undefined) ?? []).entries())
           if (args[i]) for (const name of boundNames(param)) bind(name, args[i]);
       }
-      invoke(callee);
+      invoke(callee, node);
       args.forEach((arg, i) => {
-        if (!(listener(node) && i === 1)) invoke(arg);
+        if (!(listener(node) && i === 1)) invoke(arg, node);
       });
       if (
         callee.type === "MemberExpression" &&
         ["click", "dispatchEvent", "requestSubmit"].includes(propertyName(callee) ?? "")
       )
-        listeners.forEach(invoke);
+        listeners.forEach((fn) => invoke(fn, node));
     }
     children(node).forEach(visit);
   };
@@ -809,15 +824,48 @@ function startupCalls(program: AnyNode): Set<AnyNode> {
   let exhausted = false;
   while (previous !== calls.size + [...bindings.values()].reduce((n, set) => n + set.size, 0)) {
     // Keep pathological alias graphs bounded. Giving up makes every write a startup write.
-    if (++rounds > 50 || exhausted) return allCalls;
+    if (++rounds > 50 || exhausted) return explained(allCalls, true);
     previous = calls.size + [...bindings.values()].reduce((n, set) => n + set.size, 0);
     executed.clear();
-    accessors.forEach(invoke);
+    accessors.forEach((fn) => invoke(fn));
     pending.push(program);
     while (pending.length && !exhausted) visit(pending.pop()!);
   }
-  return exhausted ? allCalls : calls;
+  return exhausted ? explained(allCalls, true) : explained(calls, false);
+
+  function explained(found: Set<AnyNode>, gaveUp: boolean): Startup {
+    const line = (node: AnyNode) => (node.loc as { start: { line: number } }).start.line;
+    const text = (node: AnyNode) => {
+      const source = js.slice(node.start, node.end).replace(/\s+/g, " ");
+      return source.length > 60 ? `${source.slice(0, 57)}...` : source;
+    };
+    return {
+      has: (node) => found.has(node),
+      why(node) {
+        if (gaveUp)
+          return "The code is too intricate to follow, so every write counts as one that may run at startup. Make it simpler.";
+        let at: AnyNode | null | undefined = enclosing.get(node);
+        let first: AnyNode | undefined;
+        const seen = new Set<AnyNode>();
+        while (at && !seen.has(at)) {
+          seen.add(at);
+          if (accessors.has(at))
+            return "It is inside a getter or setter, and those count as startup.";
+          const cause = causes.get(at);
+          if (!cause) break;
+          if (cause.vague)
+            return `It counts as startup because \`${text(cause.vague)}\` on line ${line(cause.vague)} can't be named before the tool runs, so it could be any function in the tool, this one included. Destructure the value first (\`const [y, m] = parts\`) and pass the name.`;
+          first = cause.site;
+          at = enclosing.get(cause.site);
+        }
+        return first ? `It is reached at startup from line ${line(first)}.` : undefined;
+      },
+    };
+  }
 }
+
+/** The calls that may run while a tool starts, and why one does, for its finding. */
+type Startup = { has(node: AnyNode): boolean; why(node: AnyNode): string | undefined };
 
 /** Whether `node` is written to: an assignment's target, updated, or a pattern's target. */
 function isWritten(node: AnyNode, parent: AnyNode | null): boolean {
@@ -857,7 +905,7 @@ export function checkJs(
     return [{ message: `The JavaScript can't be read: ${(error as Error).message}.` }];
   }
   const page = new PageValues(program);
-  const starting = startupCalls(program);
+  const starting = startupCalls(program, js);
   const findings: JsFinding[] = [];
   // The bridge's values count as plain data only because `tessera` is the host's: a tool may not
   // declare a name of its own that hides it.
@@ -1161,9 +1209,10 @@ export function checkJs(
     }
     const capability = BRIDGE_ACTIONS[action as BridgeActionName].capability;
     if (BRIDGE_ACTIONS[action as BridgeActionName].writes && starting.has(parent)) {
+      const why = starting.why(parent);
       found(
         node,
-        `The bridge action "${action}" writes data during startup. Read data to render the tool; move this write to a user action. Starting entries belong in initialState or reusableDefaults, installed by the host.`,
+        `The bridge action "${action}" writes data during startup.${why ? ` ${why}` : ""} Read data to render the tool; move this write to a user action. Starting entries belong in initialState or reusableDefaults, installed by the host.`,
       );
     }
     if (capability && !capabilities.includes(capability)) {
