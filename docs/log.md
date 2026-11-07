@@ -2,6 +2,8 @@
 
 ## 2026-11-07
 
+* **Update**: The [browser](code/web/package.md) doc claims `TEST-03`: every generation rule, `GEN-01` to `GEN-18`, has a scripted end-to-end test through the real pipeline and the host app, M2's first exit criterion ([issue 157](https://github.com/suredo/Tessera/issues/157)); `GEN-17`'s came with two passes. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T06:36:42Z.
+
 * **Update**: L-84's mitigation, as the owner chose: the static check stays as strict, and the base [prompt](code/server/prompts.md) tells the model to destructure indexed values a call uses and not to use `Object.assign`, so the startup analysis can follow the code. A narrower check ([#255](https://github.com/suredo/Tessera/pull/255)) let real startup writes through and was closed ([L-84](lessons/tessera-issues.md), the [comparison's report](../evals/reports/2026-11-07-two-pass-plan.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T06:10:11Z.
 
 * **Update**: The [two-pass comparison](../evals/reports/2026-11-07-two-pass-plan.md) ran live and stopped on its own rule after three of six runs, using 10 of its 30 calls ([budgets](roadmap/budgets.md): 54 used in M2). B2 in one pass passed. B2 in two passes and B4 in one pass failed the same check, the startup-write rule, which looks like a false positive ([L-84](lessons/tessera-issues.md)). The comparison is inconclusive; one pass stays the default. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T05:42:37Z.
