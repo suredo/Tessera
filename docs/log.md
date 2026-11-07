@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-07
+
+* **New**: Speed measured against the targets ([issue 154](https://github.com/suredo/Tessera/issues/154), `OBS-04`, `GEN-11`). The [scenario runner](code/evals/runner.md) gains `speed.ts`, which reads a run's report and harness ledger and gives each stage's and each request's times against the speed targets. Each step now records the ledger calls it asked for, so a request is matched to its own calls even after an intent retry ([harness](code/evals/harness.md)). The [M2 speed report](../evals/reports/2026-11-07-m2-speed.md) applies it to the live run: every measurable target met, on small samples, and two screen targets not measured. [ADR 0012](decisions/adr/0012-time-limits-after-m2.md) records the owner's choice to keep the time limits until M3's runs. No call was made. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T03:22:48Z.
+
 ## 2026-11-06
 
 * **Update**: The chat beside the tool, the last part of [issue 132](https://github.com/suredo/Tessera/issues/132): the [browser](code/web/package.md) doc claims `APP-01`. On a wide screen the chat sits beside the tool, with a divider the person drags or moves by keyboard (`APP-11`), kept in this browser; on a narrow one they stack. The tool is inline, expanded over the chat's place, or full screen, by the host's own controls. Recorded by `claude-code/claude-opus-5-5` at 2026-11-06T23:24:46Z.

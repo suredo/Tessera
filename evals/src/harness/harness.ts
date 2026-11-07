@@ -44,6 +44,11 @@ export type Harness = {
   dataFolder: string;
   /** Calls started so far; refused calls never started. */
   callsUsed(): number;
+  /**
+   * Calls asked for so far, refused ones included: the next call's index in the ledger. A step
+   * that reads it before and after knows which calls it made (OBS-04).
+   */
+  callsAsked(): number;
   /** Writes the run's summary beside its ledger and returns it. */
   finish(): LedgerSummary;
 };
@@ -189,6 +194,7 @@ export function startHarness(options: HarnessOptions): Harness {
     provider: { name: provider.name, live: provider.live, run },
     dataFolder,
     callsUsed: () => used,
+    callsAsked: () => nextIndex,
     finish,
   };
 }

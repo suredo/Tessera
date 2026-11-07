@@ -3,11 +3,11 @@ type: Code Module
 title: "Scenario runner"
 description: "Plays a scenario through the host app in Chrome, step by step, with every call through the harness, checks each step's host facts and writes the report; rehearsal and replay modes call no model."
 resource: ../../../evals/src/runner/
-implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04]
-tests: [../../../evals/test/runner.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts]
+implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
+tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T22:57:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T03:30:21Z }
 ---
 
 # Purpose
@@ -19,6 +19,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 - `src/runner/cli.ts`: `node evals/src/runner/cli.ts <scenario-id> [--replay <answers file> | --live --cap <n>]`, after `pnpm build`. Without a flag it plays the scenario's rehearsal, `evals/scenarios/rehearsals/<id>.json`. `--live` is LIVE: it needs the owner's approved cap (`ENG-07`), runs Claude Code's free checks first (found, recent enough, signed in) and writes the run's answers as `answers.json`. The evidence (report, screenshots, video, ledger, answers) goes to `test-output/evals/scenarios/`.
 - `src/runner/run.ts`: `runScenario` plays one scenario (`RunReport`, `StepResult`, `RunMode`); `zonedInstant` is a wall time's instant in a zone. `STEP_LIMIT_MS` is how long a request may take; `NEW_WORKSPACE` is the title of the empty workspace a `switch: new` step opens.
 - `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit and each stale one (`AnswersProvider`). `mapStrings` changes an answer's strings, never its JSON text, so a saved tool's name with quotes or backslashes stays whole.
+- `src/runner/speed.ts`: how fast a run was against the speed targets (`OBS-04`). `speedOf` takes runs as `readRun` reads them from a run folder (its report and harness ledger) and gives `Speed`: each stage's model time and each kind of request's time as the person waited (`RequestKind`), as `figures` (count, p50, p95 and slowest, by nearest rank), and each of `SPEED_TARGETS` met, missed or not measured. `speedMarkdown` writes them as tables. `node evals/src/runner/speed.ts <run folder>...` prints them; the [M2 speed report](../../../evals/reports/2026-11-07-m2-speed.md) is its first use.
 - `src/runner/messages.ts`: `outcomeOf` reads what a notice claims, in the app's own words from `en.ts`; `say` fills one of them.
 - `src/runner/replay.ts`: `replayScenario` plays a scenario from an answers file, a rehearsal or a recorded live run, with no call: the command's rehearsal and replay modes use it, and so does `packages/web/e2e/scenario-replays.spec.ts`, which replays every file in `evals/scenarios/replays/` in CI and expects each run's steps to pass or fail as listed there, with their problems (`EVAL-07`, `TEST-04`). The list follows today's scenario files, so after a scenario's expectation is corrected it can differ from the live report, whose score stays frozen. A new recording needs its expected failed steps listed there.
 - `src/runner/record.ts`: `recordAnswers` turns a run's ledger and request log into answers that replay it (`EVAL-07`); `CANCELLED_WAIT_MS` is how long a cancelled call's answer waits in the replay.
@@ -51,6 +52,7 @@ Depends on the [harness](harness.md), the [scenario files and host facts](scenar
 - **Continue and Use again wait for the workspace they open** (L-80): Continue's own, or one that didn't exist before Use again, for up to 30 s, never just any tool panel, since the one already showing would pass on a slow machine. If it never opens, the host facts report it.
 - **Each screenshot waits for the tool to show something** (L-81): after a workspace opens, its nested frames load again, so a screenshot taken at once showed an empty panel. The wait is at most 5 s and only for the picture; the facts are read before it, and each step's result records what its screenshot shows (`tool`, `empty` or `no tool`), and the replay spec fails on an `empty` one.
 - **A request's outcome is read from the chat** (`APP-01`): after a `say` or `cancel` step, the report's message is Tessera's newest reply in the chat; after the other steps, the notice.
+- **Speed is judged on what a run can time** (`OBS-04`). Each step's report records the ledger calls it asked for (`calls`, from the harness's `callsAsked`), so a request is matched to its own calls, an intent retry included, and timed as the person waited, staging included; one sent only to be cancelled isn't timed. A report from before that is matched in order, one intent call and the calls after it, only when its intent calls pair one to one with its requests; otherwise its requests are left untimed and the figures say so. With fewer than 20 samples, p95 is the slowest. The runner doesn't time the host's screens or a saved tool's mount, so those targets read as not measured.
 - **A notice can be stale.** A step that shows no new message, such as `next-day`, reports the last one (Continue from my tools has its own since L-77); the facts never rely on a notice alone.
 
 # Symbols (generated)
@@ -63,3 +65,4 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `report.ts`: `reportMarkdown`
 - `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `Screenshot` (type), `RunReport` (type), `zonedInstant`, `runScenario`
 - `script.ts`: `answersSchema`, `Answers` (type), `loadAnswers`, `mapStrings`, `AnswersProvider` (type), `answersProvider`
+- `speed.ts`: `SPEED_TARGETS`, `RequestKind` (type), `Figures` (type), `Speed` (type), `figures`, `speedOf`, `speedMarkdown`, `readRun`

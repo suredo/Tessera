@@ -7,7 +7,7 @@ implements: [OBS-02, ENG-07, ENG-19, CLI-04]
 tests: [../../../evals/test/harness.test.ts]
 tags: [code, evals, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T07:45:07Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T03:30:37Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Makes every evaluation run follow the [live evaluation protocol](../../practices
 
 # Entry points
 
-- `src/harness/harness.ts`: `startHarness` checks a run's options, creates its data folder and returns the guarded provider, and its `Harness` writes the summary when the run finishes. `HarnessError` means the harness refused a call or a run.
+- `src/harness/harness.ts`: `startHarness` checks a run's options, creates its data folder and returns the guarded provider, and its `Harness` writes the summary when the run finishes. It counts the calls used against the cap, and the calls asked for, refused ones included, which is the next call's index in the ledger; the [scenario runner](runner.md) reads it before and after each step, to know that step's own calls (`OBS-04`). `HarnessError` means the harness refused a call or a run.
 - `src/harness/ledger.ts`: `readLedger`, `readRequestLog` and `summarizeLedger`, and the file names `LEDGER_FILE`, `REQUEST_LOG_FILE` and `SUMMARY_FILE`.
 - The ledger and request log entries are contracts, defined in `packages/contracts/src/ledger.ts` with their JSON Schema in `packages/contracts/schemas/` ([contracts package](../contracts/package.md)).
 

@@ -54,6 +54,11 @@ export type StepResult = {
   problems: string[];
   seconds: number;
   /**
+   * The ledger's calls this step asked for, by index, from `from` up to but not including `to`,
+   * so its time is matched to its own calls (OBS-04); missing in reports from before it.
+   */
+  calls?: { from: number; to: number };
+  /**
    * What the step's screenshot shows of the tool (L-81): the tool, an empty panel after waiting
    * for it, or no tool at all; left out for a step that didn't run.
    */
@@ -223,6 +228,7 @@ export async function runScenario(
       const began = Date.now();
       const before = readHostState(store, await openWorkspace(page));
       const misfitsBefore = misfits().length;
+      const callsFrom = harness.callsAsked();
       const target: StepTarget = {};
       let outcome: StepOutcome = { claim: "none" };
       try {
@@ -248,6 +254,7 @@ export async function runScenario(
       result.problems.push(...misfits().slice(misfitsBefore));
       result.outcome = result.problems.length === 0 ? "passed" : "failed";
       result.seconds = (Date.now() - began) / 1000;
+      result.calls = { from: callsFrom, to: harness.callsAsked() };
       result.screenshot = await toolShown(page);
       await page.screenshot({ path: path.join(folder, `step-${result.index}.png`) });
       // Everything after depends on the first step, so a failed first step ends the run.
