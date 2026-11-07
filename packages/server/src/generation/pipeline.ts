@@ -126,7 +126,10 @@ export async function generate(
         kind: "mixed_data",
         workspaceId: baseline!.id,
         name: baseline!.title,
-        interface: { outcome: "unchanged" },
+        interface: {
+          outcome: "unchanged",
+          ...(edited.leftOut ? { leftOut: edited.leftOut } : {}),
+        },
         data: await changeData(
           store,
           provider,
@@ -197,6 +200,7 @@ export async function generate(
     expectedDataRevision: workspace.dataRevision,
     name: created.name,
     summary: created.summary,
+    ...(created.leftOut ? { leftOut: created.leftOut } : {}),
     ...(plan ? { followUps: plan.later.map((feature) => feature.name) } : {}),
   };
   remember?.({

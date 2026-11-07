@@ -118,6 +118,20 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
     expect(workspaceVersions(store, workspace.id)).toHaveLength(1);
   });
 
+  it("GEN-08, GEN-07: an unchanged edit still says what no tool here can do, and stores nothing", async () => {
+    const { store, workspace } = await setup();
+    const leftOut = ["Finding videos on the internet"];
+    expect(
+      await generate(
+        store,
+        provider(reply(intent(), "intent"), reply({ ...noEdit, leftOut }, "edit")),
+        DEFAULT_ROUTES,
+        { request: "Find videos for it", workspaceId: workspace.id },
+      ),
+    ).toEqual({ kind: "answer", answer: "unchanged", reason: "Kept the tool as it is.", leftOut });
+    expect(workspaceVersions(store, workspace.id)).toHaveLength(1);
+  });
+
   it("GEN-13: a data revision changed during intent or editing is refused without overwriting it", async () => {
     for (const when of ["intent", "edit"] as const) {
       const { store, workspace } = await setup();

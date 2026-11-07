@@ -42,6 +42,7 @@ export const en = {
     "The entry result couldn't be confirmed. Check the entries before asking again.",
   "request.made": "{name} is ready. {summary}",
   "request.edited": "{name} was updated. {summary}",
+  "request.leftOut": "{message} Not included, because tools here can't do it: {parts}.",
   "request.followUpAdded": "{feature} was added. {summary}",
   "request.followUpNotAdded": "{feature} wasn't added: {message}",
   "request.followUpUncertain": "{feature} may have been added: {message}",

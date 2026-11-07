@@ -20,6 +20,16 @@
           "maxLength": 400,
           "description": "What the tool does, in one or two plain sentences for the person."
         },
+        "leftOut": {
+          "maxItems": 5,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": "The parts of the request this tool doesn't do because no tool here can, such as reaching the internet or playing videos, each in plain words for the person. Left out when the tool does all of it."
+        },
         "code": {
           "type": "object",
           "properties": {

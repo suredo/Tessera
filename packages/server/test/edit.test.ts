@@ -245,6 +245,27 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
     expect(calls[1]!.prompt).toContain("(state, payload, runtime)");
   });
 
+  it("GEN-08, GEN-12: what an edit leaves out comes with its candidate, repaired first when it isn't plain", async () => {
+    const plain = {
+      outcome: "edit",
+      summary: "It is dark now.",
+      leftOut: ["Fetching pictures from the internet"],
+      files: { mode: "style", css: "body{background:#111}" },
+      data: { mode: "unchanged" },
+    };
+    const { provider, calls } = scripted(
+      reply({ ...plain, leftOut: ["A network capability"] }),
+      reply(plain, "repair"),
+    );
+    const look = { ...input, intent: { ...intent, lookOnly: true, behaviorChange: false } };
+    expect(await editTool(provider, DEFAULT_ROUTES, look)).toMatchObject({
+      kind: "candidate",
+      leftOut: ["Fetching pictures from the internet"],
+      repairs: 1,
+    });
+    expect(calls[1]!.prompt).toContain("What the tool leaves out");
+  });
+
   it("GEN-14, GEN-09: a look-only edit refused for replacing its page is repaired without its JavaScript coming back into the prompt", async () => {
     // A tool with behavior worth keeping out of the prompt.
     const js = 'document.title = "Shopping list";';
