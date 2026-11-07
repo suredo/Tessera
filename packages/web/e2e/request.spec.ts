@@ -272,8 +272,12 @@ test("GEN-09, GEN-05, APP-09, UX-06: a smoke failure gets one repair, staged aga
   ]);
   await expect(requests.nth(1)).toContainText(en["details.ended.candidate"]);
   await expect(requests.nth(1).getByRole("row").nth(1)).toContainText(en["details.unknown"]);
-  await details.getByText(en["details.source.html"]).click();
-  await expect(details.locator("pre code").first()).toContainText("<h1>Shopping list</h1>");
+  // The tool's own code, by its part's control: a call's code shows the same part names (GEN-10).
+  const html = details.locator("summary", { hasText: en["details.source.html"] });
+  await html.click();
+  await expect(html.locator("xpath=..").locator("pre code")).toContainText(
+    "<h1>Shopping list</h1>",
+  );
   await details.getByRole("button", { name: en["details.hide"] }).click();
   await expect(details.locator(".details-requests")).toHaveCount(0);
 });
