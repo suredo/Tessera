@@ -4,7 +4,7 @@ title: "Tessera issues"
 description: "Issues found while building Tessera, from L-70 on: what happened, the cause, the mitigation and where it was found."
 tags: [lessons, issues]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T16:06:17Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T20:33:58Z }
 ---
 # Tessera issues
 
