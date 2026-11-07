@@ -1,15 +1,15 @@
 ---
 type: Evaluation Report
-title: "Two passes against one: live comparison plan"
-description: "The plan for measuring two passes for big tools (GEN-17) against one pass, live: three big requests from the catalogue, each made both ways, the measures and their denominators frozen, a 30-call hard cap, and stop rules, for the owner to approve before any call."
+title: "Two passes against one: live comparison plan and results"
+description: "The plan for measuring two passes for big tools (GEN-17) against one pass, live, and what happened: the run stopped after three of six runs on its own stop rule, the same check failing twice, a likely false positive of the startup-write check (L-84); 10 of 30 calls used, and the comparison inconclusive."
 tags: [reports, live-evaluation, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:54:43Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T05:51:10Z }
 ---
 
 # Two passes against one: live comparison plan, 2026-11-07
 
-This is the plan the live evaluation protocol asks for before any call (`ENG-07`, [live evaluation](../../docs/practices/live-evaluation.md)). It is for [issue 153](https://github.com/suredo/Tessera/issues/153): `GEN-17` says two passes are a starting point, "measured against single-pass generation (time to first useful tool, total time, tokens, pass rate) before it becomes final". Two passes are built and off by default (#250, #251). **The owner approved the 30-call hard cap on 2026-11-07,** raising M2's envelope to about 75. Nothing has been run yet: the runner option, scenario files and rehearsals below come first, reviewed, with no calls.
+This is the plan the live evaluation protocol asks for before any call (`ENG-07`, [live evaluation](../../docs/practices/live-evaluation.md)). It is for [issue 153](https://github.com/suredo/Tessera/issues/153): `GEN-17` says two passes are a starting point, "measured against single-pass generation (time to first useful tool, total time, tokens, pass rate) before it becomes final". Two passes are built and off by default (#250, #251). **The owner approved the 30-call hard cap on 2026-11-07,** raising M2's envelope to about 75. Before the run, the runner option, scenario files and rehearsals below came first, reviewed, with no calls; the [results](#results-stopped-after-three-runs-2026-11-07) follow.
 
 # What is compared
 
@@ -86,3 +86,20 @@ One small pull request, reviewed before anything is spent:
 - the scenario runner's `--two-pass` option, which starts Tessera with `twoPass` at its starting point;
 - the three scenario files, B2, B4 and B10, each a single request with its budget;
 - a no-cost rehearsal of each, in both modes, with scripted answers, each passing.
+
+# Results: stopped after three runs, 2026-11-07
+
+The run started at `0a02a94`, with Claude Code 2.1.319, on the default routes. **It stopped after three of its six runs, as its own stop rule says: the same failure in two runs.** It used **10 of its 30 calls**. The unused 20 authorize nothing; resuming needs the owner's word.
+
+| Run | Calls (cap) | Outcome | Time to a first useful tool | Time as the person waited | Tokens in (cached) / out |
+| --- | ---: | --- | ---: | ---: | --- |
+| B2, one pass | 2 (3) | **passed**: "Reading List is ready", with ratings, genres, a genre filter and sorting | 22.9 s | 23.4 s | 12,369 (0) / 3,027 |
+| B2, two passes | 5 (7) | **failed**: the core and Genre were added; Genre filter didn't pass its checks after its repair, so sorting was never asked for | 22.7 s (the core) | 83.9 s | 53,004 (23,546) / 13,355 |
+| B4, one pass | 3 (3) | **failed**: the tool didn't pass its checks after its repair; nothing was made | never: nothing activated | 56.9 s | 24,486 (12,475) / 9,065 |
+| B4, two passes; B10, both | — | not run | — | — | — |
+
+- **Time to a first useful tool** is from the server starting the request to the first version's activation, both read from the run's data folder (its `requests` and `workspace_versions`). The runner doesn't record the moment the person sent it, which comes just before. For B2, the core came no sooner than the whole tool did in one pass: 22.7 s against 22.9 s.
+- **The B2 two-pass run was said honestly:** "Reading list is ready. … Genre was added. … Genre filter wasn't added: … Your tool and entries were kept." The runner scored it failed, as #253 made it do.
+- **The same check failed both runs:** the static check's startup-write rule. It said `data.patch` "writes data during startup" for every write in the code. In both tools each write is in a function that runs only when the person acts: a function passed to `addEventListener`, or called from a handler's closure, never from the startup code. **This looks like a false positive of the check, not a faulty tool** ([L-84](../../docs/lessons/tessera-issues.md)). B4's creation also tripped the rules on property names computed at run time and on `Object.assign`, there on plain objects. Those rules are deliberately conservative (ADR 0009), but their message says "an element or the page".
+- **The comparison is inconclusive:** only one pair (B2) ran both ways, below the two exercised pairs the decision needs. One pass stays the default, and `GEN-17` stays unmeasured.
+

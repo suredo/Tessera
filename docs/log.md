@@ -2,6 +2,8 @@
 
 ## 2026-11-07
 
+* **Update**: The [two-pass comparison](../evals/reports/2026-11-07-two-pass-plan.md) ran live and stopped on its own rule after three of six runs, using 10 of its 30 calls ([budgets](roadmap/budgets.md): 54 used in M2). B2 in one pass passed. B2 in two passes and B4 in one pass failed the same check, the startup-write rule, which looks like a false positive ([L-84](lessons/tessera-issues.md)). The comparison is inconclusive; one pass stays the default. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T05:42:37Z.
+
 * **New**: What the [two-pass comparison](../evals/reports/2026-11-07-two-pass-plan.md) needs before its calls, none made: the [scenario runner](code/evals/runner.md)'s `--two-pass`, three big [scenarios](code/evals/scenarios.md) (B2, B4, B10), each with a rehearsal in one pass and two, all passing; and the runner refuses a scenario clock that starts after now, the cause of [L-83](lessons/tessera-issues.md). Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T04:53:16Z.
 
 * **New**: The [plan for comparing two passes with one](../evals/reports/2026-11-07-two-pass-plan.md), live ([issue 153](https://github.com/suredo/Tessera/issues/153), `GEN-17`): three big requests from the catalogue, each made both ways, the measures and the decision rule frozen, a 30-call hard cap and stop rules, which the owner approved on 2026-11-07, raising M2's [budget](roadmap/budgets.md) to about 75 and the provisional total to the first release to about 315. It decides only if at least two pairs actually made a core and a feature after it. No call was made yet. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T04:42:49Z.
