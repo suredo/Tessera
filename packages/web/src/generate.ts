@@ -15,7 +15,7 @@ import {
   type DataReply,
 } from "@tessera/contracts";
 import { smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
-import { HostError, isRefusal, type Send } from "./host-api.ts";
+import { HostError, isRefusal, problemText, type Send } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import type { RequestControl } from "./request-control.ts";
 
@@ -303,12 +303,17 @@ export async function carryOut(
   let feature: string | undefined;
   let made: string | undefined;
   let addedLast = false;
+  // A lost activation answer: the version may be active, so it is never said as not added.
+  let uncertain = false;
   const outcome = await loop();
   if (said.length === 0) return outcome;
   // The core and each feature already added stand; the one being added now is said as it went.
   const last = addedLast
     ? outcome.message
-    : t("request.followUpNotAdded", { feature: feature!, message: outcome.message });
+    : t(uncertain ? "request.followUpUncertain" : "request.followUpNotAdded", {
+        feature: feature!,
+        message: outcome.message,
+      });
   return { ...outcome, message: [...said, last].join(" "), openWorkspaceId: made };
 
   async function loop(): Promise<RequestOutcome> {
@@ -326,6 +331,7 @@ export async function carryOut(
             staged = await wait(stageRequest(reply, deps, control));
           } catch {
             // Activation may have committed before its response was lost (GEN-08, DATA-10).
+            uncertain = true;
             return { message: t("request.activationUnknown"), reloadData: true };
           }
           if (staged.outcome === "activated") {
@@ -384,8 +390,14 @@ export async function carryOut(
             // More to come: this version stands and is shown, and the next feature is asked for.
             said.push(message);
             made = reply.workspaceId;
-            const next = reply.followUps[0]!;
-            await onInterfaceApplied?.(reply.workspaceId);
+            // The feature asked for next, named before anything can stop it (GEN-08).
+            feature = reply.followUps[0]!;
+            try {
+              await onInterfaceApplied?.(reply.workspaceId);
+            } catch (error) {
+              // What stands is still said; the next feature wasn't asked for.
+              return { message: problemText(error), reloadData: true };
+            }
             if (control?.stopped) return stopped();
             try {
               reply = await wait(
@@ -396,12 +408,10 @@ export async function carryOut(
                 }),
               );
             } catch (error) {
-              feature = next;
               if (isRefusal(error))
                 return control?.stopped ? stopped() : { message: error.message };
               return { message: t("request.requestUnknown"), reloadData: true };
             }
-            feature = next;
             repaired = false;
             continue;
           }

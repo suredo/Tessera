@@ -44,6 +44,7 @@ export const en = {
   "request.edited": "{name} was updated. {summary}",
   "request.followUpAdded": "{feature} was added. {summary}",
   "request.followUpNotAdded": "{feature} wasn't added: {message}",
+  "request.followUpUncertain": "{feature} may have been added: {message}",
   "request.unchanged": "The tool wasn't changed.",
   "request.unchangedBecause": "The tool wasn't changed. {reason}",
   "request.dataChanged": "Changed {count} entries in {name}. {summary}",

@@ -145,14 +145,29 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     if (map.size >= MAX_PENDING) map.delete(map.keys().next().value!);
     map.set(token, { context, expires });
   };
-  const remember = (token: string, context: SmokeRepairContext, expires: number) => {
+  /** Keeps a follow-up continuation, and its owner as long, so Cancel still reaches it (GEN-17). */
+  const keepFollowUps = (
+    token: string,
+    context: SmokeRepairContext,
+    until: number,
+    control: ReturnType<RequestControls["owner"]>,
+  ) => {
+    retain(waitingFollowUps, token, context, until);
+    if (control) control.expires = Math.max(control.expires, until);
+  };
+  const remember = (
+    token: string,
+    context: SmokeRepairContext,
+    expires: number,
+    control?: ReturnType<RequestControls["owner"]>,
+  ) => {
     // Equal code hashes can belong to different requests. Never replace their instructions.
     available(context);
     retain(pending, token, context, expires);
     if (context.dataPart) retain(waitingData, token, context, expires);
     // A follow-up is its own request with its own time limit, so its continuation outlives this
     // request's deadline by one request's limit, and no more (GEN-11).
-    if (context.plan?.later.length) retain(waitingFollowUps, token, context, expires + limit);
+    if (context.plan?.later.length) keepFollowUps(token, context, expires + limit, control);
   };
   const handle =
     (mode: "generate" | "smoke" | "data" | "follow-up"): Handler =>
@@ -260,7 +275,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   stopped,
                   (context) => {
                     controls.bind(control, nextToken);
-                    remember(nextToken, context, expires);
+                    remember(nextToken, context, expires, control);
                   },
                   check,
                   (offer) => offerData(offer, expires, control),
@@ -332,6 +347,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                         reply: { ...context.reply, ...(rest.length ? { followUps } : {}) },
                       },
                       expires,
+                      control,
                     );
                   },
                   check,
@@ -401,11 +417,11 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
               if (repaired.kind === "candidate") controls.bind(control, nextToken);
               if (repaired.kind === "candidate" && entry.context.plan?.later.length) {
                 available({ ...entry.context, reply: repaired });
-                retain(
-                  waitingFollowUps,
+                keepFollowUps(
                   nextToken,
                   { ...entry.context, reply: repaired },
                   entry.expires + limit,
+                  control,
                 );
               }
               if (repaired.kind === "candidate" && entry.context.dataPart) {

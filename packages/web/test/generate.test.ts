@@ -433,4 +433,78 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
       openWorkspaceId: candidate.workspaceId,
     });
   });
+
+  /** A control the test stops, as Cancel would, at the moment it chooses. */
+  const control = () => {
+    const owner = {
+      stopped: false,
+      controller: new AbortController(),
+      start: () => Promise.resolve("00000000-0000-4000-8000-000000000009"),
+      wait: <T>(pending: Promise<T>) => pending,
+    };
+    return owner;
+  };
+
+  it("GEN-17, GEN-08: a feature whose activation answer was lost is said as maybe added, never as not added", async () => {
+    const core = { ...candidate, followUps: ["Aisles"] } as GenerateReply;
+    const { fake } = deps(core, activated);
+    fake.followUp = () => Promise.resolve(edited("Added aisles."));
+    let stagings = 0;
+    fake.stage = () =>
+      ++stagings === 2
+        ? Promise.reject(new Error("The answer was lost."))
+        : Promise.resolve(activated);
+    const outcome = await carryOut("A big list", null, fake);
+    expect(outcome.message).toBe(
+      `Shopping list is ready. A list to tick off at the store. Aisles may have been added: ${en["request.activationUnknown"]}`,
+    );
+    expect(outcome.reloadData).toBe(true);
+    expect(outcome.message).not.toContain("wasn't added");
+  });
+
+  it("GEN-17, GEN-08: Cancel while a version is shown names the feature that wasn't asked for, after the core and after a feature", async () => {
+    for (const [stopAt, missing, before] of [
+      [1, "Aisles", ""],
+      [2, "Prices", " Aisles was added. Added aisles."],
+    ] as const) {
+      const core = { ...candidate, followUps: ["Aisles", "Prices"] } as GenerateReply;
+      const { fake } = deps(core, activated);
+      const replies = [
+        edited("Added aisles.", ["Prices"]),
+        edited("Added prices.", undefined, "c"),
+      ];
+      fake.followUp = () => Promise.resolve(replies.shift()!);
+      const owner = control();
+      let shown = 0;
+      const outcome = await carryOut(
+        "A big list",
+        null,
+        fake,
+        () => {
+          if (++shown === stopAt) owner.stopped = true;
+          return Promise.resolve();
+        },
+        owner as never,
+      );
+      expect(outcome.message).toBe(
+        `Shopping list is ready. A list to tick off at the store.${before} ${missing} wasn't added: ${en["request.stopped"]}`,
+      );
+    }
+  });
+
+  it("GEN-17, GEN-08: a refresh that fails between versions keeps what stands and names the feature not asked for", async () => {
+    const core = { ...candidate, followUps: ["Aisles"] } as GenerateReply;
+    const { fake } = deps(core, activated);
+    const followUp = vi.fn(fake.followUp);
+    fake.followUp = followUp;
+    const outcome = await carryOut("A big list", null, fake, () =>
+      Promise.reject(new HostError("Tessera didn't answer.", 503)),
+    );
+    expect(outcome).toEqual({
+      message: `Shopping list is ready. A list to tick off at the store. Aisles wasn't added: Tessera didn't answer.`,
+      openWorkspaceId: candidate.workspaceId,
+      reloadData: true,
+    });
+    expect(followUp).not.toHaveBeenCalled();
+  });
 });

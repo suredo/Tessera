@@ -3,8 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  CANCEL_REQUEST_ROUTE,
   DEFAULT_ROUTES,
   FOLLOW_UP_ROUTE,
+  REGISTER_REQUEST_ROUTE,
+  requestControlSchema,
   GENERATE_ROUTE,
   generateReplySchema,
   type GenerateReply,
@@ -97,6 +100,18 @@ async function fixture(after: { stage: "edit"; value: unknown }[], limit = 420_0
     expect(response.status).toBe(200);
     return generateReplySchema.parse(await response.json());
   };
+  /** Any route's status and body, for the host app's control routes. */
+  const raw = async (route: string, value: unknown = {}) => {
+    const response = await fetch(new URL(route, server.url), {
+      method: "POST",
+      headers: { origin: server.url.replace(/\/$/, ""), "content-type": "application/json" },
+      body: JSON.stringify(value),
+    });
+    return { status: response.status, body: (await response.json().catch(() => null)) as unknown };
+  };
+  /** A registered control, as the host app always sends one (CLI-06). */
+  const register = async () =>
+    requestControlSchema.parse((await raw(REGISTER_REQUEST_ROUTE)).body).token;
   /** Activates a candidate as staging would, and answers what asks for the next feature. */
   const activate = (reply: GenerateReply) => {
     if (reply.kind !== "candidate") throw new Error(`Expected a candidate, got ${reply.kind}`);
@@ -105,7 +120,7 @@ async function fixture(after: { stage: "edit"; value: unknown }[], limit = 420_0
     ).toBe(true);
     return { workspaceId: reply.workspaceId, hash: reply.hash, token: reply.activation.token };
   };
-  return { store, post, activate, calls };
+  return { store, post, raw, register, activate, calls };
 }
 
 describe("a big tool's follow-up features (GEN-17)", () => {
@@ -160,6 +175,40 @@ describe("a big tool's follow-up features (GEN-17)", () => {
     expect(await f.post(FOLLOW_UP_ROUTE, { ...asked, hash: "0".repeat(64) })).toMatchObject({
       kind: "failed",
     });
+    expect(f.calls.map((c) => c.stage)).toEqual(["intent", "create"]);
+  });
+
+  it("GEN-17, GEN-11: with a registered control, a follow-up asked after the core's own deadline is still its own request", async () => {
+    const f = await fixture([{ stage: "edit", value: edit("Added aisles.") }], 600);
+    const controlToken = await f.register();
+    const core = await f.post(GENERATE_ROUTE, {
+      request: "A shopping list with four things",
+      controlToken,
+    });
+    if (core.kind !== "candidate") throw new Error("Expected a candidate");
+    const asked = f.activate(core);
+    // Past the core's deadline, within the follow-up's kept window.
+    await new Promise((done) =>
+      setTimeout(done, Math.max(0, core.activation.expiresAt - Date.now()) + 50),
+    );
+    const added = await f.raw(FOLLOW_UP_ROUTE, asked);
+    expect(added.status).toBe(200);
+    expect(added.body).toMatchObject({ kind: "candidate", summary: "Added aisles." });
+  });
+
+  it("GEN-17, CLI-06: Cancel after the core stops the features still to come", async () => {
+    const f = await fixture([{ stage: "edit", value: edit("Added aisles.") }]);
+    const controlToken = await f.register();
+    const core = await f.post(GENERATE_ROUTE, {
+      request: "A shopping list with four things",
+      controlToken,
+    });
+    const asked = f.activate(core);
+    expect((await f.raw(CANCEL_REQUEST_ROUTE, { token: controlToken })).body).toEqual({
+      cancelled: true,
+    });
+    const refused = await f.raw(FOLLOW_UP_ROUTE, asked);
+    expect(refused.status).toBe(409);
     expect(f.calls.map((c) => c.stage)).toEqual(["intent", "create"]);
   });
 });
