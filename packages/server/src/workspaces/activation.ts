@@ -3,6 +3,7 @@ import {
   type ActivationRefusal,
   type ActivationReply,
   type Artifact,
+  type VersionNote,
 } from "@tessera/contracts";
 import { checkToolData, migrateData } from "../data-shape/index.ts";
 import type { ToolData } from "../patches/index.ts";
@@ -26,6 +27,8 @@ export type ActivationOptions = {
   beforeWrites?: () => void;
   /** Called inside the transaction after every write; a test throws here to stand for a crash. */
   afterWrites?: () => void;
+  /** What the version was made for and the checks it passed, kept in its history (APP-05). */
+  note?: VersionNote;
 };
 
 // A version is one unit with its reusable defaults (DATA-03): they must fit its own shape and the
@@ -122,7 +125,7 @@ export function activateVersion(
 
     options.beforeWrites?.();
     replaceData(store, workspace, data);
-    appendVersion(store, id, hash);
+    appendVersion(store, id, hash, options.note);
     options.afterWrites?.();
     return { ok: true, workspace: existingWorkspace(store, id), migrationCount };
   });

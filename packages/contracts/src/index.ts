@@ -257,4 +257,8 @@ export {
   type SavedTool,
   type Workspace,
   type WorkspaceVersion,
+  VERSION_CHECKS,
+  versionNoteSchema,
+  type VersionCheck,
+  type VersionNote,
 } from "./workspace.ts";

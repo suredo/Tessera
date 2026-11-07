@@ -2,6 +2,7 @@ import {
   ACTIVATION_ROUTE,
   activationRequestSchema,
   type ActivationRequest,
+  type VersionNote,
 } from "@tessera/contracts";
 import { json, readJson, text, type Handler } from "../http/index.ts";
 import { activateVersion } from "./activation.ts";
@@ -27,9 +28,15 @@ function missingMessage(store: Store, id: string): string {
 }
 
 /** The activation route for the local server, answering from `store`. */
+/**
+ * What an activation may do: a check of its authority right before the first write, and what the
+ * version was made for and passed, when the request that made it says so (APP-05).
+ */
+export type ActivationAuthority = (() => boolean) & { note?: VersionNote };
+
 export function activationRoutes(
   store: Store,
-  authorize: (request: ActivationRequest) => (() => boolean) | undefined = () => undefined,
+  authorize: (request: ActivationRequest) => ActivationAuthority | undefined = () => undefined,
 ): Record<string, Handler> {
   return {
     [ACTIVATION_ROUTE]: async (req, res) => {
@@ -62,7 +69,10 @@ export function activationRoutes(
         }
         json(
           res,
-          activateVersion(store, workspaceId, hash, expectedDataRevision, { beforeWrites }),
+          activateVersion(store, workspaceId, hash, expectedDataRevision, {
+            beforeWrites,
+            ...(allowed.note ? { note: allowed.note } : {}),
+          }),
         );
       } catch (error) {
         if (error === EXPIRED) return expired();
