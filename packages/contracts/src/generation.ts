@@ -270,6 +270,12 @@ export const generateReplySchema = z
         .boolean()
         .optional()
         .describe("The server retains a data-only continuation until this candidate activates."),
+      followUps: z
+        .array(z.string().min(1))
+        .optional()
+        .describe(
+          "A big new tool's core (GEN-17): the features still to come as edits, by name, in order.",
+        ),
     }),
     z.strictObject({
       kind: z.literal("answer"),

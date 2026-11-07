@@ -30,6 +30,7 @@ import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
 import { applyDataOffer, changeData, type DataOffer } from "./data-action.ts";
 import { RequestLedger } from "../ledger/index.ts";
 import { RequestControls } from "./control.ts";
+import { checkTwoPassOptions, type TwoPassOptions } from "./two-pass.ts";
 
 // The host app's route for a request (GEN-01): it runs as a job, one at a time (CLI-06), and
 // answers with what came of it, checked against the contract (CON-01). The local server's guard
@@ -49,10 +50,13 @@ export type GenerationOptions = {
   requestTimeLimitMs?: number;
   /** Where each request and its model calls are recorded (OBS-01); the store's own by default. */
   ledger?: RequestLedger;
+  /** Makes a big new tool in two passes, its core first (GEN-17); one pass when left out. */
+  twoPass?: TwoPassOptions;
 };
 
 export function generationRoutes(options: GenerationOptions): Record<string, Handler> {
   const limit = options.requestTimeLimitMs ?? REQUEST_TIME_LIMIT_MS;
+  const twoPass = options.twoPass && checkTwoPassOptions(options.twoPass);
   const ledger = options.ledger ?? new RequestLedger(options.store);
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2_147_483_647)
     throw new RangeError("requestTimeLimitMs must be a positive timer-sized integer.");
@@ -242,6 +246,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   },
                   check,
                   (offer) => offerData(offer, expires, control),
+                  twoPass,
                 ),
               signal,
             );

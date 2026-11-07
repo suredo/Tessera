@@ -18,6 +18,7 @@ import { createTool } from "./create.ts";
 import { generateEdit } from "./edit-pipeline.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
 import { changeData, type OfferData } from "./data-action.ts";
+import { twoPassPlan, type TwoPassOptions } from "./two-pass.ts";
 
 // A request, carried out as far as the server goes (GEN-01, GEN-04): the intent stage decides
 // what it is, the create stage makes a candidate, and the candidate is stored with its workspace
@@ -45,6 +46,7 @@ export async function generate(
   remember?: (context: SmokeRepairContext) => void,
   beforeStore: () => void = () => signal?.throwIfAborted(),
   offerData?: OfferData,
+  twoPass?: TwoPassOptions,
 ): Promise<GenerationResult> {
   const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
@@ -133,11 +135,14 @@ export async function generate(
     }
   }
   const repairUsage: Partial<Record<RepairClass, number>> = {};
+  // A big new tool is made in two passes when the server is told to: its core first (GEN-17).
+  const plan = twoPassPlan(decision.intent, twoPass);
   const created = await createTool(provider, routes, {
     request: decision.interfacePart,
     intent: decision.intent,
     signal,
     repairUsage,
+    ...(plan ? { core: plan } : {}),
   });
   if (created.kind === "cannot")
     // The model's own words, when the plain reason replaced them, stay for the details (GEN-10).
@@ -182,6 +187,7 @@ export async function generate(
     expectedDataRevision: workspace.dataRevision,
     name: created.name,
     summary: created.summary,
+    ...(plan ? { followUps: plan.later.map((feature) => feature.name) } : {}),
   };
   remember?.({
     reply,
@@ -189,6 +195,7 @@ export async function generate(
     intent: decision.intent,
     repairUsage,
     baseVersion: null,
+    ...(plan ? { plan } : {}),
   });
   return reply;
 }

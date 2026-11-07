@@ -16,6 +16,7 @@ import { UI_STANDARD_VERSION } from "@tessera/runtime/policy";
 import { staticCheck } from "../checks/index.ts";
 import { checkToolData, compileToolSchema } from "../data-shape/index.ts";
 import { assemblePrompt, REPAIR_CLASSES, type RepairClass } from "../prompts/index.ts";
+import type { TwoPassPlan } from "./two-pass.ts";
 import { ProviderError, runStage, type Provider, type Routes } from "../providers/index.ts";
 
 // The create stage (GEN-04, GEN-05): a request becomes a candidate tool, checked by the host before
@@ -227,6 +228,8 @@ export type CreateInput = {
   repairUsage?: Partial<Record<RepairClass, number>>;
   /** Resume creation at a repair after a failure reported by browser staging. */
   repair?: Repair;
+  /** A big new tool's core pass: build only its core (GEN-17). */
+  core?: TwoPassPlan;
 };
 
 const repairable = (failure: FailureClass): failure is RepairClass =>
@@ -322,6 +325,7 @@ async function ask(
     request: input.request,
     intent: input.intent,
     uiMode: repair.attempt?.uiMode ?? "standard",
+    ...(input.core ? { core: input.core } : {}),
     ...repair,
   });
   let creation: Creation;
