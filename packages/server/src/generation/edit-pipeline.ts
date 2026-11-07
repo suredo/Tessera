@@ -7,6 +7,7 @@ import { loadVersion, saveVersion } from "../versions/index.ts";
 import { getWorkspace, type Store } from "../workspaces/index.ts";
 import { editTool } from "./edit.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
+import { DEFAULT_STAGE_TIME_LIMITS, type StageTimeLimits } from "./time-limits.ts";
 
 /** An edit stores a checked version, never data; activation owns the eventual migration. */
 export async function generateEdit(
@@ -20,6 +21,7 @@ export async function generateEdit(
   remember?: (context: SmokeRepairContext) => void,
   beforeStore: () => void = () => signal?.throwIfAborted(),
   repairUsage: Partial<Record<RepairClass, number>> = {},
+  limits: StageTimeLimits = DEFAULT_STAGE_TIME_LIMITS,
 ): Promise<GenerationResult> {
   const stale = { kind: "answer", answer: "stale" } as const;
   if (!baseline?.currentVersion || baseline.data === null) return stale;
@@ -39,6 +41,7 @@ export async function generateEdit(
     data: baseline.data,
     signal,
     repairUsage,
+    timeLimits: limits,
   });
   if (!current()) return stale;
   if (result.kind === "cannot")

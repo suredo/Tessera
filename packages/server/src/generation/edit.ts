@@ -10,6 +10,7 @@ import { staticCheck } from "../checks/index.ts";
 import { migrateData } from "../data-shape/index.ts";
 import { assemblePrompt, type RepairClass } from "../prompts/index.ts";
 import { ProviderError, runStage, type Provider, type Routes } from "../providers/index.ts";
+import type { StageTimeLimits } from "./time-limits.ts";
 import {
   dataProblems,
   GENERATION_TIME_LIMIT_MS,
@@ -30,6 +31,8 @@ export type EditInput = {
   signal?: AbortSignal;
   repairUsage?: Partial<Record<RepairClass, number>>;
   repair?: Repair;
+  /** The configured stage limits; creation's constants unless given (GEN-11). */
+  timeLimits?: Pick<StageTimeLimits, "edit" | "repair">;
 };
 export type EditResult = (
   | { kind: "candidate"; artifact: Artifact; summary: string }
@@ -172,7 +175,9 @@ export async function editTool(
         promptParts: prompt.parts,
         schema: editSchema,
         signal: input.signal,
-        timeLimitMs: repair ? REPAIR_TIME_LIMIT_MS : GENERATION_TIME_LIMIT_MS,
+        timeLimitMs: repair
+          ? (input.timeLimits?.repair ?? REPAIR_TIME_LIMIT_MS)
+          : (input.timeLimits?.edit ?? GENERATION_TIME_LIMIT_MS),
         diagnostics: repair?.diagnostics,
       });
       if (response.value.outcome === "cannot")

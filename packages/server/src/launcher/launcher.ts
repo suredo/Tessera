@@ -11,7 +11,11 @@ import { collectAssets, sweepAssets } from "../assets/index.ts";
 import { hostRoutes, workspaceTools } from "../host/index.ts";
 import { runtimeRoutes } from "../runtime/index.ts";
 import { setupRoutes, type SetupOptions } from "../setup/index.ts";
-import { generationRoutes, type TwoPassOptions } from "../generation/index.ts";
+import {
+  generationRoutes,
+  type StageTimeLimits,
+  type TwoPassOptions,
+} from "../generation/index.ts";
 import { JobQueue } from "../jobs/index.ts";
 import {
   createClaudeProvider,
@@ -54,6 +58,8 @@ export type LaunchOptions = {
   provider?: Provider;
   /** Makes a big new tool in two passes (GEN-17); off unless given, until it is measured. */
   twoPass?: TwoPassOptions;
+  /** Each generation stage's own time limit; the defaults for any left out (GEN-11). */
+  stageTimeLimitsMs?: Partial<StageTimeLimits>;
 };
 
 export type Launched = { url: string; browserOpened: boolean } & (
@@ -184,6 +190,7 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
           },
           routes: () => loadRoutes(path.join(options.dataDir, ROUTES_FILE)),
           ...(options.twoPass ? { twoPass: options.twoPass } : {}),
+          ...(options.stageTimeLimitsMs ? { stageTimeLimitsMs: options.stageTimeLimitsMs } : {}),
         }),
         ...runtimeRoutes(workspaceTools(dataFolder)),
         [INSTANCE_ROUTE]: (_req, res) => {

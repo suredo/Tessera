@@ -579,6 +579,76 @@ describe("the generate route (GEN-01, CLI-06)", () => {
     },
   );
 
+  it("GEN-11: each stage's configured time limit reaches creation and its repair", async () => {
+    const folder = await newFolder();
+    const unsafe = { ...tool, code: { ...tool.code, html: '<iframe src="x"></iframe>' } };
+    const scripted = script(
+      intentReply({ kind: "create" }),
+      createReply(unsafe),
+      repairReply(tool),
+    );
+    const calls: [string, number][] = [];
+    const provider: Provider = {
+      name: "limits",
+      live: false,
+      run(spec) {
+        calls.push([spec.stage, spec.timeLimitMs]);
+        return scripted.run(spec);
+      },
+    };
+    const server = await startLocalServer({
+      port: 0,
+      routes: generationRoutes({
+        store: folder,
+        jobs: new JobQueue(),
+        provider: () => Promise.resolve(provider),
+        routes: () => DEFAULT_ROUTES,
+        stageTimeLimitsMs: { intent: 5_000, create: 6_000, repair: 7_000 },
+      }),
+    });
+    try {
+      const reply = generateReplySchema.parse(
+        JSON.parse((await send(server.port, "POST", JSON.stringify({ request: "A list" }))).body),
+      );
+      expect(reply.kind).toBe("candidate");
+      expect(calls).toEqual([
+        ["intent", 5_000],
+        ["create", 6_000],
+        ["repair", 7_000],
+      ]);
+    } finally {
+      await server.close();
+      folder.close();
+    }
+  });
+
+  it("GEN-11: a stage time limit that isn't a positive timer-sized whole number stops startup", async () => {
+    const folder = await newFolder();
+    const start = (stageTimeLimitsMs: object) =>
+      generationRoutes({
+        store: folder,
+        jobs: new JobQueue(),
+        provider: () => Promise.resolve(script()),
+        routes: () => DEFAULT_ROUTES,
+        stageTimeLimitsMs,
+      });
+    try {
+      for (const bad of [
+        { intent: 0 },
+        { create: -1 },
+        { edit: 1.5 },
+        { repair: 2_147_483_648 },
+        { data: Number.NaN },
+        { data: "60000" },
+        { research: 60_000 },
+      ])
+        expect(() => start(bad), JSON.stringify(bad)).toThrow(RangeError);
+      expect(() => start({ intent: 1, data: 2_147_483_647 })).not.toThrow();
+    } finally {
+      folder.close();
+    }
+  });
+
   it("GEN-09, GEN-05: smoke repair uses the stored candidate once and preserves starting data", async () => {
     const folder = await newFolder();
     const provider = script(
