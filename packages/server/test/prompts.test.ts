@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { checkJs } from "../src/checks/js-check.ts";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { bridgeManifest, type Intent } from "@tessera/contracts";
@@ -493,12 +494,24 @@ describe("assembling a stage's prompt (GEN-03)", () => {
 });
 
 describe("the base rules steer what the static check can verify (L-84)", () => {
-  it("L-84, GEN-06: tells the model to name a value before passing it to a call, and not to use Object.assign", () => {
+  it("L-84, GEN-06: tells the model to destructure an indexed value before a call uses it, and not to use Object.assign", () => {
     const base = partText("base");
-    expect(base).toContain("Name a value before passing it to a call");
-    expect(base).toContain("`const [y, m] = parts`, not `parts[0]`");
-    expect(base).toContain("no `Object.assign`");
+    expect(base).toContain("Destructure indexed values a call uses");
+    expect(base).toContain("`const [y, m] = parts`, never `parts[0]` or `x = parts[0]`");
+    expect(base).toContain("a property of an element or the page by a run-time name");
+    expect(base).toContain("; no `Object.assign`.");
     expect(base).toContain("Never write data while the tool starts");
+  });
+
+  it("L-84: the rule's own example is what the startup check can follow, and a name for parts[0] isn't", () => {
+    const writer =
+      'function save(){tessera.call("data.patch",{operations:[]});}document.getElementById("go").addEventListener("click",save);';
+    const parts = 'const parts="2026-11-02".split("-").map(Number);';
+    const startup = (js: string) =>
+      checkJs(js, () => []).some((f) => f.message.includes("writes data during startup"));
+    expect(startup(`${writer}${parts}const [y, m] = parts;Date.UTC(y, m - 1);`)).toBe(false);
+    expect(startup(`${writer}${parts}const y = parts[0];Date.UTC(y, 1);`)).toBe(true);
+    expect(startup(`${writer}${parts}Date.UTC(parts[0], 1);`)).toBe(true);
   });
 });
 
