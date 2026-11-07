@@ -4,12 +4,12 @@ title: "Two passes against one: live comparison plan"
 description: "The plan for measuring two passes for big tools (GEN-17) against one pass, live: three big requests from the catalogue, each made both ways, the measures and their denominators frozen, a 30-call hard cap, and stop rules, for the owner to approve before any call."
 tags: [reports, live-evaluation, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:42:25Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:44:13Z }
 ---
 
 # Two passes against one: live comparison plan, 2026-11-07
 
-This is the plan the live evaluation protocol asks for before any call (`ENG-07`, [live evaluation](../../docs/practices/live-evaluation.md)). It is for [issue 153](https://github.com/suredo/Tessera/issues/153): `GEN-17` says two passes are a starting point, "measured against single-pass generation (time to first useful tool, total time, tokens, pass rate) before it becomes final". Two passes are built and off by default (#250, #251). **Nothing here has been run, and no call is made until the owner approves the cap.**
+This is the plan the live evaluation protocol asks for before any call (`ENG-07`, [live evaluation](../../docs/practices/live-evaluation.md)). It is for [issue 153](https://github.com/suredo/Tessera/issues/153): `GEN-17` says two passes are a starting point, "measured against single-pass generation (time to first useful tool, total time, tokens, pass rate) before it becomes final". Two passes are built and off by default (#250, #251). **The owner approved the 30-call hard cap on 2026-11-07,** raising M2's envelope to about 75. Nothing has been run yet: the runner option, scenario files and rehearsals below come first, reviewed, with no calls.
 
 # What is compared
 
@@ -53,7 +53,7 @@ Routes are the defaults (A18): intent on Haiku 5.5 low, creation and repair on S
 | **Total** | **21** | | **9** | **30** |
 
 - **Each run has its own hard cap,** enforced by the harness. Unused reserve doesn't move between runs, and doesn't authorize a repeat.
-- **M2's envelope** is about 50 calls, with 44 used, so 6 are left. This plan needs **the owner to raise it to about 75**, or to approve a smaller plan: for example two pairs (B2, B4) with a 20-call cap.
+- **M2's envelope** was about 50 calls, with 44 used. The owner raised it to about 75 for this plan's 30-call cap, approved on 2026-11-07.
 - **No reviewer calls,** as before.
 
 # Stop rules
