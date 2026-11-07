@@ -4,7 +4,7 @@ title: "M2: Generation pipeline"
 description: "The Claude Code adapter and generation pipeline, ending in the internal alpha."
 tags: [roadmap, generation-pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:44:28Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T13:38:21Z }
 ---
 # M2: Generation pipeline (size L, live budget about 75 calls) → internal alpha
 
@@ -29,7 +29,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:44:28Z }
 | Two-pass generation for big tools, measured against single-pass; default model routing recorded per stage | GEN-17, CLI-09 |
 | Speed targets measured and reported | OBS-04 |
 | Scenario runner: scenario files (the scenarios move to `evals/` with the runner, moved from M0), automatic host facts, live and replay modes, evaluation report | EVAL-01, EVAL-02, EVAL-07 |
-| Replay tests from the POC's recorded failures, where exports exist | TEST-04 |
+| Replay tests from the POC's recorded failures, where exports exist. None exist: the POC's raw evidence isn't carried over (owner's decision, 2026-10-12, `ENG-10`). Its routing failures were run live again in the [intent spike](../code/evals/intent-spike.md); the answers kept from that run (three requests, and L-75's) replay in CI, next to Tessera's own live runs (`e2e/scenario-replays.spec.ts`), and the live evaluation measures the rest | TEST-04 |
 | Scripted end-to-end tests in Playwright through the real pipeline, with canned replies chosen by test configuration, screenshots and video (moved from M0, which built their tooling: Playwright with video, the scripted provider, the harness) | TEST-03 |
 
 **Live evaluation (about 35 calls at first, raised to about 50 on 2026-11-05 for the [live run](../../evals/reports/2026-11-05-m2-live-run.md)'s 29-call cap, and to about 75 on 2026-11-07 for the [two-pass comparison](../../evals/reports/2026-11-07-two-pass-plan.md)'s 30-call cap, [budgets](budgets.md), `TEST-05`):** T1 about 10, T6 about 7, T13 about 7, the limits run about 5, probe and image check 2, repair reserve about 4.

@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03, GEN-14, SEC-02]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T06:18:56Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T13:38:21Z }
 ---
 
 # Purpose
@@ -47,7 +47,7 @@ The [contracts](../contracts/package.md)' bridge manifest and intent, and the [r
 
 # Pitfalls
 
-- **A replay recorded with older parts is only reported as stale** (`ENG-16`, `TEST-04`). A prompt change must pass the replay suite, `e2e/scenario-replays.spec.ts`, which replays every recorded live run through the [scenario runner](../evals/runner.md). A replay recorded with other part versions still runs, so it shows how the host handles those answers, not what the model would answer now. A change that alters behavior also gets a small budgeted live check. Replays of the POC's recorded failures are still to come (#156).
+- **A replay recorded with older parts is only reported as stale** (`ENG-16`, `TEST-04`). A prompt change must pass the replay suite, `e2e/scenario-replays.spec.ts`, which replays every recorded live run through the [scenario runner](../evals/runner.md). A replay recorded with other part versions still runs, so it shows how the host handles those answers, not what the model would answer now. A change that alters behavior also gets a small budgeted live check. No POC failure is replayed from a POC recording, as none was carried over ([M2](../../roadmap/m2-generation-pipeline.md), [#156](https://github.com/suredo/Tessera/issues/156)).
 - **The bridge manifest is most of the instructions,** about 7,000 characters, and grows with every action. The budgets will say when it needs a shorter form.
 - **Create, edit, repair, intent and data plans are assembled so far.** Data-plan routing/confirmation follow in a separate slice. Research, review and acceptance get their parts with their stages.
 
