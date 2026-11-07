@@ -4,7 +4,7 @@ title: "Two passes against one: live comparison plan"
 description: "The plan for measuring two passes for big tools (GEN-17) against one pass, live: three big requests from the catalogue, each made both ways, the measures and their denominators frozen, a 30-call hard cap, and stop rules, for the owner to approve before any call."
 tags: [reports, live-evaluation, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:44:13Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:54:43Z }
 ---
 
 # Two passes against one: live comparison plan, 2026-11-07
@@ -21,7 +21,7 @@ Three big requests, each from the [app catalogue](../../docs/testing/app-catalog
 | B4, habit tracker | "Help me track three habits every day: walk, read, drink water. Show my streaks, a weekly chart and let me add notes to each day." | habits, daily ticks, streaks, weekly chart, notes |
 | B10, study planner | "My exam is in two weeks. Help me organize topics by day, never on Fridays, mark each one done, and show how much is left." | topics, days, the Friday rule, done, progress |
 
-The feature count is the intent stage's, so a request that comes back with fewer than four is made in one pass both times. That case is recorded as such, with its pair compared anyway as two one-pass runs, so it costs no extra call.
+The feature count is the intent stage's, so a request that comes back with fewer than four is made in one pass both times. That pair stays in every denominator, but it **didn't exercise two passes**: a pair exercised them only when its two-pass run made a core and asked for at least one feature after it. Such a pair is never re-run with other words, and its unused calls authorize nothing.
 
 # Measures, frozen before the run
 
@@ -33,7 +33,9 @@ The feature count is the intent stage's, so a request that comes back with fewer
 
 # The decision rule
 
-Two passes become the default (`twoPass` on, at its starting point) only if, across the three pairs:
+**The comparison decides only if at least two of the three pairs exercised two passes.** Otherwise it is inconclusive: one pass stays the default, `GEN-17` stays unmeasured, and no replacement calls are authorized; a new plan would need its own approval.
+
+When it decides, two passes become the default (`twoPass` on, at its starting point) only if, across the three pairs:
 
 1. their **first-attempt pass rate is no lower** than one pass's;
 2. their **time to a first useful tool is shorter** in at least two of the three pairs;
@@ -55,6 +57,20 @@ Routes are the defaults (A18): intent on Haiku 5.5 low, creation and repair on S
 - **Each run has its own hard cap,** enforced by the harness. Unused reserve doesn't move between runs, and doesn't authorize a repeat.
 - **M2's envelope** was about 50 calls, with 44 used. The owner raised it to about 75 for this plan's 30-call cap, approved on 2026-11-07.
 - **No reviewer calls,** as before.
+
+# Expected tokens and time
+
+From the [M2 live run](2026-11-05-m2-live-run.md)'s ledger, the closest measurement: intent about 4,000 input and 500 output tokens; a creation about 8,000 input and 2,500 output; an edit about 9,000 input (the whole tool's code is quoted) and 1,500 output. Big tools are larger, so these are doubled for creation and edits. Estimates, not limits:
+
+| Run | Input tokens | Output tokens | Model time |
+| --- | ---: | ---: | ---: |
+| One pass, each | about 20,000 | about 5,500 | 15–60 s |
+| Two passes, each | about 75,000 | about 14,500 | 60–150 s |
+| **Expected, all six** | **about 285,000** (half or more from cache, as in the live run) | **about 60,000** | **4–11 minutes** |
+| **With every reserve used** (9 repairs, each about a creation's size) | about 430,000 | about 105,000 | up to 20 minutes |
+
+- **Run order:** pair by pair, B2, B4 then B10, one pass first, then two passes, each on its own empty data folder. Each pair takes a few minutes, so the six runs fit in one sitting, well inside a usage window.
+- **A usage limit** pauses the run; finished runs aren't repeated.
 
 # Stop rules
 
