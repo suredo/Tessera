@@ -179,6 +179,15 @@ export const finishDataRequestSchema = z.strictObject({
 });
 export type FinishDataRequest = z.infer<typeof finishDataRequestSchema>;
 
+/**
+ * The next feature of a big tool made in two passes (GEN-17), asked for once the version before
+ * it is active: the activated candidate's token, workspace and hash. The server keeps what is
+ * still to come; the browser only names the version it follows.
+ */
+export const FOLLOW_UP_ROUTE = "/api/generate/follow-up";
+export const followUpRequestSchema = finishDataRequestSchema;
+export type FollowUpRequest = z.infer<typeof followUpRequestSchema>;
+
 const DATA_ANSWERS = [
   "data_unchanged",
   "data_cancelled",

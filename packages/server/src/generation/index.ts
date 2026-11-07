@@ -26,3 +26,10 @@ export {
 export { REQUEST_TIME_LIMIT_MS } from "./deadline.ts";
 export { editedCandidate, editTool, type EditInput, type EditResult } from "./edit.ts";
 export { generationRoutes, type GenerationOptions } from "./routes.ts";
+export {
+  TWO_PASS_STARTING_POINT,
+  checkTwoPassOptions,
+  twoPassPlan,
+  type TwoPassOptions,
+  type TwoPassPlan,
+} from "./two-pass.ts";

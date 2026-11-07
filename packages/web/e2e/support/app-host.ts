@@ -41,7 +41,11 @@ const READY_SETUP: NonNullable<LaunchOptions["setup"]> = {
  * A Tessera on a temporary data folder. `provider` carries out its requests: a scripted one, for
  * tests through the real pipeline (TEST-03, ENG-11); none means requests reach Claude Code.
  */
-export async function startApp(setup = READY_SETUP, provider?: Provider): Promise<AppHost> {
+export async function startApp(
+  setup = READY_SETUP,
+  provider?: Provider,
+  extra: Pick<LaunchOptions, "twoPass"> = {},
+): Promise<AppHost> {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-app-"));
   const launched = await launch({
     dataDir,
@@ -50,6 +54,7 @@ export async function startApp(setup = READY_SETUP, provider?: Provider): Promis
     openBrowser: () => Promise.resolve(),
     setup,
     provider,
+    ...extra,
   });
   if (launched.status !== "started") throw new Error("Tessera didn't start.");
   return {

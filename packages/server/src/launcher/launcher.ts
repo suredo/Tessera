@@ -11,7 +11,7 @@ import { collectAssets, sweepAssets } from "../assets/index.ts";
 import { hostRoutes, workspaceTools } from "../host/index.ts";
 import { runtimeRoutes } from "../runtime/index.ts";
 import { setupRoutes, type SetupOptions } from "../setup/index.ts";
-import { generationRoutes } from "../generation/index.ts";
+import { generationRoutes, type TwoPassOptions } from "../generation/index.ts";
 import { JobQueue } from "../jobs/index.ts";
 import {
   createClaudeProvider,
@@ -52,6 +52,8 @@ export type LaunchOptions = {
   setup?: Omit<SetupOptions, "dataDir">;
   /** The provider requests are carried out with; Claude Code unless a test passes a scripted one (ENG-11). */
   provider?: Provider;
+  /** Makes a big new tool in two passes (GEN-17); off unless given, until it is measured. */
+  twoPass?: TwoPassOptions;
 };
 
 export type Launched = { url: string; browserOpened: boolean } & (
@@ -181,6 +183,7 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
               : { problem: claude.message };
           },
           routes: () => loadRoutes(path.join(options.dataDir, ROUTES_FILE)),
+          ...(options.twoPass ? { twoPass: options.twoPass } : {}),
         }),
         ...runtimeRoutes(workspaceTools(dataFolder)),
         [INSTANCE_ROUTE]: (_req, res) => {
