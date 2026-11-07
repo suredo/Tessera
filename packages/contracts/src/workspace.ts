@@ -37,11 +37,31 @@ export const workspaceSchema = z
   .describe("A workspace: one tool in use, its version history and its data (DATA-08).");
 export type Workspace = z.infer<typeof workspaceSchema>;
 
+/** The host's checks a version can have passed before it was activated (APP-05, VER-01, VER-02). */
+export const VERSION_CHECKS = ["code", "start"] as const;
+export type VersionCheck = (typeof VERSION_CHECKS)[number];
+
+/** What a version was made for and which checks it passed; none for one written by hand. */
+export const versionNoteSchema = z.strictObject({
+  summary: z
+    .string()
+    .trim()
+    .min(1)
+    .max(1000)
+    .nullable()
+    .describe("The generation's plain change summary (GEN-12), or none."),
+  checks: z
+    .array(z.enum(VERSION_CHECKS))
+    .describe("The code check (static) and the start check (smoke) its candidate passed."),
+});
+export type VersionNote = z.infer<typeof versionNoteSchema>;
+
 export const workspaceVersionSchema = z
   .strictObject({
     index: z.int().min(1).describe("1 for the first version, then one more for each."),
     hash: versionHashSchema,
     createdAt: timestamp,
+    ...versionNoteSchema.shape,
   })
   .describe(
     "One entry of a workspace's version history; restoring an older version adds a new entry (DATA-04).",

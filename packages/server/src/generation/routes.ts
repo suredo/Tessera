@@ -8,6 +8,7 @@ import {
   confirmDataRequestSchema,
   type GenerateReply,
   type ActivationRequest,
+  type VersionNote,
   FINISH_DATA_ROUTE,
   finishDataRequestSchema,
   FOLLOW_UP_ROUTE,
@@ -70,7 +71,10 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   // A big tool's features still to come (GEN-17), for after the version before them activates.
   const waitingFollowUps = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const offers = new Map<string, { offer: DataOffer; expires: number }>();
-  const activations = new Map<string, Omit<ActivationRequest, "token"> & { expires: number }>();
+  const activations = new Map<
+    string,
+    Omit<ActivationRequest, "token"> & { expires: number; summary: string }
+  >();
   const controls = new RequestControls(options.jobs, (token) => {
     pending.delete(token);
     waitingData.delete(token);
@@ -88,6 +92,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       hash: reply.hash,
       expectedDataRevision: reply.expectedDataRevision,
       expires,
+      summary: reply.summary,
     });
     return { ...reply, activation: { token, expiresAt: expires } };
   };
@@ -103,7 +108,16 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     // Consume before validation/migration; a refusal or concurrent replay cannot reuse authority.
     activations.delete(request.token);
     const control = controls.owner(request.token);
-    return () => Date.now() < entry.expires && (!control || !control.controller.signal.aborted);
+    // The version keeps its summary and the checks its candidate passed (APP-05): the host's own
+    // code check before it was stored, and the start check only when the app's staging reports it.
+    const note: VersionNote = {
+      summary: entry.summary,
+      checks: request.startChecked ? ["code", "start"] : ["code"],
+    };
+    return Object.assign(
+      () => Date.now() < entry.expires && (!control || !control.controller.signal.aborted),
+      { note },
+    );
   });
   const offerData = (
     offer: DataOffer,

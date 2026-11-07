@@ -2,6 +2,7 @@ import type { SavedTool, Workspace } from "@tessera/contracts";
 import { usableVersion, type UsableVersion } from "./activation.ts";
 import {
   appendVersion,
+  noteOf,
   createWorkspace,
   existingSavedTool,
   existingWorkspace,
@@ -60,7 +61,13 @@ export function useAgain(
       description: savedTool.description,
     });
     replaceData(store, fresh, version.artifact.data.defaults);
-    appendVersion(store, fresh.id, linked.currentVersion);
+    // The version as the saved tool's workspace keeps it: its own note, not another's (APP-05).
+    appendVersion(
+      store,
+      fresh.id,
+      linked.currentVersion,
+      noteOf(store, linked.id, linked.currentVersion),
+    );
     options.afterWrites?.();
     return { ok: true, workspace: existingWorkspace(store, fresh.id) };
   });

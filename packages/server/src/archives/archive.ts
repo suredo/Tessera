@@ -428,11 +428,13 @@ function writeImport(
       );
       for (const version of workspace.versions) {
         store.db.run(
-          "INSERT INTO workspace_versions (workspace_id, number, hash, created_at) VALUES (?, ?, ?, ?)",
+          "INSERT INTO workspace_versions (workspace_id, number, hash, created_at, summary, checks) VALUES (?, ?, ?, ?, ?, ?)",
           id,
           version.index,
           version.hash,
           version.createdAt,
+          version.summary,
+          JSON.stringify(version.checks),
         );
       }
     }

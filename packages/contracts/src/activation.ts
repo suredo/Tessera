@@ -37,6 +37,12 @@ export const activationRequestSchema = z
       .int()
       .nonnegative()
       .describe("The data revision the activation was planned against (MIG-06)."),
+    startChecked: z
+      .literal(true)
+      .optional()
+      .describe(
+        "The app's staging ran the start check (smoke) on this candidate and it passed: the app's report, recorded as such (APP-05).",
+      ),
   })
   .describe("What the host page sends to activate a tool version that passed its checks.");
 export type ActivationRequest = z.infer<typeof activationRequestSchema>;

@@ -145,7 +145,7 @@ async function ask(page: Page, request: string) {
   await page.getByRole("button", { name: en["request.send"] }).click();
 }
 
-test("TEST-03, GEN-05: a request becomes a running tool, staged and activated, holding the request's entries", async ({
+test("TEST-03, GEN-05, APP-05: a request becomes a running tool, staged and activated, holding the request's entries, and its version keeps its summary and checks", async ({
   page,
 }) => {
   await page.goto(app.url);
@@ -155,6 +155,10 @@ test("TEST-03, GEN-05: a request becomes a running tool, staged and activated, h
   });
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
   expect(listWorkspaces(app.folder).map((w) => w.title)).toEqual(["Shopping list"]);
+  // The version keeps what it was made for and the checks it passed, in its history (APP-05).
+  const history = page.getByRole("region", { name: en["history.heading"] });
+  await expect(history).toContainText("A list of what to buy.");
+  await expect(history).toContainText(en["history.checkedBoth"]);
 });
 
 test("GEN-08: an unclear request is answered in plain words, and nothing is made", async ({

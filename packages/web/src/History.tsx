@@ -207,6 +207,19 @@ export function History({ workspace, changes, onChanged }: Props) {
                 {t("history.restore")}
               </button>
             )}
+            {/* What the version was made for and which of the host's checks it passed (APP-05). */}
+            {version.summary && <p className="version-summary">{version.summary}</p>}
+            {version.checks.length > 0 && (
+              <p className="detail">
+                {t(
+                  version.checks.includes("code") && version.checks.includes("start")
+                    ? "history.checkedBoth"
+                    : version.checks.includes("code")
+                      ? "history.checkedCode"
+                      : "history.checkedStart",
+                )}
+              </p>
+            )}
           </li>
         ))}
       </ul>

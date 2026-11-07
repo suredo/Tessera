@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import {
   savedToolSchema,
   workspaceSchema,
+  versionNoteSchema,
   workspaceVersionSchema,
   type SavedTool,
   type Workspace,
+  type VersionNote,
   type WorkspaceVersion,
   canonicalJson,
 } from "@tessera/contracts";
@@ -52,9 +54,23 @@ const workspaceFromRow = z
   .pipe(workspaceSchema);
 
 const versionFromRow = z
-  .object({ number: z.number(), hash: z.string(), created_at: z.string() })
-  .transform((row) => ({ index: row.number, hash: row.hash, createdAt: row.created_at }))
+  .object({
+    number: z.number(),
+    hash: z.string(),
+    created_at: z.string(),
+    summary: z.string().nullable(),
+    checks: z.string(),
+  })
+  .transform((row) => ({
+    index: row.number,
+    hash: row.hash,
+    createdAt: row.created_at,
+    summary: row.summary,
+    checks: JSON.parse(row.checks) as unknown,
+  }))
   .pipe(workspaceVersionSchema);
+
+const noteRow = z.object({ summary: z.string().nullable(), checks: z.string() });
 
 const savedToolFromRow = z
   .object({
@@ -202,10 +218,42 @@ export function addWorkspaceVersion(store: Store, id: string, hash: string): Wor
 }
 
 /**
- * Inside the caller's transaction: makes a stored version the workspace's current one, as the
- * next entry of its history. Module-internal: activation (`activation.ts`) uses it too.
+ * The note this workspace's own history last kept for a version, if any: what a restore keeps.
+ * Another workspace's note for the same code is never taken: the same code can come from other
+ * requests, with other summaries and checks.
  */
-export function appendVersion(store: Store, id: string, hash: string): WorkspaceVersion {
+export function noteOf(store: Store, workspaceId: string, hash: string): VersionNote | undefined {
+  const row = store.db.get(
+    noteRow,
+    "SELECT summary, checks FROM workspace_versions WHERE workspace_id = ? AND hash = ? ORDER BY number DESC LIMIT 1",
+    workspaceId,
+    hash,
+  );
+  return row
+    ? versionNoteSchema.parse({ summary: row.summary, checks: JSON.parse(row.checks) as unknown })
+    : undefined;
+}
+
+/**
+ * Inside the caller's transaction: makes a stored version the workspace's current one, as the
+ * next entry of its history. Module-internal: activation (`activation.ts`) uses it too. `note` is
+ * what the version was made for and the checks it passed (APP-05); without one, as on a restore,
+ * this workspace's own last note for that version is kept; a version written by hand has none.
+ */
+export function appendVersion(
+  store: Store,
+  id: string,
+  hash: string,
+  note?: VersionNote,
+): WorkspaceVersion {
+  const kept = note ?? noteOf(store, id, hash);
+  const summary = kept?.summary ?? null;
+  const checks =
+    kept === undefined
+      ? "[]"
+      : typeof kept.checks === "string"
+        ? kept.checks
+        : JSON.stringify(kept.checks);
   const last = store.db.get(
     lastNumber,
     "SELECT MAX(number) AS number FROM workspace_versions WHERE workspace_id = ?",
@@ -214,14 +262,22 @@ export function appendVersion(store: Store, id: string, hash: string): Workspace
   const number = (last?.number ?? 0) + 1;
   const at = stamp(store);
   store.db.run(
-    "INSERT INTO workspace_versions (workspace_id, number, hash, created_at) VALUES (?, ?, ?, ?)",
+    "INSERT INTO workspace_versions (workspace_id, number, hash, created_at, summary, checks) VALUES (?, ?, ?, ?, ?, ?)",
     id,
     number,
     hash,
     at,
+    summary,
+    checks,
   );
   store.db.run("UPDATE workspaces SET updated_at = ? WHERE id = ?", at, id);
-  return workspaceVersionSchema.parse({ index: number, hash, createdAt: at });
+  return workspaceVersionSchema.parse({
+    index: number,
+    hash,
+    createdAt: at,
+    summary,
+    checks: JSON.parse(checks) as unknown,
+  });
 }
 
 /** A workspace's version history, the first version first. */
@@ -229,7 +285,7 @@ export function workspaceVersions(store: Store, id: string): WorkspaceVersion[] 
   existingWorkspace(store, id);
   return store.db.all(
     versionFromRow,
-    "SELECT number, hash, created_at FROM workspace_versions WHERE workspace_id = ? ORDER BY number",
+    "SELECT number, hash, created_at, summary, checks FROM workspace_versions WHERE workspace_id = ? ORDER BY number",
     id,
   );
 }

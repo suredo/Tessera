@@ -17,12 +17,38 @@
       "type": "string",
       "format": "date-time",
       "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+    },
+    "summary": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The generation's plain change summary (GEN-12), or none."
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "code",
+          "start"
+        ]
+      },
+      "description": "The code check (static) and the start check (smoke) its candidate passed."
     }
   },
   "required": [
     "index",
     "hash",
-    "createdAt"
+    "createdAt",
+    "summary",
+    "checks"
   ],
   "additionalProperties": false,
   "description": "One entry of a workspace's version history; restoring an older version adds a new entry (DATA-04)."
