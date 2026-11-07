@@ -2,6 +2,8 @@
 
 ## 2026-11-07
 
+* **Update**: The static check's startup analysis no longer counts a built-in that only reads its arguments as running them ([checks](code/server/checks.md), `VER-01`, [L-84](lessons/tessera-issues.md)), as the owner chose: an unnamed argument such as `b[1]` had made every function look called at startup, refusing the two-pass comparison's B2 and B4 tools. Writes reached through a tool's own same-named function, an array, a `Map` or an argument's own call are still refused. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T05:52:30Z.
+
 * **Update**: The [two-pass comparison](../evals/reports/2026-11-07-two-pass-plan.md) ran live and stopped on its own rule after three of six runs, using 10 of its 30 calls ([budgets](roadmap/budgets.md): 54 used in M2). B2 in one pass passed. B2 in two passes and B4 in one pass failed the same check, the startup-write rule, which looks like a false positive ([L-84](lessons/tessera-issues.md)). The comparison is inconclusive; one pass stays the default. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T05:42:37Z.
 
 * **New**: What the [two-pass comparison](../evals/reports/2026-11-07-two-pass-plan.md) needs before its calls, none made: the [scenario runner](code/evals/runner.md)'s `--two-pass`, three big [scenarios](code/evals/scenarios.md) (B2, B4, B10), each with a rehearsal in one pass and two, all passing; and the runner refuses a scenario clock that starts after now, the cause of [L-83](lessons/tessera-issues.md). Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T04:53:16Z.
