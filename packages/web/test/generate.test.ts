@@ -507,4 +507,25 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
     });
     expect(followUp).not.toHaveBeenCalled();
   });
+
+  it("GEN-17, GEN-08: a follow-up whose smoke repair is refused keeps what stands and names the feature", async () => {
+    const core = { ...candidate, followUps: ["Aisles"] } as GenerateReply;
+    const { fake } = deps(core, activated);
+    fake.followUp = () => Promise.resolve(edited("Added aisles."));
+    let stagings = 0;
+    fake.stage = () =>
+      Promise.resolve(
+        ++stagings === 2
+          ? { outcome: "check-failed", check: "smoke", reason: "Blank." }
+          : activated,
+      ) as never;
+    fake.repairSmoke = () =>
+      Promise.reject(new HostError("The request was stopped or expired. Please ask again.", 409));
+    const outcome = await carryOut("A big list", null, fake);
+    expect(outcome).toEqual({
+      message:
+        "Shopping list is ready. A list to tick off at the store. Aisles wasn't added: The request was stopped or expired. Please ask again.",
+      openWorkspaceId: candidate.workspaceId,
+    });
+  });
 });

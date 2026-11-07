@@ -107,7 +107,8 @@ async function fixture(after: { stage: "edit"; value: unknown }[], limit = 420_0
       headers: { origin: server.url.replace(/\/$/, ""), "content-type": "application/json" },
       body: JSON.stringify(value),
     });
-    return { status: response.status, body: (await response.json().catch(() => null)) as unknown };
+    const body: unknown = await response.json().catch(() => null);
+    return { status: response.status, body };
   };
   /** A registered control, as the host app always sends one (CLI-06). */
   const register = async () =>

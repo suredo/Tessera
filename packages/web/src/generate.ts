@@ -432,6 +432,8 @@ export async function carryOut(
               } catch (error) {
                 if (isRefusal(error)) {
                   if (control?.stopped) return stopped();
+                  // Past the core, what stands is still said, with this feature not added.
+                  if (said.length > 0) return { message: error.message };
                   throw error;
                 }
                 return { message: t("request.requestUnknown"), reloadData: true };
