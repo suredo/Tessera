@@ -22,23 +22,23 @@ import { ProviderError, type Provider, type StageResult, type StageSpec } from "
 // (CLI-05) before the host checks the answer. The environment allowlist, schema wrapping, folder
 // removal and version helpers are the Claude adapter's own, imported so each has one definition (P3).
 //
-// Open questions, to settle with the first live probe (nothing here was run against a model):
-// - Does Codex have a dedicated instructions setting, so the system prompt need not travel in the
-//   request text (see `inputText`)? And is the user's global ~/.codex/AGENTS.md still loaded with
-//   --ignore-user-config? If it is, the person's own instructions reach every stage.
-// - Does `--output-schema` accept this wrapped schema as it is? OpenAI's strict structured output
-//   wants `additionalProperties: false` and every property required throughout, which a contract
-//   may not satisfy. The wrapping is kept (a non-object root is not known to work).
-// - Does Codex's `input_tokens` include cached input (assumed, as in OpenAI's accounting), and
-//   `output_tokens` the reasoning tokens (assumed)? And does it already include
-//   `cache_write_input_tokens`? Assumed yes: nothing is added.
-// - The shapes of Codex's failure events are not captured yet (see `codexFailureKind`).
-// - Do the `--disable` flags below take away every tool, as Claude's `--tools ""` does (CLI-03)? A
-//   read-only sandbox alone still lets the model run commands that read files anywhere it may
-//   (`command_execution` items were seen in a review run), so the features that grant tools are
-//   disabled by name, from `codex features list` at the tested version. The probe must show a
-//   stage that asks to list files gets no command run. Feature names can change in a later version.
-// - Is `tools.web_search` the setting that turns web search off and on?
+// What Codex 0.166.0's source settles (read at the tag rust-v0.166.0): web search is the top-level
+// `web_search` mode, cached unless set; `model_instructions_file` replaces the model's own
+// instructions; the settings in LOCKED_SETTINGS take away what no feature switch reaches.
+//
+// Two gaps that settings can't close, waiting for the owner's choice before this is used (#266):
+// - The model's own metadata adds `apply_patch`, a file-editing tool, whatever is disabled. Only a
+//   catalog of models given with `model_catalog_json` removes it; the read-only sandbox refuses
+//   its writes, but the tool is still offered (CLI-03).
+// - Codex reads the person's global AGENTS.md from its home folder in every call; only another
+//   home folder, with its own sign-in, keeps it out (CLI-08).
+// Also from the model's metadata: some models add code-mode, MCP-resource and clock tools; the
+// routes must name a model that doesn't.
+//
+// Open until the first approved live calls: whether `--output-schema` takes the wrapped schema;
+// whether `input_tokens` includes cached input and `output_tokens` the reasoning (assumed, so
+// nothing is added); the shapes of failures (see `codexFailureKind`); and the tools a real call is
+// offered with these flags.
 
 /** The version the locked flags were tested on. An older codex is refused. */
 export const TESTED_CODEX_VERSION = "0.166.0";
@@ -64,18 +64,39 @@ export const DISABLED_FEATURES = [
   "tool_suggest",
   "sleep_tool",
   "hooks",
+  "goals",
 ] as const;
+
+/**
+ * Settings that take away what no feature switch reaches, and keep out instructions that aren't
+ * the stage's (CLI-03, CLI-08), as `-c key=value`, read from Codex 0.166.0's source: the tool that
+ * asks the person for input, sub-agents whatever the model says, cloud skills, project instruction
+ * files above or in the folder, and Codex's own notes on permissions, apps, modes and environment.
+ */
+export const LOCKED_SETTINGS = [
+  "tools.experimental_request_user_input.enabled=false",
+  "agents.enabled=false",
+  "cloud.skills.enabled=false",
+  "skills.include_instructions=false",
+  "project_root_markers=[]",
+  "project_doc_max_bytes=0",
+  "include_permissions_instructions=false",
+  "include_apps_instructions=false",
+  "include_collaboration_mode_instructions=false",
+  "include_environment_context=false",
+] as const;
+
+/** The stage's system prompt, in the call's folder; it replaces the model's own instructions. */
+export const INSTRUCTIONS_FILE = "instructions.md";
 
 /** Where the answer's JSON Schema is written, in the call's own empty working folder. */
 export const OUTPUT_SCHEMA_FILE = "output-schema.json";
 
 /**
- * What goes on standard input: the stage's system prompt, a separator, then the request. Codex has
- * no system-prompt flag, so for now both travel as one text. Kept in one small function so it can
- * change once the probe shows whether Codex has a dedicated instructions setting.
+ * What goes on standard input: the request alone. The system prompt goes in `INSTRUCTIONS_FILE`,
+ * given as `model_instructions_file`, which replaces the model's own instructions.
  */
-export const inputText = (spec: Pick<StageSpec<unknown>, "system" | "prompt">): string =>
-  `${spec.system}\n---\nThe request:\n${spec.prompt}`;
+export const inputText = (spec: Pick<StageSpec<unknown>, "prompt">): string => spec.prompt;
 
 /**
  * The locked flags of a stage (CLI-03), in this order. The text goes on standard input (`-`), so
@@ -100,7 +121,12 @@ export function buildArgs(spec: StageSpec<unknown>, folder: string): string[] {
     `model_reasoning_effort="${spec.effort}"`,
     // No tool of any kind (CLI-03): each feature that grants one is disabled by name.
     ...DISABLED_FEATURES.flatMap((feature) => ["--disable", feature]),
-    // And should one remain, it may not write files: the sandbox is read-only.
+    // What no feature switch reaches, and no instructions but the stage's.
+    ...LOCKED_SETTINGS.flatMap((setting) => ["-c", setting]),
+    // The stage's system prompt replaces the model's own instructions, as Claude's file does.
+    "-c",
+    `model_instructions_file=${JSON.stringify(path.join(folder, INSTRUCTIONS_FILE))}`,
+    // And should a tool remain, it may not write files: the sandbox is read-only.
     "-s",
     "read-only",
     // Never stop to ask for approval, which nobody is there to give.
@@ -117,9 +143,10 @@ export function buildArgs(spec: StageSpec<unknown>, folder: string): string[] {
     // No colour codes in anything the CLI prints.
     "--color",
     "never",
-    // Only research gets web search (CLI-03).
+    // Only research gets web search, live; every other stage none (CLI-03). Codex's default is
+    // cached search, so it is always set.
     "-c",
-    `tools.web_search=${spec.tools === "web" ? "true" : "false"}`,
+    `web_search="${spec.tools === "web" ? "live" : "disabled"}"`,
     // Work in the call's own empty folder (CLI-08).
     "-C",
     folder,
@@ -244,6 +271,7 @@ export function createCodexProvider(options: CodexOptions): Provider {
     // A new, empty working folder outside the repository for every call (CLI-08).
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-cli-"));
     try {
+      fs.writeFileSync(path.join(cwd, INSTRUCTIONS_FILE), spec.system, "utf8");
       fs.writeFileSync(
         path.join(cwd, OUTPUT_SCHEMA_FILE),
         JSON.stringify(wrapSchema(jsonSchemaOf(spec.schema))),

@@ -93,6 +93,7 @@ function withReplies(replies: unknown[], env: NodeJS.ProcessEnv = process.env) {
                 envNames: string[];
                 stdin: string;
                 schema: string;
+                instructions: string;
               },
           )
       : [];
@@ -145,6 +146,31 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
       "sleep_tool",
       "--disable",
       "hooks",
+      "--disable",
+      "goals",
+      // What no feature switch reaches, and no instructions but the stage's.
+      "-c",
+      "tools.experimental_request_user_input.enabled=false",
+      "-c",
+      "agents.enabled=false",
+      "-c",
+      "cloud.skills.enabled=false",
+      "-c",
+      "skills.include_instructions=false",
+      "-c",
+      "project_root_markers=[]",
+      "-c",
+      "project_doc_max_bytes=0",
+      "-c",
+      "include_permissions_instructions=false",
+      "-c",
+      "include_apps_instructions=false",
+      "-c",
+      "include_collaboration_mode_instructions=false",
+      "-c",
+      "include_environment_context=false",
+      "-c",
+      `model_instructions_file=${JSON.stringify(path.join(folder, "instructions.md"))}`,
       "-s",
       "read-only",
       "-c",
@@ -156,7 +182,7 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
       "--color",
       "never",
       "-c",
-      "tools.web_search=false",
+      'web_search="disabled"',
       "-C",
       folder,
       "-",
@@ -168,14 +194,13 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
       required: ["answer"],
       properties: { answer: { type: "object", required: ["title"] } },
     });
-    // The text on standard input: the system prompt, a separator, then the request.
-    expect(call!.stdin).toBe(
-      "Make the tool the person asks for.\n---\nThe request:\nI need a shopping list",
-    );
-    // Only research gets web search.
-    expect(buildCodexArgs({ ...spec(), tools: "web" }, folder)).toContain("tools.web_search=true");
+    // The request alone on standard input; the system prompt in its own file, replacing the model's.
+    expect(call!.stdin).toBe("I need a shopping list");
+    expect(call!.instructions).toBe("Make the tool the person asks for.");
+    // Only research gets web search, live.
+    expect(buildCodexArgs({ ...spec(), tools: "web" }, folder)).toContain('web_search="live"');
     expect(buildCodexArgs({ ...spec(), tools: "web" }, folder)).not.toContain(
-      "tools.web_search=false",
+      'web_search="disabled"',
     );
   });
 
@@ -266,8 +291,9 @@ describe("long requests (CLI-01)", () => {
       value: { title: "Long" },
     });
     const [call] = made();
-    expect(call!.stdin).toBe(codexInputText({ system, prompt }));
-    expect(call!.stdin).toBe(`${system}\n---\nThe request:\n${prompt}`);
+    expect(call!.stdin).toBe(codexInputText({ prompt }));
+    expect(call!.stdin).toBe(prompt);
+    expect(call!.instructions).toBe(system);
     expect(call!.args.join(" ").length).toBeLessThan(32_000);
   });
 });

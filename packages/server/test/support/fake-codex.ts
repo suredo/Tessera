@@ -25,6 +25,18 @@ const stdin = readOr(() => fs.readFileSync(0, "utf8"), "");
 const schemaAt = args.indexOf("--output-schema") + 1;
 const schemaText =
   schemaAt > 0 ? readOr(() => fs.readFileSync(args[schemaAt] ?? "", "utf8"), "") : "";
+// The instructions are in the file a `-c model_instructions_file="…"` setting names.
+const instructionsSetting = args.find((arg) => arg.startsWith("model_instructions_file="));
+const instructions = instructionsSetting
+  ? readOr(
+      () =>
+        fs.readFileSync(
+          JSON.parse(instructionsSetting.slice("model_instructions_file=".length)) as string,
+          "utf8",
+        ),
+      "",
+    )
+  : "";
 fs.writeFileSync(
   path.join(callsFolder, `call-${callIndex}.json`),
   JSON.stringify({
@@ -33,6 +45,7 @@ fs.writeFileSync(
     envNames: Object.keys(process.env).sort(),
     stdin,
     schema: schemaText,
+    instructions,
   }),
 );
 // The schema file must be a valid draft-07 schema with an object at the root.
