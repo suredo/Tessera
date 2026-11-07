@@ -203,7 +203,8 @@ function Request({ request }: { request: LedgerRequest }) {
   );
 }
 
-function Call({ call }: { call: LedgerCall }) {
+/** One model call's row: its step, model, time, tokens and outcome, and the code it answered with. */
+export function Call({ call }: { call: LedgerCall }) {
   const why = [
     ...call.diagnostics.map((line) => t("details.askedToFix", { line })),
     ...(call.outcome === "ok" ? [] : [call.error, call.message, call.detail]),
@@ -226,6 +227,23 @@ function Call({ call }: { call: LedgerCall }) {
               <li key={index}>{line}</li>
             ))}
           </ul>
+        )}
+        {call.code && (
+          // The code it answered with, also when the checks refused it (GEN-10).
+          <details>
+            <summary>{t("details.callCode")}</summary>
+            {(["html", "css", "js"] as const).map(
+              (part) =>
+                call.code![part] !== undefined && (
+                  <div key={part}>
+                    <p>{t(`details.source.${part}`)}</p>
+                    <pre>
+                      <code>{call.code![part]}</code>
+                    </pre>
+                  </div>
+                ),
+            )}
+          </details>
         )}
       </td>
     </tr>

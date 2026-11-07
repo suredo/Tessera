@@ -1,7 +1,13 @@
 // Docs: docs/code/server/ledger.md
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { GenerateReply, LedgerCall, LedgerRequest, Usage } from "@tessera/contracts";
+import {
+  ledgerCallSchema,
+  type GenerateReply,
+  type LedgerCall,
+  type LedgerRequest,
+  type Usage,
+} from "@tessera/contracts";
 import { ProviderError, UNKNOWN_USAGE, type Provider } from "../providers/index.ts";
 import type { Store } from "../workspaces/index.ts";
 
@@ -43,11 +49,45 @@ const callRow = z.object({
   error: z.string().nullable(),
   message: z.string().nullable(),
   detail: z.string().nullable(),
+  code: z.string().nullable(),
 });
 
 type Failure = { error?: string; message?: string; detail?: string };
+type Code = NonNullable<LedgerCall["code"]>;
+
+/** The most code a call keeps, in UTF-8 bytes; a larger answer keeps none rather than a part. */
+export const CALL_CODE_LIMIT = 256 * 1024;
+
+/** The code as stored: its JSON when within `CALL_CODE_LIMIT` bytes, or nothing. */
+export function keptCode(code: Code | null): string | null {
+  if (!code) return null;
+  const json = JSON.stringify(code);
+  return Buffer.byteLength(json, "utf8") <= CALL_CODE_LIMIT ? json : null;
+}
+
+/**
+ * The code an answer holds (GEN-10): a created tool's, an edit's replaced code, or a style edit's
+ * CSS. Only the code, so neither the person's request nor the entries it gives are kept.
+ */
+export function answerCode(value: unknown): Code | null {
+  const record = (v: unknown): v is Record<string, unknown> =>
+    typeof v === "object" && v !== null && !Array.isArray(v);
+  if (!record(value)) return null;
+  const files = record(value["files"]) ? value["files"] : undefined;
+  const code = record(value["code"])
+    ? value["code"]
+    : record(files?.["code"])
+      ? files["code"]
+      : undefined;
+  const picked: Code = {};
+  for (const part of ["html", "css", "js"] as const)
+    if (typeof code?.[part] === "string") picked[part] = code[part];
+  if (!code && typeof files?.["css"] === "string") picked.css = files["css"];
+  return Object.keys(picked).length > 0 ? picked : null;
+}
 
 const strings = z.array(z.string());
+const codeSchema = ledgerCallSchema.shape.code;
 
 export class RequestLedger {
   readonly #store: Store;
@@ -79,15 +119,21 @@ export class RequestLedger {
       live: provider.live,
       run: async (spec) => {
         const startedAt = this.#store.now().toISOString();
-        const write = (usage: Usage, outcome: LedgerCall["outcome"], failure: Failure = {}) =>
+        const write = (
+          usage: Usage,
+          outcome: LedgerCall["outcome"],
+          failure: Failure = {},
+          code: Code | null = null,
+        ) =>
           this.#safely(() =>
             this.#store.db.run(
               // Numbered in the order the calls end, across every wrapper of the request.
               `INSERT INTO request_calls (request_id, call_index, stage, provider, model, effort,
                  prompt_chars, system_chars, prompt_parts, diagnostics, started_at, duration_ms,
-                 input_tokens, cached_input_tokens, output_tokens, outcome, error, message, detail)
+                 input_tokens, cached_input_tokens, output_tokens, outcome, error, message, detail,
+                 code)
                SELECT ?1, COALESCE(MAX(call_index) + 1, 0), ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10,
-                 ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18
+                 ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19
                FROM request_calls WHERE request_id = ?1`,
               id,
               spec.stage,
@@ -107,19 +153,22 @@ export class RequestLedger {
               failure.error ?? null,
               failure.message ?? null,
               failure.detail ?? null,
+              keptCode(code),
             ),
           );
         try {
           const result = await provider.run(spec);
-          write(result.usage, "ok");
+          write(result.usage, "ok", {}, answerCode(result.value));
           return result;
         } catch (error) {
           if (error instanceof ProviderError) {
-            write(error.usage, "failed", {
-              error: error.kind,
-              message: error.message,
-              detail: error.detail,
-            });
+            // An answer refused for its shape keeps its code too, unchecked, for reading (GEN-10).
+            write(
+              error.usage,
+              "failed",
+              { error: error.kind, message: error.message, detail: error.detail },
+              answerCode(error.answer),
+            );
           } else {
             const message = error instanceof Error ? error.message : String(error);
             write(UNKNOWN_USAGE, "crashed", { message });
@@ -217,6 +266,7 @@ export class RequestLedger {
         error: c.error,
         message: c.message,
         detail: c.detail,
+        code: c.code === null ? null : codeSchema.parse(JSON.parse(c.code)),
       })),
     };
   }

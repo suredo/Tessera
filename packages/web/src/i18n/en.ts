@@ -237,6 +237,7 @@ export const en = {
   "details.noSource": "This workspace has no tool yet.",
   "details.capabilities": "What it may use: {list}",
   "details.none": "nothing",
+  "details.callCode": "The code it answered with",
   "details.source.html": "Page (HTML)",
   "details.source.css": "Style (CSS)",
   "details.source.js": "Behavior (JavaScript)",

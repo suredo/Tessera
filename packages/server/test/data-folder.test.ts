@@ -13,6 +13,7 @@ import {
   schemaVersion,
   syncedFolderOf,
 } from "../src/storage/index.ts";
+import { RequestLedger } from "../src/ledger/index.ts";
 import { listTrash, restoreSavedTool } from "../src/trash/index.ts";
 import { loadVersion } from "../src/versions/index.ts";
 import { getWorkspace, listSavedTools } from "../src/workspaces/index.ts";
@@ -149,6 +150,20 @@ describe("migrating real data (ENG-18)", () => {
     // The saved tool in the trash stays there, and comes back described as none.
     expect(listTrash(folder).entries.map((entry) => entry.name)).toEqual(["Old garden"]);
     expect(restoreSavedTool(folder, "2d8e4f3a-5b6c-4d7e-8f80-91a2b3c4d5e6").description).toBe("");
+    folder.close();
+  });
+
+  it("ENG-18 GEN-10: a schema-12 database migrates with its ledger kept, and its calls have no code", async () => {
+    const root = folderFromFixture("schema-12.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated[0]).toBe(13);
+    expect(backups(root)).toHaveLength(1);
+    const requests = new RequestLedger(folder).unattached();
+    expect(requests.map((request) => request.id)).toEqual(["3e9f5a4b-6c7d-4e8f-9091-a2b3c4d5e6f7"]);
+    expect(requests[0]?.calls.map((call) => [call.stage, call.outcome, call.code])).toEqual([
+      ["intent", "ok", null],
+      ["create", "ok", null],
+    ]);
     folder.close();
   });
 

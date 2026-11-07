@@ -90,6 +90,16 @@ export const ledgerCallSchema = z
       .string()
       .nullable()
       .describe("What the provider itself said: for diagnosis, never shown as the message."),
+    code: z
+      .strictObject({
+        html: z.string().optional(),
+        css: z.string().optional(),
+        js: z.string().optional(),
+      })
+      .nullable()
+      .describe(
+        "The code a create, edit or repair call answered with, kept so an answer the checks refused can still be read (GEN-10); null for other calls and older ledgers.",
+      ),
   })
   .describe("One call in the host app's ledger; null usage is unknown, never 0 (CLI-04).");
 export type LedgerCall = z.infer<typeof ledgerCallSchema>;

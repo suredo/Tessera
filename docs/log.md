@@ -2,6 +2,8 @@
 
 ## 2026-11-07
 
+* **New**: The details view shows the code each create, edit or repair call answered with, also when the checks refused it (`GEN-10`), so a refusal such as a startup write can be read rather than guessed. The [call ledger](code/server/ledger.md) keeps only the code, never the request or its entries (migration `0013-call-code.sql`, [storage](code/server/storage.md)); the [contracts](code/contracts/package.md) and the [browser](code/web/package.md) carry and show it. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T19:23:34Z.
+
 * **Update**: A startup write's finding now says why ([static check](code/server/checks.md), `GEN-09`, [L-84](lessons/tessera-issues.md)): the value the analysis couldn't name, such as `parts[0]`, and its line, with the fix the base prompt gives, or the line startup reaches the write from. Found when a calendar the owner asked for failed after its one repair, with the repair told only the write's line. What counts as startup is unchanged. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T16:06:17Z.
 
 * **Update**: A smaller tool is no longer presented as the whole request (`GEN-08`), found when a video playlist came back as a plain list with no word that videos can't be fetched or played here. The create and edit answers can name what they leave out because no tool here can do it ([contracts](code/contracts/package.md)); the [generation stages](code/server/generation.md) check it for plain words and carry it to the reply; the [browser](code/web/package.md) adds it to the reply. The create and core [prompt parts](code/server/prompts.md) change, so earlier replays report as stale; the edit part has no room in its budget. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T15:23:42Z.
