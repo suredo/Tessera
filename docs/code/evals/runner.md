@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T03:30:21Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:53:16Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 
 # Entry points
 
-- `src/runner/cli.ts`: `node evals/src/runner/cli.ts <scenario-id> [--replay <answers file> | --live --cap <n>]`, after `pnpm build`. Without a flag it plays the scenario's rehearsal, `evals/scenarios/rehearsals/<id>.json`. `--live` is LIVE: it needs the owner's approved cap (`ENG-07`), runs Claude Code's free checks first (found, recent enough, signed in) and writes the run's answers as `answers.json`. The evidence (report, screenshots, video, ledger, answers) goes to `test-output/evals/scenarios/`.
+- `src/runner/cli.ts`: `node evals/src/runner/cli.ts <scenario-id> [--replay <answers file> | --live --cap <n>] [--two-pass]`, after `pnpm build`. Without a flag it plays the scenario's rehearsal, `evals/scenarios/rehearsals/<id>.json`. `--two-pass` starts Tessera with big tools made in two passes at their starting point (`GEN-17`), plays `<id>.two-pass.json` as the rehearsal, names the run's folder and report so, and records it in the report. `--live` is LIVE: it needs the owner's approved cap (`ENG-07`), runs Claude Code's free checks first (found, recent enough, signed in) and writes the run's answers as `answers.json`. The evidence (report, screenshots, video, ledger, answers) goes to `test-output/evals/scenarios/`.
 - `src/runner/run.ts`: `runScenario` plays one scenario (`RunReport`, `StepResult`, `RunMode`); `zonedInstant` is a wall time's instant in a zone. `STEP_LIMIT_MS` is how long a request may take; `NEW_WORKSPACE` is the title of the empty workspace a `switch: new` step opens.
 - `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit and each stale one (`AnswersProvider`). `mapStrings` changes an answer's strings, never its JSON text, so a saved tool's name with quotes or backslashes stays whole.
 - `src/runner/speed.ts`: how fast a run was against the speed targets (`OBS-04`). `speedOf` takes runs as `readRun` reads them from a run folder (its report and harness ledger) and gives `Speed`: each stage's model time and each kind of request's time as the person waited (`RequestKind`), as `figures` (count, p50, p95 and slowest, by nearest rank), and each of `SPEED_TARGETS` met, missed or not measured. `speedMarkdown` writes them as tables. `node evals/src/runner/speed.ts <run folder>...` prints them; the [M2 speed report](../../../evals/reports/2026-11-07-m2-speed.md) is its first use.
@@ -52,6 +52,7 @@ Depends on the [harness](harness.md), the [scenario files and host facts](scenar
 - **Continue and Use again wait for the workspace they open** (L-80): Continue's own, or one that didn't exist before Use again, for up to 30 s, never just any tool panel, since the one already showing would pass on a slow machine. If it never opens, the host facts report it.
 - **Each screenshot waits for the tool to show something** (L-81): after a workspace opens, its nested frames load again, so a screenshot taken at once showed an empty panel. The wait is at most 5 s and only for the picture; the facts are read before it, and each step's result records what its screenshot shows (`tool`, `empty` or `no tool`), and the replay spec fails on an `empty` one.
 - **A request's outcome is read from the chat** (`APP-01`): after a `say` or `cancel` step, the report's message is Tessera's newest reply in the chat; after the other steps, the notice.
+- **A scenario's clock must start in the past** (L-83): the browser runs on the scenario's time and the server on its own, so a clock ahead of now makes every deadline look past to the browser. `runScenario` refuses it before anything starts, with the cap check.
 - **Speed is judged on what a run can time** (`OBS-04`). Each step's report records the ledger calls it asked for (`calls`, from the harness's `callsAsked`), so a request is matched to its own calls, an intent retry included, and timed as the person waited, staging included; one sent only to be cancelled isn't timed. A report from before that is matched in order, one intent call and the calls after it, only when its intent calls pair one to one with its requests; otherwise its requests are left untimed and the figures say so. With fewer than 20 samples, p95 is the slowest. The runner doesn't time the host's screens or a saved tool's mount, so those targets read as not measured.
 - **A notice can be stale.** A step that shows no new message, such as `next-day`, reports the last one (Continue from my tools has its own since L-77); the facts never rely on a notice alone.
 

@@ -1,0 +1,88 @@
+{
+  "about": "A rehearsal of B10-study-planner in one pass, written by hand: no model answered these.",
+  "scenario": "B10-study-planner",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Topics",
+              "request": "topics"
+            },
+            {
+              "name": "Days",
+              "request": "days"
+            },
+            {
+              "name": "No Fridays",
+              "request": "no fridays"
+            },
+            {
+              "name": "Mark done",
+              "request": "mark done"
+            },
+            {
+              "name": "What is left",
+              "request": "what is left"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Study planner",
+          "summary": "Exam topics by day, never on Fridays, marked done, with what is left.",
+          "code": {
+            "html": "<h1>Study planner</h1>\n<ul id=\"has\" aria-label=\"What this tool does\"><li>Topics</li><li>Days</li><li>No Fridays</li><li>Mark done</li><li>What is left</li></ul>\n<label for=\"entry\">New entry</label> <input id=\"entry\" type=\"text\">\n<ul id=\"items\" aria-label=\"Entries\"></ul>",
+            "css": "",
+            "js": "tessera.call(\"data.read\").then(({ data }) => {\n  for (const item of data.items) {\n    const row = document.createElement(\"li\");\n    row.textContent = item.title;\n    document.getElementById(\"items\").append(row);\n  }\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "required": ["items"],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "title"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "items": []
+            },
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    }
+  ]
+}

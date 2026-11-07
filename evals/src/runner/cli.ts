@@ -1,13 +1,15 @@
 // Docs: docs/code/evals/runner.md
 // Plays a scenario: node evals/src/runner/cli.ts <scenario-id> [--replay <file> | --live --cap <n>]
-// The default is its rehearsal, evals/scenarios/rehearsals/<id>.json. Build first: pnpm build.
+// [--two-pass]. The default is its rehearsal, evals/scenarios/rehearsals/<id>.json, or
+// <id>.two-pass.json with --two-pass, which makes big tools in two passes (GEN-17) at their
+// starting point. Build first: pnpm build.
 // --live is LIVE: it calls Claude Code, so it needs the owner's approved cap first (ENG-07,
 // docs/practices/live-evaluation.md, evals/reports/2026-11-05-m2-live-run.md).
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { listSavedTools } from "@tessera/server";
+import { listSavedTools, TWO_PASS_STARTING_POINT } from "@tessera/server";
 import { liveClaudeProvider } from "../../spikes/cli-contract/claude-cli.ts";
 import { loadScenario } from "../scenarios/index.ts";
 import { recordAnswers } from "./record.ts";
@@ -37,12 +39,15 @@ function parse(args: readonly string[]): {
   process.exit(2);
 }
 
-const { id, mode, file, cap } = parse(process.argv.slice(2));
+// Two passes for big tools, to compare them with one (GEN-17): a flag anywhere in the command.
+const words = process.argv.slice(2);
+const twoPass = words.includes("--two-pass");
+const { id, mode, file, cap } = parse(words.filter((word) => word !== "--two-pass"));
 const scenario = loadScenario(path.join(scenarios, `${id}.yaml`));
 const folder = path.resolve(
   here,
   "../../../test-output/evals/scenarios",
-  `${scenario.id}-${mode}-${new Date().toISOString().replace(/[:.]/g, "-")}`,
+  `${scenario.id}-${mode}${twoPass ? "-two-pass" : ""}-${new Date().toISOString().replace(/[:.]/g, "-")}`,
 );
 fs.mkdirSync(folder, { recursive: true });
 
@@ -60,6 +65,7 @@ if (mode === "live") {
     provider: found.provider,
     folder,
     ...(cap !== undefined ? { callCap: cap } : {}),
+    ...(twoPass ? { twoPass: TWO_PASS_STARTING_POINT } : {}),
     onFinished: (finished) => {
       savedTools = listSavedTools(finished).map((t) => ({ id: t.id, name: t.name }));
     },
@@ -67,8 +73,9 @@ if (mode === "live") {
 } else {
   report = await replayScenario(scenario, {
     mode,
-    file: file ?? path.join(scenarios, "rehearsals", `${id}.json`),
+    file: file ?? path.join(scenarios, "rehearsals", `${id}${twoPass ? ".two-pass" : ""}.json`),
     folder,
+    ...(twoPass ? { twoPass: TWO_PASS_STARTING_POINT } : {}),
   });
 }
 fs.writeFileSync(path.join(folder, "report.md"), reportMarkdown(report));

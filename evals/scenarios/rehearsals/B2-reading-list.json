@@ -1,0 +1,88 @@
+{
+  "about": "A rehearsal of B2-reading-list in one pass, written by hand: no model answered these.",
+  "scenario": "B2-reading-list",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "List of books",
+              "request": "list of books"
+            },
+            {
+              "name": "Rating",
+              "request": "rating"
+            },
+            {
+              "name": "Genre",
+              "request": "genre"
+            },
+            {
+              "name": "Filter by genre",
+              "request": "filter by genre"
+            },
+            {
+              "name": "Sort by rating",
+              "request": "sort by rating"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Reading list",
+          "summary": "Books to read, with a rating, a genre, a genre filter and sorting by rating.",
+          "code": {
+            "html": "<h1>Reading list</h1>\n<ul id=\"has\" aria-label=\"What this tool does\"><li>List of books</li><li>Rating</li><li>Genre</li><li>Filter by genre</li><li>Sort by rating</li></ul>\n<label for=\"entry\">New entry</label> <input id=\"entry\" type=\"text\">\n<ul id=\"items\" aria-label=\"Entries\"></ul>",
+            "css": "",
+            "js": "tessera.call(\"data.read\").then(({ data }) => {\n  for (const item of data.items) {\n    const row = document.createElement(\"li\");\n    row.textContent = item.title;\n    document.getElementById(\"items\").append(row);\n  }\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "required": ["items"],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "title"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "items": []
+            },
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    }
+  ]
+}

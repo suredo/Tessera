@@ -1,0 +1,22 @@
+# B2-reading-list, a big request from T2 (docs/testing/app-catalogue.md), asking for several separate
+# things at once, for comparing two passes with one (GEN-17,
+# evals/reports/2026-11-07-two-pass-plan.md). It runs once in each mode, on its own data folder.
+# The budget fits the two-pass run (intent, core, three features, two repairs); the one-pass run
+# is capped at 3.
+id: B2-reading-list
+tier: advanced
+language: en
+person: "Someone keeping track of books to read"
+goal: "Keep a reading list they can sort and filter"
+clock: { start: "2026-11-02T19:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 7 }
+steps:
+  - say: "I want a list of the books I want to read, with a rating from 1 to 5, a genre for each, a filter by genre and sorting by rating."
+    expect: { created: true, workspace: new }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - accessibility
+  - messages
+  - coherence

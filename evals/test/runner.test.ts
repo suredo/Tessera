@@ -123,11 +123,17 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
     await expect(running).rejects.toThrow(ProviderError);
   });
 
-  it("EVAL-01: every M2 scenario has a rehearsal, for it, within its budget", () => {
+  it("EVAL-01: every M2 scenario has a rehearsal, for it, within its budget, and each big request one for two passes too", () => {
     const ids = fs
       .readdirSync(path.join(scenarios, "rehearsals"))
       .map((f) => path.basename(f, ".json"));
     expect(ids.sort()).toEqual([
+      "B10-study-planner",
+      "B10-study-planner.two-pass",
+      "B2-reading-list",
+      "B2-reading-list.two-pass",
+      "B4-habit-tracker",
+      "B4-habit-tracker.two-pass",
       "J6-limits",
       "T1-shopping-list",
       "T13-drawing-board",
@@ -135,10 +141,9 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
     ]);
     for (const id of ids) {
       const rehearsal = loadAnswers(path.join(scenarios, "rehearsals", `${id}.json`));
-      expect(rehearsal.scenario).toBe(loadScenario(path.join(scenarios, `${id}.yaml`)).id);
-      expect(rehearsal.answers.length).toBeLessThanOrEqual(
-        loadScenario(path.join(scenarios, `${id}.yaml`)).budget.calls,
-      );
+      const scenario = loadScenario(path.join(scenarios, `${id.replace(/\.two-pass$/, "")}.yaml`));
+      expect(rehearsal.scenario).toBe(scenario.id);
+      expect(rehearsal.answers.length).toBeLessThanOrEqual(scenario.budget.calls);
     }
   });
 });
@@ -238,6 +243,21 @@ describe("live runs become replays (EVAL-07, ENG-07)", () => {
 });
 
 describe("the run's clock and its failures (RUN-07, EVAL-02)", () => {
+  it("RUN-07, L-83: a scenario whose clock starts after now is refused before anything starts", async () => {
+    const t1 = loadScenario(path.join(scenarios, "T1-shopping-list.yaml"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-clock-"));
+    roots.push(root);
+    const ahead = { ...t1, clock: { start: "2099-01-01T09:00:00", zone: "Europe/Lisbon" } };
+    await expect(
+      runScenario(ahead, {
+        mode: "live",
+        provider: createScriptedProvider({ name: "never", replies: [] }),
+        folder: path.join(root, "run"),
+      }),
+    ).rejects.toThrow(/clock starts at 2099-01-01T09:00:00, after now/);
+    expect(fs.existsSync(path.join(root, "run"))).toBe(false);
+  });
+
   const roots: string[] = [];
   afterAll(() => roots.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
 
