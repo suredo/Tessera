@@ -364,6 +364,58 @@ function fixedText(node: AnyNode | undefined): string | undefined {
   return undefined;
 }
 
+/**
+ * Built-ins that read or convert their arguments and never call them (L-84): passing a value to
+ * one doesn't run it. Only readers, converters and DOM lookups; none stores a value it could call
+ * later, so `map.set(k, write); map.get(k)()` is still followed. A tool's own function of the same
+ * name is treated as any other call.
+ */
+const NEVER_CALLS_ARGUMENTS = new Set([
+  "UTC",
+  "max",
+  "min",
+  "round",
+  "floor",
+  "ceil",
+  "abs",
+  "trunc",
+  "sign",
+  "pow",
+  "sqrt",
+  "localeCompare",
+  "includes",
+  "indexOf",
+  "lastIndexOf",
+  "startsWith",
+  "endsWith",
+  "padStart",
+  "padEnd",
+  "split",
+  "slice",
+  "substring",
+  "at",
+  "join",
+  "toFixed",
+  "toLocaleString",
+  "toLocaleDateString",
+  "toLocaleTimeString",
+  "Number",
+  "String",
+  "Boolean",
+  "parseInt",
+  "parseFloat",
+  "isNaN",
+  "isFinite",
+  "getElementById",
+  "querySelector",
+  "querySelectorAll",
+  "createElement",
+  "createTextNode",
+  "getAttribute",
+  "setAttribute",
+  "hasAttribute",
+]);
+
 /** A computed key that can't name a property such as innerHTML: a number. */
 const isNumberKey = (node: AnyNode) => node.type === "Literal" && typeof node["value"] === "number";
 
@@ -791,8 +843,17 @@ function startupCalls(program: AnyNode): Set<AnyNode> {
           if (args[i]) for (const name of boundNames(param)) bind(name, args[i]);
       }
       invoke(callee);
+      // A built-in that only reads its arguments runs none of them, unless the tool defines a
+      // function of that name, which is followed like any other (L-84).
+      const named =
+        callee.type === "Identifier"
+          ? (callee["name"] as string)
+          : callee.type === "MemberExpression"
+            ? propertyName(callee)
+            : undefined;
+      const reads = !!named && NEVER_CALLS_ARGUMENTS.has(named) && !bindings.has(named);
       args.forEach((arg, i) => {
-        if (!(listener(node) && i === 1)) invoke(arg);
+        if (!(listener(node) && i === 1) && !reads) invoke(arg);
       });
       if (
         callee.type === "MemberExpression" &&
