@@ -4,6 +4,7 @@ import type { Provider, Routes } from "../providers/index.ts";
 import { loadVersion } from "../versions/index.ts";
 import { getWorkspace, readWorkspaceData, type Store } from "../workspaces/index.ts";
 import { commitDataPlan, planDataChange, type PlannedData } from "./data.ts";
+import { DEFAULT_STAGE_TIME_LIMITS, type StageTimeLimits } from "./time-limits.ts";
 
 /** Only the server retains the full plan; the browser can confirm its opaque token once. */
 export type DataOffer = {
@@ -55,6 +56,7 @@ export async function changeData(
   beforeStore: () => void,
   offerData?: OfferData,
   repairUsage?: Partial<Record<RepairClass, number>>,
+  limits: StageTimeLimits = DEFAULT_STAGE_TIME_LIMITS,
 ): Promise<DataReply> {
   const workspace = workspaceId ? getWorkspace(store, workspaceId) : undefined;
   const hash = workspace?.currentVersion;
@@ -68,6 +70,7 @@ export async function changeData(
     snapshot: readWorkspaceData(store, workspace.id),
     signal,
     repairUsage,
+    timeLimitMs: limits.data,
   });
   if (result.kind === "failed")
     return {

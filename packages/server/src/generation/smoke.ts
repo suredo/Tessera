@@ -9,6 +9,7 @@ import { getWorkspace, type Store } from "../workspaces/index.ts";
 import { createTool } from "./create.ts";
 import { editTool } from "./edit.ts";
 import type { TwoPassPlan } from "./two-pass.ts";
+import { DEFAULT_STAGE_TIME_LIMITS, type StageTimeLimits } from "./time-limits.ts";
 
 /** Server-owned continuation of creation or editing, never supplied by the browser (GEN-09). */
 export type SmokeRepairContext = {
@@ -33,6 +34,7 @@ export async function repairSmoke(
   context: SmokeRepairContext | undefined,
   signal?: AbortSignal,
   beforeStore: () => void = () => signal?.throwIfAborted(),
+  limits: StageTimeLimits = DEFAULT_STAGE_TIME_LIMITS,
 ): Promise<GenerationResult> {
   const failed = (findings: string[]): GenerationResult => ({
     kind: "failed",
@@ -63,6 +65,7 @@ export async function repairSmoke(
           intent: context.intent,
           signal,
           repairUsage: context.repairUsage,
+          timeLimits: limits,
           artifact: original.artifact,
           data: workspace.data,
           repair: {
@@ -91,6 +94,7 @@ export async function repairSmoke(
           intent: context.intent,
           signal,
           repairUsage: context.repairUsage,
+          timeLimits: limits,
           ...(context.plan ? { core: context.plan } : {}),
           repair: {
             failure: "smoke",

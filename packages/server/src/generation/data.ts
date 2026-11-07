@@ -37,6 +37,8 @@ type Input = {
   snapshot: WorkspaceData;
   signal?: AbortSignal;
   repairUsage?: Partial<Record<RepairClass, number>>;
+  /** How long each call, its repair too, may take; `DATA_TIME_LIMIT_MS` unless given (GEN-11). */
+  timeLimitMs?: number;
 };
 const failed = (reason: string): DataPlanResult => ({
   kind: "failed",
@@ -161,7 +163,7 @@ export async function planDataChange(
         ...prompt,
         promptParts: prompt.parts,
         schema: dataPlanSchema,
-        timeLimitMs: DATA_TIME_LIMIT_MS,
+        timeLimitMs: input.timeLimitMs ?? DATA_TIME_LIMIT_MS,
         signal: input.signal,
         diagnostics,
       });

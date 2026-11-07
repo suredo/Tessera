@@ -17,6 +17,7 @@ import { staticCheck } from "../checks/index.ts";
 import { checkToolData, compileToolSchema } from "../data-shape/index.ts";
 import { assemblePrompt, REPAIR_CLASSES, type RepairClass } from "../prompts/index.ts";
 import type { TwoPassPlan } from "./two-pass.ts";
+import type { StageTimeLimits } from "./time-limits.ts";
 import { ProviderError, runStage, type Provider, type Routes } from "../providers/index.ts";
 
 // The create stage (GEN-04, GEN-05): a request becomes a candidate tool, checked by the host before
@@ -230,6 +231,8 @@ export type CreateInput = {
   repair?: Repair;
   /** A big new tool's core pass: build only its core (GEN-17). */
   core?: TwoPassPlan;
+  /** The configured stage limits; the constants above unless given (GEN-11). */
+  timeLimits?: Pick<StageTimeLimits, "create" | "repair">;
 };
 
 const repairable = (failure: FailureClass): failure is RepairClass =>
@@ -336,7 +339,10 @@ async function ask(
       prompt: prompt.prompt,
       promptParts: prompt.parts,
       schema: creationSchema,
-      timeLimitMs: stage === "repair" ? REPAIR_TIME_LIMIT_MS : GENERATION_TIME_LIMIT_MS,
+      timeLimitMs:
+        stage === "repair"
+          ? (input.timeLimits?.repair ?? REPAIR_TIME_LIMIT_MS)
+          : (input.timeLimits?.create ?? GENERATION_TIME_LIMIT_MS),
       signal: input.signal,
       diagnostics: repair.diagnostics,
     });

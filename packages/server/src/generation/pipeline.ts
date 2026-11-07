@@ -19,6 +19,7 @@ import { generateEdit } from "./edit-pipeline.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
 import { changeData, type OfferData } from "./data-action.ts";
 import { twoPassPlan, type TwoPassOptions } from "./two-pass.ts";
+import { DEFAULT_STAGE_TIME_LIMITS, type StageTimeLimits } from "./time-limits.ts";
 
 // A request, carried out as far as the server goes (GEN-01, GEN-04): the intent stage decides
 // what it is, the create stage makes a candidate, and the candidate is stored with its workspace
@@ -47,6 +48,7 @@ export async function generate(
   beforeStore: () => void = () => signal?.throwIfAborted(),
   offerData?: OfferData,
   twoPass?: TwoPassOptions,
+  limits: StageTimeLimits = DEFAULT_STAGE_TIME_LIMITS,
 ): Promise<GenerationResult> {
   const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
@@ -57,6 +59,7 @@ export async function generate(
       open,
       saved: recentSavedTools(store),
       signal,
+      timeLimitMs: limits.intent,
     });
   } catch (error) {
     if (!(error instanceof ProviderError)) throw error;
@@ -80,6 +83,8 @@ export async function generate(
         signal,
         remember,
         beforeStore,
+        undefined,
+        limits,
       );
     case "data":
       return changeData(
@@ -92,6 +97,8 @@ export async function generate(
         signal,
         beforeStore,
         offerData,
+        undefined,
+        limits,
       );
     case "mixed": {
       const repairUsage: Partial<Record<RepairClass, number>> = {};
@@ -111,6 +118,7 @@ export async function generate(
           }),
         beforeStore,
         repairUsage,
+        limits,
       );
       if (edited.kind === "candidate") return { ...edited, dataPending: true };
       if (edited.kind !== "answer" || edited.answer !== "unchanged") return edited;
@@ -130,6 +138,7 @@ export async function generate(
           beforeStore,
           offerData,
           repairUsage,
+          limits,
         ),
       };
     }
@@ -143,6 +152,7 @@ export async function generate(
     signal,
     repairUsage,
     ...(plan ? { core: plan } : {}),
+    timeLimits: limits,
   });
   if (created.kind === "cannot")
     // The model's own words, when the plain reason replaced them, stay for the details (GEN-10).

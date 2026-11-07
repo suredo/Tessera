@@ -11,7 +11,7 @@ import {
   generateReplySchema,
   type Intent,
 } from "@tessera/contracts";
-import { candidateFrom, generationRoutes } from "../src/generation/index.ts";
+import { candidateFrom, generationRoutes, type StageTimeLimits } from "../src/generation/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
 import { createScriptedProvider, type Provider } from "../src/providers/index.ts";
@@ -49,6 +49,7 @@ async function fixture(
   replies: { stage: "intent" | "edit" | "repair" | "data"; value: unknown }[],
   fields: Partial<Intent> = {},
   limit = 420_000,
+  stageTimeLimitsMs?: Partial<StageTimeLimits>,
 ) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-mixed-"));
   const store = await openDataFolder(dir);
@@ -85,6 +86,7 @@ async function fixture(
       provider: () => Promise.resolve(provider),
       routes: () => DEFAULT_ROUTES,
       requestTimeLimitMs: limit,
+      ...(stageTimeLimitsMs ? { stageTimeLimitsMs } : {}),
     }),
   });
   clean.push(async () => {
@@ -441,6 +443,51 @@ describe("mixed request sequencing", () => {
       }),
     ).toMatchObject({ kind: "data_changed" });
     expect(f.calls.map((c) => c.stage)).toEqual(["intent", "edit", "repair", "data"]);
+  });
+  it("GEN-11: each stage's configured time limit reaches its call, edit, smoke repair and data too", async () => {
+    if (styleEdit.files.mode !== "replace") throw new Error("Expected fixture");
+    const fixed = {
+      ...styleEdit,
+      files: {
+        mode: "replace",
+        code: { ...styleEdit.files.code, html: '<h1>Shopping list</h1><ul id="items"></ul>' },
+      },
+    };
+    const f = await fixture(
+      [
+        { stage: "edit", value: styleEdit },
+        { stage: "repair", value: fixed },
+        { stage: "data", value: add },
+      ],
+      { interfacePart: "Make it dark", dataPart: "Add Bread" },
+      420_000,
+      { intent: 11_000, edit: 22_000, repair: 33_000, data: 44_000 },
+    );
+    const generated = await f.ask();
+    if (generated.kind !== "candidate") throw new Error("Expected candidate");
+    const repaired = await f.post(SMOKE_REPAIR_ROUTE, {
+      workspaceId: f.id,
+      hash: generated.hash,
+      token: generated.activation.token,
+      findings: ["A field has no label"],
+    });
+    if (repaired.kind !== "candidate") throw new Error("Expected repaired candidate");
+    expect(activateVersion(f.store, f.id, repaired.hash, repaired.expectedDataRevision).ok).toBe(
+      true,
+    );
+    expect(
+      await f.post(FINISH_DATA_ROUTE, {
+        workspaceId: f.id,
+        hash: repaired.hash,
+        token: repaired.activation.token,
+      }),
+    ).toMatchObject({ kind: "data_changed" });
+    expect(f.calls.map((c) => [c.stage, c.limit])).toEqual([
+      ["intent", 11_000],
+      ["edit", 22_000],
+      ["repair", 33_000],
+      ["data", 44_000],
+    ]);
   });
   it("GEN-11 GEN-04: staging and queue time do not create a new data deadline", async () => {
     let now = Date.now();

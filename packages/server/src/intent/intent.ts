@@ -99,6 +99,8 @@ export type IntentInput = {
   /** The person's saved tools, the most recently used first; the catalogue is chosen from them (GEN-18). */
   saved?: readonly SavedToolEntry[];
   signal?: AbortSignal;
+  /** How long the call may take; `INTENT_TIME_LIMIT_MS` unless configured (GEN-11). */
+  timeLimitMs?: number;
 };
 
 /**
@@ -128,7 +130,7 @@ export async function decideIntent(
       prompt: prompt.prompt,
       promptParts: prompt.parts,
       schema: intentSchema,
-      timeLimitMs: INTENT_TIME_LIMIT_MS,
+      timeLimitMs: input.timeLimitMs ?? INTENT_TIME_LIMIT_MS,
       signal: input.signal,
     });
     return result.value;

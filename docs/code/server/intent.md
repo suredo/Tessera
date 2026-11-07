@@ -7,7 +7,7 @@ implements: [GEN-01, GEN-15, GEN-18]
 tests: [../../../packages/server/test/intent.test.ts]
 tags: [code, server, generation, intent]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-05T06:47:34Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T13:10:21Z }
 ---
 
 # Purpose
@@ -20,7 +20,7 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
   - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the person's saved tools, the most recently used first) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, or ask the person to split it.
   - `recordLists` reads the lists a tool keeps, and their fields, from its declared data shape (`DATA-03`).
   - `wordsNotInRequest` is the word check of a split part.
-  - `INTENT_TIME_LIMIT_MS` is the stage's time limit (`GEN-11`).
+  - `INTENT_TIME_LIMIT_MS` is the stage's default time limit (`GEN-11`); `IntentInput.timeLimitMs` replaces it with the configured one.
   - `savedToolCatalogue` chooses the saved tools the stage is shown (`GEN-18`): each one's ID, name and description, in the order given, until the next would pass `CATALOGUE_MAX_TOOLS` (20) or `CATALOGUE_MAX_CHARACTERS` (3,000, as quoted). It stops there rather than skip one, so the most recent always come first.
 - Its prompt is assembled by the [prompt assembly](prompts.md) from the intent parts: the instructions, the request, the open tool or none, a tool with no records, the saved tools or none, and the reminder for a second ask.
 - `packages/server/test/fixtures/intent/`: `requests.json`, the 31 requests of the intent spike plus ADR 0008's pairs, each with its context (the open tool, and the saved tools with their names and descriptions) and expected action; `replays.json`, the spike's recorded live answers (`TEST-04`).

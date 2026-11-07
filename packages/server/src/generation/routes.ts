@@ -35,6 +35,7 @@ import { applyDataOffer, changeData, type DataOffer } from "./data-action.ts";
 import { RequestLedger } from "../ledger/index.ts";
 import { RequestControls } from "./control.ts";
 import { checkTwoPassOptions, type TwoPassOptions } from "./two-pass.ts";
+import { checkStageTimeLimits, isTimerLimit, type StageTimeLimits } from "./time-limits.ts";
 
 // The host app's route for a request (GEN-01): it runs as a job, one at a time (CLI-06), and
 // answers with what came of it, checked against the contract (CON-01). The local server's guard
@@ -52,6 +53,8 @@ export type GenerationOptions = {
   routes: () => Routes;
   /** Total stage time after a queued request starts, including later smoke repair (GEN-11). */
   requestTimeLimitMs?: number;
+  /** Each stage's own limit, capped by the request's; the defaults for any left out (GEN-11). */
+  stageTimeLimitsMs?: Partial<StageTimeLimits>;
   /** Where each request and its model calls are recorded (OBS-01); the store's own by default. */
   ledger?: RequestLedger;
   /** Makes a big new tool in two passes, its core first (GEN-17); one pass when left out. */
@@ -62,8 +65,9 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   const limit = options.requestTimeLimitMs ?? REQUEST_TIME_LIMIT_MS;
   const twoPass = options.twoPass && checkTwoPassOptions(options.twoPass);
   const ledger = options.ledger ?? new RequestLedger(options.store);
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 2_147_483_647)
+  if (!isTimerLimit(limit))
     throw new RangeError("requestTimeLimitMs must be a positive timer-sized integer.");
+  const stageLimits = checkStageTimeLimits(options.stageTimeLimitsMs);
   // Short-lived continuations, bounded in memory and consumed before a repair call. Restarting
   // loses eligibility, never resets it; a replay or a parallel POST cannot spend another call.
   const pending = new Map<string, { context: SmokeRepairContext; expires: number }>();
@@ -294,6 +298,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   check,
                   (offer) => offerData(offer, expires, control),
                   twoPass,
+                  stageLimits,
                 ),
               signal,
             );
@@ -365,6 +370,8 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                     );
                   },
                   check,
+                  undefined,
+                  stageLimits,
                 );
                 return edited.kind === "candidate" && rest.length
                   ? { ...edited, followUps }
@@ -401,6 +408,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   check,
                   (offer) => offerData(offer, entry.expires, control),
                   entry.context.repairUsage,
+                  stageLimits,
                 );
               },
               signal,
@@ -426,6 +434,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                 entry.context,
                 stopped,
                 check,
+                stageLimits,
               );
               if (control?.controller.signal.aborted) return repaired;
               if (repaired.kind === "candidate") controls.bind(control, nextToken);
