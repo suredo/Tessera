@@ -659,9 +659,9 @@ function isFunction(node: AnyNode | null | undefined): boolean {
  */
 function startupCalls(program: AnyNode, js: string): Startup {
   const bindings = new Map<string, Set<AnyNode>>();
-  // Why each function counts as startup: the first call or value that reached it, and the part of
-  // it that couldn't be named, if any. Only explains a finding; it never decides one (GEN-06).
-  const causes = new Map<AnyNode, { site: AnyNode; vague?: AnyNode }>();
+  // Why each function counts as startup: every call or value that reached it, each with the part
+  // of it that couldn't be named, if any. Only explains a finding; it never decides one (GEN-06).
+  const causes = new Map<AnyNode, { site: AnyNode; vague?: AnyNode }[]>();
   const enclosing = new Map<AnyNode, AnyNode | null>();
   const functions = new Set<AnyNode>();
   const accessors = new Set<AnyNode>();
@@ -773,9 +773,12 @@ function startupCalls(program: AnyNode, js: string): Startup {
   const invoke = (value: AnyNode | undefined, site: AnyNode | undefined = value) => {
     const vague: { node?: AnyNode } = {};
     for (const fn of resolve(value, new Set(), vague)) {
-      // A named reach is the real reason, so it replaces one through a value that couldn't be named.
-      if (site && (!causes.has(fn) || (causes.get(fn)!.vague && !vague.node)))
-        causes.set(fn, { site, ...(vague.node ? { vague: vague.node } : {}) });
+      if (site) {
+        const known = causes.get(fn) ?? [];
+        if (!known.some((cause) => cause.site === site && cause.vague === vague.node))
+          known.push({ site, ...(vague.node ? { vague: vague.node } : {}) });
+        causes.set(fn, known);
+      }
       if (executed.has(fn)) continue;
       executed.add(fn);
       if (isFunction(fn)) pending.push(...children(fn));
@@ -844,21 +847,43 @@ function startupCalls(program: AnyNode, js: string): Startup {
       why(node) {
         if (gaveUp)
           return "The code is too intricate to follow, so every write counts as one that may run at startup. Make it simpler.";
-        let at: AnyNode | null | undefined = enclosing.get(node);
-        let first: AnyNode | undefined;
-        const seen = new Set<AnyNode>();
-        while (at && !seen.has(at)) {
-          seen.add(at);
-          if (accessors.has(at))
+        const start = enclosing.get(node);
+        if (!start) return undefined;
+        // A path named all the way to startup is the real reason, so it is preferred.
+        const named = (fn: AnyNode, seen: Set<AnyNode>): string | undefined => {
+          if (seen.has(fn)) return undefined;
+          seen.add(fn);
+          if (accessors.has(fn))
             return "It is inside a getter or setter, and those count as startup.";
-          const cause = causes.get(at);
-          if (!cause) break;
-          if (cause.vague)
-            return `It counts as startup because \`${text(cause.vague)}\` on line ${line(cause.vague)} can't be named before the tool runs, so it could be any function in the tool, this one included. Destructure the value first (\`const [y, m] = parts\`) and pass the name.`;
-          first = cause.site;
-          at = enclosing.get(cause.site);
-        }
-        return first ? `It is reached at startup from line ${line(first)}.` : undefined;
+          for (const cause of causes.get(fn) ?? []) {
+            if (cause.vague) continue;
+            const up = enclosing.get(cause.site);
+            if (!up) return `It is reached at startup from line ${line(cause.site)}.`;
+            const found = named(up, seen);
+            if (found) return found;
+          }
+          return undefined;
+        };
+        // Otherwise the nearest value that couldn't be named is why.
+        const unnamed = (fn: AnyNode, seen: Set<AnyNode>): AnyNode | undefined => {
+          if (seen.has(fn)) return undefined;
+          seen.add(fn);
+          const known = causes.get(fn) ?? [];
+          const here = known.find((cause) => cause.vague)?.vague;
+          if (here) return here;
+          for (const cause of known) {
+            const up = enclosing.get(cause.site);
+            const found = up && unnamed(up, seen);
+            if (found) return found;
+          }
+          return undefined;
+        };
+        const reason = named(start, new Set());
+        if (reason) return reason;
+        const value = unnamed(start, new Set());
+        return value
+          ? `It counts as startup because \`${text(value)}\` on line ${line(value)} can't be named before the tool runs, so it could be any function in the tool, this one included. Destructure the value first (\`const [y, m] = parts\`) and pass the name.`
+          : undefined;
       },
     };
   }

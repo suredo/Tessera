@@ -445,11 +445,25 @@ describe("startup data writes (VER-01, GEN-06)", () => {
       message: expect.stringContaining("It is reached at startup from line 4.") as unknown,
     });
   });
+  it("VER-01, GEN-09: a write reached both through a named startup call and an unnamed value names the real call", () => {
+    const js = [
+      "function save() { tessera.call('data.patch', {}); }",
+      "function real() { save(); }",
+      "function ghost() { save(); }",
+      "const parts = [2026];",
+      "new Date(parts[0], 0, 1);",
+      "real();",
+    ].join(String.fromCharCode(10));
+    const finding = checkJs(js).find((f) => f.message.includes("writes data during startup"));
+    expect(finding?.message).toContain("It is reached at startup from line 6.");
+    expect(finding?.message).not.toContain("parts[0]");
+  });
   it("VER-01: exhausted startup analysis fails closed, including otherwise deferred handlers", () => {
     const js =
       "0;".repeat(26_000) +
       "button.addEventListener('click', () => tessera.call('data.patch', {}));";
     expect(checkJs(js).some((f) => f.message.includes("writes data during startup"))).toBe(true);
+    expect(checkJs(js).some((f) => f.message.includes("too intricate to follow"))).toBe(true);
   });
 });
 
