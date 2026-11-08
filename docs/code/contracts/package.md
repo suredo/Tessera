@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/profiles.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T12:19:47Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T12:51:50Z }
 ---
 
 # Purpose
@@ -55,7 +55,7 @@ Defines each shape that crosses a boundary once, with zod (`CON-01`): model outp
 
 - **Edit output is explicit and bounded by existing contracts** (`CON-02`, `GEN-07`). `editSchema` (`Edit`) is edit or cannot; an edit has a plain summary, independent unchanged/style/replace file modes (style carries the complete CSS alone, so the HTML and JavaScript stay as they are, `GEN-14`) and unchanged/migrate data modes. Migration uses the existing migration contract; code and cannot/summary fields reuse creation's definitions. Name, capabilities, pins, UI mode and session entries cannot be supplied by an edit. The committed `edit.schema.json` is generated from the same zod definition.
 
-- **Smoke repair reports are bounded** (`GEN-09`). `SMOKE_REPAIR_ROUTE` takes `smokeRepairRequestSchema` (`SmokeRepairRequest`): a workspace UUID, the stored version hash and one to twenty nonempty findings, each at most 8,000 characters. It answers with `generateReplySchema`; original requests, language and repair counts stay on the server. The HTTP request also has the generation route's 16 KB byte limit.
+- **Smoke repair reports are bounded** (`GEN-09`). `SMOKE_REPAIR_ROUTE` takes `smokeRepairRequestSchema` (`SmokeRepairRequest`): a workspace UUID, the stored version hash, one to twenty nonempty findings, each at most 8,000 characters, and which check failed, smoke unless it says behavior (`VER-03`). A candidate reply names the verification profile whose behavior check staging runs, from the server's intent, or null. It answers with `generateReplySchema`; original requests, language and repair counts stay on the server. The HTTP request also has the generation route's 16 KB byte limit.
 
 - **Stored JSON is kept exactly or refused whole.** A JavaScript object can't keep an own `__proto__` key, and zod's own JSON schemas silently drop one, so `jsonValueSchema` and `jsonObjectSchema` refuse any object with that key, at any depth, before parsing; the generated JSON Schema refuses it too (`propertyNames`). Every other key is kept, including `constructor` and `toString`. Codex's review of [pull request 63](https://github.com/suredo/Tessera/pull/63) found the silent loss.
 - **One definition.** A shape exists only as a zod schema here. The files in `schemas/` are generated and never edited by hand. A test fails while they differ from the zod definitions.

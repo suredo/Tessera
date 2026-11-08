@@ -43,6 +43,8 @@ export const PROMPT_PARTS = [
   "edit-declarations",
   "edit-attempt",
   "repair-edit-smoke",
+  "repair-edit-behavior",
+  "repair-behavior",
   "language",
   "repair-schema-shape",
   "repair-static",
@@ -75,6 +77,7 @@ export const REPAIR_CLASSES = [
   "schema-shape",
   "static",
   "smoke",
+  "behavior",
 ] as const satisfies readonly FailureClass[];
 export type RepairClass = (typeof REPAIR_CLASSES)[number];
 
@@ -302,8 +305,8 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     addSystem("edit", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
   if (stage === "repair")
     addSystem(
-      input.editArtifact && input.failure === "smoke"
-        ? "repair-edit-smoke"
+      input.editArtifact && (input.failure === "smoke" || input.failure === "behavior")
+        ? `repair-edit-${input.failure}`
         : `repair-${input.failure!}`,
     );
   // One tag for every marker in this prompt, from all it quotes as raw text (SEC-02).

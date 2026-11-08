@@ -16,6 +16,7 @@ const candidate: GenerateReply = {
   mountId: `v-${"a".repeat(64)}`,
   capabilities: [],
   syntheticData: { items: [] },
+  profile: null,
   expectedDataRevision: 1,
   activation: { token: "00000000-0000-4000-8000-000000000002", expiresAt: Date.now() + 420_000 },
   name: "Shopping list",
@@ -280,6 +281,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       hash: candidate.hash,
       token: candidate.activation.token,
       findings: ["2 fields have no label."],
+      failure: "smoke",
     });
     expect(seen.stagings.map((s) => s.candidate.hash)).toEqual([candidate.hash, "b".repeat(64)]);
     fake.stage = () =>
@@ -337,6 +339,46 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       expectedDataRevision: 1,
     });
     expect(seen.stagings[0]!.checks.map((check) => check.name)).toEqual(["smoke"]);
+  });
+
+  it("VER-03: a candidate that fits a profile is staged behind the smoke check, then the profile's behavior check", async () => {
+    const { fake, seen } = deps(
+      { ...candidate, profile: "item-list" },
+      {
+        outcome: "activated",
+        workspace: {} as never,
+        migrationCount: 0,
+      },
+    );
+    await carryOut("A shopping list", null, fake);
+    expect(seen.stagings[0]!.checks.map((check) => check.name)).toEqual(["smoke", "behavior"]);
+  });
+
+  it("GEN-09, VER-03: a behavior failure gets one repair of its own, after a smoke repair too, and no second", async () => {
+    const fits = { ...candidate, profile: "item-list" } as GenerateReply;
+    const { fake, seen } = deps(fits);
+    const repair = vi.fn().mockResolvedValue({ ...fits, hash: "b".repeat(64) });
+    fake.repairSmoke = repair;
+    const failures: StagingResult[] = [
+      { outcome: "check-failed", check: "smoke", reason: "1 field has no label." },
+      { outcome: "check-failed", check: "behavior", reason: "expected 3 items; observed 2." },
+      { outcome: "check-failed", check: "behavior", reason: "expected 3 items; observed 2." },
+    ];
+    fake.stage = (options) => {
+      seen.stagings.push(options);
+      return Promise.resolve(failures.shift()!);
+    };
+    expect(await carryOut("A shopping list", null, fake)).toEqual({
+      message: en["request.checkFailed"],
+    });
+    expect(repair.mock.calls.map(([request]) => (request as { failure: string }).failure)).toEqual([
+      "smoke",
+      "behavior",
+    ]);
+    expect(repair.mock.calls[1]![0]).toMatchObject({
+      findings: ["expected 3 items; observed 2."],
+    });
+    expect(seen.stagings).toHaveLength(3);
   });
 
   it("GEN-08: a candidate that fails its check, or is refused, is never called ready, and nothing opens", async () => {

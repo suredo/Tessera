@@ -14,6 +14,7 @@ const candidate: Extract<GenerateReply, { kind: "candidate" }> = {
   mountId: "test",
   capabilities: [],
   syntheticData: {},
+  profile: null,
   expectedDataRevision: 0,
   activation: { token, expiresAt: Date.now() + 420_000 },
   name: "List",
@@ -400,4 +401,19 @@ describe("GEN-08: the choice on reviewed entries", () => {
     );
     expect(result.message).toBe(en["request.dataCancelled"]);
   });
+});
+
+it("GEN-09: a request whose candidate fails its checks with no repair left lets the server go, and still says the check failed", async () => {
+  const { owner, calls } = control();
+  const fake = deps();
+  fake.stage = vi.fn<RequestDeps["stage"]>(() =>
+    Promise.resolve({ outcome: "check-failed", check: "smoke", reason: "Still broken." }),
+  );
+  expect(await carryOut("Make it dark", token, fake, undefined, owner)).toEqual({
+    message: en["request.editCheckFailed"],
+  });
+  // One repair, then the release: the request isn't stopped here, only let go on the server.
+  expect(fake.repairSmoke).toHaveBeenCalledTimes(1);
+  await vi.waitFor(() => expect(calls).toContain("/api/generate/cancel"));
+  expect(owner.stopped).toBe(false);
 });

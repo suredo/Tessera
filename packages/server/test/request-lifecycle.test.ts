@@ -4,7 +4,10 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ACTIVATION_ROUTE,
+  CANCEL_REQUEST_ROUTE,
   DEFAULT_ROUTES,
+  REGISTER_REQUEST_ROUTE,
+  requestControlSchema,
   GENERATE_ROUTE,
   FINISH_DATA_ROUTE,
   SMOKE_REPAIR_ROUTE,
@@ -233,5 +236,114 @@ describe("request lifecycle authority", () => {
     expect(
       activationReplySchema.parse((await f.post(ACTIVATION_ROUTE, f.activation(latest))).body),
     ).toMatchObject({ ok: true });
+  });
+});
+
+describe("a repaired candidate's continuation (GEN-09, VER-03)", () => {
+  it("GEN-09: kept for the other check's repair, it holds the same edit as busy until its request is let go, then frees it", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-request-lifecycle-"));
+    const store = await openDataFolder(dir);
+    const intent = (kind: "create" | "edit") => ({
+      kind: "value" as const,
+      stage: "intent" as const,
+      value: {
+        kind,
+        interfacePart: kind === "edit" ? "Make it dark" : null,
+        dataPart: null,
+        behaviorChange: false,
+        lookOnly: false,
+        targetsCurrentTool: kind === "edit",
+        language: "en",
+        features: [],
+        profile: "item-list",
+      },
+    });
+    const dark = {
+      outcome: "edit",
+      summary: "Made it dark.",
+      files: { mode: "replace", code: { ...editFixture.code, css: "body{color:#eee}" } },
+      data: { mode: "unchanged" },
+    };
+    const provider = createScriptedProvider({
+      name: "continuation",
+      replies: [
+        intent("create"),
+        { kind: "value", stage: "create", value: editFixture },
+        intent("edit"),
+        { kind: "value", stage: "edit", value: dark },
+        { kind: "value", stage: "repair", value: dark },
+        intent("edit"),
+        { kind: "value", stage: "edit", value: dark },
+        intent("edit"),
+        { kind: "value", stage: "edit", value: dark },
+      ],
+    });
+    const server = await startLocalServer({
+      port: 0,
+      routes: generationRoutes({
+        store,
+        jobs: new JobQueue(),
+        provider: () => Promise.resolve(provider),
+        routes: () => DEFAULT_ROUTES,
+        requestTimeLimitMs: 60_000,
+      }),
+    });
+    cleanup.push(async () => {
+      await server.close();
+      store.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    });
+    const post = async (route: string, body: unknown) =>
+      await (
+        await fetch(new URL(route, server.url), {
+          method: "POST",
+          headers: { origin: server.url.replace(/\/$/, ""), "content-type": "application/json" },
+          body: JSON.stringify(body),
+        })
+      ).json();
+    const made = generateReplySchema.parse(await post(GENERATE_ROUTE, { request: "A list" }));
+    if (made.kind !== "candidate") throw new Error("No candidate");
+    expect(
+      activationReplySchema.parse(
+        await post(ACTIVATION_ROUTE, {
+          workspaceId: made.workspaceId,
+          hash: made.hash,
+          expectedDataRevision: made.expectedDataRevision,
+          token: made.activation.token,
+        }),
+      ),
+    ).toMatchObject({ ok: true });
+    const edit = async () => {
+      const { token } = requestControlSchema.parse(await post(REGISTER_REQUEST_ROUTE, {}));
+      const reply = generateReplySchema.parse(
+        await post(GENERATE_ROUTE, {
+          controlToken: token,
+          request: "Make it dark",
+          workspaceId: made.workspaceId,
+        }),
+      );
+      return { token, reply };
+    };
+    // The first edit fails its smoke check, is repaired once, and fails it again: the app ends it.
+    const first = await edit();
+    if (first.reply.kind !== "candidate") throw new Error("No edit candidate");
+    const repaired = generateReplySchema.parse(
+      await post(SMOKE_REPAIR_ROUTE, {
+        token: first.reply.activation.token,
+        workspaceId: first.reply.workspaceId,
+        hash: first.reply.hash,
+        findings: ["Blank"],
+        failure: "smoke",
+      }),
+    );
+    expect(repaired).toMatchObject({ kind: "candidate", profile: "item-list" });
+    // Its behavior repair is still unspent, so its continuation stays: the same edit is busy.
+    expect((await edit()).reply).toMatchObject({
+      kind: "failed",
+      message: "Another request is still checking this tool. Finish it before asking again.",
+    });
+    // Let go, as the app does when a request ends without a repair left, it frees the edit.
+    expect(await post(CANCEL_REQUEST_ROUTE, { token: first.token })).toEqual({ cancelled: true });
+    expect((await edit()).reply).toMatchObject({ kind: "candidate", profile: "item-list" });
   });
 });

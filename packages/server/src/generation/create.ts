@@ -40,6 +40,7 @@ export const REPAIR_BUDGETS: Readonly<Record<RepairClass, number>> = {
   "schema-shape": 1,
   static: 1,
   smoke: 1,
+  behavior: 1,
 };
 
 type ToolData = Artifact["data"]["defaults"];

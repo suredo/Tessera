@@ -43,6 +43,15 @@ export class RequestControl {
     const reply = await this.#post(CANCEL_REQUEST_ROUTE, { token: this.#token });
     return cancelRequestReplySchema.parse(reply).cancelled;
   }
+  /**
+   * Tells the server this request is over, without stopping it here: what it kept for a repair
+   * still to come goes, so the same tool isn't held as busy for the next request (GEN-09). Its
+   * answer doesn't matter; the server lets a request go at its deadline anyway.
+   */
+  async release(): Promise<void> {
+    if (!this.#token) return;
+    await this.#post(CANCEL_REQUEST_ROUTE, { token: this.#token }).catch(() => undefined);
+  }
   async #post(route: string, body: object): Promise<unknown> {
     const response = await this.#send(route, {
       method: "POST",

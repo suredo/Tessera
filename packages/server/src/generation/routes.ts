@@ -30,6 +30,7 @@ import type { GenerationResult } from "./result.ts";
 import { generate } from "./pipeline.ts";
 import { generateEdit } from "./edit-pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
+import { REPAIR_BUDGETS } from "./create.ts";
 import { REQUEST_TIME_LIMIT_MS, withinRequestDeadline } from "./deadline.ts";
 import { applyDataOffer, changeData, type DataOffer } from "./data-action.ts";
 import { RequestLedger } from "../ledger/index.ts";
@@ -455,6 +456,20 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   { ...entry.context, reply: repaired },
                   entry.expires,
                 );
+              }
+              // The repaired candidate keeps the continuation, with the repairs spent so far and
+              // the original deadline, while the other check's one repair is still there: a
+              // smoke repair, then a behavior one, or the reverse (GEN-09, VER-03). Only then,
+              // since nothing tells the server a request ended, and a continuation kept for
+              // nothing would make the same candidate look busy until the deadline. Kept last,
+              // as the checks above refuse a pending entry for the same candidate.
+              const other = smokeInput.failure === "behavior" ? "smoke" : "behavior";
+              if (
+                repaired.kind === "candidate" &&
+                repaired.profile !== null &&
+                (entry.context.repairUsage[other] ?? 0) < REPAIR_BUDGETS[other]
+              ) {
+                retain(pending, nextToken, { ...entry.context, reply: repaired }, entry.expires);
               }
               return repaired;
             },

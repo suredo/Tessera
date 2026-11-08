@@ -1,0 +1,3 @@
+The last tool started and showed, but failed Tessera's behavior check, run in a hidden panel against its reusable defaults with its saves going to a throwaway copy. Each problem below names the check's rule it broke, what was expected and what was observed. Make the tool follow every rule of the check stated above, through the hooks named there. Return the full creation answer again, or cannot with a plain reason if the request cannot work here.
+
+Keep the tool's purpose, language, name, data schema and reusable defaults. Fix its HTML, CSS and JavaScript. The workspace already holds the request's starting entries; they will not be installed again. Return an empty initialState. Never write data on startup or bypass the host's checks.

@@ -197,6 +197,7 @@ export async function generate(
     mountId: candidateMount(hash),
     capabilities: created.artifact.capabilities,
     syntheticData: created.artifact.data.defaults,
+    profile: decision.intent.profile ?? null,
     expectedDataRevision: workspace.dataRevision,
     name: created.name,
     summary: created.summary,

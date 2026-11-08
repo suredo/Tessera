@@ -133,6 +133,53 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     }
   });
 
+  it("VER-03, GEN-09: a tool that fits a profile carries it to staging, and its behavior failure is repaired once with its own part and the profile's", async () => {
+    const folder = await newFolder();
+    let context: SmokeRepairContext | undefined;
+    const reply = await generate(
+      folder,
+      script(intentReply({ kind: "create", profile: "item-list" }), createReply(tool)),
+      DEFAULT_ROUTES,
+      { request: "A shopping list" },
+      undefined,
+      (c) => {
+        context = c;
+      },
+    );
+    expect(reply).toMatchObject({ kind: "candidate", profile: "item-list" });
+    if (!context) throw new Error("Expected continuation");
+    const finding =
+      "The item-list check, a rule of Tessera's (Pressing an item's item-remove removes that item from the list, and saves that.): expected 2 items; observed 3.";
+    const scripted = script(repairReply(tool));
+    let parts: readonly string[] = [];
+    const repaired = await repairSmoke(
+      folder,
+      {
+        ...scripted,
+        run(spec) {
+          parts = spec.promptParts ?? [];
+          expect(spec.prompt).toContain(finding);
+          return scripted.run(spec);
+        },
+      },
+      DEFAULT_ROUTES,
+      {
+        workspaceId: context.reply.workspaceId,
+        hash: context.reply.hash,
+        findings: [finding],
+        failure: "behavior",
+      },
+      context,
+    );
+    expect(repaired).toMatchObject({ kind: "candidate", profile: "item-list" });
+    expect(parts.map((part) => part.split("@")[0])).toEqual(
+      expect.arrayContaining(["repair-behavior", "profile"]),
+    );
+    expect(parts.some((part) => part.startsWith("repair-smoke@"))).toBe(false);
+    expect(context.repairUsage).toEqual({ behavior: 1 });
+    folder.close();
+  });
+
   it("GEN-09: smoke repair retains earlier class budgets and quotes the stored answer with the original language", async () => {
     const folder = await newFolder();
     let context: SmokeRepairContext | undefined;
@@ -613,6 +660,72 @@ describe("the generate route (GEN-01, CLI-06)", () => {
       }
     },
   );
+
+  it("GEN-09, VER-03: over HTTP, a smoke repair and then a behavior repair each get their one call, and a second of either gets none", async () => {
+    const folder = await newFolder();
+    const fixed = (html: string) => ({
+      ...tool,
+      code: { ...tool.code, html },
+      data: { ...tool.data, initialState: {} },
+    });
+    const scripted = script(
+      intentReply({ kind: "create", profile: "item-list" }),
+      createReply(tool),
+      repairReply(fixed("<h1>Labelled</h1>")),
+      repairReply(fixed("<h1>Keeps what it adds</h1>")),
+    );
+    const stages: string[] = [];
+    const provider: Provider = {
+      ...scripted,
+      run(spec) {
+        stages.push(spec.stage);
+        return scripted.run(spec);
+      },
+    };
+    const server = await startLocalServer({
+      port: 0,
+      routes: generationRoutes({
+        store: folder,
+        jobs: new JobQueue(),
+        provider: () => Promise.resolve(provider),
+        routes: () => DEFAULT_ROUTES,
+      }),
+    });
+    const repair = async (
+      reply: ReturnType<typeof generateReplySchema.parse>,
+      failure: "smoke" | "behavior",
+    ) => {
+      if (reply.kind !== "candidate") throw new Error(`Expected a candidate, got ${reply.kind}`);
+      const body = JSON.stringify({
+        token: reply.activation.token,
+        workspaceId: reply.workspaceId,
+        hash: reply.hash,
+        findings: [`The ${failure} check failed.`],
+        failure,
+      });
+      return generateReplySchema.parse(
+        JSON.parse((await send(server.port, "POST", body, SMOKE_REPAIR_ROUTE)).body),
+      );
+    };
+    try {
+      const made = generateReplySchema.parse(
+        JSON.parse((await send(server.port, "POST", JSON.stringify({ request: "A list" }))).body),
+      );
+      if (made.kind !== "candidate") throw new Error("Expected candidate");
+      const before = getWorkspace(folder, made.workspaceId);
+      const smoked = await repair(made, "smoke");
+      expect(smoked).toMatchObject({ kind: "candidate", profile: "item-list" });
+      const behaved = await repair(smoked, "behavior");
+      expect(behaved).toMatchObject({ kind: "candidate", profile: "item-list" });
+      // Each class's one repair is spent: a second of either fails without a call.
+      expect(await repair(behaved, "behavior")).toMatchObject({ kind: "failed" });
+      expect(stages).toEqual(["intent", "create", "repair", "repair"]);
+      expect(getWorkspace(folder, made.workspaceId)?.data).toEqual(before?.data);
+    } finally {
+      await server.close();
+      folder.close();
+    }
+  });
 
   it("GEN-11: each stage's configured time limit reaches creation and its repair", async () => {
     const folder = await newFolder();

@@ -2,6 +2,8 @@
 
 ## 2026-11-08
 
+* **New**: The app runs the item-list check, last part of [issue 273](https://github.com/suredo/Tessera/issues/273) (`VER-03`, `GEN-09`): a candidate carries the profile its intent named ([contracts](code/contracts/package.md), [generation stages](code/server/generation.md)), the [browser](code/web/package.md) stages it behind the smoke check and that profile's behavior check, and a behavior failure gets one repair of its own, with new [prompt parts](code/server/prompts.md) for creation's and an edit's. A scripted end-to-end test repairs a list that didn't keep what it added. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T12:51:50Z.
+
 * **Update**: The owner approved edit's prompt budget of 20,000 ([prompt assembly](code/server/prompts.md), `GEN-03`, #273). Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T14:46:03Z.
 
 * **New**: The item-list profile's behavior check, fourth part of [issue 273](https://github.com/suredo/Tessera/issues/273) (`VER-03`, `VER-07`): the [runtime](code/runtime/package.md)'s `profileCheck` adds an item, opens the tool again, removes it and opens it again, through the profile's hooks and on a throwaway copy, and a failure says what was expected and observed and whose rule it is. A good scripted list passes and each deliberately broken one fails. The app doesn't run it yet. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T12:28:38Z.
