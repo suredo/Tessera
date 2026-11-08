@@ -1,17 +1,17 @@
 ---
 type: Code Module
 title: "Provider adapters"
-description: "The one interface every model connection implements: the Claude Code adapter, with locked flags, a clean environment, normalized usage and plain errors; the Codex adapter behind the same contract, not yet wired into the app; and the scripted provider that answers from a script chosen by test configuration."
+description: "The one interface every model connection implements: the Claude Code adapter, with locked flags, a clean environment, normalized usage and plain errors; the Codex adapter behind the same contract, used when the data folder chooses Codex; the choice of program and each program's routes; and the scripted provider that answers from a script chosen by test configuration."
 resource: ../../../packages/server/src/providers/
 implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, CLI-09, TEST-02, ENG-11, OBS-02]
 tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/codex.test.ts, ../../../packages/server/test/strict-schema.test.ts, ../../../packages/server/test/routing.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
 tags: [code, server, providers]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T01:50:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T02:20:00Z }
 ---
 # Purpose
 
-Puts every model connection behind one interface (`CLI-01`): a stage's system prompt, request, schema, model, effort, tool policy, time limit and cancellation go in, and the checked value, its normalized usage (`CLI-04`) and the raw answer come out. Two providers implement it. The Claude Code adapter (#139) is the product's one way to call a model; it took over the M0 spike's caller and the findings of [ADR 0002](../../decisions/adr/0002-claude-code-cli-contract.md). The scripted provider answers from canned replies, so tests and dry runs (`OBS-02`) run the real code at no cost. Codex follows in M3 behind the same interface.
+Puts every model connection behind one interface (`CLI-01`): a stage's system prompt, request, schema, model, effort, tool policy, time limit and cancellation go in, and the checked value, its normalized usage (`CLI-04`) and the raw answer come out. Two providers implement it. The Claude Code adapter (#139) is the product's default way to call a model; it took over the M0 spike's caller and the findings of [ADR 0002](../../decisions/adr/0002-claude-code-cli-contract.md). The scripted provider answers from canned replies, so tests and dry runs (`OBS-02`) run the real code at no cost. The Codex adapter (#266, M3) is the other, used when the data folder chooses Codex on the [setup check](setup.md)'s provider route.
 
 # Entry points
 

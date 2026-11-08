@@ -195,13 +195,43 @@ describe("the launcher (PLAT-02)", () => {
 
 // The entry point Tessera.cmd runs, as its own process.
 const main = fileURLToPath(new URL("../src/launcher/main.ts", import.meta.url));
+
+/**
+ * A PATH folder holding only a fake Codex, laid out as npm installs it, so the check on start
+ * finds it instead of any real program on the machine (ENG-11). The fake writes each start's
+ * arguments to `calls.log` beside it and says an old version, so the check stops there.
+ */
+function fakeCodexPath(): { bin: string; calls: () => string } {
+  const bin = dataFolder();
+  const script = `const fs = require("node:fs");
+const path = require("node:path");
+fs.appendFileSync(path.join(${JSON.stringify(bin)}, "calls.log"), process.argv.slice(2).join(" ") + "\\n");
+process.stdout.write("codex-cli 0.0.1\\n");
+`;
+  if (process.platform === "win32") {
+    const launcher = path.join(bin, "node_modules", "@openai", "codex", "bin", "codex.js");
+    fs.mkdirSync(path.dirname(launcher), { recursive: true });
+    fs.writeFileSync(launcher, script);
+    fs.writeFileSync(path.join(bin, "codex.cmd"), "");
+  } else {
+    fs.writeFileSync(path.join(bin, "codex"), `#!${process.execPath}\n${script}`);
+    fs.chmodSync(path.join(bin, "codex"), 0o755);
+  }
+  const log = path.join(bin, "calls.log");
+  return { bin, calls: () => (fs.existsSync(log) ? fs.readFileSync(log, "utf8") : "") };
+}
+
 function runMain(dataDir: string, nodeArgs: string[] = [], env: NodeJS.ProcessEnv = {}) {
+  // Only the fake Codex on the PATH unless a test gives its own PATH: never a real program.
+  const { bin } = fakeCodexPath();
   const child = spawn(process.execPath, [...nodeArgs, main], {
     env: {
       ...process.env,
+      PATH: bin,
+      Path: bin,
       TESSERA_DATA_DIR: dataDir,
       TESSERA_OPEN_BROWSER: "0",
-      // Never the real Codex home folder: the check on start would ready it (ENG-19).
+      // Never the real Codex home folder either: the check on start would ready it (ENG-19).
       TESSERA_CODEX_HOME: path.join(dataDir, "..", `${path.basename(dataDir)}-codex-home`),
       ...env,
     },
@@ -238,6 +268,20 @@ describe("the launcher's entry point (PLAT-02)", { timeout: 30_000 }, () => {
     expect(run.errors()).toContain(`Tessera found Claude Code at ${claude} but couldn't start it.`);
     await new Promise((resolve) => setTimeout(resolve, 500));
     expect(run.child.exitCode).toBeNull();
+    run.child.kill("SIGKILL");
+    await run.exit;
+  });
+
+  it("PLAT-03, ENG-11: the check on start checks Codex too, and reaches only the fake one", async () => {
+    const fake = fakeCodexPath();
+    const run = runMain(dataFolder(), [], { PATH: fake.bin, Path: fake.bin });
+    expect(await run.line).toContain("Tessera is running at");
+    const deadline = Date.now() + 15_000;
+    while (!fake.calls().includes("--version") && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    // Asked its version, which is too old, so nothing more: no sign-in check, no catalog.
+    expect(fake.calls()).toBe("--version\n");
     run.child.kill("SIGKILL");
     await run.exit;
   });

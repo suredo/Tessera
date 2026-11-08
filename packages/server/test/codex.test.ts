@@ -614,7 +614,7 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
   });
 
   it("CLI-02, PLAT-03: npm's codex.cmd is started through the launcher script beside it, with Node", async () => {
-    const env = pathWith("codex.cmd");
+    const env = pathWith("codex.CMD");
     const script = path.join(env.PATH, "node_modules", "@openai", "codex", "bin", "codex.js");
     fs.mkdirSync(path.dirname(script), { recursive: true });
     fs.writeFileSync(script, "");
