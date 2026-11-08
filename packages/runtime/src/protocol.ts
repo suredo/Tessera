@@ -52,7 +52,7 @@ export type DriveStep =
  * A field a fields step describes, so a check can fill it with a value it takes: its element and
  * type, its name, whether it must be filled and is checked, its limits as the page states them
  * (empty when it states none; a max length of -1 when none), and a select's choices' values, the
- * first 50 that can be chosen.
+ * first 50 that can be chosen, and its value now, the first 200 characters.
  */
 export type DriveField = {
   kind: "input" | "select" | "textarea" | "other";
@@ -65,6 +65,7 @@ export type DriveField = {
   step: string;
   maxLength: number;
   choices: string[];
+  value: string;
 };
 
 /**

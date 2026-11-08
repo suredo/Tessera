@@ -160,6 +160,7 @@ function readField(value: unknown): DriveField {
     step: text("step"),
     maxLength: typeof field["maxLength"] === "number" ? field["maxLength"] : -1,
     choices: Array.isArray(choices) ? choices.map(String) : [],
+    value: text("value"),
   };
 }
 

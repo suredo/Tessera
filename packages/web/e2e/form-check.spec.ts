@@ -11,15 +11,27 @@ import { ready } from "./support/ready.ts";
 // what was observed and whose rule it is (VER-07).
 
 type Flaw =
-  "none" | "numbersOnly" | "silent" | "savesEmpty" | "notSaved" | "dropsAllergies" | "browserOnly";
+  | "none"
+  | "numbersOnly"
+  | "silent"
+  | "savesEmpty"
+  | "notSaved"
+  | "dropsAllergies"
+  | "browserOnly"
+  | "consentOnly"
+  | "shortName"
+  | "pastDate"
+  | "verbose";
 
 /** An RSVP form that fits the form profile, with `flaw` built in. */
 const rsvp = (flaw: Flaw): Artifact["code"] => ({
   html: `<form>
-${flaw === "numbersOnly" ? "" : '<label for="name">Name</label> <input id="name" name="name" data-hook="form-field" required>'}
-<label for="people">How many people</label> <input id="people" name="people" type="number" min="1" max="20" data-hook="form-field" required>
+${flaw === "consentOnly" ? '<label for="note">Note</label> <input id="note" name="note" data-hook="form-field">' : ""}
+${flaw === "numbersOnly" || flaw === "consentOnly" ? "" : `<label for="name">Name</label> <input id="name" name="name" data-hook="form-field" required${flaw === "shortName" ? ' maxlength="8"' : ""}>`}
+${flaw === "pastDate" ? '<label for="day">Day</label> <input id="day" name="day" type="date" max="2025-12-31" data-hook="form-field" required>' : ""}
+${flaw === "consentOnly" ? "" : '<label for="people">How many people</label> <input id="people" name="people" type="number" min="1" max="20" data-hook="form-field" required>'}
 <label for="meal">Meal</label> <select id="meal" name="meal" data-hook="form-field"><option value="">Any</option><option value="fish">Fish</option><option value="veg">Vegetarian</option></select>
-${flaw === "numbersOnly" ? "" : '<label for="allergies">Food allergies</label> <textarea id="allergies" name="allergies" data-hook="form-field"></textarea>'}
+${flaw === "numbersOnly" || flaw === "consentOnly" ? "" : '<label for="allergies">Food allergies</label> <textarea id="allergies" name="allergies" data-hook="form-field"></textarea>'}
 <label><input type="checkbox" name="coming" data-hook="form-field" required> I'm coming</label>
 <button ${flaw === "browserOnly" ? "" : 'type="button"'} data-hook="form-submit">Send</button>
 <p data-hook="form-error"></p>
@@ -34,8 +46,11 @@ const error = document.querySelector("[data-hook=form-error]");
 const render = () => list.replaceChildren(...state.data.answers.map((answer) => {
   const item = document.createElement("li");
   item.dataset.hook = "answer";
-  const parts = [answer.name, answer.people + " people", answer.meal, flaw === "dropsAllergies" ? "" : answer.allergies];
-  item.textContent = parts.filter(Boolean).join(", ");
+  // One flaw shows a set phrase in place of the name; one starts each answer with a long thank-you.
+  const name = flaw === "shortName" ? "Answer saved" : answer.name;
+  const parts = [name, answer.note, answer.day, answer.people ? answer.people + " people" : "", answer.meal, flaw === "dropsAllergies" ? "" : answer.allergies];
+  const thanks = flaw === "verbose" ? "Thank you for answering. ".repeat(10) : "";
+  item.textContent = thanks + parts.filter(Boolean).join(", ");
   return item;
 }));
 const load = () => tessera.call("data.read").then((read) => { state = read; render(); });
@@ -45,12 +60,17 @@ const send = (event) => {
   event.preventDefault();
   const answer = Object.fromEntries(new FormData(form));
   const missing = [...form.elements].filter((field) => field.required && (field.type === "checkbox" ? !field.checked : !field.value.trim()));
-  if (missing.length > 0 && flaw !== "savesEmpty") {
+  // One flaw saves without the box ticked, and says nothing.
+  if (missing.length > 0 && flaw !== "savesEmpty" && flaw !== "consentOnly") {
     if (flaw !== "silent") error.textContent = "Please fill in: " + missing.map((field) => field.labels[0].textContent.trim()).join(", ");
     return;
   }
+  if (flaw === "pastDate" && answer.day > "2025-12-31") {
+    error.textContent = "Pick a day by the end of 2025.";
+    return;
+  }
   error.textContent = "";
-  const record = { name: answer.name ?? "", people: Number(answer.people), meal: answer.meal ?? "", allergies: answer.allergies ?? "" };
+  const record = { name: answer.name ?? "", note: answer.note ?? "", day: answer.day ?? "", people: Number(answer.people ?? 0), meal: answer.meal ?? "", allergies: answer.allergies ?? "" };
   if (flaw === "notSaved") {
     state.data.answers.push({ id: "local", ...record });
     return render();
@@ -69,6 +89,10 @@ const flaws: Flaw[] = [
   "notSaved",
   "dropsAllergies",
   "browserOnly",
+  "consentOnly",
+  "shortName",
+  "pastDate",
+  "verbose",
 ];
 let host: SandboxHost;
 
@@ -131,7 +155,7 @@ test("VER-03, VER-07: a form that refuses without saying what is missing fails, 
   const result = await check(page, "silent");
   expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
   expect(result.reason).toBe(
-    `The form check, a rule of Tessera's ${REFUSES}: expected 1 answer as before, and form-error saying what is missing, after sending the form with required field 1 empty; observed 1 answer; form-error saying nothing.`,
+    `The form check, a rule of Tessera's ${REFUSES}: expected 1 answer as before, and form-error saying what is missing, after sending the form with required field 1 unfilled; observed 1 answer; form-error saying nothing.`,
   );
 });
 
@@ -165,4 +189,30 @@ test("VER-03: a form that shows an answer without saving it fails once opened ag
   expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
   expect(result.reason).toContain("(Opened again, the tool shows every answer saved.)");
   expect(result.reason).toMatch(/observed 1 answer; gone: "Tessera check answer [0-9a-f]{6} 1, /);
+});
+
+test("VER-03: a form whose only required field is a box to tick is sent with it unticked, and fails if it saves anyway", async ({
+  page,
+}) => {
+  const result = await check(page, "consentOnly");
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toContain(
+    "after sending the form with required field 3 unfilled; observed 2 answers; none gone; new: ",
+  );
+  expect(result.reason).toContain("form-error saying nothing.");
+});
+
+test("VER-03: a form whose answer doesn't show a text typed in a short field fails", async ({
+  page,
+}) => {
+  const result = await check(page, "shortName");
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toMatch(/observed it without "[0-9a-f]{6}x1"\.$/);
+});
+
+test("VER-03: a form takes a date within its stated limits, and a long answer is checked whole", async ({
+  page,
+}) => {
+  expect(await check(page, "pastDate")).toEqual(PASSED);
+  expect(await check(page, "verbose")).toEqual(PASSED);
 });

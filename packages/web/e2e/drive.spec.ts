@@ -264,6 +264,7 @@ test("VER-03: a check reads what a hooked field is, so it can fill it with a val
             step: "",
             maxLength: -1,
             choices: ["", "f", "h"],
+            value: "",
           },
         ],
       },

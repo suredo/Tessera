@@ -195,6 +195,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
                   .slice(0, 50)
                   .map((option) => option.value.slice(0, 200))
               : [],
+            value: (input ?? select ?? area)?.value.slice(0, 200) ?? "",
           };
         });
         results.push({ ok: true, count: found.length, fields });
