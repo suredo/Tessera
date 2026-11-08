@@ -89,10 +89,12 @@ export type RepairClass = (typeof REPAIR_CLASSES)[number];
  * when set (GEN-09). Edit's rose from 18,500 in M3 for the verification profile's part, which states
  * every rule a profile's check enforces (VER-04, #273): its fixture with the part measured 18,835;
  * the owner approved 20,000 on 2026-11-08.
- * Creation's fixture is a creation that fits a profile, its largest shape: 16,997 when set.
+ * Creation's fixture is a creation that fits a profile, its largest shape: with the item list,
+ * 16,997 when set at 17,000; with the filtering profile, 17,530, and the owner approved 20,000 on
+ * 2026-11-08, room for the profiles still to come. Every profile's part is measured in both.
  */
 export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
-  create: 17_000,
+  create: 20_000,
   edit: 20_000,
   repair: 23_500,
 };

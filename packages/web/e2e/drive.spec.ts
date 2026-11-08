@@ -67,6 +67,17 @@ document.querySelector("[data-hook=item-add]").addEventListener("click", () => {
   },
   // A hooked element that is neither a field nor a button.
   text: { html: '<p data-hook="total">0</p>', css: "", js: "" },
+  // A select whose choices' values aren't what they say, and items it hides.
+  picker: {
+    html: '<label for="pick">Show</label> <select id="pick" data-hook="pick"><option value="">All</option><option value="f">Fiction</option><option value="h">History</option></select><ul><li data-hook="book" data-genre="f">Dune</li><li data-hook="book" data-genre="h">SPQR</li><li data-hook="book" data-genre="h" style="visibility: hidden">Gone</li></ul>',
+    css: "",
+    js: `const pick = document.querySelector("[data-hook=pick]");
+pick.addEventListener("change", () => {
+  for (const book of document.querySelectorAll("[data-hook=book]")) {
+    book.hidden = pick.value !== "" && book.dataset.genre !== pick.value;
+  }
+});`,
+  },
 };
 
 let host: SandboxHost;
@@ -201,12 +212,42 @@ test("VER-03: a check fills in, clicks and reads hooked elements, each step once
   });
 });
 
+test("VER-03: a check chooses a select's choice by its value or by what it says, and reads only what is shown", async ({
+  page,
+}) => {
+  expect(
+    await drive(page, "picker", [
+      { do: "read", hook: "book" },
+      { do: "fill", hook: "pick", value: "History" },
+      { do: "read", hook: "book" },
+      { do: "fill", hook: "pick", value: "f" },
+      { do: "find", hook: "book", value: "Dune" },
+      { do: "fill", hook: "pick", value: "" },
+      { do: "read", hook: "book" },
+      { do: "fill", hook: "pick", value: "Poetry" },
+      { do: "read", hook: "book" },
+    ]),
+  ).toEqual({
+    problems: [],
+    steps: [
+      { ok: true, count: 2, texts: ["Dune", "SPQR"] },
+      { ok: true },
+      { ok: true, count: 1, texts: ["SPQR"] },
+      { ok: true },
+      { ok: true, count: 1, matches: [0] },
+      { ok: true },
+      { ok: true, count: 2, texts: ["Dune", "SPQR"] },
+      { ok: false, problem: 'The select with the hook "pick" has no choice "Poetry".' },
+    ],
+  });
+});
+
 test("VER-03: a step that can't be done ends the answer, saying what was missing", async ({
   page,
 }) => {
   expect(await drive(page, "list", [{ do: "click", hook: "item-save" }])).toEqual({
     problems: [],
-    steps: [{ ok: false, problem: 'Nothing has the hook "item-save".' }],
+    steps: [{ ok: false, problem: 'Nothing shown has the hook "item-save".' }],
   });
   expect(
     await drive(page, "list", [
@@ -218,7 +259,7 @@ test("VER-03: a step that can't be done ends the answer, saying what was missing
     steps: [
       {
         ok: false,
-        problem: 'Only 1 element has the hook "item-remove", so there is no number 4.',
+        problem: 'Only 1 element shown has the hook "item-remove", so there is no number 4.',
       },
     ],
   });

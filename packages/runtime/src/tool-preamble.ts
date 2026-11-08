@@ -145,7 +145,11 @@ import type { BridgeMethodName } from "@tessera/contracts";
         results.push({ ok: false, problem: `"${hook.slice(0, 50)}" isn't a hook name.` });
         break;
       }
-      const found = [...document.querySelectorAll(`[data-hook~="${hook}"]`)];
+      // Only what the page shows: an element hidden, as a filter may hide an item, isn't there for
+      // the person, so it isn't for the check either.
+      const found = [...document.querySelectorAll(`[data-hook~="${hook}"]`)].filter((element) =>
+        element.checkVisibility({ visibilityProperty: true }),
+      );
       const textOf = (element: Element) =>
         (element instanceof HTMLElement ? element.innerText : (element.textContent ?? ""))
           .trim()
@@ -176,8 +180,23 @@ import type { BridgeMethodName } from "@tessera/contracts";
           ok: false,
           problem:
             found.length === 0
-              ? `Nothing has the hook "${hook}".`
-              : `Only ${found.length} ${found.length === 1 ? "element has" : "elements have"} the hook "${hook}", so there is no number ${index + 1}.`,
+              ? `Nothing shown has the hook "${hook}".`
+              : `Only ${found.length} ${found.length === 1 ? "element shown has" : "elements shown have"} the hook "${hook}", so there is no number ${index + 1}.`,
+        });
+        break;
+      }
+      const value = String(step.value);
+      // A select is filled by choosing the choice whose value or text is the value, as a person
+      // picks by what it says.
+      const choice =
+        element instanceof HTMLSelectElement
+          ? ([...element.options].find((option) => option.value === value) ??
+            [...element.options].find((option) => textOf(option) === value.trim()))
+          : undefined;
+      if (step.do === "fill" && element instanceof HTMLSelectElement && !choice) {
+        results.push({
+          ok: false,
+          problem: `The select with the hook "${hook}" has no choice ${value ? `"${value.slice(0, 60)}"` : "with an empty value"}.`,
         });
         break;
       }
@@ -190,7 +209,10 @@ import type { BridgeMethodName } from "@tessera/contracts";
       ) {
         // Through the prototype's setter, as typing would, then the events typing gives.
         const prototype = Object.getPrototypeOf(element) as object;
-        Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(element, String(step.value));
+        Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(
+          element,
+          choice ? choice.value : value,
+        );
         element.dispatchEvent(new Event("input", { bubbles: true }));
         element.dispatchEvent(new Event("change", { bubbles: true }));
       } else {

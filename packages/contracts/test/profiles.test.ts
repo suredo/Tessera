@@ -17,10 +17,17 @@ describe("verification profiles", () => {
       // The names the staging panel's driver accepts.
       for (const name of names) expect(name).toMatch(/^[a-z][a-z0-9-]{0,40}$/);
       for (const rule of profile.rules) {
-        for (const named of rule.match(/\bitem(-[a-z]+)?\b/g) ?? []) {
+        for (const named of rule.match(/\b[a-z]+(?:-[a-z]+)+\b/g) ?? []) {
           expect(names, `${profile.id}: "${rule}" names ${named}`).toContain(named);
         }
       }
     }
+  });
+
+  it("VER-03: the filtering profile is an item list too, so the item list's check holds for it", () => {
+    const names = PROFILES.filtering.hooks.map((hook) => hook.name);
+    for (const hook of PROFILES["item-list"].hooks) expect(names).toContain(hook.name);
+    expect(PROFILES.filtering.rules.slice(1, 3)).toEqual(PROFILES["item-list"].rules.slice(1));
+    expect(PROFILES.filtering.fixture.itemName).toBe(PROFILES["item-list"].fixture.itemName);
   });
 });
