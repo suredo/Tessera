@@ -342,11 +342,14 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
   });
 
   it("VER-03: a candidate that fits a profile is staged behind the smoke check, then the profile's behavior check", async () => {
-    const { fake, seen } = deps({ ...candidate, profile: "item-list" }, {
-      outcome: "activated",
-      workspace: {} as never,
-      migrationCount: 0,
-    });
+    const { fake, seen } = deps(
+      { ...candidate, profile: "item-list" },
+      {
+        outcome: "activated",
+        workspace: {} as never,
+        migrationCount: 0,
+      },
+    );
     await carryOut("A shopping list", null, fake);
     expect(seen.stagings[0]!.checks.map((check) => check.name)).toEqual(["smoke", "behavior"]);
   });
