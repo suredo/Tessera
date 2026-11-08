@@ -2,6 +2,8 @@
 
 ## 2026-11-08
 
+* **Update**: The owner approved edit's prompt budget of 20,000 ([prompt assembly](code/server/prompts.md), `GEN-03`, #273). Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T14:46:03Z.
+
 * **New**: The item-list profile's behavior check, fourth part of [issue 273](https://github.com/suredo/Tessera/issues/273) (`VER-03`, `VER-07`): the [runtime](code/runtime/package.md)'s `profileCheck` adds an item, opens the tool again, removes it and opens it again, through the profile's hooks and on a throwaway copy, and a failure says what was expected and observed and whose rule it is. A good scripted list passes and each deliberately broken one fails. The app doesn't run it yet. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T12:28:38Z.
 
 * **New**: The verification-profile registry, third part of [issue 273](https://github.com/suredo/Tessera/issues/273) (`VER-03`, `VER-04`): the [contracts](code/contracts/package.md) define each profile once, the first being item list, and the intent names the profile a tool fits, as the owner chose. The [intent stage](code/server/intent.md)'s prompt lists the profiles, and the [prompt assembly](code/server/prompts.md) gives a fitting tool its hooks and every rule its check enforces, in a new part; edit's prompt budget rises to 20,000 for it. Earlier replays report as stale. No check runs the profile yet. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T12:19:47Z.
