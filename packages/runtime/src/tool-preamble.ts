@@ -23,6 +23,8 @@ import type { BridgeMethodName } from "@tessera/contracts";
     byte.toString(16).padStart(2, "0"),
   ).join("");
   let lastCall = 0;
+  // Counts calls made and settled, so a behavior check can tell a quiet moment from a busy one.
+  let activity = 0;
 
   // A waiting envelope is copied now, as the port would copy it, so what can't be sent fails here,
   // and a later change to it by the tool doesn't change what is sent.
@@ -47,6 +49,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
       if (data && "ping" in data) port?.postMessage({ pong: data.ping });
       else if (data && "reply" in data) settle(data.reply);
       else if (data && "inspect" in data) void inspect((data as { inspect?: unknown }).inspect);
+      else if (data && "drive" in data) void drive((data as { drive?: unknown }).drive);
       else listeners.forEach((listen) => listen(data?.message));
     };
     for (const envelope of waiting.splice(0)) port.postMessage(envelope);
@@ -63,6 +66,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
     const call = typeof r?.requestId === "string" ? pending.get(r.requestId) : undefined;
     if (!call || !r) return;
     pending.delete(r.requestId as string);
+    activity += 1;
     if (r.ok === true) return call.resolve(r.result);
     const message = r.error?.message;
     const error = new Error(typeof message === "string" ? message : "The host refused the call.");
@@ -102,9 +106,89 @@ import type { BridgeMethodName } from "@tessera/contracts";
 
   // The smoke check's question: once the tool's calls have settled (or 3 seconds have passed),
   // what it shows, whether it scrolls sideways, and the accessibility floor's basics.
-  async function inspect(id: unknown) {
-    const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
+  const wait = (ms: number) => new Promise((done) => setTimeout(done, ms));
+  // Until the tool's calls have settled, or 3 seconds have passed.
+  const settled = async () => {
     for (let waited = 0; pending.size > 0 && waited < 3000; waited += 50) await wait(50);
+  };
+  // Settled, then 50 quiet ms to show the result: a call made or settled in that time starts the
+  // wait again, a bounded number of times.
+  const shown = async () => {
+    for (let rounds = 0; rounds < 20; rounds += 1) {
+      await settled();
+      const seen = activity;
+      await wait(50);
+      if (pending.size === 0 && activity === seen) return;
+    }
+  };
+
+  // A behavior check's question (VER-03): steps on the elements the tool marks with a hook name
+  // in its `data-hook` attribute, one at a time, each once the tool's calls have settled and it
+  // has had a moment to show the result. The first step that can't be done ends the answer, with
+  // what was missing. Like the smoke check's report, the answer is the page's word.
+  async function drive(question: unknown) {
+    const q = question as { id?: unknown; steps?: unknown } | null;
+    if (typeof q?.id !== "number" || !Array.isArray(q.steps)) return;
+    await codeRan;
+    await shown();
+    const results: object[] = [];
+    for (const raw of q.steps as unknown[]) {
+      const step = raw as { do?: unknown; hook?: unknown; index?: unknown; value?: unknown };
+      const hook = typeof step?.hook === "string" ? step.hook : "";
+      if (!/^[a-z][a-z0-9-]{0,40}$/.test(hook)) {
+        results.push({ ok: false, problem: `"${hook.slice(0, 50)}" isn't a hook name.` });
+        break;
+      }
+      const found = [...document.querySelectorAll(`[data-hook~="${hook}"]`)];
+      if (step.do === "read") {
+        const texts = found.map((element) =>
+          (element instanceof HTMLElement ? element.innerText : (element.textContent ?? ""))
+            .trim()
+            .replace(/\s+/g, " ")
+            .slice(0, 200),
+        );
+        results.push({ ok: true, count: found.length, texts: texts.slice(0, 100) });
+        continue;
+      }
+      const index = typeof step.index === "number" ? step.index : 0;
+      const element = found[index];
+      if (!element) {
+        results.push({
+          ok: false,
+          problem:
+            found.length === 0
+              ? `Nothing has the hook "${hook}".`
+              : `Only ${found.length} ${found.length === 1 ? "element has" : "elements have"} the hook "${hook}", so there is no number ${index + 1}.`,
+        });
+        break;
+      }
+      if (step.do === "click" && element instanceof HTMLElement) element.click();
+      else if (
+        step.do === "fill" &&
+        (element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement ||
+          element instanceof HTMLSelectElement)
+      ) {
+        // Through the prototype's setter, as typing would, then the events typing gives.
+        const prototype = Object.getPrototypeOf(element) as object;
+        Object.getOwnPropertyDescriptor(prototype, "value")?.set?.call(element, String(step.value));
+        element.dispatchEvent(new Event("input", { bubbles: true }));
+        element.dispatchEvent(new Event("change", { bubbles: true }));
+      } else {
+        results.push({
+          ok: false,
+          problem: `The element with the hook "${hook}" can't be ${step.do === "fill" ? "filled in" : "clicked"}.`,
+        });
+        break;
+      }
+      await shown();
+      results.push({ ok: true });
+    }
+    post({ report: { id: q.id, problems: [...problems], steps: results } });
+  }
+
+  async function inspect(id: unknown) {
+    await settled();
     // Watched for at least two seconds after the tool's code ran, so an error a quiet tool makes a
     // moment after starting is seen too, however long the page took to load (#214).
     const ran = await codeRan;
@@ -239,6 +323,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
    */
   function call(action: string, args: unknown = {}): Promise<unknown> {
     lastCall += 1;
+    activity += 1;
     const requestId = `p${page}-c${lastCall}`;
     return new Promise((resolve, reject) => {
       pending.set(requestId, { resolve, reject });

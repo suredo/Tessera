@@ -1,8 +1,10 @@
 import type { MountedTool } from "./host.ts";
+import type { DriveResult, DriveStep } from "./protocol.ts";
 
 // The checks a candidate runs in the staging panel before it may be activated (RUN-03): the smoke
 // check (VER-02), and a stub for tests. The static check (VER-01) runs on the server, before a
-// candidate reaches staging; behavior checks plug in here in M3.
+// candidate reaches staging; behavior checks drive the candidate
+// through its hooks with `driveTool` (VER-03).
 
 /** A check's verdict: passed, or failed with a plain reason the person could read. */
 export type CheckOutcome = { ok: true } | { ok: false; reason: string };
@@ -99,3 +101,47 @@ export const smokeCheck = (options: { timeoutMs?: number } = {}): VerificationCh
     return found.length === 0 ? { ok: true } : { ok: false, reason: found.join(" ") };
   },
 });
+
+/** What the tool's page answered to a behavior check's steps (VER-03). */
+export type DriveReport = {
+  /** What went wrong since it started, as for the smoke check. */
+  problems: string[];
+  /** One result per step taken; the first that failed is the last. */
+  steps: DriveResult[];
+};
+
+function readStep(value: unknown): DriveResult | undefined {
+  const step = value as Partial<Record<string, unknown>> | null;
+  if (typeof step !== "object" || step === null) return undefined;
+  if (step["ok"] === false) {
+    return typeof step["problem"] === "string"
+      ? { ok: false, problem: step["problem"] }
+      : undefined;
+  }
+  if (step["ok"] !== true) return undefined;
+  const texts = step["texts"];
+  return {
+    ok: true,
+    ...(typeof step["count"] === "number" ? { count: step["count"] } : {}),
+    ...(Array.isArray(texts) ? { texts: texts.map(String) } : {}),
+  };
+}
+
+/**
+ * Takes `steps` on the candidate and reads its page's answer; undefined when the answer can't be
+ * read. The answer is the page's word, so a behavior check judges quality, not safety.
+ */
+export async function driveTool(
+  tool: MountedTool,
+  steps: readonly DriveStep[],
+  timeoutMs?: number,
+): Promise<DriveReport | undefined> {
+  const report = (await tool.drive(steps, timeoutMs)) as Partial<Record<string, unknown>> | null;
+  if (typeof report !== "object" || report === null) return undefined;
+  const problems = report["problems"];
+  const results = report["steps"];
+  if (!Array.isArray(problems) || !Array.isArray(results)) return undefined;
+  const read = results.map(readStep);
+  if (!read.every((step) => step !== undefined)) return undefined;
+  return { problems: problems.map(String), steps: read };
+}

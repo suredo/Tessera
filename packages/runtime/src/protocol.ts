@@ -34,3 +34,18 @@ export const isToolHost = (host: string, port: number | string): boolean =>
 /** The runtime's origin for a host app page: the same port on the other loopback name. */
 export const runtimeOriginFor = (appLocation: { protocol: string; port: string }): string =>
   `${appLocation.protocol}//${RUNTIME_HOST}:${appLocation.port}`;
+
+/**
+ * One step a behavior check takes on a candidate (VER-03), on the elements it marks with `hook` in
+ * their `data-hook` attribute: fill in the `index`th one (the first by default) with `value`, click
+ * it, or read what every one of them shows. The tool's page takes the steps (src/tool-preamble.ts,
+ * which repeats these names).
+ */
+export type DriveStep =
+  | { do: "fill"; hook: string; value: string; index?: number }
+  | { do: "click"; hook: string; index?: number }
+  | { do: "read"; hook: string };
+
+/** What a step did: a read gives how many elements have the hook and the text of each. */
+export type DriveResult =
+  { ok: true; count?: number; texts?: string[] } | { ok: false; problem: string };

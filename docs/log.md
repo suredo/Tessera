@@ -2,6 +2,8 @@
 
 ## 2026-11-08
 
+* **New**: A behavior check can drive a candidate in the staging panel, first part of [issue 273](https://github.com/suredo/Tessera/issues/273) (`VER-03`): the [runtime](code/runtime/package.md) gains `driveTool`, which fills in, clicks and reads the elements a tool marks with hook names in their `data-hook` attribute, each step once the tool has settled, and says what was missing when a step can't be done. No profile uses it yet. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T11:50:30Z.
+
 * **New**: [ADR 0013](decisions/adr/0013-codex-cli-contract.md), the Codex CLI contract ([issue 266](https://github.com/suredo/Tessera/issues/266)): what the Codex probe found on 0.166.0 and the rules it sets, three of them the owner's choices, the rest for the owner to confirm. The [threat model](spec/threat-model.md) numbers the trusted CLIs' checks, TCL-01 to TCL-07 (`SEC-05`), each claimed by the [provider adapters](code/server/providers.md) or the [Codex probe](code/evals/codex-probe.md) and named by its tests; the [providers spec](spec/providers.md) takes over Codex's locked settings and home folder; and the probe's failures are lessons L-86 to L-88 in [Tessera issues](lessons/tessera-issues.md). Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T03:30:00Z.
 
 * **Update**: The [status screen](code/web/package.md) offers the choice of program, Claude Code or Codex, with each one's status beside it ([issue 266](https://github.com/suredo/Tessera/issues/266), `CLI-01`); the choice is kept with the data folder, the probe uses the chosen program, and the notice on the main screens gives the chosen program's problem. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T02:55:00Z.
