@@ -116,6 +116,8 @@ export async function runPilot(mode: RunMode): Promise<string> {
       setup: {
         findClaude: () =>
           Promise.resolve({ ok: true as const, executable: "fake-claude", version: "0.0.0" }),
+        findCodex: () =>
+          Promise.resolve({ ok: true as const, executable: "fake-codex", version: "0.0.0" }),
       },
     }),
   });

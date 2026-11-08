@@ -36,6 +36,10 @@ export {
   buildArgs as buildCodexArgs,
   CODEX_FAILURE_MESSAGES,
   codexFailureKind,
+  codexHome,
+  codexLaunch,
+  CODEX_HOME_VARIABLE,
+  liveCodexProvider,
   codexSignInCommand,
   createCodexProvider,
   findCodex,
@@ -52,6 +56,14 @@ export {
   type CodexStatus,
 } from "./codex.ts";
 export { restoreAnswer, toStrictSchema } from "./strict-schema.ts";
+export {
+  DEFAULT_PROVIDER,
+  loadProviderRoutes,
+  PROVIDER_FILE,
+  readProviderChoice,
+  ROUTES_FILES,
+  writeProviderChoice,
+} from "./choice.ts";
 export {
   loadRoutes,
   ROUTES_FILE,

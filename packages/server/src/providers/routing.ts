@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import {
-  DEFAULT_ROUTES,
+  DEFAULT_ROUTES_BY_PROVIDER,
   EFFORTS,
-  MODELS,
+  MODELS_BY_PROVIDER,
   routeOverridesSchema,
   STAGES,
   withOverrides,
+  type ProviderName,
   type Route,
   type Stage,
 } from "@tessera/contracts";
@@ -41,7 +42,8 @@ const shown = (value: unknown) =>
  * What is wrong with a routes file's content, in plain words (GEN-12), or undefined if nothing
  * is: which step is affected, and what it may say instead.
  */
-function problemWith(content: unknown): string | undefined {
+function problemWith(content: unknown, provider: ProviderName): string | undefined {
+  const models = MODELS_BY_PROVIDER[provider];
   if (!isObject(content)) return "it should list steps, each with a model and an effort";
   for (const [stage, route] of Object.entries(content)) {
     if (!(STAGES as readonly string[]).includes(stage)) {
@@ -54,8 +56,8 @@ function problemWith(content: unknown): string | undefined {
     if (extra.length > 0) {
       return `the ${stage} step has "${extra[0]}", but a step has only a model and an effort`;
     }
-    if (!(MODELS as readonly unknown[]).includes(route["model"])) {
-      return `the ${stage} step names a model Tessera doesn't know, ${shown(route["model"])}; the models are ${list(MODELS)}`;
+    if (!(models as readonly unknown[]).includes(route["model"])) {
+      return `the ${stage} step names a model ${provider === "codex" ? "Codex" : "Claude Code"} doesn't take, ${shown(route["model"])}; the models are ${list(models)}`;
     }
     if (!(EFFORTS as readonly unknown[]).includes(route["effort"])) {
       return `the ${stage} step's effort should be ${list(EFFORTS)}, not ${shown(route["effort"])}`;
@@ -65,16 +67,17 @@ function problemWith(content: unknown): string | undefined {
 }
 
 /**
- * The routes in use: the defaults, with the stages `file` names replaced. A missing file means the
- * defaults. A file Tessera can't use is refused with a plain message that says what to change, so
- * a mistake there never silently falls back to some other route.
+ * The routes in use for a program: its defaults, with the stages `file` names replaced. A missing
+ * file means the defaults. A file Tessera can't use, a model of the other program included, is
+ * refused with a plain message that says what to change, so a mistake there never silently falls
+ * back to some other route.
  */
-export function loadRoutes(file: string): Routes {
+export function loadRoutes(file: string, provider: ProviderName = "claude-code"): Routes {
   let text: string;
   try {
     text = fs.readFileSync(file, "utf8");
   } catch (error) {
-    if ((error as { code?: string }).code === "ENOENT") return DEFAULT_ROUTES;
+    if ((error as { code?: string }).code === "ENOENT") return DEFAULT_ROUTES_BY_PROVIDER[provider];
     throw error;
   }
   const refuse = (why: string) =>
@@ -87,12 +90,12 @@ export function loadRoutes(file: string): Routes {
   } catch {
     throw refuse("its text isn't written in the settings format");
   }
-  const problem = problemWith(content);
+  const problem = problemWith(content, provider);
   if (problem !== undefined) throw refuse(problem);
   // The contract has the last word; the checks above only put its refusals into plain words.
   const parsed = routeOverridesSchema.safeParse(content);
   if (!parsed.success) throw refuse("one of its steps isn't written as a model and an effort");
-  return withOverrides(parsed.data);
+  return withOverrides(parsed.data, provider);
 }
 
 /** One stage call, without its route: the routing table supplies the model and effort. */

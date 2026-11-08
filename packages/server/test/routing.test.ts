@@ -1,7 +1,15 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DEFAULT_ROUTES, STAGES, type Stage } from "@tessera/contracts";
+import {
+  CODEX_DEFAULT_ROUTES,
+  DEFAULT_ROUTES,
+  DEFAULT_ROUTES_BY_PROVIDER,
+  MODELS_BY_PROVIDER,
+  PROVIDERS,
+  STAGES,
+  type Stage,
+} from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -78,6 +86,49 @@ describe("the routing table (CLI-09)", () => {
     expect(routes.edit).toEqual(DEFAULT_ROUTES.edit);
   });
 
+  it("CLI-09: Codex starts by the same kinds of task: the fast model where Claude's routes use Haiku, the everyday one where they use Sonnet", () => {
+    expect(CODEX_DEFAULT_ROUTES).toEqual({
+      intent: { model: "gpt-6-luna", effort: "low" },
+      data: { model: "gpt-6-luna", effort: "low" },
+      acceptance: { model: "gpt-6-luna", effort: "low" },
+      create: { model: "gpt-6.1-sol", effort: "medium" },
+      repair: { model: "gpt-6.1-sol", effort: "medium" },
+      edit: { model: "gpt-6.1-sol", effort: "low" },
+      research: { model: "gpt-6.1-sol", effort: "medium" },
+      review: { model: "gpt-6.1-sol", effort: "medium" },
+    });
+    // Each program's defaults name only its own models.
+    for (const provider of PROVIDERS) {
+      for (const stage of STAGES) {
+        expect(MODELS_BY_PROVIDER[provider]).toContain(
+          DEFAULT_ROUTES_BY_PROVIDER[provider][stage].model,
+        );
+      }
+    }
+  });
+
+  it("CLI-09: a program's routes file takes only that program's models, over its own defaults", () => {
+    const missing = path.join(os.tmpdir(), "no-such-folder-tessera", "codex-routes.json");
+    expect(loadRoutes(missing, "codex")).toEqual(CODEX_DEFAULT_ROUTES);
+    const codex = loadRoutes(
+      routesFile(JSON.stringify({ edit: { model: "gpt-6-astra", effort: "high" } })),
+      "codex",
+    );
+    expect(codex.edit).toEqual({ model: "gpt-6-astra", effort: "high" });
+    expect(codex.intent).toEqual(CODEX_DEFAULT_ROUTES.intent);
+    expect(() =>
+      loadRoutes(
+        routesFile(JSON.stringify({ edit: { model: "claude-sonnet-5-5", effort: "low" } })),
+        "codex",
+      ),
+    ).toThrow(
+      'the edit step names a model Codex doesn\'t take, "claude-sonnet-5-5"; the models are gpt-6-luna, gpt-6.1-terra, gpt-6.1-sol, gpt-6-sol or gpt-6-astra',
+    );
+    expect(() =>
+      loadRoutes(routesFile(JSON.stringify({ edit: { model: "gpt-6.1-sol", effort: "low" } }))),
+    ).toThrow("a model Claude Code doesn't take");
+  });
+
   it("CLI-09: no routes file means the defaults", () => {
     expect(loadRoutes(path.join(os.tmpdir(), "no-such-folder-tessera", "routes.json"))).toEqual(
       DEFAULT_ROUTES,
@@ -103,7 +154,7 @@ describe("the routing table (CLI-09)", () => {
       ],
       [
         JSON.stringify({ create: { model: "gpt-5", effort: "low" } }),
-        'the create step names a model Tessera doesn\'t know, "gpt-5"; the models are claude-haiku-5-5, claude-sonnet-5-5 or claude-opus-5-5',
+        'the create step names a model Claude Code doesn\'t take, "gpt-5"; the models are claude-haiku-5-5, claude-sonnet-5-5 or claude-opus-5-5',
       ],
       [
         JSON.stringify({ create: { model: "claude-sonnet-5-5", effort: "extreme" } }),
@@ -112,7 +163,7 @@ describe("the routing table (CLI-09)", () => {
       // A value that isn't a plain one is never coerced to text, which could throw instead.
       [
         JSON.stringify({ create: { model: { toString: null }, effort: "low" } }),
-        "the create step names a model Tessera doesn't know, something that isn't a name; the models are claude-haiku-5-5, claude-sonnet-5-5 or claude-opus-5-5",
+        "the create step names a model Claude Code doesn't take, something that isn't a name; the models are claude-haiku-5-5, claude-sonnet-5-5 or claude-opus-5-5",
       ],
       [
         JSON.stringify({ create: { model: "claude-sonnet-5-5", effort: { toString: null } } }),

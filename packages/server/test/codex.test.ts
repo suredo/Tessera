@@ -12,6 +12,8 @@ import {
   codexInputText,
   createCodexProvider,
   findCodex,
+  codexHome,
+  codexLaunch,
   codexSignInCommand,
   MODEL_CATALOG_FILE,
   ProviderError,
@@ -565,7 +567,9 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
   /** Codex answering the version, `login status` (on stderr, as Codex prints it) and the catalog. */
   const answering =
     (version: string, login: string, models: ProcessResult | string = BUNDLED) =>
-    (_exe: string, args: readonly string[]): Promise<ProcessResult> => {
+    (_exe: string, all: readonly string[]): Promise<ProcessResult> => {
+      // npm's launcher script, when Codex is started through it, comes before Codex's own arguments.
+      const args = all[0]?.endsWith(".js") ? all.slice(1) : all;
       if (args[0] === "debug" && typeof models !== "string") return Promise.resolve(models);
       const said = { "--version": version, debug: models }[args[0] ?? ""];
       return Promise.resolve({
@@ -607,6 +611,46 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
       problem: "batch-file",
       message: expect.stringContaining("codex.exe") as unknown,
     });
+  });
+
+  it("CLI-02, PLAT-03: npm's codex.cmd is started through the launcher script beside it, with Node", async () => {
+    const env = pathWith("codex.CMD");
+    const script = path.join(env.PATH, "node_modules", "@openai", "codex", "bin", "codex.js");
+    fs.mkdirSync(path.dirname(script), { recursive: true });
+    fs.writeFileSync(script, "");
+    const started: string[][] = [];
+    const recording = (exe: string, args: readonly string[]) => {
+      started.push([exe, ...args]);
+      return signedIn(exe, args);
+    };
+    expect(await findCodex(home(), env, "win32", recording)).toEqual({
+      ok: true,
+      executable: script,
+      version: "0.166.0",
+    });
+    // Every check starts Node with the script; nothing starts the batch file.
+    expect(started.map(([exe, first]) => [exe, first])).toEqual([
+      [process.execPath, script],
+      [process.execPath, script],
+      [process.execPath, script],
+    ]);
+    // And so does every call, through the adapter.
+    expect(codexLaunch(script)).toEqual({ executable: process.execPath, leadingArgs: [script] });
+    expect(codexLaunch("C:\\Tools\\codex.exe")).toEqual({
+      executable: "C:\\Tools\\codex.exe",
+      leadingArgs: [],
+    });
+  });
+
+  it("CLI-08: Tessera's Codex home folder is one per account, outside every data folder, and tests can move it", () => {
+    expect(codexHome({ LOCALAPPDATA: "C:\\Users\\o\\AppData\\Local" }, "win32")).toBe(
+      path.join("C:\\Users\\o\\AppData\\Local", "Tessera", "codex-home"),
+    );
+    expect(codexHome({ XDG_DATA_HOME: "/home/o/.local/share" }, "linux")).toBe(
+      path.join("/home/o/.local/share", "Tessera", "codex-home"),
+    );
+    const moved = tempDir();
+    expect(codexHome({ TESSERA_CODEX_HOME: moved }, "win32")).toBe(path.resolve(moved));
   });
 
   it("CLI-02: refuses a version older than the tested one, and checks sign-in without a model call", async () => {

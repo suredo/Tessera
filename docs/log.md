@@ -2,6 +2,8 @@
 
 ## 2026-11-08
 
+* **New**: Codex can be chosen as the program Tessera reaches a model through ([issue 266](https://github.com/suredo/Tessera/issues/266), `CLI-01`, `CLI-09`, `PLAT-03`). The [setup check](code/server/setup.md) checks Claude Code and Codex, keeps the choice in the data folder (Claude Code until one is made, set on a new route), is ready when Node.js and the chosen program pass, and the probe and every request use the chosen one. Codex has its own starting routes and routes file ([contracts](code/contracts/package.md), [provider adapters](code/server/providers.md), [providers spec](spec/providers.md)); npm's codex.cmd is started through npm's launcher script with Node; and Tessera's Codex home folder is one per account. The status screen doesn't offer the choice yet. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T01:50:00Z.
+
 * **New**: The [Codex probe](code/evals/codex-probe.md) ran the Codex adapter against the real CLI with the 4 calls the owner approved ([issue 266](https://github.com/suredo/Tessera/issues/266), `CLI-01`, `CLI-03`, `CLI-05`). A ChatGPT sign-in can't use gpt-5.5, and that wording now maps to an unavailable model; strict structured output refused the contracts' schemas, so the [provider adapters](code/server/providers.md) gain a projection of each contract onto strict mode and back (`strict-schema.ts`), with the contract still checked by the host. Then a real create answer passed the creation contract and the model was offered no tool. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T00:58:00Z.
 
 ## 2026-11-07

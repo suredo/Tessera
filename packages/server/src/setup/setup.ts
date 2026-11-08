@@ -3,33 +3,42 @@ import path from "node:path";
 import {
   PROBE_ROUTE,
   probeResultSchema,
+  PROVIDER_ROUTE,
+  providerChoiceSchema,
   SETUP_ROUTE,
   setupReportSchema,
   type ClaudeCheck,
+  type CodexCheck,
   type NodeCheck,
   type ProbeResult,
+  type ProviderName,
   type SetupReport,
 } from "@tessera/contracts";
 import { z } from "zod";
-import { json, text } from "../http/body.ts";
+import { json, readJson, text } from "../http/body.ts";
 import type { Handler } from "../http/server.ts";
 import { fixedPart } from "../prompts/index.ts";
 import {
   atLeast,
+  codexHome,
   createClaudeProvider,
   findClaude,
-  loadRoutes,
+  findCodex,
+  liveCodexProvider,
+  loadProviderRoutes,
   ProviderError,
-  ROUTES_FILE,
+  readProviderChoice,
   RoutesError,
   runStage,
+  writeProviderChoice,
   type Provider,
 } from "../providers/index.ts";
 
 // The setup check (PLAT-03) and the probe (CLI-02), for the status screen (APP-07): Node's version,
-// Claude Code installed, recent enough and signed in, none of which spends a model call, and the
-// data folder's size. The probe is the one check that does call a model, so it runs only when
-// asked, only once the rest has passed, and only one at a time.
+// Claude Code and Codex each installed, recent enough and signed in, none of which spends a model
+// call, which program is chosen (CLI-01), and the data folder's size. Tessera is ready when Node
+// and the chosen program pass. The probe is the one check that does call a model, through the
+// chosen program, so it runs only when asked, only once the rest has passed, and one at a time.
 
 /** The oldest Node.js Tessera runs on: the lower bound of the root package.json's engines. */
 export const MINIMUM_NODE = "22.12.0";
@@ -41,13 +50,55 @@ export type SetupOptions = {
   dataDir: string;
   /** Checks Claude Code; findClaude unless a test passes its own. */
   findClaude?: () => Promise<ClaudeCheck>;
-  /** The provider the probe calls, for the program found; the live adapter unless a test passes its own. */
-  probeProvider?: (executable: string) => Provider;
+  /** Checks Codex; findCodex with Tessera's Codex home folder unless a test passes its own. */
+  findCodex?: () => Promise<CodexCheck>;
+  /**
+   * The provider for the program found, which the probe and every request call; the live adapter
+   * unless a test passes its own.
+   */
+  probeProvider?: (executable: string, provider: ProviderName) => Provider;
   /** Node's version; this process's unless a test passes its own. */
   nodeVersion?: string;
 };
 
-const COULDNT_CHECK = "Tessera couldn't check Claude Code. Reinstall Claude Code, then try again.";
+const NAMES: Readonly<Record<ProviderName, string>> = {
+  "claude-code": "Claude Code",
+  codex: "Codex",
+};
+
+const couldntCheck = (provider: ProviderName): ClaudeCheck => ({
+  ok: false,
+  problem: "broken",
+  message: `Tessera couldn't check ${NAMES[provider]}. Reinstall ${NAMES[provider]}, then try again.`,
+});
+
+/** One program's check, as the options give it. It explains what it finds; it never fails itself. */
+function check(options: SetupOptions, provider: ProviderName): Promise<ClaudeCheck> {
+  const find =
+    provider === "codex"
+      ? (options.findCodex ?? (() => findCodex(codexHome())))
+      : (options.findClaude ?? (() => findClaude()));
+  return find().catch(() => couldntCheck(provider));
+}
+
+/** The live adapter for a program found. */
+export const liveProvider = (executable: string, provider: ProviderName): Provider =>
+  provider === "codex"
+    ? liveCodexProvider(executable)
+    : createClaudeProvider({ executable, live: true });
+
+/**
+ * The provider every model call goes through: the chosen program's, found when asked, so a fix or
+ * a new choice made on the status screen counts at once; or what is wrong with it, in plain words.
+ */
+export async function chosenProvider(
+  options: SetupOptions,
+): Promise<{ provider: Provider; name: ProviderName } | { problem: string }> {
+  const name = readProviderChoice(options.dataDir);
+  const found = await check(options, name);
+  if (!found.ok) return { problem: found.message };
+  return { provider: (options.probeProvider ?? liveProvider)(found.executable, name), name };
+}
 
 /** Whether this Node.js is recent enough, and if not, how to fix it. */
 export function checkNode(version: string = process.versions.node): NodeCheck {
@@ -83,19 +134,24 @@ export function folderBytes(dir: string): number {
   return bytes;
 }
 
-/** The setup check: ready only when Node.js and Claude Code both pass (PLAT-03). */
+/**
+ * The setup check: both programs are checked, so the status screen can show which can be chosen,
+ * and Tessera is ready when Node.js and the chosen one pass (PLAT-03).
+ */
 export async function checkSetup(options: SetupOptions): Promise<SetupReport> {
   const node = checkNode(options.nodeVersion);
-  // The check explains what it finds; it never fails itself, so Tessera stays up to show it.
-  const claude = await (options.findClaude ?? (() => findClaude()))().catch((): ClaudeCheck => ({
-    ok: false,
-    problem: "broken",
-    message: COULDNT_CHECK,
-  }));
+  const provider = readProviderChoice(options.dataDir);
+  const [claude, codex] = await Promise.all([
+    check(options, "claude-code"),
+    check(options, "codex"),
+  ]);
+  const chosen = provider === "codex" ? codex : claude;
   return {
-    ready: node.ok && claude.ok,
+    ready: node.ok && chosen.ok,
+    provider,
     node,
     claude,
+    codex,
     dataFolder: { path: options.dataDir, bytes: folderBytes(options.dataDir) },
   };
 }
@@ -103,12 +159,16 @@ export async function checkSetup(options: SetupOptions): Promise<SetupReport> {
 const probeAnswer = z.strictObject({ connected: z.literal(true) });
 
 /**
- * The probe (CLI-02): one small structured answer, on the intent stage's route, the cheapest. A
- * failure is the adapter's plain message.
+ * The probe (CLI-02): one small structured answer, on the intent stage's route of the program
+ * given, the cheapest. A failure is the adapter's plain message.
  */
-export async function runProbe(provider: Provider, dataDir: string): Promise<ProbeResult> {
+export async function runProbe(
+  provider: Provider,
+  dataDir: string,
+  name: ProviderName = "claude-code",
+): Promise<ProbeResult> {
   try {
-    const routes = loadRoutes(path.join(dataDir, ROUTES_FILE));
+    const routes = loadProviderRoutes(dataDir, name);
     const system = fixedPart("probe");
     const prompt = fixedPart("probe-request");
     const result = await runStage(provider, routes, {
@@ -132,17 +192,17 @@ const NOT_READY =
   "The probe would fail until the setup check passes. Fix what the status screen shows first.";
 
 /**
- * The setup routes for the local server: the check on GET, and the probe on POST, which runs
- * only when the check passes, and shares one call between requests that arrive while it runs.
+ * The setup routes for the local server: the check on GET; the probe on POST, which runs only
+ * when the check passes, and shares one call between requests that arrive while it runs; and the
+ * choice of program on POST, answered with the check as it now stands.
  */
 export function setupRoutes(options: SetupOptions): Record<string, Handler> {
-  const live = (executable: string) => createClaudeProvider({ executable, live: true });
   let probing: Promise<ProbeResult> | undefined;
   const probe = async (): Promise<ProbeResult> => {
-    const report = await checkSetup(options);
-    if (!report.ready || !report.claude.ok) return { ok: false, message: NOT_READY };
-    const provider = (options.probeProvider ?? live)(report.claude.executable);
-    return runProbe(provider, options.dataDir);
+    if (!checkNode(options.nodeVersion).ok) return { ok: false, message: NOT_READY };
+    const chosen = await chosenProvider(options);
+    if ("problem" in chosen) return { ok: false, message: NOT_READY };
+    return runProbe(chosen.provider, options.dataDir, chosen.name);
   };
   return {
     [SETUP_ROUTE]: async (req, res) => {
@@ -153,6 +213,15 @@ export function setupRoutes(options: SetupOptions): Record<string, Handler> {
       if (req.method !== "POST") return text(res, 405, "Run the probe with POST.");
       probing ??= probe().finally(() => (probing = undefined));
       json(res, probeResultSchema.parse(await probing));
+    },
+    [PROVIDER_ROUTE]: async (req, res) => {
+      if (req.method !== "POST") return text(res, 405, "Choose the program with POST.");
+      const body = await readJson(req, 1024);
+      const choice =
+        typeof body === "object" ? providerChoiceSchema.safeParse(body.json) : undefined;
+      if (!choice?.success) return text(res, 400, "Choose Claude Code or Codex.");
+      writeProviderChoice(options.dataDir, choice.data.provider);
+      json(res, setupReportSchema.parse(await checkSetup(options)));
     },
   };
 }

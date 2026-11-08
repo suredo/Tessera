@@ -202,6 +202,8 @@ export async function runScenario(
           setup: {
             findClaude: () =>
               Promise.resolve({ ok: true as const, executable: "rehearsal", version: "0.0.0" }),
+            findCodex: () =>
+              Promise.resolve({ ok: true as const, executable: "rehearsal", version: "0.0.0" }),
           },
         }),
   });

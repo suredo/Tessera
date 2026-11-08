@@ -4,17 +4,28 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  CODEX_DEFAULT_ROUTES,
   DEFAULT_ROUTES,
   PROBE_ROUTE,
   probeResultSchema,
+  PROVIDER_ROUTE,
   SETUP_ROUTE,
   setupReportSchema,
   type ClaudeCheck,
+  type ProviderName,
 } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { startLocalServer } from "../src/http/index.ts";
 import { partText } from "../src/prompts/index.ts";
-import { createClaudeProvider, FAILURE_MESSAGES, ROUTES_FILE } from "../src/providers/index.ts";
+import {
+  createClaudeProvider,
+  FAILURE_MESSAGES,
+  PROVIDER_FILE,
+  readProviderChoice,
+  ROUTES_FILE,
+  ROUTES_FILES,
+  writeProviderChoice,
+} from "../src/providers/index.ts";
 import {
   checkNode,
   checkSetup,
@@ -38,6 +49,14 @@ const tempDir = () => {
 };
 
 const READY: ClaudeCheck = { ok: true, executable: "/usr/bin/claude", version: "2.1.310" };
+const CODEX_READY: ClaudeCheck = { ok: true, executable: "/usr/bin/codex", version: "0.166.0" };
+const CODEX_MISSING: ClaudeCheck = {
+  ok: false,
+  problem: "missing",
+  message: "Codex isn't installed, or isn't on the PATH. Install it, then try again.",
+};
+/** Codex as the check sees it unless a test says otherwise: never the real one (ENG-11). */
+const noCodex = () => Promise.resolve(CODEX_MISSING);
 const SIGNED_OUT: ClaudeCheck = {
   ok: false,
   problem: "signed-out",
@@ -108,12 +127,21 @@ describe("the setup check (PLAT-03)", () => {
 
   it("PLAT-03: is ready only when Node.js and Claude Code both pass, and passes Claude Code's problem on", async () => {
     const dataDir = tempDir();
-    const ready = await checkSetup({ dataDir, findClaude: () => Promise.resolve(READY) });
+    const ready = await checkSetup({
+      dataDir,
+      findCodex: noCodex,
+      findClaude: () => Promise.resolve(READY),
+    });
     expect(ready).toMatchObject({ ready: true, claude: READY });
-    const signedOut = await checkSetup({ dataDir, findClaude: () => Promise.resolve(SIGNED_OUT) });
+    const signedOut = await checkSetup({
+      dataDir,
+      findCodex: noCodex,
+      findClaude: () => Promise.resolve(SIGNED_OUT),
+    });
     expect(signedOut).toMatchObject({ ready: false, claude: SIGNED_OUT });
     const oldNode = await checkSetup({
       dataDir,
+      findCodex: noCodex,
       findClaude: () => Promise.resolve(READY),
       nodeVersion: "20.0.0",
     });
@@ -128,7 +156,11 @@ describe("the setup check (PLAT-03)", () => {
     fs.writeFileSync(path.join(dataDir, "assets", "ab", "one"), "y".repeat(234));
     expect(folderBytes(dataDir)).toBe(1234);
     expect(folderBytes(path.join(dataDir, "missing"))).toBe(0);
-    const report = await checkSetup({ dataDir, findClaude: () => Promise.resolve(READY) });
+    const report = await checkSetup({
+      dataDir,
+      findCodex: noCodex,
+      findClaude: () => Promise.resolve(READY),
+    });
     expect(report.dataFolder).toEqual({ path: dataDir, bytes: 1234 });
   });
 });
@@ -176,9 +208,76 @@ describe("the probe (CLI-02)", () => {
   });
 });
 
+describe("the choice of program (CLI-01, CLI-09)", () => {
+  it("CLI-01: keeps the choice in the data folder, Claude Code until one is made", () => {
+    const dataDir = tempDir();
+    expect(readProviderChoice(dataDir)).toBe("claude-code");
+    writeProviderChoice(dataDir, "codex");
+    expect(readProviderChoice(dataDir)).toBe("codex");
+    // Written whole: nothing is left beside it.
+    expect(fs.readdirSync(dataDir)).toEqual([PROVIDER_FILE]);
+    // A file Tessera didn't write as it does is a preference lost, not a stop.
+    fs.writeFileSync(path.join(dataDir, PROVIDER_FILE), '{"provider":"elsewhere"}');
+    expect(readProviderChoice(dataDir)).toBe("claude-code");
+  });
+
+  it("PLAT-03: checks both programs, and is ready when Node.js and the chosen one pass", async () => {
+    const dataDir = tempDir();
+    const check = (claude: ClaudeCheck, codex: ClaudeCheck) =>
+      checkSetup({
+        dataDir,
+        findClaude: () => Promise.resolve(claude),
+        findCodex: () => Promise.resolve(codex),
+      });
+    expect(await check(READY, CODEX_MISSING)).toMatchObject({
+      ready: true,
+      provider: "claude-code",
+      claude: READY,
+      codex: CODEX_MISSING,
+    });
+    writeProviderChoice(dataDir, "codex");
+    expect(await check(READY, CODEX_MISSING)).toMatchObject({ ready: false, provider: "codex" });
+    const both = await check(SIGNED_OUT, CODEX_READY);
+    expect(both).toMatchObject({ ready: true, provider: "codex", claude: SIGNED_OUT });
+    expect(setupReportSchema.parse(both)).toEqual(both);
+  });
+
+  it("CLI-09: the probe runs on the chosen program's routes, its own file included", async () => {
+    const dataDir = tempDir();
+    const standard = fakeClaude([connected]);
+    expect(await runProbe(standard.provider, dataDir, "codex")).toMatchObject({
+      ok: true,
+      model: CODEX_DEFAULT_ROUTES.intent.model,
+    });
+    const [call] = standard.made();
+    expect(call!.args[call!.args.indexOf("--model") + 1]).toBe(CODEX_DEFAULT_ROUTES.intent.model);
+    // Codex's own routes file; Claude Code's doesn't apply to it, nor its models.
+    fs.writeFileSync(
+      path.join(dataDir, ROUTES_FILES.codex),
+      JSON.stringify({ intent: { model: "gpt-6.1-sol", effort: "low" } }),
+    );
+    fs.writeFileSync(
+      path.join(dataDir, ROUTES_FILE),
+      JSON.stringify({ intent: { model: "claude-sonnet-5-5", effort: "low" } }),
+    );
+    const routed = fakeClaude([connected]);
+    expect(await runProbe(routed.provider, dataDir, "codex")).toMatchObject({
+      ok: true,
+      model: "gpt-6.1-sol",
+    });
+    fs.writeFileSync(
+      path.join(dataDir, ROUTES_FILES.codex),
+      JSON.stringify({ intent: { model: "claude-haiku-5-5", effort: "low" } }),
+    );
+    const refused = await runProbe(fakeClaude([connected]).provider, dataDir, "codex");
+    expect(refused).toMatchObject({ ok: false });
+    expect(!refused.ok && refused.message).toContain("a model Codex doesn't take");
+  });
+});
+
 describe("the setup routes (APP-07)", () => {
   type Answer = { status: number; body: string };
-  const send = (port: number, route: string, method: string): Promise<Answer> =>
+  const send = (port: number, route: string, method: string, body?: string): Promise<Answer> =>
     new Promise((resolve, reject) => {
       const req = http.request(
         {
@@ -195,7 +294,7 @@ describe("the setup routes (APP-07)", () => {
         },
       );
       req.on("error", reject);
-      req.end();
+      req.end(body);
     });
 
   it("APP-07: answers the check to GET, and runs the probe on POST only", async () => {
@@ -205,6 +304,7 @@ describe("the setup routes (APP-07)", () => {
       port: 0,
       routes: setupRoutes({
         dataDir,
+        findCodex: noCodex,
         findClaude: () => Promise.resolve(READY),
         probeProvider: () => provider,
       }),
@@ -228,7 +328,11 @@ describe("the setup routes (APP-07)", () => {
     const denied = Object.assign(new Error("spawn EACCES"), { code: "EACCES" });
     const server = await startLocalServer({
       port: 0,
-      routes: setupRoutes({ dataDir: tempDir(), findClaude: () => Promise.reject(denied) }),
+      routes: setupRoutes({
+        dataDir: tempDir(),
+        findCodex: noCodex,
+        findClaude: () => Promise.reject(denied),
+      }),
     });
     try {
       for (let i = 0; i < 2; i += 1) {
@@ -256,6 +360,7 @@ describe("the setup routes (APP-07)", () => {
       port: 0,
       routes: setupRoutes({
         dataDir,
+        findCodex: noCodex,
         findClaude: () => Promise.resolve(claude),
         probeProvider: () => provider,
       }),
@@ -277,6 +382,47 @@ describe("the setup routes (APP-07)", () => {
         expect.objectContaining({ ok: true }),
         expect.objectContaining({ ok: true }),
       ]);
+      expect(made()).toHaveLength(1);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("CLI-01: takes the choice of program on POST, keeps it, and the probe then uses it", async () => {
+    const dataDir = tempDir();
+    const { provider, made } = fakeClaude([connected]);
+    const asked: ProviderName[] = [];
+    const server = await startLocalServer({
+      port: 0,
+      routes: setupRoutes({
+        dataDir,
+        findClaude: () => Promise.resolve(READY),
+        findCodex: () => Promise.resolve(CODEX_READY),
+        probeProvider: (_executable, name) => {
+          asked.push(name);
+          return provider;
+        },
+      }),
+    });
+    try {
+      expect((await send(server.port, PROVIDER_ROUTE, "GET")).status).toBe(405);
+      for (const body of ["", "{", '{"provider":"elsewhere"}', '{"provider":"codex","x":1}']) {
+        expect((await send(server.port, PROVIDER_ROUTE, "POST", body)).status).toBe(400);
+      }
+      expect(readProviderChoice(dataDir)).toBe("claude-code");
+      const chosen = await send(server.port, PROVIDER_ROUTE, "POST", '{"provider":"codex"}');
+      expect(chosen.status).toBe(200);
+      expect(setupReportSchema.parse(JSON.parse(chosen.body))).toMatchObject({
+        ready: true,
+        provider: "codex",
+      });
+      expect(readProviderChoice(dataDir)).toBe("codex");
+      const probe = await send(server.port, PROBE_ROUTE, "POST");
+      expect(probeResultSchema.parse(JSON.parse(probe.body))).toMatchObject({
+        ok: true,
+        model: CODEX_DEFAULT_ROUTES.intent.model,
+      });
+      expect(asked).toEqual(["codex"]);
       expect(made()).toHaveLength(1);
     } finally {
       await server.close();
