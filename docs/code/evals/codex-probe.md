@@ -3,11 +3,11 @@ type: Code Module
 title: "Codex probe"
 description: "The M3 live probe of the Codex adapter against the real CLI: whether strict structured output takes the projected contract, whether the answer comes back intact, and whether a call is offered any tool; with the fake codex for its free dry run."
 resource: ../../../evals/spikes/codex-probe/
-implements: [CLI-01, CLI-03, CLI-04, CLI-05, ENG-07]
+implements: [CLI-01, CLI-03, CLI-04, CLI-05, ENG-07, TCL-07]
 tests: [../../../evals/test/codex-probe.test.ts]
 tags: [code, evals, cli, codex, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T01:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:30:00Z }
 ---
 
 # Purpose

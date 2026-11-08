@@ -134,7 +134,7 @@ function withReplies(replies: unknown[], env: NodeJS.ProcessEnv = process.env) {
 }
 
 describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
-  it("CLI-03: passes the locked flags exactly, with the wrapped draft-07 schema in a file, and the system prompt and request on standard input", async () => {
+  it("TCL-01, TCL-02, CLI-03: passes the locked flags exactly, with the wrapped draft-07 schema in a file, and the system prompt and request on standard input", async () => {
     const { provider, made, home } = withReplies([success({ title: "Shopping" })]);
     await provider.run(spec());
     const [call] = made();
@@ -253,7 +253,7 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
     );
   });
 
-  it("CLI-08: starts the CLI with only the allowlisted environment and Tessera's own Codex home, in a fresh empty folder it removes", async () => {
+  it("TCL-03, CLI-08: starts the CLI with only the allowlisted environment and Tessera's own Codex home, in a fresh empty folder it removes", async () => {
     const env = {
       ...process.env,
       OPENAI_API_KEY: "would-bill-the-api",
@@ -288,7 +288,7 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
 });
 
 describe("Tessera's Codex home folder (CLI-03, CLI-08)", () => {
-  it("CLI-03: the catalog takes out every tool a model's metadata adds, and keeps the rest", () => {
+  it("TCL-04, CLI-03: the catalog takes out every tool a model's metadata adds, and keeps the rest", () => {
     const { models } = restrictCatalog(BUNDLED);
     expect(models.map((model) => model.slug)).toEqual(["gpt-5.5", "gpt-6-sol"]);
     for (const model of models) {
@@ -307,7 +307,7 @@ describe("Tessera's Codex home folder (CLI-03, CLI-08)", () => {
     expect(() => restrictCatalog("not json")).toThrow();
   });
 
-  it("CLI-08: never calls without the catalog, or with an instructions file in the home folder", async () => {
+  it("TCL-04, TCL-05, CLI-08: never calls without the catalog, or with an instructions file in the home folder", async () => {
     for (const ready of [
       (home: string) => fs.rmSync(path.join(home, MODEL_CATALOG_FILE)),
       (home: string) => fs.writeFileSync(path.join(home, "AGENTS.md"), "Always answer in French."),
@@ -653,7 +653,7 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
     expect(codexHome({ TESSERA_CODEX_HOME: moved }, "win32")).toBe(path.resolve(moved));
   });
 
-  it("CLI-02: refuses a version older than the tested one, and checks sign-in without a model call", async () => {
+  it("TCL-06, CLI-02: refuses a version older than the tested one, and checks sign-in without a model call", async () => {
     const env = pathWith("codex.exe");
     expect(await findCodex(home(), env, "win32", answering("codex-cli 0.100.0", ""))).toMatchObject(
       { ok: false, problem: "old" },
@@ -687,7 +687,7 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
     });
   });
 
-  it("CLI-08: checks and readies Tessera's own Codex folder, with Codex pointed at it", async () => {
+  it("TCL-05, CLI-08: checks and readies Tessera's own Codex folder, with Codex pointed at it", async () => {
     const env = { ...pathWith("codex.exe"), CODEX_HOME: "/the-person's-own" };
     const folder = home();
     const seen: { args: readonly string[]; codexHome: string | undefined }[] = [];

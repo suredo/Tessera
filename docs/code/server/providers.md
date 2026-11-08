@@ -3,11 +3,11 @@ type: Code Module
 title: "Provider adapters"
 description: "The one interface every model connection implements: the Claude Code adapter, with locked flags, a clean environment, normalized usage and plain errors; the Codex adapter behind the same contract, used when the data folder chooses Codex; the choice of program and each program's routes; and the scripted provider that answers from a script chosen by test configuration."
 resource: ../../../packages/server/src/providers/
-implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, CLI-09, TEST-02, ENG-11, OBS-02]
+implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, CLI-09, TEST-02, ENG-11, OBS-02, TCL-01, TCL-02, TCL-03, TCL-04, TCL-05, TCL-06]
 tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/codex.test.ts, ../../../packages/server/test/strict-schema.test.ts, ../../../packages/server/test/routing.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/contracts/test/provider.test.ts]
 tags: [code, server, providers]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T02:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:30:00Z }
 ---
 # Purpose
 
