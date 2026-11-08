@@ -73,15 +73,44 @@ export const FILTERING_PROFILE = {
   fixture: { itemName: ITEM_LIST_PROFILE.fixture.itemName, category: "Tessera check category" },
 } as const satisfies VerificationProfile;
 
+/** A form people fill in and send, whose answers it keeps and shows: T5 (the M3 scenario sets). */
+export const FORM_PROFILE = {
+  id: "form",
+  fits: "a form people fill in and send, whose answers it keeps and shows, such as an RSVP, a sign-up sheet or a survey",
+  hooks: [
+    {
+      name: "form-field",
+      says: "each field of the form, an input, select or textarea with a label; one that must be filled has the required attribute",
+    },
+    { name: "form-submit", says: "the button that sends the form" },
+    {
+      name: "form-error",
+      says: "where the tool itself says in words what is missing when the form can't be sent",
+    },
+    {
+      name: "answer",
+      says: "each answer sent, one element per answer, its text holding what was typed in each text field",
+    },
+  ],
+  rules: [
+    "Filling in every form-field and pressing form-submit saves one answer, and shows it as an answer.",
+    "Pressing form-submit with a required form-field empty saves nothing, and shows form-error saying what is missing.",
+    "Opened again, the tool shows every answer saved.",
+  ],
+  fixture: { text: "Tessera check answer" },
+} as const satisfies VerificationProfile;
+
 /** Every profile, by ID. */
 export const PROFILES = {
   "item-list": ITEM_LIST_PROFILE,
   filtering: FILTERING_PROFILE,
+  form: FORM_PROFILE,
 } as const satisfies Record<string, VerificationProfile>;
 
 export const PROFILE_IDS = [
   "item-list",
   "filtering",
+  "form",
 ] as const satisfies readonly (keyof typeof PROFILES)[];
 export type ProfileId = (typeof PROFILE_IDS)[number];
 

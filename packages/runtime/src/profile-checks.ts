@@ -7,7 +7,7 @@ import {
   type VerificationCheck,
 } from "./checks.ts";
 import type { MountedTool } from "./host.ts";
-import type { DriveResult, DriveStep } from "./protocol.ts";
+import type { DriveField, DriveResult, DriveStep } from "./protocol.ts";
 
 // The verification profiles' behavior checks (VER-03): each drives a candidate that fits its
 // profile through the hooks the profile names, in rehearsals whose saves go to a throwaway copy
@@ -83,15 +83,18 @@ async function readList(
   return { count, texts };
 }
 
-/** Where items `hook` marks show `text`: the positions of the first 20. */
+/** Where items `hook` marks show `text`: the positions of the first 20, from `start`. */
 async function findAll(
   profile: ProfileId,
   rule: string,
   tool: MountedTool,
   hook: string,
   text: string,
+  start?: number,
 ): Promise<number[] | CheckOutcome> {
-  const found = await drive(profile, rule, tool, [{ do: "find", hook, value: text }]);
+  const found = await drive(profile, rule, tool, [
+    { do: "find", hook, value: text, ...(start ? { start } : {}) },
+  ]);
   if (!("steps" in found)) return found;
   const step = found.steps[0];
   return step?.ok ? (step.matches ?? []) : [];
@@ -324,9 +327,326 @@ const filtering = (context: CheckContext) => {
   );
 };
 
+/** Field types whose value the form profile calls text, which an answer shows as typed. */
+const TEXT_TYPES = new Set(["text", "search", ""]);
+
+/** Field types a fill can empty, so a required one of them can be left empty. */
+const EMPTIABLE = new Set([
+  "text",
+  "search",
+  "",
+  "email",
+  "url",
+  "tel",
+  "password",
+  "number",
+  "date",
+  "time",
+  "datetime-local",
+  "month",
+  "week",
+]);
+
+const isText = (field: DriveField) =>
+  field.kind === "textarea" || (field.kind === "input" && TEXT_TYPES.has(field.type));
+
+/** `wanted`, or the field's min when it states one, kept at or below its max when it states one. */
+function within(field: DriveField, wanted: string): string {
+  const value = field.min || wanted;
+  // Dates and times in their input formats compare as text.
+  return field.max !== "" && value > field.max ? field.max : value;
+}
+
+/**
+ * A value `field` takes, or undefined when none is known. A text field gets the check's `probe`
+ * when it fits, or else as much of `short`, a shorter unique text, as fits.
+ */
+function valueFor(field: DriveField, probe: string, short: string): string | undefined {
+  if (field.kind === "select") return field.choices.find((choice) => choice !== "");
+  if (isText(field)) {
+    if (field.maxLength < 0 || probe.length <= field.maxLength) return probe;
+    return short.slice(0, field.maxLength) || undefined;
+  }
+  switch (field.type) {
+    case "email":
+      return `check-${short}@example.com`;
+    case "url":
+      return `https://example.com/${short}`;
+    case "tel":
+      return "5550100";
+    case "password":
+      return `Check-${short}`;
+    case "number":
+    case "range": {
+      const fallback = field.step && field.step !== "any" ? field.step : "1";
+      const value = field.min || fallback;
+      return field.max !== "" && Number(value) > Number(field.max) ? field.max : value;
+    }
+    case "date":
+      return within(field, "2026-01-15");
+    case "time":
+      return within(field, "12:00");
+    case "datetime-local":
+      return within(field, "2026-01-15T12:00");
+    case "month":
+      return within(field, "2026-01");
+    case "week":
+      return within(field, "2026-W03");
+    default:
+      return undefined;
+  }
+}
+
+/** The radios in `field`'s group: those sharing its name, or itself alone when it has none. */
+const groupOf = (fields: readonly DriveField[], index: number) =>
+  fields
+    .map((other, at) => ({ other, at }))
+    .filter(({ other, at }) =>
+      fields[index]!.name
+        ? other.type === "radio" && other.name === fields[index]!.name
+        : at === index,
+    );
+
+/**
+ * Whether the required field at `index` can be left unfilled: a field a fill empties, a box that
+ * is unticked or can be, a select with an empty choice or empty now, or a radio group none of
+ * whose choices is chosen.
+ */
+function canLeaveEmpty(fields: readonly DriveField[], index: number): boolean {
+  const field = fields[index]!;
+  if (!field.required) return false;
+  if (field.kind === "textarea" || (field.kind === "input" && EMPTIABLE.has(field.type))) {
+    return true;
+  }
+  if (field.type === "checkbox") return true;
+  if (field.kind === "select") return field.value === "" || field.choices.includes("");
+  if (field.type === "radio") return groupOf(fields, index).every(({ other }) => !other.checked);
+  return false;
+}
+
+/**
+ * The steps that fill every field, leaving the one at `skip` unfilled, and the texts an answer
+ * should show: each text typed, as typed.
+ */
+function filling(fields: readonly DriveField[], hex: string, probe: string, skip?: number) {
+  const steps: DriveStep[] = [];
+  const texts: string[] = [];
+  const unfillable: string[] = [];
+  const skipped = skip === undefined ? [] : groupOf(fields, skip).map(({ at }) => at);
+  const answered = new Set<number>();
+  fields.forEach((field, index) => {
+    if (index === skip || (fields[skip ?? -1]?.type === "radio" && skipped.includes(index))) {
+      if (field.type === "checkbox") {
+        if (field.checked) steps.push({ do: "click", hook: "form-field", index });
+      } else if (field.kind === "select") {
+        if (field.value !== "") steps.push({ do: "fill", hook: "form-field", index, value: "" });
+      } else if (field.type !== "radio") {
+        steps.push({ do: "fill", hook: "form-field", index, value: "" });
+      }
+      return;
+    }
+    if (field.type === "checkbox") {
+      if (field.required && !field.checked) steps.push({ do: "click", hook: "form-field", index });
+      return;
+    }
+    if (field.type === "radio") {
+      // One choice in each group that must be answered, unless one is chosen already.
+      const group = groupOf(fields, index);
+      const first = group[0]?.at ?? index;
+      if (answered.has(first)) return;
+      answered.add(first);
+      const needed = group.some(({ other }) => other.required);
+      if (needed && group.every(({ other }) => !other.checked)) {
+        steps.push({ do: "click", hook: "form-field", index });
+      }
+      return;
+    }
+    if (field.type === "color" || field.type === "hidden") return;
+    const value = valueFor(field, `${probe} ${index + 1}`, `${hex}x${index + 1}`);
+    if (value === undefined) {
+      if (field.required) unfillable.push(field.type || field.kind);
+      return;
+    }
+    steps.push({ do: "fill", hook: "form-field", index, value });
+    if (isText(field)) texts.push(value);
+  });
+  return { steps, texts, unfillable };
+}
+
+/**
+ * Whether the answer `now` holds beyond `before` shows every one of `texts` in its whole text,
+ * not the part a read reports: undefined when it does, or else the texts it lacks. The new answer
+ * is the one whose text, as read, `before` didn't hold; if several show that, any may be it.
+ */
+async function holding(
+  tool: MountedTool,
+  rule: string,
+  before: List,
+  now: List,
+  texts: readonly string[],
+): Promise<string[] | CheckOutcome | undefined> {
+  if (texts.length === 0) return undefined;
+  const added = difference(before.texts, now.texts).added[0];
+  const previewed = now.texts
+    .map((text, at) => ({ text, at }))
+    .filter(({ text }) => comparable(text) === added)
+    .map(({ at }) => at);
+  // Of those, the ones whose whole text shows the longest text typed, found a page of 20 at a
+  // time, however many answers share what a read shows.
+  const key = [...texts].sort((a, b) => b.length - a.length)[0]!;
+  const showing = new Set<number>();
+  for (let start = 0; start < now.count;) {
+    const page = await findAll("form", rule, tool, "answer", key, start);
+    if (!Array.isArray(page)) return page;
+    page.forEach((at) => showing.add(at));
+    if (page.length < 20) break;
+    start = page[page.length - 1]! + 1;
+  }
+  const candidates = previewed.filter((at) => showing.has(at));
+  if (candidates.length === 0) return [...texts];
+  let lacking: string[] = [...texts];
+  for (const at of candidates) {
+    const lacks: string[] = [];
+    for (const text of texts) {
+      if (text === key) continue;
+      const found = await findAll("form", rule, tool, "answer", text, at);
+      if (!Array.isArray(found)) return found;
+      if (found[0] !== at) lacks.push(text);
+    }
+    if (lacks.length === 0) return undefined;
+    if (at === candidates[0]) lacking = lacks;
+  }
+  return lacking;
+}
+
+/** The fields marked form-field, as the page describes them now. */
+async function describe(tool: MountedTool, rule: string): Promise<DriveField[] | CheckOutcome> {
+  const described = await drive("form", rule, tool, [{ do: "fields", hook: "form-field" }]);
+  if (!("steps" in described)) return described;
+  const step = described.steps[0];
+  return step?.ok ? (step.fields ?? []) : [];
+}
+
+/**
+ * The form profile's check (VER-03): it reads what the form's fields are; sends the form with a
+ * required field left unfilled, if one can be, and expects nothing saved and form-error to say
+ * so; sends it filled in and expects one more answer, showing each text typed, and the others as
+ * they were; and opens the tool again and expects the answers as they were shown.
+ */
+async function form(context: CheckContext): Promise<CheckOutcome> {
+  const profile = PROFILES.form;
+  const [sends, refuses, reopens] = profile.rules;
+  const probe = unique(profile.fixture.text);
+  const hex = probe.split(" ").pop() ?? "";
+  const answers = (count: number) => `${count} ${count === 1 ? "answer" : "answers"}`;
+
+  const tool = await context.rehearse();
+  const fields = await describe(tool, sends);
+  if (!Array.isArray(fields)) return fields;
+  if (fields.length === 0) {
+    return broke("form", sends, "the form's fields, marked form-field", "none");
+  }
+  const unfillable = filling(fields, hex, probe).unfillable;
+  if (unfillable.length > 0) {
+    return broke(
+      "form",
+      sends,
+      "fields the check can fill in",
+      `a required field of a kind it can't: ${clip(unfillable)}`,
+    );
+  }
+  const before = await readList("form", sends, tool, "answer");
+  if (!("texts" in before)) return before;
+
+  // Sent with a required field unfilled: nothing saved, and form-error says what is missing.
+  const empty = fields.findIndex((_, index) => canLeaveEmpty(fields, index));
+  if (empty >= 0) {
+    const partial = filling(fields, hex, probe, empty);
+    const sent = await drive("form", refuses, tool, [
+      ...partial.steps,
+      { do: "click", hook: "form-submit" },
+    ]);
+    if (!("steps" in sent)) return sent;
+    const kept = await readList("form", refuses, tool, "answer");
+    if (!("texts" in kept)) return kept;
+    const error = await readList("form", refuses, tool, "form-error");
+    if (!("texts" in error)) return error;
+    const saved = changed(before.texts, kept.texts);
+    const said = error.texts.some((text) => text !== "");
+    if (kept.count !== before.count || saved || !said) {
+      return broke(
+        "form",
+        refuses,
+        `${answers(before.count)} as before, and form-error saying what is missing, after sending the form with required field ${empty + 1} unfilled`,
+        `${answers(kept.count)}${saved ? `; ${saved}` : ""}; form-error ${said ? `saying ${clip(error.texts.filter(Boolean))}` : "saying nothing"}`,
+      );
+    }
+  }
+
+  // Sent filled in: one more answer, showing each text typed, and the others as they were. The
+  // fields are read again first, since the refused send may have ticked a box this would untick.
+  const now = await describe(tool, sends);
+  if (!Array.isArray(now)) return now;
+  const filled = filling(now, hex, probe);
+  const sent = await drive("form", sends, tool, [
+    ...filled.steps,
+    { do: "click", hook: "form-submit" },
+  ]);
+  if (!("steps" in sent)) return sent;
+  const after = await readList("form", sends, tool, "answer");
+  if (!("texts" in after)) return after;
+  if (after.count !== before.count + 1) {
+    return broke(
+      "form",
+      sends,
+      `${answers(before.count + 1)} after sending the form filled in, with ${before.count} before`,
+      `${after.count}`,
+    );
+  }
+  // The other answers as they were, each as often as it showed: so the one more is the new one,
+  // even when another answer shows the same.
+  const sentOut = difference(before.texts, after.texts);
+  if (sentOut.gone.length > 0) {
+    return broke(
+      "form",
+      sends,
+      `the other ${answers(before.count)} as they were after sending the form`,
+      changed(before.texts, after.texts) ?? `gone: ${clip(sentOut.gone)}`,
+    );
+  }
+  const showing = await holding(tool, sends, before, after, filled.texts);
+  if (showing && !Array.isArray(showing)) return showing;
+  if (showing) {
+    return broke(
+      "form",
+      sends,
+      `one answer showing what was typed: ${clip(filled.texts)}`,
+      `it without ${clip(showing)}`,
+    );
+  }
+
+  // Opened again: the answers as they were shown, the new one still showing what was typed.
+  const reopened = await context.rehearse();
+  const shown = await readList("form", reopens, reopened, "answer");
+  if (!("texts" in shown)) return shown;
+  const kept = changed(after.texts, shown.texts);
+  const still = kept ? undefined : await holding(reopened, reopens, before, shown, filled.texts);
+  if (still && !Array.isArray(still)) return still;
+  if (shown.count !== after.count || kept || still) {
+    return broke(
+      "form",
+      reopens,
+      `the ${answers(after.count)} it showed, the new one showing what was typed, after opening the tool again`,
+      `${answers(shown.count)}${kept ? `; ${kept}` : ""}${still ? `; the new one without ${clip(still)}` : ""}`,
+    );
+  }
+  return { ok: true };
+}
+
 const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<CheckOutcome>>> = {
   "item-list": itemList,
   filtering,
+  form,
 };
 
 /**

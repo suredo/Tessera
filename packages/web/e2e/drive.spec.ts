@@ -242,6 +242,36 @@ test("VER-03: a check chooses a select's choice by its value or by what it says,
   });
 });
 
+test("VER-03: a check reads what a hooked field is, so it can fill it with a value it takes", async ({
+  page,
+}) => {
+  const report = await drive(page, "picker", [{ do: "fields", hook: "pick" }]);
+  expect(report).toEqual({
+    problems: [],
+    steps: [
+      {
+        ok: true,
+        count: 1,
+        fields: [
+          {
+            kind: "select",
+            type: "",
+            name: "",
+            required: false,
+            checked: false,
+            min: "",
+            max: "",
+            step: "",
+            maxLength: -1,
+            choices: ["", "f", "h"],
+            value: "",
+          },
+        ],
+      },
+    ],
+  });
+});
+
 test("VER-03: a step that can't be done ends the answer, saying what was missing", async ({
   page,
 }) => {

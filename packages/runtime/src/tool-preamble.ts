@@ -163,14 +163,46 @@ import type { BridgeMethodName } from "@tessera/contracts";
         results.push({ ok: true, count: found.length, texts });
         continue;
       }
-      // Which of them, by position, show `text`: however many there are, the first 20.
+      // Which of them, by position, show `text`: however many there are, the first 20 from
+      // `start`, so a check can ask whether one at a known position does.
       if (step.do === "find") {
         const text = String(step.value);
+        const start = typeof step.start === "number" && step.start > 0 ? Math.floor(step.start) : 0;
         const matches: number[] = [];
         found.forEach((element, at) => {
-          if (matches.length < 20 && textOf(element).includes(text)) matches.push(at);
+          if (at >= start && matches.length < 20 && textOf(element).includes(text)) {
+            matches.push(at);
+          }
         });
         results.push({ ok: true, count: found.length, matches });
+        continue;
+      }
+      // What each field is, so a check can fill it with a value it takes: the first 100.
+      if (step.do === "fields") {
+        const fields = found.slice(0, 100).map((element) => {
+          const input = element instanceof HTMLInputElement ? element : undefined;
+          const select = element instanceof HTMLSelectElement ? element : undefined;
+          const area = element instanceof HTMLTextAreaElement ? element : undefined;
+          return {
+            kind: input ? "input" : select ? "select" : area ? "textarea" : "other",
+            type: input ? input.type : "",
+            name: (input ?? select ?? area)?.name.slice(0, 100) ?? "",
+            required: Boolean((input ?? select ?? area)?.required),
+            checked: Boolean(input?.checked),
+            min: input?.min.slice(0, 40) ?? "",
+            max: input?.max.slice(0, 40) ?? "",
+            step: input?.step.slice(0, 40) ?? "",
+            maxLength: (input ?? area)?.maxLength ?? -1,
+            choices: select
+              ? [...select.options]
+                  .filter((option) => !option.disabled)
+                  .slice(0, 50)
+                  .map((option) => option.value.slice(0, 200))
+              : [],
+            value: (input ?? select ?? area)?.value.slice(0, 200) ?? "",
+          };
+        });
+        results.push({ ok: true, count: found.length, fields });
         continue;
       }
       const index = typeof step.index === "number" ? step.index : 0;
