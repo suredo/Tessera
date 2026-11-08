@@ -1,4 +1,10 @@
-import { MOUNT_MESSAGE, runtimeOriginFor, TOOL_EVENTS, type ToolEvent } from "./protocol.ts";
+import {
+  MOUNT_MESSAGE,
+  runtimeOriginFor,
+  TOOL_EVENTS,
+  type DriveStep,
+  type ToolEvent,
+} from "./protocol.ts";
 
 // The host app's side of the runtime (RUN-01): it frames the wrapper on the opposite loopback name
 // and talks to the tool only through a fresh MessageChannel bound to one instance. Its watchdog
@@ -59,6 +65,11 @@ export type MountedTool = {
    * page's word: the tool's own code can reach the port.
    */
   inspect(timeoutMs?: number): Promise<unknown>;
+  /**
+   * Asks the tool's page to take `steps` on the elements it marks with hooks, for a behavior check
+   * (VER-03), and answers with each step's result. Like `inspect`, the answer is the page's word.
+   */
+  drive(steps: readonly DriveStep[], timeoutMs?: number): Promise<unknown>;
   /** Removes the tool, its frames and its channel. */
   unmount(): void;
 };
@@ -89,6 +100,17 @@ export function mountTool(
   const eventListeners = new Set<(event: MountEvent) => void>();
   const reports = new Map<number, (report: unknown) => void>();
   let inspections = 0;
+  // A check's question, answered by a report with its number, or refused after `timeoutMs`.
+  const ask = (question: (id: number) => object, timeoutMs: number) =>
+    new Promise<unknown>((answer, refuse) => {
+      inspections += 1;
+      const id = inspections;
+      reports.set(id, answer);
+      channel.port1.postMessage({ instanceId, ...question(id) });
+      setTimeout(() => {
+        if (reports.delete(id)) refuse(new Error("The tool didn't answer the check."));
+      }, timeoutMs);
+    });
   // Every listener there when the event happens hears it, even one that unmounts the tool first.
   const emit = (event: MountEvent) => [...eventListeners].forEach((listen) => listen(event));
 
@@ -200,16 +222,8 @@ export function mountTool(
             eventListeners.add(listen);
             return () => eventListeners.delete(listen);
           },
-          inspect: (timeoutMs = 10_000) =>
-            new Promise((answer, refuse) => {
-              inspections += 1;
-              const id = inspections;
-              reports.set(id, answer);
-              channel.port1.postMessage({ instanceId, inspect: id });
-              setTimeout(() => {
-                if (reports.delete(id)) refuse(new Error("The tool didn't answer the check."));
-              }, timeoutMs);
-            }),
+          inspect: (timeoutMs = 10_000) => ask((id) => ({ inspect: id }), timeoutMs),
+          drive: (steps, timeoutMs = 30_000) => ask((id) => ({ drive: { id, steps } }), timeoutMs),
           unmount: () => {
             eventListeners.clear();
             reports.clear();

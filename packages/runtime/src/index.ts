@@ -14,8 +14,10 @@ export {
   type ServedBridge,
 } from "./bridge.ts";
 export {
+  driveTool,
   smokeCheck,
   stubCheck,
+  type DriveReport,
   type SmokeReport,
   type CheckContext,
   type CheckOutcome,
@@ -47,5 +49,7 @@ export {
   RUNTIME_HOST,
   runtimeOriginFor,
   TOOL_EVENTS,
+  type DriveResult,
+  type DriveStep,
   type ToolEvent,
 } from "./protocol.ts";

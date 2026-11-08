@@ -21,8 +21,8 @@
   let waiting: unknown[] = [];
   // The request IDs of the current page's calls still waiting for a reply.
   let calls = new Set<string>();
-  // The smoke check's question, if it came before the tool's page was ready (VER-02).
-  let inspecting: unknown;
+  // The checks' questions that came before the tool's page was ready, in order (VER-02, VER-03).
+  let questions: object[] = [];
   // Watches for the person's first real input in the tool's page (GEN-06).
   let watchingInput: ReturnType<typeof setInterval> | undefined;
   let checkInput: (() => void) | undefined;
@@ -43,6 +43,7 @@
     hostPort?.close();
     hostPort = undefined;
     waiting = [];
+    questions = [];
   };
 
   addEventListener("message", (event: MessageEvent) => {
@@ -67,12 +68,15 @@
         ping?: unknown;
         reply?: unknown;
         inspect?: unknown;
+        drive?: unknown;
       };
       if (data?.instanceId !== instanceId) return;
-      // The smoke check's question (VER-02): it waits for the page if there is none yet.
-      if ("inspect" in data) {
-        if (toolPort) toolPort.postMessage({ inspect: data.inspect });
-        else inspecting = data.inspect;
+      // A check's question, the smoke check's (VER-02) or a behavior check's (VER-03): it waits
+      // for the page if there is none yet.
+      if ("inspect" in data || "drive" in data) {
+        const question = "inspect" in data ? { inspect: data.inspect } : { drive: data.drive };
+        if (toolPort) toolPort.postMessage(question);
+        else questions.push(question);
         return;
       }
       // The host's watchdog pings the tool's page; with no page ready yet, the ping goes nowhere
@@ -165,8 +169,7 @@
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
         frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
         for (const message of waiting.splice(0)) toolPort.postMessage({ message });
-        if (inspecting !== undefined) toolPort.postMessage({ inspect: inspecting });
-        inspecting = undefined;
+        for (const question of questions.splice(0)) toolPort.postMessage(question);
       };
       frame.addEventListener("load", () => {
         if (toolFrame !== frame) return;
