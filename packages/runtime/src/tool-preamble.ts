@@ -140,14 +140,23 @@ import type { BridgeMethodName } from "@tessera/contracts";
         break;
       }
       const found = [...document.querySelectorAll(`[data-hook~="${hook}"]`)];
+      const textOf = (element: Element) =>
+        (element instanceof HTMLElement ? element.innerText : (element.textContent ?? ""))
+          .trim()
+          .replace(/\s+/g, " ");
       if (step.do === "read") {
-        const texts = found.map((element) =>
-          (element instanceof HTMLElement ? element.innerText : (element.textContent ?? ""))
-            .trim()
-            .replace(/\s+/g, " ")
-            .slice(0, 200),
-        );
-        results.push({ ok: true, count: found.length, texts: texts.slice(0, 100) });
+        const texts = found.slice(0, 100).map((element) => textOf(element).slice(0, 200));
+        results.push({ ok: true, count: found.length, texts });
+        continue;
+      }
+      // Which of them, by position, show `text`: however many there are, the first 20.
+      if (step.do === "find") {
+        const text = String(step.value);
+        const matches: number[] = [];
+        found.forEach((element, at) => {
+          if (matches.length < 20 && textOf(element).includes(text)) matches.push(at);
+        });
+        results.push({ ok: true, count: found.length, matches });
         continue;
       }
       const index = typeof step.index === "number" ? step.index : 0;

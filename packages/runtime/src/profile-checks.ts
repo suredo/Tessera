@@ -50,83 +50,114 @@ async function drive(
 const seen = (result: DriveResult | undefined) => ({
   count: result?.ok ? (result.count ?? 0) : 0,
   texts: result?.ok ? (result.texts ?? []) : [],
+  matches: result?.ok ? (result.matches ?? []) : [],
 });
+
+/** "1 item", "3 items". */
+const items = (count: number) => `${count} ${count === 1 ? "item" : "items"}`;
+
+/** Whether two lists show the same texts, in any order, each as often. */
+function sameTexts(one: readonly string[], other: readonly string[]): boolean {
+  const sorted = (texts: readonly string[]) => JSON.stringify([...texts].sort());
+  return one.length === other.length && sorted(one) === sorted(other);
+}
+
+/** The most items a read reports the text of; a longer list's texts aren't all seen. */
+const READ_WINDOW = 100;
 
 async function itemList(context: CheckContext): Promise<CheckOutcome> {
   const profile = PROFILES["item-list"];
-  const name = profile.fixture.itemName;
   const [adds, removes, reopens] = profile.rules;
-  const has = (texts: readonly string[]) => texts.some((text) => text.includes(name));
+  // A name no starting item shows, so the item found is the one the check added.
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(3)), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  const name = `${profile.fixture.itemName} ${token}`;
 
-  // Adding: one more item, showing its name.
+  // Adding: one more item, and exactly one showing its name.
   const added = await drive("item-list", adds, await context.rehearse(), [
     { do: "read", hook: "item" },
     { do: "fill", hook: "item-name", value: name },
     { do: "click", hook: "item-add" },
     { do: "read", hook: "item" },
+    { do: "find", hook: "item", value: name },
   ]);
   if (!("steps" in added)) return added;
-  const before = seen(added.steps[0]).count;
+  const before = seen(added.steps[0]);
   const after = seen(added.steps[3]);
-  if (after.count !== before + 1) {
+  // The starting items' texts, when the read saw all of them.
+  const complete = before.count <= READ_WINDOW;
+  if (after.count !== before.count + 1) {
     return broke(
       "item-list",
       adds,
-      `${before + 1} items after adding "${name}" to ${before}`,
+      `${items(before.count + 1)} after adding "${name}" to ${before.count}`,
       `${after.count}`,
     );
   }
-  if (!has(after.texts)) {
+  const found = seen(added.steps[4]).matches;
+  if (found.length !== 1) {
     return broke(
       "item-list",
       adds,
-      `an item showing "${name}"`,
-      `items showing ${clip(after.texts)}`,
+      `one item showing "${name}"`,
+      `${items(found.length)} showing it, of ${after.count}`,
     );
   }
 
-  // Opened again: the item it saved is still there.
+  // Opened again: the list is as it was saved.
   const kept = await drive("item-list", reopens, await context.rehearse(), [
     { do: "read", hook: "item" },
+    { do: "find", hook: "item", value: name },
   ]);
   if (!("steps" in kept)) return kept;
   const reopened = seen(kept.steps[0]);
-  if (reopened.count !== before + 1 || !has(reopened.texts)) {
+  const keptAt = seen(kept.steps[1]).matches;
+  if (
+    reopened.count !== after.count ||
+    keptAt.length !== 1 ||
+    (after.count <= READ_WINDOW && !sameTexts(reopened.texts, after.texts))
+  ) {
     return broke(
       "item-list",
       reopens,
-      `${before + 1} items, one showing "${name}", after opening the tool again`,
-      `${reopened.count}, showing ${clip(reopened.texts)}`,
+      `the ${items(after.count)} it showed, one showing "${name}", after opening the tool again`,
+      `${items(reopened.count)}, showing ${clip(reopened.texts)}`,
     );
   }
 
-  // Removing: that item goes, and stays gone once opened again.
-  const index = reopened.texts.findIndex((text) => text.includes(name));
+  // Removing: that item goes, the others stay as they started, and so once opened again.
   const removed = await drive("item-list", removes, await context.rehearse(), [
-    { do: "click", hook: "item-remove", index },
+    { do: "click", hook: "item-remove", index: keptAt[0] },
     { do: "read", hook: "item" },
+    { do: "find", hook: "item", value: name },
   ]);
   if (!("steps" in removed)) return removed;
   const left = seen(removed.steps[1]);
-  if (left.count !== before || has(left.texts)) {
+  if (left.count !== before.count || seen(removed.steps[2]).matches.length > 0) {
     return broke(
       "item-list",
       removes,
-      `${before} items, none showing "${name}", after removing it`,
-      `${left.count}, showing ${clip(left.texts)}`,
+      `${items(before.count)}, none showing "${name}", after removing it`,
+      `${items(left.count)}, showing ${clip(left.texts)}`,
     );
   }
   const gone = await drive("item-list", reopens, await context.rehearse(), [
     { do: "read", hook: "item" },
+    { do: "find", hook: "item", value: name },
   ]);
   if (!("steps" in gone)) return gone;
   const last = seen(gone.steps[0]);
-  if (last.count !== before || has(last.texts)) {
+  if (
+    last.count !== before.count ||
+    seen(gone.steps[1]).matches.length > 0 ||
+    (complete && !sameTexts(last.texts, before.texts))
+  ) {
     return broke(
       "item-list",
       reopens,
-      `${before} items, none showing "${name}", after removing it and opening the tool again`,
-      `${last.count}, showing ${clip(last.texts)}`,
+      `the ${items(before.count)} it started with, as they were, after removing "${name}" and opening the tool again`,
+      `${items(last.count)}, showing ${clip(last.texts)}`,
     );
   }
   return { ok: true };
