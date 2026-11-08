@@ -15,6 +15,7 @@ const base = {
   targetsCurrentTool: false,
   language: "en",
   features: [{ name: "guest list", request: "a table of my guests" }],
+  profile: null,
 };
 const withoutFeatures: Record<string, unknown> = { kind: "create", ...base };
 delete withoutFeatures["features"];
@@ -32,6 +33,12 @@ const valid: Record<string, unknown> = {
     features: [],
   },
   "a behavior statement": { ...base, kind: "edit", interfacePart: null, behaviorChange: true },
+  "a tool that fits a verification profile (VER-03)": {
+    ...base,
+    kind: "create",
+    interfacePart: "a shopping list",
+    profile: "item-list",
+  },
 };
 
 const invalid: Record<string, unknown> = {
@@ -43,6 +50,7 @@ const invalid: Record<string, unknown> = {
   "a language that isn't a BCP 47 tag": { ...base, kind: "create", language: "English" },
   "null where a value is required": { ...base, kind: "create", language: null },
   "an empty feature name": { ...base, kind: "create", features: [{ name: "", request: "x" }] },
+  "a profile that isn't in the registry (VER-03)": { ...base, kind: "create", profile: "chess" },
 };
 
 describe("intent contract", () => {
@@ -58,4 +66,12 @@ describe("intent contract", () => {
       expect(validateWithJsonSchema(sample)).toBe(false);
     },
   );
+});
+
+describe("recorded intents", () => {
+  it("VER-03: an answer recorded before profiles existed reads as fitting none", () => {
+    const recorded: Record<string, unknown> = { kind: "create", ...base };
+    delete recorded["profile"];
+    expect(intentSchema.parse(recorded).profile).toBeNull();
+  });
 });

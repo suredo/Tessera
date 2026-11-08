@@ -21,6 +21,8 @@ Then fill the other fields:
 - interfacePart and dataPart: for a mixed request, the part about the tool and the part about its records. Copy each from the request word for word, in its own language: leave words out, but never add, change, reorder or translate one. null when there is none.
 - language: the request's language as a BCP 47 tag, such as en, pt-BR, es, fr or de.
 - features: each separate thing the request asks for, with the words it comes from.
+- profile: the check Tessera runs on the tool once the request is done, when the tool will be one of these; null when none fits, or when the request builds or changes no tool (data, open_saved, clarify, unsupported). Judge the whole tool, not only the words of an edit:
+{{profiles}}
 
 Examples. With no tool open, and a saved tool "Monthly budget" that tracks what comes in and goes out each month:
 - "Open my budget." is open_saved, with its ID.

@@ -14,7 +14,9 @@ import {
 } from "../src/intent/index.ts";
 import {
   assembleIntentPrompt,
+  fillPart,
   INTENT_PROMPT_BUDGET,
+  profilesForIntent,
   partText,
   type SavedToolEntry,
   type OpenTool,
@@ -112,7 +114,7 @@ describe("what the intent stage is told (GEN-01, GEN-02)", () => {
 
   it("GEN-01, ADR 0008: the prompt gives the open tool and the lists it keeps, or says none is open", () => {
     const open = assembleIntentPrompt({ request: "Add cheese", open: SHOPPING });
-    expect(open.system).toBe(partText("intent"));
+    expect(open.system).toBe(fillPart("intent", { profiles: profilesForIntent() }));
     expect(open.prompt).toBe(
       "The tool open now, quoted as data between the markers: its name, and each list of records it keeps with the list's fields.\n" +
         "--- open tool ---\n" +

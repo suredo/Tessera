@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { profileIdSchema } from "./profiles.ts";
 
 // The intent stage's answer (GEN-01): what a request asks for, so the host can route it. Drafted
 // for the intent spike (#20) and used by the intent stage (#144). Each kind is a branch of a
@@ -49,6 +50,13 @@ const common = {
   features: z
     .array(feature)
     .describe("The separate things the request asks for, used to decide on two passes (GEN-17)."),
+  // Absent in answers recorded before profiles existed, which read as none.
+  profile: profileIdSchema
+    .nullable()
+    .default(null)
+    .describe(
+      "The verification profile the tool fits once the request is done, from the list given; null when none fits or no tool is built or changed (VER-03).",
+    ),
 };
 
 export const intentSchema = z
@@ -68,4 +76,8 @@ export const intentSchema = z
   ])
   .describe("The intent stage's answer: what a request asks for, used to route it (GEN-01).");
 
-export type Intent = z.infer<typeof intentSchema>;
+/**
+ * An intent as the host passes it: `profile` may be left out, meaning none, as in answers recorded
+ * before profiles existed.
+ */
+export type Intent = z.input<typeof intentSchema>;

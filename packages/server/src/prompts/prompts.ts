@@ -3,6 +3,8 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   bridgeManifest,
+  PROFILE_IDS,
+  PROFILES,
   type Artifact,
   type Creation,
   type Edit,
@@ -17,8 +19,8 @@ import { TOOL_SCHEMA_KEYWORDS } from "../data-shape/index.ts";
 // change to one is reviewed like code. A part's version is a hash of its text, recorded with each
 // call, so a change in outcomes can be traced to the prompt that produced it. Parts are chosen by
 // the stage and the intent's structured fields, never by matching words in the request (GEN-02).
-// The bridge manifest (CON-03) and the UI standard's variables (VER-06) are generated into their
-// parts from their one definitions.
+// The bridge manifest (CON-03), the UI standard's variables (VER-06) and the verification profiles
+// (VER-03, VER-04) are generated into their parts from their one definitions.
 
 const PROMPTS_FOLDER = fileURLToPath(new URL("../../prompts/", import.meta.url));
 
@@ -29,6 +31,7 @@ export const PROMPT_PARTS = [
   "ui-standard",
   "ui-edit",
   "accessibility",
+  "profile",
   "request",
   "source",
   "source-style",
@@ -80,11 +83,13 @@ export type RepairClass = (typeof REPAIR_CLASSES)[number];
  * may reach (GEN-03), about a tenth above what they measured when set: a test fails past it, so a
  * part can't grow unnoticed. The POC's one prompt reached about 18,000. Repair's covers its larger
  * shape, the repair of a creation: the creation prompt with the failed answer quoted, about 21,400
- * when set (GEN-09).
+ * when set (GEN-09). Edit's rose from 18,500 in M3 for the verification profile's part, which states
+ * every rule a profile's check enforces (VER-04, #273): its fixture with the part measured 18,835.
+ * Creation's fixture is a creation that fits a profile, its largest shape: 16,997 when set.
  */
 export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
   create: 17_000,
-  edit: 18_500,
+  edit: 20_000,
   repair: 23_500,
 };
 
@@ -229,6 +234,19 @@ export type AssembledPrompt = {
   size: number;
 };
 
+/** The profile part's values: each hook with what it marks, and each rule. */
+function profileValues(id: keyof typeof PROFILES): Record<string, string> {
+  const profile = PROFILES[id];
+  return {
+    hooks: profile.hooks.map((hook) => `- data-hook="${hook.name}": ${hook.says}.`).join("\n"),
+    rules: profile.rules.map((rule) => `- ${rule}`).join("\n"),
+  };
+}
+
+/** The intent part's list of profiles, from their one definitions (VER-03). */
+export const profilesForIntent = (): string =>
+  PROFILE_IDS.map((id) => `  - ${id}: the tool is ${PROFILES[id].fits}.`).join("\n");
+
 /**
  * Builds a generation stage's prompt from the parts it needs. The instructions always have the
  * base rules; the bridge manifest unless the intent says the request only changes the look; the
@@ -272,6 +290,9 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   }
   // In custom mode too: a custom look drops the standard's look, never its accessibility (UX-04).
   addSystem("accessibility");
+  // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
+  // every rule its check enforces is stated here (VER-03, VER-04).
+  if (input.intent?.profile) addSystem("profile", profileValues(input.intent.profile));
   // What creation answers, with the data schema keywords the host accepts (DATA-03, GEN-05).
   if (creating) {
     addSystem("create", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
@@ -447,7 +468,9 @@ export function assembleIntentPrompt(input: {
     used.push(`${part}@${partVersion(partText(part))}`);
     return fillPart(part, values);
   };
-  const system = use("intent");
+  // The system part's version covers the profiles generated into it.
+  const system = fillPart("intent", { profiles: profilesForIntent() });
+  used.push(`intent@${partVersion(system)}`);
   // Each part's version covers its wording; what it quotes changes with every call. The tool's
   // name and lists come from the tool itself, so they are quoted as JSON between markers, data
   // and never instructions (SEC-02): a newline or an instruction in a name stays inside a string.
