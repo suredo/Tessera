@@ -487,15 +487,28 @@ async function holding(
 ): Promise<string[] | CheckOutcome | undefined> {
   if (texts.length === 0) return undefined;
   const added = difference(before.texts, now.texts).added[0];
-  const candidates = now.texts
+  const previewed = now.texts
     .map((text, at) => ({ text, at }))
     .filter(({ text }) => comparable(text) === added)
-    .slice(0, 5)
     .map(({ at }) => at);
+  // Of those, the ones whose whole text shows the longest text typed, found a page of 20 at a
+  // time, however many answers share what a read shows.
+  const key = [...texts].sort((a, b) => b.length - a.length)[0]!;
+  const showing = new Set<number>();
+  for (let start = 0; start < now.count;) {
+    const page = await findAll("form", rule, tool, "answer", key, start);
+    if (!Array.isArray(page)) return page;
+    page.forEach((at) => showing.add(at));
+    if (page.length < 20) break;
+    start = page[page.length - 1]! + 1;
+  }
+  const candidates = previewed.filter((at) => showing.has(at));
+  if (candidates.length === 0) return [...texts];
   let lacking: string[] = [...texts];
   for (const at of candidates) {
     const lacks: string[] = [];
     for (const text of texts) {
+      if (text === key) continue;
       const found = await findAll("form", rule, tool, "answer", text, at);
       if (!Array.isArray(found)) return found;
       if (found[0] !== at) lacks.push(text);

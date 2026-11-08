@@ -256,3 +256,16 @@ test("VER-03: a long answer that loses what was typed once saved fails when the 
     /observed 2 answers; the new one without "Tessera check answer [0-9a-f]{6} 1", "Tessera check answer [0-9a-f]{6} 4"\.$/,
   );
 });
+
+test("VER-03: a long answer is found among many that read the same, however many there are", async ({
+  page,
+}) => {
+  const answers = Array.from({ length: 25 }, (_, i) => ({
+    id: `a-${i + 1}`,
+    name: `Guest ${i + 1}`,
+    people: 2,
+    meal: "fish",
+    allergies: "",
+  }));
+  expect(await check(page, "verbose", answers)).toEqual(PASSED);
+});
