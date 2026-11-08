@@ -122,7 +122,6 @@ import type { BridgeMethodName } from "@tessera/contracts";
     }
   };
 
-
   // A behavior check's question (VER-03): steps on the elements the tool marks with a hook name
   // in its `data-hook` attribute, one at a time, each once the tool's calls have settled and it
   // has had a moment to show the result. The first step that can't be done ends the answer, with
