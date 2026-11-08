@@ -155,17 +155,21 @@ describe("strict structured output for Codex (CLI-01, #266)", () => {
     const stages = new Set<string>();
     for (const { stage, value, from } of answers) {
       const contract = CONTRACTS[stage]!;
-      if (!contract.safeParse(value).success) continue;
+      const parsed = contract.safeParse(value);
+      if (!parsed.success) continue;
       stages.add(stage);
+      // The answer whole, as the contract reads it: one recorded before a field with a default
+      // existed, such as the intent's profile, gets that field, as a model's answer now has it.
+      const whole = parsed.data;
       const wrapped = wrapSchema(jsonSchemaOf(contract));
       const strict = toStrictSchema(wrapped);
-      const written = encode({ answer: value }, wrapped, wrapped);
+      const written = encode({ answer: whole }, wrapped, wrapped);
       // What the model writes fits the projected schema...
       expect(ajv.validate({ ...strict, $schema: undefined }, written), `${from} ${stage}`).toBe(
         true,
       );
       // ...and turned back it is the contract's own value again.
-      expect(restoreAnswer(written, wrapped), `${from} ${stage}`).toEqual({ answer: value });
+      expect(restoreAnswer(written, wrapped), `${from} ${stage}`).toEqual({ answer: whole });
     }
     expect([...stages].sort()).toEqual(["create", "data", "edit", "intent"]);
   });

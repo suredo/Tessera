@@ -6,6 +6,7 @@ export {
   DATA_PROMPT_BUDGET,
   assemblePrompt,
   fillPart,
+  profilesForIntent,
   fixedPart,
   INTENT_PROMPT_BUDGET,
   manifestForPrompt,

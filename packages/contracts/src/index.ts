@@ -168,6 +168,15 @@ export {
 } from "./patch-engine.ts";
 export { INTERNAL_TERMS, internalTerms } from "./plain-language.ts";
 export {
+  ITEM_LIST_PROFILE,
+  PROFILE_IDS,
+  PROFILES,
+  profileIdSchema,
+  type ProfileHook,
+  type ProfileId,
+  type VerificationProfile,
+} from "./profiles.ts";
+export {
   EFFORTS,
   effortSchema,
   PROVIDER_ERROR_KINDS,

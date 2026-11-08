@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { checkJs } from "../src/checks/js-check.ts";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { bridgeManifest, type Intent } from "@tessera/contracts";
+import { bridgeManifest, ITEM_LIST_PROFILE, type Intent } from "@tessera/contracts";
 import { Ajv } from "ajv";
 import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
 import { describe, expect, it } from "vitest";
@@ -429,6 +429,31 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(one).toEqual(two);
   });
 
+  it("VER-03, VER-04: a tool that fits a profile is told its hooks and every rule its check enforces, from the one definition; one that fits none isn't", () => {
+    const request = "I need a shopping list I can tick off at the store.";
+    const fits = assemblePrompt({
+      stage: "create",
+      request,
+      intent: intent({ kind: "create", profile: "item-list" }),
+      uiMode: "standard",
+    });
+    expect(names(fits.parts)).toContain("profile");
+    for (const hook of ITEM_LIST_PROFILE.hooks) {
+      expect(fits.system).toContain(`data-hook="${hook.name}": ${hook.says}.`);
+    }
+    for (const rule of ITEM_LIST_PROFILE.rules) expect(fits.system).toContain(`- ${rule}`);
+    for (const profile of [null, undefined]) {
+      const none = assemblePrompt({
+        stage: "create",
+        request,
+        intent: intent({ kind: "create", profile }),
+        uiMode: "standard",
+      });
+      expect(names(none.parts)).not.toContain("profile");
+      expect(none.system).not.toContain("data-hook");
+    }
+  });
+
   it("GEN-03: each stage's fixture prompt stays within its budget", () => {
     const sizes = {
       create: create().size,
@@ -437,6 +462,8 @@ describe("assembling a stage's prompt (GEN-03)", () => {
         request: "Add a quantity next to each item, and sort them by name",
         uiMode: "standard",
         source: shoppingList,
+        // A tool that fits a profile carries its part too (VER-03).
+        intent: intent({ profile: "item-list" }),
       }).size,
       repair: assemblePrompt({
         stage: "repair",
@@ -462,7 +489,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       stage: "repair",
       request:
         "I need a shopping list I can tick off at the store, with milk, eggs and bread on it.",
-      intent: intent({ kind: "create" }),
+      intent: intent({ kind: "create", profile: "item-list" }),
       uiMode: "standard",
       failure: "schema-shape",
       attempt: {

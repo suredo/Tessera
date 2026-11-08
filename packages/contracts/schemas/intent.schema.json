@@ -77,6 +77,22 @@
             "additionalProperties": false
           },
           "description": "The separate things the request asks for, used to decide on two passes (GEN-17)."
+        },
+        "profile": {
+          "default": null,
+          "description": "The verification profile the tool fits once the request is done, from the list given; null when none fits or no tool is built or changed (VER-03).",
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "item-list"
+              ],
+              "description": "A verification profile: a behavior pattern the host checks (VER-03)."
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -88,7 +104,8 @@
         "lookOnly",
         "targetsCurrentTool",
         "language",
-        "features"
+        "features",
+        "profile"
       ],
       "additionalProperties": false
     },
@@ -171,6 +188,22 @@
             "additionalProperties": false
           },
           "description": "The separate things the request asks for, used to decide on two passes (GEN-17)."
+        },
+        "profile": {
+          "default": null,
+          "description": "The verification profile the tool fits once the request is done, from the list given; null when none fits or no tool is built or changed (VER-03).",
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "item-list"
+              ],
+              "description": "A verification profile: a behavior pattern the host checks (VER-03)."
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -181,7 +214,8 @@
         "lookOnly",
         "targetsCurrentTool",
         "language",
-        "features"
+        "features",
+        "profile"
       ],
       "additionalProperties": false
     }
