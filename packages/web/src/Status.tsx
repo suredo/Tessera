@@ -106,7 +106,9 @@ export function Status({ report, problem, onRecheck, onProbe, onChoose }: Props)
         !problem && <p role="status">{t("setup.checking")}</p>
       ) : (
         <>
-          <fieldset className="programs" disabled={choosing}>
+          {/* One at a time: a choice while a check runs, or a check while a choice is saved,
+              would race to the screen. */}
+          <fieldset className="programs" disabled={choosing || checking}>
             <legend>
               <h3>{t("setup.provider.heading")}</h3>
             </legend>
@@ -150,7 +152,7 @@ export function Status({ report, problem, onRecheck, onProbe, onChoose }: Props)
         </>
       )}
       {(report !== null || problem) && (
-        <button type="button" disabled={checking} onClick={() => void recheck()}>
+        <button type="button" disabled={checking || choosing} onClick={() => void recheck()}>
           {t("setup.recheck")}
         </button>
       )}

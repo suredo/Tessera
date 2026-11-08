@@ -308,3 +308,50 @@ test("CLI-01: chooses the program on the status screen, keeps the choice, and th
     await host.close();
   }
 });
+
+test("CLI-01: a check and a choice never overlap, so an old check can't put the old program back", async ({
+  page,
+}) => {
+  // Claude Code ready, Codex signed out: which program the screen shows can be told apart.
+  const host = await startApp({
+    findClaude: STATES["ready"]!,
+    findCodex: () =>
+      Promise.resolve({ ok: false, problem: "signed-out", message: "Codex isn't signed in." }),
+  });
+  try {
+    await page.goto(host.url);
+    await page.getByRole("button", { name: en["nav.status"] }).click();
+    const programs = status(page).getByRole("group", { name: en["setup.provider.heading"] });
+    const codexChoice = programs.getByRole("radio", { name: en["setup.provider.codex"] });
+    const recheck = status(page).getByRole("button", { name: en["setup.recheck"] });
+    await expect(codexChoice).toBeEnabled();
+    // While a check is on its way, the choice waits.
+    let releaseCheck = () => {};
+    const checkHeld = new Promise<void>((resolve) => (releaseCheck = resolve));
+    await page.route("**/api/setup", async (route) => {
+      await checkHeld;
+      await route.continue();
+    });
+    await recheck.click();
+    await expect(codexChoice).toBeDisabled();
+    releaseCheck();
+    await expect(codexChoice).toBeEnabled();
+    await page.unroute("**/api/setup");
+    // While a choice is being kept, the check waits; the choice is what the screen then shows.
+    let releaseChoice = () => {};
+    const choiceHeld = new Promise<void>((resolve) => (releaseChoice = resolve));
+    await page.route("**/api/setup/provider", async (route) => {
+      await choiceHeld;
+      await route.continue();
+    });
+    // Clicked, not checked: the radio follows the kept choice, so it changes only once kept.
+    await codexChoice.click();
+    await expect(recheck).toBeDisabled();
+    releaseChoice();
+    await expect(codexChoice).toBeChecked();
+    await expect(recheck).toBeEnabled();
+    await expect(probeButton(page)).toHaveCount(0);
+  } finally {
+    await host.close();
+  }
+});
