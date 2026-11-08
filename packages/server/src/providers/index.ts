@@ -51,6 +51,7 @@ export {
   type CodexOptions,
   type CodexStatus,
 } from "./codex.ts";
+export { restoreAnswer, toStrictSchema } from "./strict-schema.ts";
 export {
   loadRoutes,
   ROUTES_FILE,

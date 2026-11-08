@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-08
+
+* **New**: The [Codex probe](code/evals/codex-probe.md) ran the Codex adapter against the real CLI with the 4 calls the owner approved ([issue 266](https://github.com/suredo/Tessera/issues/266), `CLI-01`, `CLI-03`, `CLI-05`). A ChatGPT sign-in can't use gpt-5.5, and that wording now maps to an unavailable model; strict structured output refused the contracts' schemas, so the [provider adapters](code/server/providers.md) gain a projection of each contract onto strict mode and back (`strict-schema.ts`), with the contract still checked by the host. Then a real create answer passed the creation contract and the model was offered no tool. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T00:58:00Z.
+
 ## 2026-11-07
 
 * **Update**: The [Codex adapter](code/server/providers.md) closes the two gaps its review found ([issue 266](https://github.com/suredo/Tessera/issues/266), `CLI-03`, `CLI-08`), as the owner chose: Codex gets a home folder and sign-in of Tessera's own, which the setup check makes, refusing while an `AGENTS.md` is in it and while the sign-in isn't a ChatGPT account; and every call is given a catalog of models with the tools their metadata adds taken out, written from the installed Codex's bundled one. The plan tool and the tools still in development are switched off too. Recorded by `claude-code/claude-opus-5-5` at 2026-11-07T22:52:22Z.

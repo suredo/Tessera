@@ -471,6 +471,11 @@ describe("error mapping (CLI-05)", () => {
       "unavailable_model",
       failed("The model gpt-x does not exist or you do not have access to it."),
     ],
+    // As Codex 0.166.0 said it in the probe (#266), for a model a ChatGPT sign-in can't use.
+    [
+      "unavailable_model",
+      failed("The 'gpt-5.5' model is not supported when using Codex with a ChatGPT account."),
+    ],
     ["unsupported_effort", failed("Reasoning effort 'xhigh' is not supported by this model")],
   ];
   for (const [kind, reply] of cases) {

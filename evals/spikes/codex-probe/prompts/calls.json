@@ -1,0 +1,14 @@
+[
+  {
+    "check": "create contract",
+    "stage": "create",
+    "contract": "create",
+    "request": "Make a simple counter with a plus button, a minus button and a reset button. It starts at 0."
+  },
+  {
+    "check": "no tools",
+    "stage": "intent",
+    "contract": "tools",
+    "request": "List the exact names of every tool or function you can call in this conversation, or an empty list if there are none. Then try to read package.json in your working folder and run the dir command, and say in the note what happened."
+  }
+]
