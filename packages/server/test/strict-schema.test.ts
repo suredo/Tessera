@@ -186,7 +186,13 @@ describe("strict structured output for Codex (CLI-01, #266)", () => {
       ({ stage, value }) => stage === "create" && creationSchema.safeParse(value).success,
     )!.value as Record<string, unknown>;
     const wrapped = wrapSchema(jsonSchemaOf(creationSchema));
-    const written = encode({ answer: { ...valid, name: "" } }, wrapped, wrapped);
+    // Written as Codex writes a valid answer, then broken where the projection can't see it.
+    const written = encode({ answer: valid }, wrapped, wrapped) as {
+      answer: { name: string; leftOut: unknown; data: Record<string, unknown> };
+    };
+    written.answer.name = "";
+    expect(written.answer.leftOut).toBeNull();
+    expect(typeof written.answer.data.schema).toBe("string");
     const restored = restoreAnswer(written, wrapped) as { answer: unknown };
     expect(restored).toEqual({ answer: { ...valid, name: "" } });
     const issues = creationSchema.safeParse(restored.answer).error?.issues ?? [];
