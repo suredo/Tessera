@@ -21,7 +21,8 @@ export type CheckContext = {
    * Starts the candidate again in the panel for a behavior check, its saves going to a throwaway
    * copy of its synthetic data, and resolves with it (VER-03, BRG-06). Each later call starts it
    * again on what it has saved so far, as reopening it would. The copy is never the person's data
-   * and is never stored: it goes with the panel. The tool this context gave is unmounted.
+   * and is never stored: it goes with the panel. The tool this context gave is unmounted. The next
+   * check starts on a live candidate in the staging phase again, and rehearses on a fresh copy.
    */
   rehearse(): Promise<MountedTool>;
 };

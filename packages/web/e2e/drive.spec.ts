@@ -101,7 +101,7 @@ async function rehearse(page: Page) {
       { do: "read", hook: "item" },
     ];
     const answers: unknown[] = [];
-    await w.stageCandidate({
+    const staged = await w.stageCandidate({
       candidate: { mountId: "saver", hash: "a".repeat(64), capabilities: [], syntheticData },
       workspaceId: "00000000-0000-4000-8000-000000000000",
       expectedDataRevision: 0,
@@ -116,10 +116,20 @@ async function rehearse(page: Page) {
             return { ok: true };
           },
         },
+        // The next check gets a live candidate in the staging phase again, which can't save,
+        // and its own rehearsal starts on a fresh copy.
+        {
+          name: "next",
+          run: async ({ tool, rehearse }: { tool: unknown; rehearse: () => Promise<unknown> }) => {
+            answers.push(await w.driveTool(tool, add));
+            answers.push(await w.driveTool(await rehearse(), [{ do: "read", hook: "item" }]));
+            return { ok: true };
+          },
+        },
       ],
       activate: () => Promise.resolve({ ok: false, reason: "stale", message: "Not stored." }),
     });
-    return { answers, syntheticData };
+    return { answers, syntheticData, staged };
   });
   return { ...result, bridgeRequests };
 }
@@ -218,10 +228,10 @@ test("VER-03: a step that can't be done ends the answer, saying what was missing
   });
 });
 
-test("BRG-06, VER-03: in the smoke check's panel a save is refused; in a rehearsal it goes to a throwaway copy that a reopen shows, and never to the server", async ({
+test("BRG-06, VER-03: in the smoke check's panel a save is refused; in a rehearsal it goes to a throwaway copy that a reopen shows, and never to the server; the next check starts afresh", async ({
   page,
 }) => {
-  const { answers, syntheticData, bridgeRequests } = await rehearse(page);
+  const { answers, syntheticData, bridgeRequests, staged } = await rehearse(page);
   const steps = (answer: unknown) => (answer as DriveReport).steps;
   // Before the rehearsal, the candidate can't save (BRG-06).
   expect(steps(answers[0])).toEqual([
@@ -239,6 +249,16 @@ test("BRG-06, VER-03: in the smoke check's panel a save is refused; in a rehears
   ]);
   // Reopened, it shows what it saved.
   expect(steps(answers[2])).toEqual([{ ok: true, count: 2, texts: ["Milk", "Eggs"] }]);
+  // The next check's candidate is live and can't save, and its rehearsal starts afresh.
+  expect(steps(answers[3])).toEqual([
+    { ok: true },
+    { ok: true },
+    { ok: true, count: 1, texts: ["not-active"] },
+    { ok: true, count: 1, texts: ["Milk"] },
+  ]);
+  expect(steps(answers[4])).toEqual([{ ok: true, count: 1, texts: ["Milk"] }]);
+  // Every check passed, so staging went on to activation.
+  expect(staged).toMatchObject({ outcome: "refused", message: "Not stored." });
   // The starting data it was given is unchanged, and nothing reached the server's bridge.
   expect(syntheticData).toEqual({ items: [{ id: "i-1", name: "Milk" }] });
   expect(bridgeRequests).toEqual([]);

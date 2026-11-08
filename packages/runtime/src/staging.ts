@@ -10,7 +10,7 @@ import {
   type PatchRefusal,
   type Workspace,
 } from "@tessera/contracts";
-import { BridgeError, serveBridge, type DataHandlers, type ServedBridge } from "./bridge.ts";
+import { BridgeError, serveBridge, type DataHandlers } from "./bridge.ts";
 import type { CheckContext, CheckOutcome, VerificationCheck } from "./checks.ts";
 import { mountTool, type MountedTool, type WatchdogOptions } from "./host.ts";
 import { serverActivation, type Activate } from "./server-activation.ts";
@@ -197,41 +197,53 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       verdict = { check: "start", outcome: { ok: false, reason: (error as Error).message } };
     }
     if (tool) {
-      const bridge = serveBridge(tool, {
-        capabilities: candidate.capabilities,
-        data: syntheticData(candidate.syntheticData),
-        staging: true,
-      });
-      // The candidate in the panel now, and the throwaway copy a behavior check's runs share.
-      let mounted: { tool: MountedTool; bridge: ServedBridge } = { tool, bridge };
-      let copy: DataHandlers | undefined;
-      const rehearse = async (): Promise<MountedTool> => {
-        mounted.bridge.stop();
-        mounted.tool.unmount();
-        copy ??= throwawayData(candidate.syntheticData);
-        const next = await mountTool(
+      const serve = (next: MountedTool, data: DataHandlers | undefined) =>
+        serveBridge(next, {
+          capabilities: candidate.capabilities,
+          ...(data
+            ? { data, rehearsal: true }
+            : { data: syntheticData(candidate.syntheticData), staging: true }),
+        });
+      const mount = () =>
+        mountTool(
           panel,
           candidate.mountId,
           options.appLocation,
           controller.signal,
           options.watchdog,
         );
-        const served = serveBridge(next, {
-          capabilities: candidate.capabilities,
-          data: copy,
-          rehearsal: true,
-        });
-        mounted = { tool: next, bridge: served };
+      // The candidate in the panel now, whether it is rehearsing, and the throwaway copy that one
+      // check's rehearsals share. Each check starts on a candidate in the staging phase, which
+      // can't write, and its rehearsals on a fresh copy.
+      let mounted = { tool, bridge: serve(tool, undefined), rehearsing: false };
+      let copy: DataHandlers | undefined;
+      const replace = async (data: DataHandlers | undefined): Promise<MountedTool> => {
+        mounted.bridge.stop();
+        mounted.tool.unmount();
+        const next = await mount();
+        mounted = { tool: next, bridge: serve(next, data), rehearsing: data !== undefined };
         return next;
       };
+      const rehearse = (): Promise<MountedTool> =>
+        replace((copy ??= throwawayData(candidate.syntheticData)));
       try {
         for (const check of options.checks) {
-          const outcome = await runCheck(check, {
-            tool,
-            panel,
-            signal: controller.signal,
-            rehearse,
-          });
+          copy = undefined;
+          let outcome: CheckOutcome;
+          try {
+            if (mounted.rehearsing) await replace(undefined);
+            outcome = await runCheck(check, {
+              tool: mounted.tool,
+              panel,
+              signal: controller.signal,
+              rehearse,
+            });
+          } catch (error) {
+            // The candidate didn't start again for this check.
+            outcome = controller.signal.aborted
+              ? CANCELLED
+              : { ok: false, reason: (error as Error).message };
+          }
           if (!outcome.ok) {
             verdict = { check: outcome === CANCELLED ? "cancelled" : check.name, outcome };
             break;
@@ -239,8 +251,6 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
           passed.push(check.name);
         }
       } finally {
-        bridge.stop();
-        tool.unmount();
         mounted.bridge.stop();
         mounted.tool.unmount();
       }
