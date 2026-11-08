@@ -285,7 +285,9 @@ test("CLI-01: chooses the program on the status screen, keeps the choice, and th
     await expect(claude).toBeChecked();
     // Each program says its own state, the one not chosen included.
     await expect(programs.getByText(codexSignedOut.message)).toBeVisible();
-    await codexChoice.check();
+    // Clicked, not checked: the radio follows the kept choice, so it changes only once the
+    // server has kept it, which on a busy machine is later than check() waits (CI on #271).
+    await codexChoice.click();
     await expect(codexChoice).toBeChecked();
     // Codex can't reach a model yet, so the probe waits, and the main screens say why.
     await expect(probeButton(page)).toHaveCount(0);
