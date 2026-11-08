@@ -3,13 +3,14 @@ import {
   recordIdSchema,
   TOOL_DATA_LIMIT_BYTES,
   type PatchOperation,
-} from "@tessera/contracts";
+} from "./patch.ts";
 import type { z } from "zod";
 
 // The patch engine (DATA-02, DATA-06): applies a batch of changes to a tool's data in memory.
 // Each operation is resolved against a working copy left by the ones before it, so a removal
 // never shifts which record a later one changes (L-23). The batch applies whole or not at all,
-// and only a record it touches can make it stale. Storing the result is the caller's job.
+// and only a record it touches can make it stale. Storing the result is the caller's job. It
+// lives with the contracts so the server and the staging panel apply changes alike (P3).
 
 type Json = z.infer<ReturnType<typeof z.json>>;
 /** A tool's structured data: its top-level fields, where each list of records is a collection. */

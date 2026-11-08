@@ -1,13 +1,26 @@
-import type { ActivationRefusal, BridgeResult, JsonValue, Workspace } from "@tessera/contracts";
+import {
+  applyPatch,
+  createDataState,
+  recordOfKey,
+  type ActivationRefusal,
+  type BridgeErrorCode,
+  type BridgeResult,
+  type DataState,
+  type JsonValue,
+  type PatchRefusal,
+  type Workspace,
+} from "@tessera/contracts";
 import { BridgeError, serveBridge, type DataHandlers } from "./bridge.ts";
 import type { CheckContext, CheckOutcome, VerificationCheck } from "./checks.ts";
-import { mountTool, type WatchdogOptions } from "./host.ts";
+import { mountTool, type MountedTool, type WatchdogOptions } from "./host.ts";
 import { serverActivation, type Activate } from "./server-activation.ts";
 
 // Staging before activation (RUN-03): a candidate first runs in a hidden panel against synthetic
 // data, where it can't write (BRG-06), and its checks judge it there. Only when every check passes
 // does the host ask the server to activate it (DATA-10). A failed check activates nothing, so the
 // previous version stays, with the person's data untouched. The panel always goes afterwards.
+// A behavior check may start the candidate again to drive it, its saves then going to a throwaway
+// copy of the synthetic data, in this page's memory alone (VER-03, BRG-06).
 
 /** A tool version waiting to be activated. */
 export type Candidate = {
@@ -66,6 +79,37 @@ const syntheticData = (data: Record<string, JsonValue>): DataHandlers => ({
   // The bridge refuses a write in the staging phase before it gets here; this is a second wall.
   patch: () => Promise.reject(new BridgeError("not-active", "A tool being checked can't save.")),
 });
+
+// The patch engine's reasons, as the bridge's codes, as the server gives them.
+const PATCH_CODES: Record<PatchRefusal, BridgeErrorCode> = {
+  stale: "stale",
+  invalid: "invalid-args",
+  "too-large": "too-large",
+};
+
+// A behavior check's throwaway copy (BRG-06): changes are applied by the server's own patch engine,
+// to this copy in memory, and reach neither the server nor the person's data.
+function throwawayData(start: Record<string, JsonValue>): DataHandlers {
+  let state: DataState = createDataState(structuredClone(start));
+  return {
+    read: () => {
+      const revisions: Record<string, Record<string, number>> = {};
+      for (const [key, count] of state.revisions) {
+        const { collection, id } = recordOfKey(key);
+        (revisions[collection] ??= {})[id] = count;
+      }
+      return Promise.resolve({ data: state.data, revisions });
+    },
+    patch: (batch) => {
+      const result = applyPatch(state, batch);
+      if (!result.ok) {
+        return Promise.reject(new BridgeError(PATCH_CODES[result.reason], result.message));
+      }
+      state = result.state;
+      return Promise.resolve({ addedIds: result.addedIds });
+    },
+  };
+}
 
 // Hidden from sight, assistive technology and input, but laid out at the UI standard's narrow
 // width, so a check can measure it.
@@ -153,14 +197,53 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       verdict = { check: "start", outcome: { ok: false, reason: (error as Error).message } };
     }
     if (tool) {
-      const bridge = serveBridge(tool, {
-        capabilities: candidate.capabilities,
-        data: syntheticData(candidate.syntheticData),
-        staging: true,
-      });
+      const serve = (next: MountedTool, data: DataHandlers | undefined) =>
+        serveBridge(next, {
+          capabilities: candidate.capabilities,
+          ...(data
+            ? { data, rehearsal: true }
+            : { data: syntheticData(candidate.syntheticData), staging: true }),
+        });
+      const mount = () =>
+        mountTool(
+          panel,
+          candidate.mountId,
+          options.appLocation,
+          controller.signal,
+          options.watchdog,
+        );
+      // The candidate in the panel now, whether it is rehearsing, and the throwaway copy that one
+      // check's rehearsals share. Each check starts on a candidate in the staging phase, which
+      // can't write, and its rehearsals on a fresh copy.
+      let mounted = { tool, bridge: serve(tool, undefined), rehearsing: false };
+      let copy: DataHandlers | undefined;
+      const replace = async (data: DataHandlers | undefined): Promise<MountedTool> => {
+        mounted.bridge.stop();
+        mounted.tool.unmount();
+        const next = await mount();
+        mounted = { tool: next, bridge: serve(next, data), rehearsing: data !== undefined };
+        return next;
+      };
+      const rehearse = (): Promise<MountedTool> =>
+        replace((copy ??= throwawayData(candidate.syntheticData)));
       try {
         for (const check of options.checks) {
-          const outcome = await runCheck(check, { tool, panel, signal: controller.signal });
+          copy = undefined;
+          let outcome: CheckOutcome;
+          try {
+            if (mounted.rehearsing) await replace(undefined);
+            outcome = await runCheck(check, {
+              tool: mounted.tool,
+              panel,
+              signal: controller.signal,
+              rehearse,
+            });
+          } catch (error) {
+            // The candidate didn't start again for this check.
+            outcome = controller.signal.aborted
+              ? CANCELLED
+              : { ok: false, reason: (error as Error).message };
+          }
           if (!outcome.ok) {
             verdict = { check: outcome === CANCELLED ? "cancelled" : check.name, outcome };
             break;
@@ -168,8 +251,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
           passed.push(check.name);
         }
       } finally {
-        bridge.stop();
-        tool.unmount();
+        mounted.bridge.stop();
+        mounted.tool.unmount();
       }
     }
   } finally {

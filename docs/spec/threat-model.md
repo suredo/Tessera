@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:50:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T12:02:04Z }
 ---
 # Threat model and boundary checks
 
@@ -112,7 +112,7 @@ Run against the bridge's message handling, and through a hostile test tool in th
 | BRG-03 | A capability the tool didn't declare | Refused (`CAP-01`). |
 | BRG-04 | A batch of changes planned against a record revision that has since changed | The whole batch is refused with a plain message, and none of its changes apply; a separate batch touching other records still succeeds (`DATA-02`). |
 | BRG-05 | A call carrying an earlier instance's or another tool's identity | Refused or ignored (`RUN-04`). |
-| BRG-06 | A data write before the tool is active, from the staging panel | Refused with an explanatory error (`GEN-06`). |
+| BRG-06 | A data write before the tool is active, from the staging panel | Refused with an explanatory error (`GEN-06`). Only while a behavior check drives the candidate (`VER-03`, the owner's decision on #273) do its writes go somewhere: to a throwaway copy of its synthetic data in the host page's memory, changed by the same patch engine as saved data, which never reaches the server, the disk or the person's data and goes with the panel. |
 | BRG-07 | Arguments naming a file path, a URL, or another workspace's record or asset | Refused; no reply ever contains a file path. |
 
 ## Import checks
