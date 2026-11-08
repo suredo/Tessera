@@ -19,11 +19,12 @@ type Flaw =
   | "keepsFilter"
   | "dropsCategory"
   | "fieldDropsCategory"
-  | "duplicates";
+  | "duplicates"
+  | "exactSpaces";
 
 /** A reading list that fits the filtering profile, with `flaw` built in. */
 const list = (flaw: Flaw): Artifact["code"] => {
-  const field = flaw === "field" || flaw === "fieldDropsCategory";
+  const field = flaw === "field" || flaw === "fieldDropsCategory" || flaw === "exactSpaces";
   return {
     html: `<label for="name">Book</label> <input id="name" data-hook="item-name">
 <label for="genre">Genre</label> <input id="genre" data-hook="item-category">
@@ -54,10 +55,12 @@ const render = () => {
     if (chosen) last = chosen;
     else chosen = last;
   }
+  // A category as the rule compares it; one flaw compares the text as stored.
+  const spaced = (text) => flaw === "exactSpaces" ? text : text.trim().split(" ").filter(Boolean).join(" ");
   let shown = 0;
   let first;
   list.replaceChildren(...books.flatMap((record) => {
-    const fits = flaw === "ignoresFilter" || !chosen || record.genre === chosen;
+    const fits = flaw === "ignoresFilter" || !chosen || spaced(record.genre) === spaced(chosen);
     if (fits && flaw === "firstOnly" && chosen && shown > 0) return [];
     if (fits) shown += 1;
     // The field-filtered list leaves out what it filters; the others hide it.
@@ -106,6 +109,7 @@ const flaws: Flaw[] = [
   "dropsCategory",
   "fieldDropsCategory",
   "duplicates",
+  "exactSpaces",
 ];
 let host: SandboxHost;
 
@@ -155,7 +159,7 @@ async function check(page: Page, flaw: Flaw, books = BOOKS): Promise<Result> {
 
 const PASSED = { outcome: "refused", reason: "stale", message: "Passed the checks." };
 const NARROWS =
-  "(Setting filter to a category shows every item whose category is exactly that, and hides the rest; emptying it shows every item again.)";
+  "(Setting filter to a category shows every item whose category is exactly that, spaces at either end aside and repeated spaces counting as one, and hides the rest; emptying it shows every item again.)";
 
 test("VER-03: a list whose select filter hides the items outside a category passes the filtering check", async ({
   page,
@@ -235,5 +239,17 @@ test("VER-03, VER-04: categories are their text exactly, as the prompt says, so 
 }) => {
   expect(await check(page, "none", [...BOOKS, { name: "Ulysses", genre: "fiction" }])).toEqual(
     PASSED,
+  );
+});
+
+test("VER-03, VER-04: spaces at a category's ends, or repeated, don't make it another, as the prompt says", async ({
+  page,
+}) => {
+  const spaced = [...BOOKS, { name: "Ulysses", genre: " Fiction " }];
+  expect(await check(page, "field", spaced)).toEqual(PASSED);
+  const result = await check(page, "exactSpaces", spaced);
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toContain(
+    'expected the 3 items in "Fiction", and no other, with filter set to it; observed 2 items; gone: "Ulysses Fiction Remove"; none new.',
   );
 });

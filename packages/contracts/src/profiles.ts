@@ -68,7 +68,7 @@ export const FILTERING_PROFILE = {
     "Typing a name in item-name and a category in item-category, then pressing item-add, adds one item with that name and category to the list, and saves it.",
     ITEM_LIST_PROFILE.rules[1],
     ITEM_LIST_PROFILE.rules[2],
-    "Setting filter to a category shows every item whose category is exactly that, and hides the rest; emptying it shows every item again.",
+    "Setting filter to a category shows every item whose category is exactly that, spaces at either end aside and repeated spaces counting as one, and hides the rest; emptying it shows every item again.",
   ],
   fixture: { itemName: ITEM_LIST_PROFILE.fixture.itemName, category: "Tessera check category" },
 } as const satisfies VerificationProfile;

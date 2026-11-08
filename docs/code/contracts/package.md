@@ -7,7 +7,7 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/profiles.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T17:47:24Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T17:56:18Z }
 ---
 
 # Purpose
