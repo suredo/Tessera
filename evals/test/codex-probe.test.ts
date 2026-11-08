@@ -73,7 +73,7 @@ describe("Codex probe (CLI-01, CLI-03, ENG-07, #266)", { timeout: 60_000 }, () =
     ]);
   });
 
-  it("CLI-03: a tool the model names fails the check, even when it isn't used", async () => {
+  it("TCL-07, CLI-03: the probe's scoring fails a call whose answer names a tool, even unused", async () => {
     const dataFolder = path.join(root, "named");
     const done = JSON.stringify({
       type: "turn.completed",

@@ -3,11 +3,11 @@ type: Code Module
 title: "Codex probe"
 description: "The M3 live probe of the Codex adapter against the real CLI: whether strict structured output takes the projected contract, whether the answer comes back intact, and whether a call is offered any tool; with the fake codex for its free dry run."
 resource: ../../../evals/spikes/codex-probe/
-implements: [CLI-01, CLI-03, CLI-04, CLI-05, ENG-07]
+implements: [CLI-01, CLI-03, CLI-04, CLI-05, ENG-07, TCL-07]
 tests: [../../../evals/test/codex-probe.test.ts]
 tags: [code, evals, cli, codex, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T01:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:50:00Z }
 ---
 
 # Purpose
@@ -25,7 +25,7 @@ The probe the [M3 roadmap](../../roadmap/m3-verification-and-codex.md) names for
 - **Live only with approval.** `--live` refuses to start without `--approved-cap` equal to `PLAN.callCap`, and the harness refuses every call past it. The owner approved 4 Codex calls on 2026-11-07; the runs below spent them. Changing `PLAN` needs a new approval (`ENG-07`).
 - **The product adapter makes every call,** after its free checks: Codex found, at least the tested version, Tessera's home folder with no instructions file, a ChatGPT sign-in, and the restricted catalog written. Anything wrong stops the run before a call is counted (L-71).
 - **The first call failing stops the run** (`ENG-07`).
-- **A tool named is a failure, even unused:** the no-tools check fails when the model lists any tool, as well as when an event is one (`CLI-03`).
+- **A tool named is a failure, even unused:** the no-tools check fails when the model lists any tool, as well as when an event is one (`CLI-03`, `TCL-07`). It reads what the model reports and what the events show; it can't see the tool list the request carried.
 - **A schema failure says which parts of the contract the turned-back answer missed,** so a fault of the projection can be told from the model's.
 
 # Depends on / used by

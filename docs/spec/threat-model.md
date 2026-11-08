@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T04:57:55Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:50:00Z }
 ---
 # Threat model and boundary checks
 
@@ -40,7 +40,7 @@ A check that passes shows that the attempt it describes failed, in the browsers 
 | Assets | Bytes a tool, a person or an archive hands over | Files that aren't the image types they claim, oversize files, reads outside the asset store, paths reaching a tool, cross-workspace reads | `DATA-11`, `DATA-09` | AST-01 to AST-06 | M1, the asset store ([#49](https://github.com/suredo/Tessera/issues/49)) |
 | Imports | An archive file | Writing outside the import's own folder, oversize or bomb archives, malformed or newer formats, hash mismatches, executable content, overwriting existing work | `DATA-05`, `SEC-01` | IMP-01 to IMP-07 | M1, export and import ([#48](https://github.com/suredo/Tessera/issues/48)); assets in archives with [#49](https://github.com/suredo/Tessera/issues/49) |
 | The local server | Web pages and other local processes | Requests from foreign `Host` headers and other origins | `SEC-03`, `PLAT-02` | Its own tests | M1, the launcher and server ([#54](https://github.com/suredo/Tessera/issues/54)) |
-| The trusted CLIs | Prompts that carry untrusted text | File tools, web tools outside research, a leaked environment, a stage with more tools than it needs | `CLI-03`, `CLI-08`, `SEC-02`, `SEC-04` | Not yet numbered | M2 for Claude Code; M3 for the Codex tool policy |
+| The trusted CLIs | Prompts that carry untrusted text | File tools, web tools outside research, a leaked environment, a stage with more tools than it needs | `CLI-03`, `CLI-08`, `SEC-02`, `SEC-04` | TCL-01 to TCL-07 | M2 for Claude Code; M3 for the Codex tool policy ([#266](https://github.com/suredo/Tessera/issues/266), [ADR 0013](../decisions/adr/0013-codex-cli-contract.md)) |
 | Research and engines | Web pages read during research; engine code | Instructions taken from sources; engine checks reaching files, network or processes | `SEC-01`, `SEC-02`, `SIM-02`, `SIM-04` | Not yet numbered | M5 |
 
 ## What M1 covers, and its limits
@@ -64,6 +64,20 @@ Its limits, which stay open after M1:
 - **Server checks** (BRG, IMP, AST, MIG): Node tests in a test data folder (`ENG-19`), with a canary file outside it and tripwires that fail the test on any network connection opened, any request sent on a connection opened before, any process or worker started, or any file touched outside the folders the test allows, judged by where its path really leads through links and junctions, and for a recursive copy by every entry it reaches. The tripwires and the canary are a shared test helper, `packages/server/test/support/tripwires.ts` ([#55](https://github.com/suredo/Tessera/issues/55)). They detect an attempt in code that should never make one; they are not an isolation mechanism (`SEC-01`). They see only calls made through Node's public modules: a file opened before arming, by its descriptor, or an HTTP/2 session opened before arming is not checked.
 - **Each check is a test whose name starts with its ID,** in the pull request that builds its path, so the coverage report shows which checks pass and which are still missing. At M1's end all 39 are verified, and a test keeps it so: it fails CI if any numbered check here lacks a test that names it (`SEC-05`, the [coverage report](../code/scripts/coverage-report.md)).
 - **What the checks claim is what they test.** A passing check shows that its listed attempts fail, in the browsers and paths tested; it is not a claim of general safety (see the limits above).
+
+## Trusted CLI checks
+
+Run against the provider adapters with a fake program that records what it was given (`TEST-02`), and once live: the M0 spike for Claude Code ([ADR 0002](../decisions/adr/0002-claude-code-cli-contract.md)) and the Codex probe ([ADR 0013](../decisions/adr/0013-codex-cli-contract.md)). The fake checks the arguments, environment and files a call starts with. No check sees the tool list a real request carries: the live calls show what the model reports and does, and `codex debug prompt-input` what reaches Codex's model besides the request. Claude Code's research stage arrives in M5, so `TCL-02` covers Codex until then.
+
+| ID | Attempt | Expected result |
+| --- | --- | --- |
+| TCL-01 | A normal stage's call, on either program | Started with the locked flags, exactly: no file, shell, web or other tool, no approvals, a fresh empty folder (`CLI-03`). |
+| TCL-02 | A stage other than research getting the web | The stage policy gives web tools to research alone, every stage checked (`runStage`); the Codex adapter turns that into web search `disabled`, or `live` for research (`CLI-03`). |
+| TCL-03 | API keys, Codex and Claude Code variables, and a parent session's variables in Tessera's environment | None reaches the program: it starts from an allowlist, with Codex pointed at Tessera's own home folder (`CLI-08`). |
+| TCL-04 | Codex: tools a model's metadata adds whatever is disabled, such as file editing | Taken out of every model by the restricted catalog every call is given; a call refuses to start without it (`CLI-03`). |
+| TCL-05 | Codex: instructions in its home folder, which reach every call | The setup check and every call refuse while an `AGENTS.md` or `AGENTS.override.md` is there; project instruction files are switched off (`CLI-08`). |
+| TCL-06 | Codex: a sign-in that could bill apart from the plan, such as an API key | Refused by the setup check, without a model call (`CLI-02`). |
+| TCL-07 | Live: a request that asks the model to list its tools, read a file and run a command | The probe's scoring fails a call whose events show a tool or whose answer names one, even unused. In the Codex probe of 2026-11-07 the model named no tool and attempted neither, and no event was a tool. That is the model's own report and the events' absence, not proof of what was offered: what is offered rests on `TCL-01` and `TCL-04`, and what reaches the model on `codex debug prompt-input`. |
 
 ## Sandbox checks: the POC's 13
 

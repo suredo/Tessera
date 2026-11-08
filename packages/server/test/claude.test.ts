@@ -102,7 +102,7 @@ function withReplies(replies: unknown[], env: NodeJS.ProcessEnv = process.env) {
 }
 
 describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
-  it("CLI-03: passes the locked flags exactly, with the wrapped draft-07 schema, and the request and system prompt apart", async () => {
+  it("TCL-01, CLI-03: passes the locked flags exactly, with the wrapped draft-07 schema, and the request and system prompt apart", async () => {
     const { provider, made } = withReplies([success({ answer: { title: "Shopping" } })]);
     await provider.run(spec());
     const [call] = made();
@@ -143,7 +143,7 @@ describe("arguments and environment (CLI-03, CLI-08, TEST-02)", () => {
     expect(buildArgs({ ...spec(), tools: "web" })).toContain("WebSearch,WebFetch");
   });
 
-  it("CLI-08: starts the CLI with only the allowlisted environment, in a fresh empty folder it removes", async () => {
+  it("TCL-03, CLI-08: starts the CLI with only the allowlisted environment, in a fresh empty folder it removes", async () => {
     const env = {
       ...process.env,
       ANTHROPIC_API_KEY: "would-bill-the-api",
