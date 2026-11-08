@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { checkJs } from "../src/checks/js-check.ts";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { bridgeManifest, ITEM_LIST_PROFILE, type Intent } from "@tessera/contracts";
+import { bridgeManifest, ITEM_LIST_PROFILE, PROFILE_IDS, type Intent } from "@tessera/contracts";
 import { Ajv } from "ajv";
 import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
 import { describe, expect, it } from "vitest";
@@ -487,6 +487,28 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     for (const stage of ["create", "edit", "repair"] as const) {
       expect(sizes[stage], `${stage} is ${sizes[stage]} characters`).toBeLessThanOrEqual(
         PROMPT_BUDGETS[stage],
+      );
+    }
+    // Every profile's part fits, the largest setting the largest shape (VER-03).
+    for (const profile of PROFILE_IDS) {
+      const create = assemblePrompt({
+        stage: "create",
+        request: "I need a shopping list I can tick off at the store.",
+        intent: intent({ kind: "create", profile }),
+        uiMode: "standard",
+      }).size;
+      expect(create, `create with ${profile} is ${create} characters`).toBeLessThanOrEqual(
+        PROMPT_BUDGETS.create,
+      );
+      const edit = assemblePrompt({
+        stage: "edit",
+        request: "Add a quantity next to each item, and sort them by name",
+        uiMode: "standard",
+        source: shoppingList,
+        intent: intent({ profile }),
+      }).size;
+      expect(edit, `edit with ${profile} is ${edit} characters`).toBeLessThanOrEqual(
+        PROMPT_BUDGETS.edit,
       );
     }
     // Repair's larger shape: a creation's repair quotes the whole failed answer (GEN-09).

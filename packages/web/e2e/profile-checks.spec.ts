@@ -193,7 +193,7 @@ test("VER-03, VER-04: a list missing a hook the prompt asked for fails, naming i
 }) => {
   const result = await check(page, "noRemoveHook");
   expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
-  expect(result.reason).toContain('observed Nothing has the hook "item-remove".');
+  expect(result.reason).toContain('observed Nothing shown has the hook "item-remove".');
 });
 
 test("VER-03: an error while the check drives the list fails it", async ({ page }) => {

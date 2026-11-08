@@ -169,6 +169,7 @@ export {
 export { INTERNAL_TERMS, internalTerms } from "./plain-language.ts";
 export {
   ITEM_LIST_PROFILE,
+  FILTERING_PROFILE,
   PROFILE_IDS,
   PROFILES,
   profileIdSchema,

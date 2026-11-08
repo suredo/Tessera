@@ -42,13 +42,47 @@ export const ITEM_LIST_PROFILE = {
   fixture: { itemName: "Tessera check item" },
 } as const satisfies VerificationProfile;
 
-/** Every profile, by ID. */
-export const PROFILES = { "item-list": ITEM_LIST_PROFILE } as const satisfies Record<
-  string,
-  VerificationProfile
->;
+/**
+ * A list whose items each have a category, narrowed to one at a time: T2 (the M3 scenario sets).
+ * It is an item list too, with the same hooks and rules, so its check is the item list's and more.
+ */
+export const FILTERING_PROFILE = {
+  id: "filtering",
+  fits: "a list of items, each in a category, that the person adds to, removes from and narrows to one category, such as a reading list filtered by genre",
+  hooks: [
+    ...ITEM_LIST_PROFILE.hooks,
+    {
+      name: "item-category",
+      says: "the field where a new item's category is typed, taking any text",
+    },
+    {
+      name: "category",
+      says: "inside each item, the element whose text is the item's category and nothing else",
+    },
+    {
+      name: "filter",
+      says: "the field or select that narrows the list to one category; a select offers every category the list holds, and an empty-valued choice for all",
+    },
+  ],
+  rules: [
+    "Typing a name in item-name and a category in item-category, then pressing item-add, adds one item with that name and category to the list, and saves it.",
+    ITEM_LIST_PROFILE.rules[1],
+    ITEM_LIST_PROFILE.rules[2],
+    "Setting filter to a category shows every item in that category and hides the rest; emptying it shows every item again.",
+  ],
+  fixture: { itemName: ITEM_LIST_PROFILE.fixture.itemName, category: "Tessera check category" },
+} as const satisfies VerificationProfile;
 
-export const PROFILE_IDS = ["item-list"] as const satisfies readonly (keyof typeof PROFILES)[];
+/** Every profile, by ID. */
+export const PROFILES = {
+  "item-list": ITEM_LIST_PROFILE,
+  filtering: FILTERING_PROFILE,
+} as const satisfies Record<string, VerificationProfile>;
+
+export const PROFILE_IDS = [
+  "item-list",
+  "filtering",
+] as const satisfies readonly (keyof typeof PROFILES)[];
 export type ProfileId = (typeof PROFILE_IDS)[number];
 
 export const profileIdSchema = z
