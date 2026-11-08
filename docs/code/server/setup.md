@@ -7,7 +7,7 @@ implements: [PLAT-03, CLI-02]
 tests: [../../../packages/server/test/setup.test.ts]
 tags: [code, server, setup, cli]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T00:24:24Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T01:50:00Z }
 ---
 
 # Purpose
@@ -17,20 +17,22 @@ Guides a fresh machine to a working connection (`PLAT-03`): Tessera checks what 
 # Entry points
 
 - `src/setup/setup.ts`:
-  - `checkSetup` gives the setup report: `checkNode` against `MINIMUM_NODE`, Claude Code through the [provider adapters](providers.md)' findClaude, and the data folder with its size from `folderBytes`. It is ready only when both checks pass.
-  - `runProbe` makes the probe's call, within `PROBE_TIME_LIMIT_MS`.
-  - `setupRoutes` answers the check and the probe for the local server; `SetupOptions` lets tests pass a fake Claude Code.
+  - `checkSetup` gives the setup report: `checkNode` against `MINIMUM_NODE`, Claude Code and Codex through the [provider adapters](providers.md)' findClaude and findCodex (Codex with Tessera's own Codex home folder), the program chosen for the data folder, and the data folder with its size from `folderBytes`. It is ready when Node.js and the chosen program pass; both programs are checked so the status screen can show which can be chosen.
+  - `chosenProvider` is the provider every model call goes through: the chosen program, found when asked, through `liveProvider`, or what is wrong with it in plain words. The [launcher](launcher.md) asks it for each request.
+  - `runProbe` makes the probe's call through the chosen program, on its routes, within `PROBE_TIME_LIMIT_MS`.
+  - `setupRoutes` answers the check, the probe and the choice of program for the local server; `SetupOptions` lets tests pass a fake Claude Code and Codex.
 - The report and the probe's result are contracts in `packages/contracts/src/setup.ts` ([contracts](../contracts/package.md)).
 
 # Invariants
 
-- **The check spends no model call.** Node's version is read from the process, and Claude Code is checked with `claude --version` and `claude auth status`, which reach no model (L-71).
+- **The check spends no model call.** Node's version is read from the process, Claude Code is checked with `claude --version` and `claude auth status`, and Codex with `codex --version`, `codex login status` and `codex debug models --bundled`, none of which reach a model (L-71).
+- **The choice of program is kept in the data folder** (`CLI-01`), Claude Code until one is made, and set on POST to the provider route with `{ provider }`; the answer is the check as it then stands. A new choice counts at the next request, with that program's routes (`CLI-09`).
 - **The check never fails itself.** A Claude Code that is found but can't start (access denied, or removed during an update) is a failed check with its fix, and so is anything else that stops the check, so Tessera stays up to show it, on start and on the status screen.
 - **Each failure says what is wrong and how to fix it,** in plain words (`GEN-12`): the adapter's messages for Claude Code, and the Node.js version to install.
 - **`MINIMUM_NODE` is the root package.json's lower bound;** a test fails if the two disagree.
 - **The probe runs only on request, and never while the check fails.** The probe route answers POST only, checks first, and spends nothing if the check fails. Probes sent while one is running share its call, so a double click costs one call.
-- **The probe is one small structured answer on the intent stage's route,** the cheapest (`CLI-09`), following the data folder's routes file, with no tools. Its words are the [prompt parts](prompts.md) `probe` and `probe-request`, recorded with the call. A failure is the adapter's plain message.
-- **Tests fake Claude Code by configuration:** `SetupOptions` (passed through the [launcher](launcher.md)'s `setup` option) replaces `findClaude` and the probe's provider. They never come from the request (`ENG-11`).
+- **The probe is one small structured answer on the intent stage's route** of the chosen program, the cheapest (`CLI-09`), following that program's routes file, with no tools. Its words are the [prompt parts](prompts.md) `probe` and `probe-request`, recorded with the call. A failure is the adapter's plain message.
+- **Tests fake Claude Code and Codex by configuration:** `SetupOptions` (passed through the [launcher](launcher.md)'s `setup` option) replaces `findClaude`, `findCodex` and the provider for the program found. They never come from the request (`ENG-11`).
 
 # Depends on / used by
 
@@ -45,5 +47,5 @@ The [provider adapters](providers.md) (`findClaude`, `createClaudeProvider`, rou
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `checkNode`, `checkSetup`, `folderBytes`, `MINIMUM_NODE`, `PROBE_TIME_LIMIT_MS`, `runProbe`, `setupRoutes`, `SetupOptions` (type)
-- `setup.ts`: `MINIMUM_NODE`, `PROBE_TIME_LIMIT_MS`, `SetupOptions` (type), `checkNode`, `folderBytes`, `checkSetup`, `runProbe`, `setupRoutes`
+- `index.ts`: `checkNode`, `checkSetup`, `chosenProvider`, `folderBytes`, `liveProvider`, `MINIMUM_NODE`, `PROBE_TIME_LIMIT_MS`, `runProbe`, `setupRoutes`, `SetupOptions` (type)
+- `setup.ts`: `MINIMUM_NODE`, `PROBE_TIME_LIMIT_MS`, `SetupOptions` (type), `liveProvider`, `chosenProvider`, `checkNode`, `folderBytes`, `checkSetup`, `runProbe`, `setupRoutes`

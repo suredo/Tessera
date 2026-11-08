@@ -10,20 +10,14 @@ import { openDataFolder, tryLockFile, type Clock, type DataFolder } from "../sto
 import { collectAssets, sweepAssets } from "../assets/index.ts";
 import { hostRoutes, workspaceTools } from "../host/index.ts";
 import { runtimeRoutes } from "../runtime/index.ts";
-import { setupRoutes, type SetupOptions } from "../setup/index.ts";
+import { chosenProvider, setupRoutes, type SetupOptions } from "../setup/index.ts";
 import {
   generationRoutes,
   type StageTimeLimits,
   type TwoPassOptions,
 } from "../generation/index.ts";
 import { JobQueue } from "../jobs/index.ts";
-import {
-  createClaudeProvider,
-  findClaude,
-  loadRoutes,
-  ROUTES_FILE,
-  type Provider,
-} from "../providers/index.ts";
+import { loadProviderRoutes, readProviderChoice, type Provider } from "../providers/index.ts";
 import { removeExpired } from "../trash/index.ts";
 
 // Starting Tessera (PLAT-02): one copy per data folder, on a free port, opened in the browser,
@@ -182,13 +176,13 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
           jobs: new JobQueue(),
           provider: async () => {
             if (options.provider) return options.provider;
-            // Found when a request comes, so a fix made on the status screen counts at once.
-            const claude = await (options.setup?.findClaude ?? (() => findClaude()))();
-            return claude.ok
-              ? createClaudeProvider({ executable: claude.executable, live: true })
-              : { problem: claude.message };
+            // The chosen program, found when a request comes, so a fix or a new choice made on
+            // the status screen counts at once (CLI-01).
+            const chosen = await chosenProvider({ ...options.setup, dataDir: options.dataDir });
+            return "problem" in chosen ? chosen : chosen.provider;
           },
-          routes: () => loadRoutes(path.join(options.dataDir, ROUTES_FILE)),
+          // The chosen program's routes (CLI-09).
+          routes: () => loadProviderRoutes(options.dataDir, readProviderChoice(options.dataDir)),
           ...(options.twoPass ? { twoPass: options.twoPass } : {}),
           ...(options.stageTimeLimitsMs ? { stageTimeLimitsMs: options.stageTimeLimitsMs } : {}),
         }),

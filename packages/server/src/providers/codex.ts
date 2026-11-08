@@ -430,6 +430,54 @@ export function createCodexProvider(options: CodexOptions): Provider {
   return { name: options.live ? "codex" : "codex-fake", live: options.live, run };
 }
 
+/** The script npm's codex.cmd runs, beside it, if it is there. */
+function npmLauncher(cmd: string): string | undefined {
+  const script = path.join(
+    path.dirname(cmd),
+    "node_modules",
+    "@openai",
+    "codex",
+    "bin",
+    "codex.js",
+  );
+  return fs.existsSync(script) ? script : undefined;
+}
+
+/**
+ * How to start the Codex `findCodex` found: the program itself, or npm's launcher script with
+ * this Node, which is a program, so no shell is needed (L-45).
+ */
+export const codexLaunch = (executable: string): { executable: string; leadingArgs: string[] } =>
+  /\.[cm]?js$/i.test(executable)
+    ? { executable: process.execPath, leadingArgs: [executable] }
+    : { executable, leadingArgs: [] };
+
+/** The variable that moves Tessera's Codex home folder, for tests and evaluations (ENG-19). */
+export const CODEX_HOME_VARIABLE = "TESSERA_CODEX_HOME";
+
+/**
+ * Tessera's Codex home folder on this computer (CLI-08): one per person's account, outside every
+ * data folder, so the one sign-in it holds serves development, evaluations and use alike. A sign-in
+ * is never copied into it (ENG-19); the person signs in there once.
+ */
+export function codexHome(
+  env: NodeJS.ProcessEnv = process.env,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  const moved = env[CODEX_HOME_VARIABLE];
+  if (moved) return path.resolve(moved);
+  const base =
+    platform === "win32"
+      ? (env.LOCALAPPDATA ?? path.join(os.homedir(), "AppData", "Local"))
+      : (env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share"));
+  return path.join(base, "Tessera", "codex-home");
+}
+
+/** The live adapter for the Codex `findCodex` found, with Tessera's home folder. */
+export function liveCodexProvider(executable: string, home: string = codexHome()): Provider {
+  return createCodexProvider({ ...codexLaunch(executable), live: true, home });
+}
+
 /** What Tessera found about Codex: the same shape as for Claude Code (the contracts' check). */
 export type CodexStatus = ClaudeStatus;
 
@@ -457,13 +505,17 @@ export async function findCodex(
       message: "Codex isn't installed, or isn't on the PATH. Install it, then try again.",
     };
   }
-  if (/\.(cmd|bat)$/i.test(executable)) {
+  // npm's codex.cmd can't be started without a shell (L-45), but the script it runs, npm's own
+  // launcher for Codex, can be: with Node, which is a program.
+  const found = /\.(cmd|bat)$/i.test(executable) ? npmLauncher(executable) : executable;
+  if (found === undefined) {
     return {
       ok: false,
       problem: "batch-file",
       message: `Codex was found as ${executable}, which Tessera can't start. Install Codex's own program (codex.exe), then try again.`,
     };
   }
+  const launch = codexLaunch(found);
   const clean = cleanEnvironment(env);
   const cantStart: CodexStatus = {
     ok: false,
@@ -472,7 +524,10 @@ export async function findCodex(
   };
   let answer: Awaited<ReturnType<typeof runProcess>>;
   try {
-    answer = await run(executable, ["--version"], { env: clean, timeoutMs: 30_000 });
+    answer = await run(launch.executable, [...launch.leadingArgs, "--version"], {
+      env: clean,
+      timeoutMs: 30_000,
+    });
   } catch {
     return cantStart;
   }
@@ -513,7 +568,7 @@ export async function findCodex(
   const inHome = { cwd: os.tmpdir(), env: codexEnvironment(env, home), timeoutMs: 30_000 };
   let status: Awaited<ReturnType<typeof runProcess>>;
   try {
-    status = await run(executable, ["login", "status"], inHome);
+    status = await run(launch.executable, [...launch.leadingArgs, "login", "status"], inHome);
   } catch {
     return cantStart;
   }
@@ -542,7 +597,11 @@ export async function findCodex(
   };
   let models: Awaited<ReturnType<typeof runProcess>>;
   try {
-    models = await run(executable, ["debug", "models", "--bundled"], inHome);
+    models = await run(
+      launch.executable,
+      [...launch.leadingArgs, "debug", "models", "--bundled"],
+      inHome,
+    );
   } catch {
     return cantStart;
   }
@@ -556,5 +615,5 @@ export async function findCodex(
   } catch {
     return unreadable;
   }
-  return { ok: true, executable, version };
+  return { ok: true, executable: found, version };
 }

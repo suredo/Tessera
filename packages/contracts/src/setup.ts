@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { modelSchema } from "./routes.ts";
+import { modelSchema, providerSchema } from "./routes.ts";
 
 // The setup check (PLAT-03) and the status screen (APP-07): what Tessera needs to reach a model,
 // each failure in plain words with its fix, and the opt-in probe, one small model call (CLI-02).
@@ -9,8 +9,10 @@ import { modelSchema } from "./routes.ts";
 export const SETUP_ROUTE = "/api/setup";
 /** The probe, run on POST only, since it costs a model call. */
 export const PROBE_ROUTE = "/api/setup/probe";
+/** The program Tessera reaches a model through, chosen on the status screen: set on POST. */
+export const PROVIDER_ROUTE = "/api/setup/provider";
 
-/** What can be wrong with Claude Code (CLI-02). */
+/** What can be wrong with Claude Code or Codex (CLI-02). */
 export const CLAUDE_PROBLEMS = ["missing", "batch-file", "old", "signed-out", "broken"] as const;
 export type ClaudeProblem = (typeof CLAUDE_PROBLEMS)[number];
 
@@ -21,6 +23,9 @@ export const claudeCheckSchema = z.union([
   z.strictObject({ ok: z.literal(false), problem: z.enum(CLAUDE_PROBLEMS), message }),
 ]);
 export type ClaudeCheck = z.infer<typeof claudeCheckSchema>;
+/** Codex's check has the same shape as Claude Code's. */
+export const codexCheckSchema = claudeCheckSchema;
+export type CodexCheck = ClaudeCheck;
 
 export const nodeCheckSchema = z.union([
   z.strictObject({ ok: z.literal(true), version: z.string(), minimum: z.string() }),
@@ -32,9 +37,13 @@ export const setupReportSchema = z
   .strictObject({
     ready: z
       .boolean()
-      .describe("Every check passed, so what needs the model may be offered (PLAT-03)."),
+      .describe(
+        "Node and the chosen program passed their checks, so what needs the model may be offered (PLAT-03).",
+      ),
+    provider: providerSchema.describe("The program chosen to reach a model through."),
     node: nodeCheckSchema,
     claude: claudeCheckSchema,
+    codex: codexCheckSchema,
     dataFolder: z.strictObject({
       path: z.string(),
       bytes: z.int().nonnegative().describe("How much the data folder holds (APP-07)."),
@@ -54,3 +63,9 @@ export const probeResultSchema = z
   ])
   .describe("How the probe went: one small structured answer from the model (CLI-02).");
 export type ProbeResult = z.infer<typeof probeResultSchema>;
+
+/** The choice of program, as the status screen sends it. */
+export const providerChoiceSchema = z
+  .strictObject({ provider: providerSchema })
+  .describe("The program Tessera should reach a model through (CLI-01).");
+export type ProviderChoice = z.infer<typeof providerChoiceSchema>;

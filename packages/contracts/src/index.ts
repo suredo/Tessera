@@ -173,13 +173,21 @@ export {
   type Usage,
 } from "./provider.ts";
 export {
+  CLAUDE_MODELS,
+  CODEX_DEFAULT_ROUTES,
+  CODEX_MODELS,
   DEFAULT_ROUTES,
+  DEFAULT_ROUTES_BY_PROVIDER,
   MODELS,
+  MODELS_BY_PROVIDER,
   modelSchema,
+  PROVIDERS,
+  providerSchema,
   routeOverridesSchema,
   routeSchema,
   withOverrides,
   type Model,
+  type ProviderName,
   type Route,
   type RouteOverrides,
 } from "./routes.ts";
@@ -225,15 +233,20 @@ export {
 export {
   CLAUDE_PROBLEMS,
   claudeCheckSchema,
+  codexCheckSchema,
   nodeCheckSchema,
   PROBE_ROUTE,
   probeResultSchema,
+  PROVIDER_ROUTE,
+  providerChoiceSchema,
   SETUP_ROUTE,
   setupReportSchema,
   type ClaudeCheck,
   type ClaudeProblem,
+  type CodexCheck,
   type NodeCheck,
   type ProbeResult,
+  type ProviderChoice,
   type SetupReport,
 } from "./setup.ts";
 export {

@@ -32,6 +32,8 @@ export type AppHost = {
 const READY_SETUP: NonNullable<LaunchOptions["setup"]> = {
   findClaude: () =>
     Promise.resolve({ ok: true, executable: "C:\\Tools\\claude.exe", version: "2.1.310" }),
+  findCodex: () =>
+    Promise.resolve({ ok: true, executable: "C:\\Tools\\codex.exe", version: "0.166.0" }),
   probeProvider: () => {
     throw new Error("This test has no probe.");
   },
@@ -52,7 +54,9 @@ export async function startApp(
     port: 0,
     webRoot,
     openBrowser: () => Promise.resolve(),
-    setup,
+    // A test's own setup over the ready one, so what it doesn't name (such as Codex) is still
+    // faked and never the real program (ENG-11).
+    setup: { ...READY_SETUP, ...setup },
     provider,
     ...extra,
   });

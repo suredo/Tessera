@@ -44,7 +44,7 @@ if (launched.status === "already-running") {
   console.log(`Tessera is running at ${launched.url}.${opened} Close this window to stop it.`);
   // The setup check on start (PLAT-03); the status screen shows the same, with the fixes.
   const report = await checkSetup({ dataDir });
-  for (const check of [report.node, report.claude]) {
+  for (const check of [report.node, report.provider === "codex" ? report.codex : report.claude]) {
     if (!check.ok) console.warn(check.message);
   }
 }

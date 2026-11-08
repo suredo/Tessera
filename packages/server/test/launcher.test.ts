@@ -197,7 +197,14 @@ describe("the launcher (PLAT-02)", () => {
 const main = fileURLToPath(new URL("../src/launcher/main.ts", import.meta.url));
 function runMain(dataDir: string, nodeArgs: string[] = [], env: NodeJS.ProcessEnv = {}) {
   const child = spawn(process.execPath, [...nodeArgs, main], {
-    env: { ...process.env, TESSERA_DATA_DIR: dataDir, TESSERA_OPEN_BROWSER: "0", ...env },
+    env: {
+      ...process.env,
+      TESSERA_DATA_DIR: dataDir,
+      TESSERA_OPEN_BROWSER: "0",
+      // Never the real Codex home folder: the check on start would ready it (ENG-19).
+      TESSERA_CODEX_HOME: path.join(dataDir, "..", `${path.basename(dataDir)}-codex-home`),
+      ...env,
+    },
     stdio: ["ignore", "pipe", "pipe"],
   });
   children.push(child);
