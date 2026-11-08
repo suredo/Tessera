@@ -44,12 +44,13 @@ export const runtimeOriginFor = (appLocation: { protocol: string; port: string }
 export type DriveStep =
   | { do: "fill"; hook: string; value: string; index?: number }
   | { do: "click"; hook: string; index?: number }
-  | { do: "read"; hook: string }
+  | { do: "read"; hook: string; start?: number }
   | { do: "find"; hook: string; value: string };
 
 /**
- * What a step did: a read gives how many elements have the hook and the text of the first 100; a
- * find gives how many, and the positions of the first 20 whose text holds its value.
+ * What a step did: a read gives how many elements have the hook and the text of 100 of them, from
+ * its `start` (the first by default); a find gives how many, and the positions of the first 20
+ * whose text holds its value.
  */
 export type DriveResult =
   | { ok: true; count?: number; texts?: string[]; matches?: number[] }

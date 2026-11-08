@@ -133,7 +133,13 @@ import type { BridgeMethodName } from "@tessera/contracts";
     await shown();
     const results: object[] = [];
     for (const raw of q.steps as unknown[]) {
-      const step = raw as { do?: unknown; hook?: unknown; index?: unknown; value?: unknown };
+      const step = raw as {
+        do?: unknown;
+        hook?: unknown;
+        index?: unknown;
+        value?: unknown;
+        start?: unknown;
+      };
       const hook = typeof step?.hook === "string" ? step.hook : "";
       if (!/^[a-z][a-z0-9-]{0,40}$/.test(hook)) {
         results.push({ ok: false, problem: `"${hook.slice(0, 50)}" isn't a hook name.` });
@@ -145,7 +151,11 @@ import type { BridgeMethodName } from "@tessera/contracts";
           .trim()
           .replace(/\s+/g, " ");
       if (step.do === "read") {
-        const texts = found.slice(0, 100).map((element) => textOf(element).slice(0, 200));
+        // At most 100 texts a read, from `start`, so a long list is read a page at a time.
+        const start = typeof step.start === "number" && step.start > 0 ? Math.floor(step.start) : 0;
+        const texts = found
+          .slice(start, start + 100)
+          .map((element) => textOf(element).slice(0, 200));
         results.push({ ok: true, count: found.length, texts });
         continue;
       }

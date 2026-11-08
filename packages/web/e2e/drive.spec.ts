@@ -182,6 +182,7 @@ test("VER-03: a check fills in, clicks and reads hooked elements, each step once
     { do: "click", hook: "item-add" },
     { do: "read", hook: "item" },
     { do: "find", hook: "item", value: "Eggs" },
+    { do: "read", hook: "item", start: 1 },
     { do: "click", hook: "item-remove", index: 0 },
     { do: "read", hook: "item" },
   ]);
@@ -193,6 +194,7 @@ test("VER-03: a check fills in, clicks and reads hooked elements, each step once
       { ok: true },
       { ok: true, count: 2, texts: ["Milk Remove", "Eggs Remove"] },
       { ok: true, count: 2, matches: [1] },
+      { ok: true, count: 2, texts: ["Eggs Remove"] },
       { ok: true },
       { ok: true, count: 1, texts: ["Eggs Remove"] },
     ],

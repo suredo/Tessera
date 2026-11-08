@@ -16,7 +16,8 @@ type Flaw =
   | "removeNotSaved"
   | "noRemoveHook"
   | "throwsOnAdd"
-  | "renamesOthers";
+  | "renamesOthers"
+  | "renamesThenRestores";
 
 /** A list that fits the item-list profile, with `flaw` built in. */
 const list = (flaw: Flaw): Artifact["code"] => ({
@@ -37,8 +38,11 @@ const render = () => list.replaceChildren(...state.data.items.map((record) => {
       state.data.items = state.data.items.filter((other) => other.id !== record.id);
       return render();
     }
+    const restores = flaw !== "renamesThenRestores" ? [] : state.data.items
+      .filter((other) => other.id !== record.id && other.name.startsWith("Changed "))
+      .map((other) => ({ op: "replace", collection: "items", id: other.id, revisionCount: state.revisions.items[other.id], fields: { name: other.name.slice(8) } }));
     tessera
-      .call("data.patch", { operations: [{ op: "remove", collection: "items", id: record.id, revisionCount: state.revisions.items[record.id] }] })
+      .call("data.patch", { operations: [{ op: "remove", collection: "items", id: record.id, revisionCount: state.revisions.items[record.id] }, ...restores] })
       .then(load);
   });
   item.append(remove);
@@ -50,9 +54,10 @@ document.querySelector("[data-hook=item-add]").addEventListener("click", () => {
   const name = document.querySelector("[data-hook=item-name]").value;
   if (flaw === "noAdd") return;
   if (flaw === "throwsOnAdd") throw new Error("adding broke");
-  // Adding renames every other item too, keeping the count right.
-  if (flaw === "renamesOthers") {
-    const renames = state.data.items.map((record) => ({ op: "replace", collection: "items", id: record.id, revisionCount: state.revisions.items[record.id], fields: { name: "Changed" } }));
+  // Adding renames every other item too, keeping the count right; one flaw puts the names back
+  // when an item is removed.
+  if (flaw === "renamesOthers" || flaw === "renamesThenRestores") {
+    const renames = state.data.items.map((record) => ({ op: "replace", collection: "items", id: record.id, revisionCount: state.revisions.items[record.id], fields: { name: flaw === "renamesOthers" ? "Changed" : "Changed " + record.name } }));
     return tessera.call("data.patch", { operations: [...renames, { op: "add", collection: "items", record: { name } }] }).then(load);
   }
   if (flaw === "addNotSaved") {
@@ -71,6 +76,7 @@ const flaws: Flaw[] = [
   "noRemoveHook",
   "throwsOnAdd",
   "renamesOthers",
+  "renamesThenRestores",
 ];
 let host: SandboxHost;
 
@@ -142,23 +148,44 @@ test("VER-03: a list that adds without saving fails once opened again", async ({
   const result = await check(page, "addNotSaved");
   expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
   expect(result.reason).toContain("(Opened again, the tool shows the list as it was saved.)");
-  expect(result.reason).toContain('observed 2 items, showing "Milk Remove", "Eggs Remove"');
+  expect(result.reason).toMatch(
+    /observed 2 items; gone: "Tessera check item [0-9a-f]{6} Remove"; none new\.$/,
+  );
 });
 
 test("VER-03: a list whose removal isn't saved fails once opened again", async ({ page }) => {
   const result = await check(page, "removeNotSaved");
   expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
   expect(result.reason).toContain('after removing "Tessera check item');
-  expect(result.reason).toContain("and opening the tool again; observed 3 items");
+  expect(result.reason).toMatch(
+    /and opening the tool again; observed 3 items; none gone; new: "Tessera check item [0-9a-f]{6} Remove"\.$/,
+  );
 });
 
-test("VER-03: a list that changes the other items as it adds fails, though every count is right", async ({
+test("VER-03: a list that changes the other items as it adds fails, though every count is right, however long the list", async ({
   page,
 }) => {
-  const result = await check(page, "renamesOthers");
+  const short = await check(page, "renamesOthers");
+  expect(short).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(short.reason).toContain("expected the other 2 items as they were after adding");
+  expect(short.reason).toContain(
+    'observed gone: "Milk Remove", "Eggs Remove"; new: "Changed Remove", "Changed Remove".',
+  );
+  const long = Array.from({ length: 105 }, (_, i) => `Item ${i + 1}`);
+  const renamed = await check(page, "renamesOthers", long);
+  expect(renamed).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(renamed.reason).toContain("expected the other 105 items as they were after adding");
+  expect(renamed.reason).toContain("and 100 more");
+});
+
+test("VER-03: a list that changes the other items as it adds, and puts them back as it removes, fails", async ({
+  page,
+}) => {
+  const result = await check(page, "renamesThenRestores");
   expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
-  expect(result.reason).toContain("expected the 2 items it started with, as they were");
-  expect(result.reason).toContain('observed 2 items, showing "Changed Remove", "Changed Remove"');
+  expect(result.reason).toContain(
+    'observed gone: "Milk Remove", "Eggs Remove"; new: "Changed Milk Remove", "Changed Eggs Remove".',
+  );
 });
 
 test("VER-03, VER-04: a list missing a hook the prompt asked for fails, naming it", async ({
