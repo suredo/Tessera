@@ -83,15 +83,18 @@ async function readList(
   return { count, texts };
 }
 
-/** Where items `hook` marks show `text`: the positions of the first 20. */
+/** Where items `hook` marks show `text`: the positions of the first 20, from `start`. */
 async function findAll(
   profile: ProfileId,
   rule: string,
   tool: MountedTool,
   hook: string,
   text: string,
+  start?: number,
 ): Promise<number[] | CheckOutcome> {
-  const found = await drive(profile, rule, tool, [{ do: "find", hook, value: text }]);
+  const found = await drive(profile, rule, tool, [
+    { do: "find", hook, value: text, ...(start ? { start } : {}) },
+  ]);
   if (!("steps" in found)) return found;
   const step = found.steps[0];
   return step?.ok ? (step.matches ?? []) : [];
@@ -470,6 +473,39 @@ function filling(fields: readonly DriveField[], hex: string, probe: string, skip
   return { steps, texts, unfillable };
 }
 
+/**
+ * Whether the answer `now` holds beyond `before` shows every one of `texts` in its whole text,
+ * not the part a read reports: undefined when it does, or else the texts it lacks. The new answer
+ * is the one whose text, as read, `before` didn't hold; if several show that, any may be it.
+ */
+async function holding(
+  tool: MountedTool,
+  rule: string,
+  before: List,
+  now: List,
+  texts: readonly string[],
+): Promise<string[] | CheckOutcome | undefined> {
+  if (texts.length === 0) return undefined;
+  const added = difference(before.texts, now.texts).added[0];
+  const candidates = now.texts
+    .map((text, at) => ({ text, at }))
+    .filter(({ text }) => comparable(text) === added)
+    .slice(0, 5)
+    .map(({ at }) => at);
+  let lacking: string[] = [...texts];
+  for (const at of candidates) {
+    const lacks: string[] = [];
+    for (const text of texts) {
+      const found = await findAll("form", rule, tool, "answer", text, at);
+      if (!Array.isArray(found)) return found;
+      if (found[0] !== at) lacks.push(text);
+    }
+    if (lacks.length === 0) return undefined;
+    if (at === candidates[0]) lacking = lacks;
+  }
+  return lacking;
+}
+
 /** The fields marked form-field, as the page describes them now. */
 async function describe(tool: MountedTool, rule: string): Promise<DriveField[] | CheckOutcome> {
   const described = await drive("form", rule, tool, [{ do: "fields", hook: "form-field" }]);
@@ -554,69 +590,41 @@ async function form(context: CheckContext): Promise<CheckOutcome> {
       `${after.count}`,
     );
   }
-  // The new answer is the one showing the longest text typed, and it must show every other one.
-  // Each is found in the answer's whole text, not the part a read reports.
-  let at: number | undefined;
-  if (filled.texts.length > 0) {
-    const key = [...filled.texts].sort((a, b) => b.length - a.length)[0]!;
-    const found = await findAll("form", sends, tool, "answer", key);
-    if (!Array.isArray(found)) return found;
-    if (found.length !== 1) {
-      return broke(
-        "form",
-        sends,
-        `one answer showing what was typed: ${clip(filled.texts)}`,
-        `${answers(found.length)} showing "${key}"`,
-      );
-    }
-    at = found[0]!;
-    const missing: string[] = [];
-    for (const text of filled.texts) {
-      if (text === key) continue;
-      const where = await findAll("form", sends, tool, "answer", text);
-      if (!Array.isArray(where)) return where;
-      if (!where.includes(at)) missing.push(text);
-    }
-    if (missing.length > 0) {
-      return broke(
-        "form",
-        sends,
-        `one answer showing what was typed: ${clip(filled.texts)}`,
-        `it without ${clip(missing)}`,
-      );
-    }
-  }
-  // Without a text to find the new answer by, the others are those the answers held before.
-  const gone = difference(before.texts, after.texts).gone;
-  const others =
-    at === undefined
-      ? gone.length > 0
-        ? `gone: ${clip(gone)}`
-        : undefined
-      : changed(
-          before.texts,
-          after.texts.filter((_, i) => i !== at),
-        );
-  if (others) {
+  // The other answers as they were, each as often as it showed: so the one more is the new one,
+  // even when another answer shows the same.
+  const sentOut = difference(before.texts, after.texts);
+  if (sentOut.gone.length > 0) {
     return broke(
       "form",
       sends,
       `the other ${answers(before.count)} as they were after sending the form`,
-      others,
+      changed(before.texts, after.texts) ?? `gone: ${clip(sentOut.gone)}`,
+    );
+  }
+  const showing = await holding(tool, sends, before, after, filled.texts);
+  if (showing && !Array.isArray(showing)) return showing;
+  if (showing) {
+    return broke(
+      "form",
+      sends,
+      `one answer showing what was typed: ${clip(filled.texts)}`,
+      `it without ${clip(showing)}`,
     );
   }
 
-  // Opened again: the answers as they were shown.
+  // Opened again: the answers as they were shown, the new one still showing what was typed.
   const reopened = await context.rehearse();
   const shown = await readList("form", reopens, reopened, "answer");
   if (!("texts" in shown)) return shown;
   const kept = changed(after.texts, shown.texts);
-  if (shown.count !== after.count || kept) {
+  const still = kept ? undefined : await holding(reopened, reopens, before, shown, filled.texts);
+  if (still && !Array.isArray(still)) return still;
+  if (shown.count !== after.count || kept || still) {
     return broke(
       "form",
       reopens,
-      `the ${answers(after.count)} it showed, after opening the tool again`,
-      `${answers(shown.count)}${kept ? `; ${kept}` : ""}`,
+      `the ${answers(after.count)} it showed, the new one showing what was typed, after opening the tool again`,
+      `${answers(shown.count)}${kept ? `; ${kept}` : ""}${still ? `; the new one without ${clip(still)}` : ""}`,
     );
   }
   return { ok: true };

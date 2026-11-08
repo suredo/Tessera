@@ -45,7 +45,7 @@ export type DriveStep =
   | { do: "fill"; hook: string; value: string; index?: number }
   | { do: "click"; hook: string; index?: number }
   | { do: "read"; hook: string; start?: number }
-  | { do: "find"; hook: string; value: string }
+  | { do: "find"; hook: string; value: string; start?: number }
   | { do: "fields"; hook: string };
 
 /**
@@ -71,7 +71,7 @@ export type DriveField = {
 /**
  * What a step did: a read gives how many elements have the hook and the text of 100 of them, from
  * its `start` (the first by default); a find gives how many, and the positions of the first 20
- * whose text holds its value; a fields step describes the first 100 fields with the hook.
+ * from its `start` whose text holds its value; a fields step describes the first 100 fields with the hook.
  */
 export type DriveResult =
   | { ok: true; count?: number; texts?: string[]; matches?: number[]; fields?: DriveField[] }

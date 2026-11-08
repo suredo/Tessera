@@ -21,17 +21,19 @@ type Flaw =
   | "consentOnly"
   | "shortName"
   | "pastDate"
-  | "verbose";
+  | "verbose"
+  | "oneChar"
+  | "forgetsLong";
 
 /** An RSVP form that fits the form profile, with `flaw` built in. */
 const rsvp = (flaw: Flaw): Artifact["code"] => ({
   html: `<form>
 ${flaw === "consentOnly" ? '<label for="note">Note</label> <input id="note" name="note" data-hook="form-field">' : ""}
-${flaw === "numbersOnly" || flaw === "consentOnly" ? "" : `<label for="name">Name</label> <input id="name" name="name" data-hook="form-field" required${flaw === "shortName" ? ' maxlength="8"' : ""}>`}
+${flaw === "numbersOnly" || flaw === "consentOnly" ? "" : `<label for="name">Name</label> <input id="name" name="name" data-hook="form-field" required${flaw === "shortName" ? ' maxlength="8"' : flaw === "oneChar" ? ' maxlength="1"' : ""}>`}
 ${flaw === "pastDate" ? '<label for="day">Day</label> <input id="day" name="day" type="date" max="2025-12-31" data-hook="form-field" required>' : ""}
 ${flaw === "consentOnly" ? "" : '<label for="people">How many people</label> <input id="people" name="people" type="number" min="1" max="20" data-hook="form-field" required>'}
 <label for="meal">Meal</label> <select id="meal" name="meal" data-hook="form-field"><option value="">Any</option><option value="fish">Fish</option><option value="veg">Vegetarian</option></select>
-${flaw === "numbersOnly" || flaw === "consentOnly" ? "" : '<label for="allergies">Food allergies</label> <textarea id="allergies" name="allergies" data-hook="form-field"></textarea>'}
+${flaw === "numbersOnly" || flaw === "consentOnly" || flaw === "oneChar" ? "" : '<label for="allergies">Food allergies</label> <textarea id="allergies" name="allergies" data-hook="form-field"></textarea>'}
 <label><input type="checkbox" name="coming" data-hook="form-field" required> I'm coming</label>
 <button ${flaw === "browserOnly" ? "" : 'type="button"'} data-hook="form-submit">Send</button>
 <p data-hook="form-error"></p>
@@ -49,7 +51,7 @@ const render = () => list.replaceChildren(...state.data.answers.map((answer) => 
   // One flaw shows a set phrase in place of the name; one starts each answer with a long thank-you.
   const name = flaw === "shortName" ? "Answer saved" : answer.name;
   const parts = [name, answer.note, answer.day, answer.people ? answer.people + " people" : "", answer.meal, flaw === "dropsAllergies" ? "" : answer.allergies];
-  const thanks = flaw === "verbose" ? "Thank you for answering. ".repeat(10) : "";
+  const thanks = flaw === "verbose" || flaw === "forgetsLong" ? "Thank you for answering. ".repeat(10) : "";
   item.textContent = thanks + parts.filter(Boolean).join(", ");
   return item;
 }));
@@ -75,7 +77,13 @@ const send = (event) => {
     state.data.answers.push({ id: "local", ...record });
     return render();
   }
-  tessera.call("data.patch", { operations: [{ op: "add", collection: "answers", record }] }).then(load);
+  // One flaw saves the answer without what was typed, though it shows it until opened again.
+  const saved = flaw === "forgetsLong" ? { ...record, name: "", allergies: "" } : record;
+  tessera.call("data.patch", { operations: [{ op: "add", collection: "answers", record: saved }] }).then(load).then(() => {
+    if (flaw !== "forgetsLong") return;
+    state.data.answers[state.data.answers.length - 1] = { id: "shown", ...record };
+    render();
+  });
 };
 if (flaw === "browserOnly") form.addEventListener("submit", send);
 else document.querySelector("[data-hook=form-submit]").addEventListener("click", send);`,
@@ -93,6 +101,8 @@ const flaws: Flaw[] = [
   "shortName",
   "pastDate",
   "verbose",
+  "oneChar",
+  "forgetsLong",
 ];
 let host: SandboxHost;
 
@@ -104,33 +114,38 @@ test.afterAll(() => host.close());
 type Result = { outcome: string; check?: string; reason?: string };
 
 /** Stages a form behind the smoke check and the form check; activation is refused. */
-async function check(page: Page, flaw: Flaw): Promise<Result> {
+const ANA = [{ id: "a-1", name: "Ana", people: 2, meal: "fish", allergies: "nuts" }];
+
+async function check(page: Page, flaw: Flaw, answers: object[] = ANA): Promise<Result> {
   await page.goto(host.url);
   await ready(page, "stageCandidate");
-  return page.evaluate(async (mountId) => {
-    const w = window as unknown as {
-      stageCandidate(options: unknown): Promise<Result>;
-      smokeCheck(): unknown;
-      profileCheck(id: string): unknown;
-    };
-    return w.stageCandidate({
-      candidate: {
-        mountId,
-        hash: "a".repeat(64),
-        capabilities: [],
-        syntheticData: {
-          answers: [{ id: "a-1", name: "Ana", people: 2, meal: "fish", allergies: "nuts" }],
+  return page.evaluate(
+    async ({ mountId, answers }) => {
+      const w = window as unknown as {
+        stageCandidate(options: unknown): Promise<Result>;
+        smokeCheck(): unknown;
+        profileCheck(id: string): unknown;
+      };
+      return w.stageCandidate({
+        candidate: {
+          mountId,
+          hash: "a".repeat(64),
+          capabilities: [],
+          syntheticData: {
+            answers,
+          },
         },
-      },
-      workspaceId: "00000000-0000-4000-8000-000000000000",
-      expectedDataRevision: 0,
-      activationToken: "00000000-0000-4000-8000-000000000001",
-      checks: [w.smokeCheck(), w.profileCheck("form")],
-      // Reached only when every check passed; refusing keeps the test off the server.
-      activate: () =>
-        Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
-    });
-  }, flaw);
+        workspaceId: "00000000-0000-4000-8000-000000000000",
+        expectedDataRevision: 0,
+        activationToken: "00000000-0000-4000-8000-000000000001",
+        checks: [w.smokeCheck(), w.profileCheck("form")],
+        // Reached only when every check passed; refusing keeps the test off the server.
+        activate: () =>
+          Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
+      });
+    },
+    { mountId: flaw, answers },
+  );
 }
 
 const PASSED = { outcome: "refused", reason: "stale", message: "Passed the checks." };
@@ -215,4 +230,29 @@ test("VER-03: a form takes a date within its stated limits, and a long answer is
 }) => {
   expect(await check(page, "pastDate")).toEqual(PASSED);
   expect(await check(page, "verbose")).toEqual(PASSED);
+});
+
+test("VER-03: a one-character field's answer passes though other answers show the same, even all of them", async ({
+  page,
+}) => {
+  // Every character the field could take, each in an answer like the one the check sends.
+  const answers = [..."0123456789abcdef"].map((name, i) => ({
+    id: `a-${i + 1}`,
+    name,
+    people: 1,
+    meal: "fish",
+    allergies: "",
+  }));
+  expect(await check(page, "oneChar", answers)).toEqual(PASSED);
+});
+
+test("VER-03: a long answer that loses what was typed once saved fails when the tool is opened again", async ({
+  page,
+}) => {
+  const result = await check(page, "forgetsLong");
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toContain("(Opened again, the tool shows every answer saved.)");
+  expect(result.reason).toMatch(
+    /observed 2 answers; the new one without "Tessera check answer [0-9a-f]{6} 1", "Tessera check answer [0-9a-f]{6} 4"\.$/,
+  );
 });

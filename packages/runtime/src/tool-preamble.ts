@@ -163,12 +163,16 @@ import type { BridgeMethodName } from "@tessera/contracts";
         results.push({ ok: true, count: found.length, texts });
         continue;
       }
-      // Which of them, by position, show `text`: however many there are, the first 20.
+      // Which of them, by position, show `text`: however many there are, the first 20 from
+      // `start`, so a check can ask whether one at a known position does.
       if (step.do === "find") {
         const text = String(step.value);
+        const start = typeof step.start === "number" && step.start > 0 ? Math.floor(step.start) : 0;
         const matches: number[] = [];
         found.forEach((element, at) => {
-          if (matches.length < 20 && textOf(element).includes(text)) matches.push(at);
+          if (at >= start && matches.length < 20 && textOf(element).includes(text)) {
+            matches.push(at);
+          }
         });
         results.push({ ok: true, count: found.length, matches });
         continue;
