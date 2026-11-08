@@ -132,8 +132,8 @@ test("TEST-03, VER-03, GEN-09: a list that doesn't keep what it adds fails the i
   // it broke, what was expected and what was observed.
   expect(calls.map((spec) => spec.stage)).toEqual(["intent", "create", "repair"]);
   expect(calls[1]!.system).toContain('data-hook="item-add"');
-  expect(calls[2]!.prompt).toContain(
-    'The item-list check, a rule of Tessera\'s (Opened again, the tool shows the list as it was saved.): expected 1 item, one showing "Tessera check item", after opening the tool again; observed 0',
+  expect(calls[2]!.prompt).toMatch(
+    /The item-list check, a rule of Tessera's \(Opened again, the tool shows the list as it was saved\.\): expected the 1 item it showed, one showing "Tessera check item [0-9a-f]{6}", after opening the tool again; observed 0 items/,
   );
   expect(calls[2]!.promptParts?.some((part) => part.startsWith("repair-behavior@"))).toBe(true);
   // Only the starting data the host installed: nothing the check typed was saved.

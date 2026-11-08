@@ -38,14 +38,20 @@ export const runtimeOriginFor = (appLocation: { protocol: string; port: string }
 /**
  * One step a behavior check takes on a candidate (VER-03), on the elements it marks with `hook` in
  * their `data-hook` attribute: fill in the `index`th one (the first by default) with `value`, click
- * it, or read what every one of them shows. The tool's page takes the steps (src/tool-preamble.ts,
- * which repeats these names).
+ * it, read what they show, or find which of them show `value`. The tool's page takes the steps
+ * (src/tool-preamble.ts, which repeats these names).
  */
 export type DriveStep =
   | { do: "fill"; hook: string; value: string; index?: number }
   | { do: "click"; hook: string; index?: number }
-  | { do: "read"; hook: string };
+  | { do: "read"; hook: string; start?: number }
+  | { do: "find"; hook: string; value: string };
 
-/** What a step did: a read gives how many elements have the hook and the text of each. */
+/**
+ * What a step did: a read gives how many elements have the hook and the text of 100 of them, from
+ * its `start` (the first by default); a find gives how many, and the positions of the first 20
+ * whose text holds its value.
+ */
 export type DriveResult =
-  { ok: true; count?: number; texts?: string[] } | { ok: false; problem: string };
+  | { ok: true; count?: number; texts?: string[]; matches?: number[] }
+  | { ok: false; problem: string };
