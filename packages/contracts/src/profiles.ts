@@ -26,13 +26,13 @@ export const ITEM_LIST_PROFILE = {
   id: "item-list",
   fits: "a list of items the person adds to and removes from, such as a shopping list, a reading list or a to-do list",
   hooks: [
-    { name: "item-name", says: "the field where the name of a new item is typed" },
-    { name: "item-add", says: "the button that adds the item named in item-name" },
+    { name: "item-name", says: "the field for a new item's name" },
+    { name: "item-add", says: "the button that adds the item named there" },
     {
       name: "item",
-      says: "each item shown in the list, one element per item, whose text holds the item's name",
+      says: "each item in the list, one element per item, its text holding the item's name",
     },
-    { name: "item-remove", says: "inside each item, the button that removes that item" },
+    { name: "item-remove", says: "inside each item, the button that removes it" },
   ],
   rules: [
     "Typing a name in item-name and pressing item-add adds one item with that name to the list, and saves it.",

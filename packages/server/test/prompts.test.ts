@@ -456,7 +456,13 @@ describe("assembling a stage's prompt (GEN-03)", () => {
 
   it("GEN-03: each stage's fixture prompt stays within its budget", () => {
     const sizes = {
-      create: create().size,
+      // A creation that fits a profile, with its language: the largest creation shape (VER-03).
+      create: assemblePrompt({
+        stage: "create",
+        request: "I need a shopping list I can tick off at the store.",
+        intent: intent({ kind: "create", profile: "item-list" }),
+        uiMode: "standard",
+      }).size,
       edit: assemblePrompt({
         stage: "edit",
         request: "Add a quantity next to each item, and sort them by name",
