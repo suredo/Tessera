@@ -456,6 +456,13 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   entry.expires,
                 );
               }
+              // The repaired candidate keeps the continuation, with the repairs spent so far and
+              // the original deadline, so the other check's one repair is still there: a smoke
+              // repair, then a behavior one, or the reverse (GEN-09, VER-03). Kept last, as the
+              // checks above refuse a pending entry for the same candidate.
+              if (repaired.kind === "candidate") {
+                retain(pending, nextToken, { ...entry.context, reply: repaired }, entry.expires);
+              }
               return repaired;
             },
             signal,
