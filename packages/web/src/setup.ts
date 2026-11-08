@@ -1,9 +1,11 @@
 import {
   PROBE_ROUTE,
   probeResultSchema,
+  PROVIDER_ROUTE,
   SETUP_ROUTE,
   setupReportSchema,
   type ProbeResult,
+  type ProviderName,
   type SetupReport,
 } from "@tessera/contracts";
 import { HostError, type Send } from "./host-api.ts";
@@ -31,6 +33,23 @@ export async function runProbe(send: Send = fetchSend): Promise<ProbeResult> {
   const response = await send(PROBE_ROUTE, { method: "POST" });
   return read(response, (json) => probeResultSchema.safeParse(json).data);
 }
+
+/** Chooses the program Tessera reaches a model through (CLI-01); the answer is the new check. */
+export async function chooseProvider(
+  provider: ProviderName,
+  send: Send = fetchSend,
+): Promise<SetupReport> {
+  const response = await send(PROVIDER_ROUTE, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ provider }),
+  });
+  return read(response, (json) => setupReportSchema.safeParse(json).data);
+}
+
+/** The chosen program's check: what Tessera needs from it to reach a model. */
+export const chosenCheck = (report: SetupReport) =>
+  report.provider === "codex" ? report.codex : report.claude;
 
 /** A size in bytes as the person reads it, such as "1.5 MB". */
 export function formatBytes(bytes: number): string {

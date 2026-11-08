@@ -8,7 +8,7 @@ import { t } from "./i18n/translate.ts";
 import { History } from "./History.tsx";
 import { ImportFile } from "./ImportFile.tsx";
 import { Library } from "./Library.tsx";
-import { checkSetup, runProbe } from "./setup.ts";
+import { checkSetup, chooseProvider, runProbe } from "./setup.ts";
 import { SetupNotice, Status } from "./Status.tsx";
 import {
   carryOut,
@@ -254,12 +254,27 @@ export function App() {
   const [openProblem, setOpenProblem] = useState("");
   const [opening, setOpening] = useState(0);
 
+  // Each setup answer is numbered when asked for, and only the newest asked is shown: a check
+  // still running when the person chooses another program must never put the old program back
+  // on the screen (CLI-01, PLAT-03).
+  const setupAsked = useRef(0);
+  const newestSetup = async (load: () => Promise<SetupReport>): Promise<void> => {
+    const asked = ++setupAsked.current;
+    const loaded = await load();
+    if (asked === setupAsked.current) {
+      setSetup(loaded);
+      setSetupProblem("");
+    }
+  };
+
   // The setup check on start (PLAT-03); the status screen runs it again on request.
   useEffect(() => {
     let current = true;
+    const asked = ++setupAsked.current;
     checkSetup().then(
-      (report) => current && setSetup(report),
-      (error: unknown) => current && setSetupProblem(message(error)),
+      (report) => current && asked === setupAsked.current && setSetup(report),
+      (error: unknown) =>
+        current && asked === setupAsked.current && setSetupProblem(message(error)),
     );
     return () => {
       current = false;
@@ -674,13 +689,13 @@ export function App() {
             problem={setupProblem}
             onRecheck={async () => {
               try {
-                setSetup(await checkSetup());
-                setSetupProblem("");
+                await newestSetup(() => checkSetup());
               } catch (error) {
                 setSetupProblem(message(error));
               }
             }}
             onProbe={() => runProbe()}
+            onChoose={(provider) => newestSetup(() => chooseProvider(provider))}
           />
         </main>
       ) : view === "trash" ? (
