@@ -4,6 +4,7 @@ import { UI_MODES } from "./artifact.ts";
 import { BRIDGE_CAPABILITIES } from "./bridge.ts";
 import { jsonObjectSchema } from "./json.ts";
 import { versionHashSchema } from "./workspace.ts";
+import { profileIdSchema } from "./profiles.ts";
 import { migrationSchema } from "./migration.ts";
 import { patchBatchSchema, collectionName, recordIdSchema } from "./patch.ts";
 
@@ -167,15 +168,20 @@ export const generateRequestSchema = z
   .describe("A request for Tessera to carry out (GEN-01).");
 export type GenerateRequest = z.infer<typeof generateRequestSchema>;
 
-/** The browser reports a staged candidate's smoke failure, once (GEN-09). */
+/** The browser reports a staged candidate's smoke or behavior failure, once each (GEN-09). */
 export const SMOKE_REPAIR_ROUTE = "/api/generate/repair-smoke";
 export const smokeRepairRequestSchema = z.strictObject({
   token: z.uuid(),
   workspaceId: z.uuid(),
   hash: versionHashSchema,
   findings: z.array(z.string().min(1).max(8000)).min(1).max(20),
+  failure: z
+    .enum(["smoke", "behavior"])
+    .default("smoke")
+    .describe("Which check failed: the smoke check, or the profile's behavior check (VER-03)."),
 });
-export type SmokeRepairRequest = z.infer<typeof smokeRepairRequestSchema>;
+/** As the browser sends it: failure may be left out, meaning the smoke check. */
+export type SmokeRepairRequest = z.input<typeof smokeRepairRequestSchema>;
 
 export const CONFIRM_DATA_ROUTE = "/api/generate/confirm-data";
 export const confirmDataRequestSchema = z.strictObject({ token: z.uuid(), approve: z.boolean() });
@@ -285,6 +291,12 @@ export const generateReplySchema = z
       mountId: z.string().min(1).describe("Where the candidate is served for staging (RUN-03)."),
       capabilities: z.array(z.string()),
       syntheticData: jsonObjectSchema.describe("What staging runs it against: its defaults."),
+      profile: profileIdSchema
+        .nullable()
+        .default(null)
+        .describe(
+          "The verification profile whose behavior check staging runs after the smoke check, from the server's intent (VER-03).",
+        ),
       expectedDataRevision: z.int().nonnegative(),
       activation: z.strictObject({ token: z.uuid(), expiresAt: z.int().nonnegative() }),
       name: z.string().min(1),

@@ -468,6 +468,24 @@ describe("editing and repair (GEN-09)", () => {
     expect(calls[0]!.promptParts?.some((p) => p.startsWith("repair-smoke@"))).toBe(false);
   });
 
+  it("GEN-09, VER-03: an edit's behavior failure is repaired as an edit, with its own part and the profile's", async () => {
+    const { provider, calls } = scripted(reply(style, "repair"));
+    const result = await editTool(provider, DEFAULT_ROUTES, {
+      ...input,
+      intent: { ...input.intent!, profile: "item-list" },
+      repair: {
+        failure: "behavior",
+        diagnostics: ["The item-list check: expected 3 items; observed 2."],
+        attempt: style,
+      },
+    });
+    expect(result).toMatchObject({ kind: "candidate" });
+    const parts = calls[0]!.promptParts ?? [];
+    expect(parts.some((p) => p.startsWith("repair-edit-behavior@"))).toBe(true);
+    expect(parts.some((p) => p.startsWith("profile@"))).toBe(true);
+    expect(parts.some((p) => p.startsWith("repair-behavior@"))).toBe(false);
+  });
+
   it("GEN-09: provider failures never repair, and cannot is an explicit answer", async () => {
     const { provider, calls } = scripted({ kind: "error", stage: "edit", error: "time_limit" });
     expect(await editTool(provider, DEFAULT_ROUTES, input)).toMatchObject({

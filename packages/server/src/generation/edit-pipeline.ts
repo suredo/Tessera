@@ -79,6 +79,7 @@ export async function generateEdit(
     mountId: candidateMount(hash),
     capabilities: result.artifact.capabilities,
     syntheticData: result.artifact.data.defaults,
+    profile: intent?.profile ?? null,
     expectedDataRevision: baseline.dataRevision,
     name: baseline.title,
     summary: result.summary,

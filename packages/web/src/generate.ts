@@ -14,15 +14,15 @@ import {
   type FollowUpRequest,
   type DataReply,
 } from "@tessera/contracts";
-import { smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
+import { profileCheck, smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
 import { HostError, isRefusal, problemText, type Send } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import type { RequestControl } from "./request-control.ts";
 
 // The host app's side of a request (GEN-01): the server carries it out as far as a candidate, and
-// the app stages the candidate behind the smoke check (RUN-03, VER-02) before the server activates
-// it (DATA-10). What the person reads is composed here from what happened, never claiming a step
-// that didn't succeed (GEN-08).
+// the app stages the candidate behind the smoke check (RUN-03, VER-02), and the behavior check of
+// the profile it fits (VER-03), before the server activates it (DATA-10). What the person reads is
+// composed here from what happened, never claiming a step that didn't succeed (GEN-08).
 
 /** Asks the server to carry out a request; resolves with what came of it. */
 export async function askToGenerate(
@@ -257,7 +257,8 @@ async function stageRequest(
       workspaceId: reply.workspaceId,
       expectedDataRevision: reply.expectedDataRevision,
       activationToken: reply.activation.token,
-      checks: [smokeCheck()],
+      // The profile's behavior check after the smoke check, when the tool fits one (VER-03).
+      checks: [smokeCheck(), ...(reply.profile ? [profileCheck(reply.profile)] : [])],
       signal: controller.signal,
     });
   } finally {
@@ -310,7 +311,9 @@ export async function carryOut(
     }
     return { message: t("request.requestUnknown"), reloadData: true };
   }
-  let repaired = false;
+  // The checks whose one repair this candidate has had: the smoke check's and the behavior check's
+  // are separate (GEN-09).
+  let repaired = new Set<"smoke" | "behavior">();
   let mixed = false;
   // A big tool made in two passes (GEN-17): what has been said of the versions already active,
   // the feature being added now, and the tool's workspace.
@@ -434,14 +437,18 @@ export async function carryOut(
                 return control?.stopped ? stopped() : { message: error.message };
               return { message: t("request.requestUnknown"), reloadData: true };
             }
-            repaired = false;
+            repaired = new Set();
             continue;
           }
           if (control?.stopped) return stopped();
           if (Date.now() >= reply.activation.expiresAt) return { message: t("request.timedOut") };
           if (staged.outcome === "check-failed") {
-            if (!repaired && (staged.check === "smoke" || staged.check === "start")) {
-              repaired = true;
+            const failure = staged.check === "behavior" ? "behavior" : "smoke";
+            if (
+              !repaired.has(failure) &&
+              (staged.check === "smoke" || staged.check === "start" || staged.check === "behavior")
+            ) {
+              repaired.add(failure);
               try {
                 reply = await wait(
                   deps.repairSmoke({
@@ -449,6 +456,7 @@ export async function carryOut(
                     hash: reply.hash,
                     token: reply.activation.token,
                     findings: [staged.reason],
+                    failure,
                   }),
                 );
               } catch (error) {

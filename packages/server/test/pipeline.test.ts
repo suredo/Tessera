@@ -133,6 +133,53 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     }
   });
 
+  it("VER-03, GEN-09: a tool that fits a profile carries it to staging, and its behavior failure is repaired once with its own part and the profile's", async () => {
+    const folder = await newFolder();
+    let context: SmokeRepairContext | undefined;
+    const reply = await generate(
+      folder,
+      script(intentReply({ kind: "create", profile: "item-list" }), createReply(tool)),
+      DEFAULT_ROUTES,
+      { request: "A shopping list" },
+      undefined,
+      (c) => {
+        context = c;
+      },
+    );
+    expect(reply).toMatchObject({ kind: "candidate", profile: "item-list" });
+    if (!context) throw new Error("Expected continuation");
+    const finding =
+      "The item-list check, a rule of Tessera's (Pressing an item's item-remove removes that item from the list, and saves that.): expected 2 items; observed 3.";
+    const scripted = script(repairReply(tool));
+    let parts: readonly string[] = [];
+    const repaired = await repairSmoke(
+      folder,
+      {
+        ...scripted,
+        run(spec) {
+          parts = spec.promptParts ?? [];
+          expect(spec.prompt).toContain(finding);
+          return scripted.run(spec);
+        },
+      },
+      DEFAULT_ROUTES,
+      {
+        workspaceId: context.reply.workspaceId,
+        hash: context.reply.hash,
+        findings: [finding],
+        failure: "behavior",
+      },
+      context,
+    );
+    expect(repaired).toMatchObject({ kind: "candidate", profile: "item-list" });
+    expect(parts.map((part) => part.split("@")[0])).toEqual(
+      expect.arrayContaining(["repair-behavior", "profile"]),
+    );
+    expect(parts.some((part) => part.startsWith("repair-smoke@"))).toBe(false);
+    expect(context.repairUsage).toEqual({ behavior: 1 });
+    folder.close();
+  });
+
   it("GEN-09: smoke repair retains earlier class budgets and quotes the stored answer with the original language", async () => {
     const folder = await newFolder();
     let context: SmokeRepairContext | undefined;

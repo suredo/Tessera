@@ -14,6 +14,9 @@ import type { DriveResult, DriveStep } from "./protocol.ts";
 // (BRG-06), and checks only the rules the profile states, which its prompt part gave the tool
 // (VER-04). A failure says what was expected, what was observed and whose rule it is (VER-07).
 
+/** "1 item", "3 items". */
+const items = (count: number) => `${count} ${count === 1 ? "item" : "items"}`;
+
 const clip = (texts: readonly string[]) =>
   texts.length === 0 ? "none" : texts.map((text) => `"${text.slice(0, 60)}"`).join(", ");
 
@@ -72,7 +75,7 @@ async function itemList(context: CheckContext): Promise<CheckOutcome> {
     return broke(
       "item-list",
       adds,
-      `${before + 1} items after adding "${name}" to ${before}`,
+      `${items(before + 1)} after adding "${name}" to ${before}`,
       `${after.count}`,
     );
   }
@@ -95,7 +98,7 @@ async function itemList(context: CheckContext): Promise<CheckOutcome> {
     return broke(
       "item-list",
       reopens,
-      `${before + 1} items, one showing "${name}", after opening the tool again`,
+      `${items(before + 1)}, one showing "${name}", after opening the tool again`,
       `${reopened.count}, showing ${clip(reopened.texts)}`,
     );
   }
@@ -112,7 +115,7 @@ async function itemList(context: CheckContext): Promise<CheckOutcome> {
     return broke(
       "item-list",
       removes,
-      `${before} items, none showing "${name}", after removing it`,
+      `${items(before)}, none showing "${name}", after removing it`,
       `${left.count}, showing ${clip(left.texts)}`,
     );
   }
@@ -125,7 +128,7 @@ async function itemList(context: CheckContext): Promise<CheckOutcome> {
     return broke(
       "item-list",
       reopens,
-      `${before} items, none showing "${name}", after removing it and opening the tool again`,
+      `${items(before)}, none showing "${name}", after removing it and opening the tool again`,
       `${last.count}, showing ${clip(last.texts)}`,
     );
   }

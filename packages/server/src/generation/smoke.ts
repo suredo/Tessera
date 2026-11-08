@@ -69,7 +69,7 @@ export async function repairSmoke(
           artifact: original.artifact,
           data: workspace.data,
           repair: {
-            failure: "smoke",
+            failure: input.failure ?? "smoke",
             diagnostics: input.findings,
             attempt: {
               outcome: "edit",
@@ -98,7 +98,7 @@ export async function repairSmoke(
           timeLimits: limits,
           ...(context.plan ? { core: context.plan } : {}),
           repair: {
-            failure: "smoke",
+            failure: input.failure ?? "smoke",
             diagnostics: input.findings,
             attempt: {
               outcome: "tool",
