@@ -170,6 +170,29 @@ describe("strict structured output for Codex (CLI-01, #266)", () => {
     expect([...stages].sort()).toEqual(["create", "data", "edit", "intent"]);
   });
 
+  it("CLI-01: a key the contract refuses, such as __proto__, reaches the host's check as it came", () => {
+    const wrapped = wrapSchema(jsonSchemaOf(dataPlanSchema));
+    const written = JSON.parse(
+      '{"answer":{"outcome":"patch","summary":"Remove the entry.","patch":{"operations":[{"op":"remove","collection":"tasks","id":"a","revisionCount":1}],"__proto__":{}}}}',
+    ) as { answer: unknown };
+    expect(dataPlanSchema.safeParse(written.answer).success).toBe(false);
+    const restored = restoreAnswer(written, wrapped) as { answer: { patch: object } };
+    expect(Object.hasOwn(restored.answer.patch, "__proto__")).toBe(true);
+    expect(dataPlanSchema.safeParse(restored.answer).success).toBe(false);
+  });
+
+  it("CLI-01: an answer that breaks a rule the projection dropped is still turned back whole, so only that field is refused", () => {
+    const valid = rehearsedAnswers().find(
+      ({ stage, value }) => stage === "create" && creationSchema.safeParse(value).success,
+    )!.value as Record<string, unknown>;
+    const wrapped = wrapSchema(jsonSchemaOf(creationSchema));
+    const written = encode({ answer: { ...valid, name: "" } }, wrapped, wrapped);
+    const restored = restoreAnswer(written, wrapped) as { answer: unknown };
+    expect(restored).toEqual({ answer: { ...valid, name: "" } });
+    const issues = creationSchema.safeParse(restored.answer).error?.issues ?? [];
+    expect(issues.map((issue) => issue.path.join("."))).toEqual(["name"]);
+  });
+
   it("CLI-01: an optional property absent, an open map and a union branch come back as the contract has them", () => {
     const schema = {
       $schema: "http://json-schema.org/draft-07/schema#",

@@ -126,7 +126,9 @@ export async function runProbe(options: {
       });
       fs.writeFileSync(path.join(raws, `call-${index}.jsonl`), result.raw);
       const { problems, usage } = inspectEvents(result.raw);
-      report.notes = problems;
+      // A tool offered is a failure even when it isn't used: the model must name none (CLI-03).
+      const named = call.contract === "tools" ? toolsSchema.parse(result.value).toolNames : [];
+      report.notes = [...problems, ...named.map((name) => `a tool was offered: ${name}`)];
       report.codexUsage = usage;
       report.answer = result.value;
     } catch (error) {

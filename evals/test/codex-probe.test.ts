@@ -2,6 +2,14 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
+import {
+  restoreAnswer,
+  wrapSchema,
+  type Provider,
+  type StageResult,
+  type StageSpec,
+} from "@tessera/server";
+import { creationSchema, jsonSchemaOf } from "@tessera/contracts";
 import { readLedger } from "../src/index.ts";
 import { runModeFrom } from "../spikes/cli-contract/claude-cli.ts";
 import {
@@ -14,6 +22,17 @@ import {
 
 // The Codex probe's dry run (#266, ENG-07): the same calls through the product adapter, on the
 // fake codex, in the system's temporary folder (ENG-19). It never reaches a model.
+/** The dry run's create answer, turned back from how Codex writes it into the contract's shape. */
+const creationAnswer = () => {
+  const replies = JSON.parse(
+    fs.readFileSync(
+      path.join(import.meta.dirname, "..", "spikes", "codex-probe", "dry-run-replies.json"),
+      "utf8",
+    ),
+  ) as { answer: unknown }[];
+  const wrapped = wrapSchema(jsonSchemaOf(creationSchema));
+  return (restoreAnswer({ answer: replies[0]!.answer }, wrapped) as { answer: unknown }).answer;
+};
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-codex-probe-"));
 afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
 
@@ -52,5 +71,34 @@ describe("Codex probe (CLI-01, CLI-03, ENG-07, #266)", { timeout: 60_000 }, () =
     expect(inspectEvents(line({ type: "turn.completed" })).problems).toEqual([
       "usage is incomplete",
     ]);
+  });
+
+  it("CLI-03: a tool the model names fails the check, even when it isn't used", async () => {
+    const dataFolder = path.join(root, "named");
+    const done = JSON.stringify({
+      type: "turn.completed",
+      usage: { input_tokens: 1, output_tokens: 1 },
+    });
+    const answers = [
+      creationAnswer(),
+      { toolNames: ["shell"], note: "I can call shell but did not use it." },
+    ];
+    let call = 0;
+    const provider: Provider = {
+      name: "stub",
+      live: false,
+      run: <T>(spec: StageSpec<T>): Promise<StageResult<T>> =>
+        Promise.resolve({
+          value: spec.schema.parse(answers[call++]),
+          usage: { inputTokens: 1, cachedInputTokens: 0, outputTokens: 1, durationMs: 0 },
+          raw: done,
+        }),
+    };
+    const report = await runProbe({ mode: "dry-run", provider, dataFolder });
+    expect(report.calls.at(-1)).toMatchObject({
+      check: "no tools",
+      passed: false,
+      notes: ["a tool was offered: shell"],
+    });
   });
 });

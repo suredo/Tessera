@@ -161,6 +161,28 @@ function fits(value: unknown, node: Node, root: Node): boolean {
   return validate(value);
 }
 
+const projectedRoots = new WeakMap<object, Node>();
+const projectedValidators = new WeakMap<object, ValidateFunction>();
+
+/** Whether a value fits a branch as the model saw it: projected, with the projected definitions. */
+function fitsProjected(value: unknown, branch: Node, root: Node): boolean {
+  let validate = projectedValidators.get(branch);
+  if (validate === undefined) {
+    let projectedRoot = projectedRoots.get(root);
+    if (projectedRoot === undefined) {
+      projectedRoot = toStrictSchema(root);
+      projectedRoots.set(root, projectedRoot);
+    }
+    validate = ajv.compile({
+      ...(project(branch, root) as Node),
+      definitions: projectedRoot.definitions,
+      $defs: projectedRoot.$defs,
+    });
+    projectedValidators.set(branch, validate);
+  }
+  return validate(value);
+}
+
 function restore(value: unknown, node: unknown, root: Node): unknown {
   if (!isNode(node)) return value;
   if (typeof node.$ref === "string") return restore(value, resolve(node.$ref, root), root);
@@ -178,27 +200,41 @@ function restore(value: unknown, node: unknown, root: Node): unknown {
   }
   const branches = node.oneOf ?? node.anyOf;
   if (Array.isArray(branches)) {
-    const candidates = branches.filter(isNode).map((branch) => ({
-      branch,
-      value: restore(value, branch, root),
-    }));
+    const nodes = branches.filter(isNode);
+    // The branch the answer was written for: the one whose projected shape it fits, which leaves
+    // out what the projection dropped, so a field that breaks a dropped rule (a length, say)
+    // still finds its branch, is turned back with the rest, and is refused by the host's check
+    // on its own. Failing that, a branch whose turned-back answer fits the original.
+    const written = nodes.find((branch) => fitsProjected(value, branch, root));
+    if (written !== undefined) return restore(value, written, root);
+    const candidates = nodes.map((branch) => ({ branch, value: restore(value, branch, root) }));
     return (
       candidates.find((candidate) => fits(candidate.value, candidate.branch, root))?.value ?? value
     );
   }
   if (isNode(node.properties) && isNode(value)) {
     const required = new Set(Array.isArray(node.required) ? node.required : []);
+    const properties = node.properties;
     const out: Node = {};
     for (const [key, item] of Object.entries(value)) {
-      const property = node.properties[key];
+      // Own keys only, and every key kept as an own property: a key such as `__proto__` must
+      // reach the host's check as it came, or the contract's refusal of it would be bypassed.
+      const property = Object.hasOwn(properties, key) ? properties[key] : undefined;
+      let kept: unknown;
       if (property === undefined) {
-        out[key] = item;
+        kept = item;
       } else if (item === null && !required.has(key) && !allowsNull(property, root)) {
         // A null the projection allowed for an optional property: absent, as the contract says.
         continue;
       } else {
-        out[key] = restore(item, property, root);
+        kept = restore(item, property, root);
       }
+      Object.defineProperty(out, key, {
+        value: kept,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
     }
     return out;
   }

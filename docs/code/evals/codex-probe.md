@@ -7,7 +7,7 @@ implements: [CLI-01, CLI-03, CLI-04, CLI-05, ENG-07]
 tests: [../../../evals/test/codex-probe.test.ts]
 tags: [code, evals, cli, codex, spike]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T00:55:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T01:20:00Z }
 ---
 
 # Purpose
@@ -18,13 +18,14 @@ The probe the [M3 roadmap](../../roadmap/m3-verification-and-codex.md) names for
 
 - `run.ts`: the script. `PLAN` is the approved run (cap, model, effort, time limit); `runProbe` makes the planned calls, keeps each call's raw events and writes `report.json`; `inspectEvents` checks what a call's events show beyond its schema (an event item that is a tool, a failure, missing usage); `fakeProvider` is the dry run's provider, the adapter on `FAKE_CODEX`, the fake program in the server's tests. `withBundledCodex` puts npm's bundled `codex.exe` first on the PATH, as an npm install puts only `codex.cmd` there, and `machineCodexHome` is Tessera's Codex home folder on this machine. Run it with `node evals/spikes/codex-probe/run.ts --dry-run`, or `--live --approved-cap 2`.
 - `prompts/`: the system prompt (the CLI contract spike's) and the planned calls: the real create contract, and a request that asks the model to name its tools and to read a file and run a command (`ENG-16`).
-- `dry-run-replies.json`: the fake's answers, a rehearsed create answer and an empty tool list.
+- `dry-run-replies.json`: the fake's answers, a rehearsed create answer written as Codex writes it (open maps as JSON text, the absent optional field as null) and an empty tool list.
 
 # Invariants
 
 - **Live only with approval.** `--live` refuses to start without `--approved-cap` equal to `PLAN.callCap`, and the harness refuses every call past it. The owner approved 4 Codex calls on 2026-11-07; the runs below spent them. Changing `PLAN` needs a new approval (`ENG-07`).
 - **The product adapter makes every call,** after its free checks: Codex found, at least the tested version, Tessera's home folder with no instructions file, a ChatGPT sign-in, and the restricted catalog written. Anything wrong stops the run before a call is counted (L-71).
 - **The first call failing stops the run** (`ENG-07`).
+- **A tool named is a failure, even unused:** the no-tools check fails when the model lists any tool, as well as when an event is one (`CLI-03`).
 - **A schema failure says which parts of the contract the turned-back answer missed,** so a fault of the projection can be told from the model's.
 
 # Depends on / used by
