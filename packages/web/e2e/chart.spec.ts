@@ -162,7 +162,7 @@ test("CAP-04: a spec the helper can't draw is refused, saying what is wrong", as
     "tessera.chart can't draw this chart: a pie chart has exactly one series.",
   );
   await expect((await open(page, "holed")).locator("#out")).toHaveText(
-    `tessera.chart can't draw this chart: series "Spent" needs one number for each of its 4 labels.`,
+    `tessera.chart can't draw this chart: item 2 of its series 1's values must be a number.`,
   );
 });
 

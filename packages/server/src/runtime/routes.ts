@@ -4,7 +4,13 @@ import type { ServerResponse } from "node:http";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CHART_LIMITS, CHART_TYPES, checkChartSpec, type Artifact } from "@tessera/contracts";
+import {
+  chartSpecRelations,
+  chartSpecShape,
+  jsonSchemaOf,
+  schemaProblem,
+  type Artifact,
+} from "@tessera/contracts";
 import {
   hostStyles,
   TOOL_CSP,
@@ -35,12 +41,11 @@ const runtimeSource = path.join(
   "runtime",
   "src",
 );
-// The chart helper's values (CAP-04): the spec's limits and the standard's chart styles, which the
-// helper uses where a tool sets none, each from its one definition (P3).
+// The chart helper's values (CAP-04): the spec's shape as JSON Schema, and the standard's chart
+// styles, which the helper uses where a tool sets none, each from its one definition (P3).
 const CHART_STYLES = ["font", "size-secondary", "text", "divider", "surface"] as const;
 const chartValues = JSON.stringify({
-  types: CHART_TYPES,
-  limits: CHART_LIMITS,
+  schema: jsonSchemaOf(chartSpecShape),
   styles: {
     ...Object.fromEntries(
       Object.entries(UI_TOKENS).filter(([name]) =>
@@ -59,7 +64,11 @@ const loadScripts = () =>
       fs.readFileSync(path.join(runtimeSource, "tool-preamble.ts"), "utf8"),
     )
       .replace('"__TESSERA_CHART__"', () => JSON.stringify(chartValues))
-      .replace("/*__TESSERA_CHART_CHECK__*/ undefined", () => `(${checkChartSpec.toString()})`),
+      .replace("/*__TESSERA_SCHEMA_PROBLEM__*/ undefined", () => `(${schemaProblem.toString()})`)
+      .replace(
+        "/*__TESSERA_CHART_RELATIONS__*/ undefined",
+        () => `(${chartSpecRelations.toString()})`,
+      ),
     // The pinned Chart.js (ADR 0014), only for a tool that declares chart.
     chart: fs.readFileSync(
       path.join(runtimeSource, "..", "node_modules", "chart.js", "dist", "chart.umd.min.js"),

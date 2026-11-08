@@ -129,8 +129,11 @@ describe("the runtime's routes (RUN-01)", () => {
     // The served preamble carries the spec's limits and the standard's chart colors.
     const tool = await get("/runtime/tool?mount=mount-1", asFrame());
     expect(tool.body).not.toContain("__TESSERA_CHART__");
-    // And the contract's own spec rules, as plain script (P3).
-    expect(tool.body).toContain("function checkChartSpec(");
+    // And the contracts' own functions for the spec's rules, as plain script (P3).
+    expect(tool.body).toContain("function schemaProblem(");
+    expect(tool.body).toContain("function chartSpecRelations(");
+    expect(tool.body).not.toContain("__TESSERA_SCHEMA_PROBLEM__");
+    expect(tool.body).not.toContain("__TESSERA_CHART_RELATIONS__");
     expect(tool.body).toContain(UI_CHART_TOKENS["chart-2"]);
   });
 });

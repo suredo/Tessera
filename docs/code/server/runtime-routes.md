@@ -7,7 +7,7 @@ implements: [RUN-01, SEC-03]
 tests: [../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts]
 tags: [code, server, runtime]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T22:24:11Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T22:33:49Z }
 ---
 
 # Purpose
@@ -22,7 +22,7 @@ Serves the two documents of the [runtime](../runtime/package.md) (`RUN-01`): `/r
 
 - **The guard's policy stays.** Each route adds its own Content-Security-Policy beside the guard's `frame-ancestors`; the browser enforces every policy.
 - **The wrapper runs only its own script,** marked with a new nonce on every request, and frames only the tool's document.
-- **A tool's document is sandboxed and under the strict CSP,** by header (`sandbox allow-scripts`), whatever frames it. The preamble runs before the tool's markup and code. Neither document is cached. For a tool that declares chart, the pinned Chart.js from the runtime package's dependencies comes first, in its own script before the preamble (`CAP-04`, [ADR 0014](../../decisions/adr/0014-chart-library.md)); no other tool gets it. The served preamble carries the chart helper's values, the chart contract's types and limits and the standard's chart styles, and the contract's spec rules, `checkChartSpec`, as its source, each written in from its one definition.
+- **A tool's document is sandboxed and under the strict CSP,** by header (`sandbox allow-scripts`), whatever frames it. The preamble runs before the tool's markup and code. Neither document is cached. For a tool that declares chart, the pinned Chart.js from the runtime package's dependencies comes first, in its own script before the preamble (`CAP-04`, [ADR 0014](../../decisions/adr/0014-chart-library.md)); no other tool gets it. The served preamble carries the chart helper's values, the chart contract's types and limits and the standard's chart styles, and the chart contract's rules: the spec's shape as JSON Schema, and the source of the contracts' general schema check and of the rules tying a spec's fields together, each written in from its one definition.
 - **The host's styles come before the tool's** (`RUN-05`). The tool's document carries the runtime's host stylesheets inline, after the preamble and before the tool's own styles: the accessibility floor always, the UI standard's look in standard mode only (`VER-06`). Their cascade layers are named with a new random mark for every document, so a tool's styles can't add rules to them ([runtime package](../runtime/package.md)).
 - **An unknown mount gets 404.** Which mounts exist, and what code each shows, is the caller's (`ToolFor`); the host app's mounts arrive with the app shell (#53).
 

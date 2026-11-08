@@ -170,8 +170,10 @@ export { INTERNAL_TERMS, internalTerms } from "./plain-language.ts";
 export {
   CHART_LIMITS,
   CHART_TYPES,
+  chartSpecRelations,
   chartSpecSchema,
-  checkChartSpec,
+  chartSpecShape,
+  schemaProblem,
   type ChartSpec,
   type ChartType,
 } from "./chart.ts";

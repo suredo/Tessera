@@ -381,7 +381,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
 
   // The chart helper (CAP-04, ADR 0014). A tool that declares chart gets Chart.js in a script just
   // before this one; it is taken here and removed from the page, so a tool draws only through
-  // tessera.chart. The server writes in the spec's limits and the standard's chart styles, each
+  // tessera.chart. The server writes in the spec's shape and the standard's chart styles, each
   // from its one definition (P3).
   type ChartSpecLike = {
     type: string;
@@ -397,8 +397,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
   const chartLibrary = chartPage.Chart;
   delete chartPage.Chart;
   const CHART = JSON.parse("__TESSERA_CHART__") as {
-    types: string[];
-    limits: { labels: number; series: number; title: number; text: number };
+    schema: unknown;
     styles: Record<string, string>;
   };
   // What each element shows, for a behavior check, and the chart drawn in it.
@@ -407,17 +406,20 @@ import type { BridgeMethodName } from "@tessera/contracts";
     { spec: ChartSpecLike; chart: ChartInstance; canvas: HTMLCanvasElement }
   >();
 
-  // The spec's rules: the contract's checkChartSpec, whose source the server writes in here, so
-  // the page and the contract can't disagree (P3).
-  const checkChartSpec = /*__TESSERA_CHART_CHECK__*/ undefined as unknown as (
-    spec: unknown,
-    limits: { labels: number; series: number; title: number; text: number },
-    types: string[],
+  // The spec's rules, from the contract (P3): its shape's JSON Schema, in CHART, applied by the
+  // contracts' schemaProblem, and the rules that tie its fields together, chartSpecRelations. The
+  // server writes in both functions' source here, so the page restates none of it.
+  const schemaProblem = /*__TESSERA_SCHEMA_PROBLEM__*/ undefined as unknown as (
+    value: unknown,
+    schema: unknown,
+  ) => string | null;
+  const chartSpecRelations = /*__TESSERA_CHART_RELATIONS__*/ undefined as unknown as (
+    spec: ChartSpecLike,
   ) => string | null;
 
   /** `spec` as the helper draws it, a copy, or an error saying in plain words what is wrong. */
   function checkChart(spec: unknown): ChartSpecLike {
-    const problem = checkChartSpec(spec, CHART.limits, CHART.types);
+    const problem = schemaProblem(spec, CHART.schema) ?? chartSpecRelations(spec as ChartSpecLike);
     if (problem) throw new Error(`tessera.chart can't draw this chart: ${problem}`);
     const s = spec as ChartSpecLike;
     return {

@@ -1,9 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { CHART_LIMITS, chartSpecSchema, checkChartSpec } from "../src/index.ts";
+import {
+  CHART_LIMITS,
+  chartSpecRelations,
+  chartSpecSchema,
+  chartSpecShape,
+  jsonSchemaOf,
+  schemaProblem,
+} from "../src/index.ts";
 
-// The chart helper's spec (CAP-04, ADR 0014): one set of rules, checkChartSpec, which the schema
-// applies and the server writes into the tool's page (P3). The two must agree on every spec, those
-// JavaScript can make that JSON can't, such as arrays with holes, included.
+// The chart helper's spec (CAP-04, ADR 0014) has one definition (P3): its zod shape, whose JSON
+// Schema the tool's page applies with schemaProblem, and chartSpecRelations, which the schema and
+// the page both apply. The page's check and the contract must agree on every spec, those
+// JavaScript can make and JSON can't, such as lists with holes and inherited keys, included.
+
+const SCHEMA = jsonSchemaOf(chartSpecShape);
+/** The page's check, as the helper makes it. */
+const pageCheck = (
+  spec: unknown,
+  shape: typeof schemaProblem = schemaProblem,
+  relations: typeof chartSpecRelations = chartSpecRelations,
+) => shape(spec, SCHEMA) ?? relations(spec as Parameters<typeof chartSpecRelations>[0]);
 
 const good = {
   type: "bar",
@@ -73,32 +89,41 @@ const cases: [string, unknown][] = [
   ["not a number", { ...good, series: series([1, Number.NaN]) }],
   ["infinity", { ...good, series: series([1, Number.POSITIVE_INFINITY]) }],
   ["a hole in the values", { ...good, labels: ["Rent", "Food", "Fun"], series: series(holed) }],
+  ["an inherited extra key", Object.assign(Object.create({ colors: ["red"] }) as object, good)],
+  [
+    "an inherited title",
+    Object.assign(Object.create({ title: "Spending" }) as object, { ...good, title: undefined }),
+  ],
+  ["a missing title", { type: good.type, labels: good.labels, series: good.series }],
 ];
 
 describe("the chart spec (CAP-04)", () => {
   it.each(cases)("CAP-04: the page's rules and the contract agree on %s", (_, spec) => {
-    const problem = checkChartSpec(spec);
-    expect(chartSpecSchema.safeParse(spec).success).toBe(problem === null);
+    expect(chartSpecSchema.safeParse(spec).success).toBe(pageCheck(spec) === null);
   });
 
   it("CAP-04: says in plain words what is wrong", () => {
-    expect(
-      checkChartSpec({ ...good, labels: ["Rent", "Food", "Fun"], series: series(holed) }),
-    ).toBe('series "Spent" needs one number for each of its 3 labels.');
-    expect(checkChartSpec({ ...good, type: "pie", series: [...good.series, ...good.series] })).toBe(
+    expect(pageCheck({ ...good, labels: ["Rent", "Food", "Fun"], series: series(holed) })).toBe(
+      "item 2 of its series 1's values must be a number.",
+    );
+    expect(pageCheck({ ...good, series: series([1]) })).toBe(
+      'series "Spent" needs one number for each of its 2 labels.',
+    );
+    expect(pageCheck({ ...good, type: "pie", series: [...good.series, ...good.series] })).toBe(
       "a pie chart has exactly one series.",
+    );
+    expect(pageCheck({ ...good, colors: ["red"] })).toBe(
+      `the spec has "colors", which it doesn't take.`,
     );
   });
 
-  it("CAP-04: stands alone, so its source runs in the tool's page as it is", () => {
-    const source = checkChartSpec.toString();
-    // The page's way of getting it, tried here: its source alone, evaluated where nothing else is.
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call -- that is the point
-    const copy = new Function(`return (${source});`)() as typeof checkChartSpec;
-    for (const [, spec] of cases) {
-      expect(copy(spec, CHART_LIMITS, ["bar", "line", "pie", "doughnut"])).toBe(
-        checkChartSpec(spec),
-      );
-    }
+  it("CAP-04: its functions stand alone, so their source runs in the tool's page as it is", () => {
+    // The page's way of getting them, tried here: their source alone, evaluated where nothing
+    // else is.
+    const alone = <T>(fn: T): T =>
+      // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call -- that is the point
+      new Function(`return (${String(fn)});`)() as T;
+    const [shape, relations] = [alone(schemaProblem), alone(chartSpecRelations)];
+    for (const [, spec] of cases) expect(pageCheck(spec, shape, relations)).toBe(pageCheck(spec));
   });
 });
