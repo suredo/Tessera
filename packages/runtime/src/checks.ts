@@ -17,6 +17,13 @@ export type CheckContext = {
   panel: HTMLElement;
   /** Aborted when staging is cancelled; a check stops waiting then. */
   signal: AbortSignal;
+  /**
+   * Starts the candidate again in the panel for a behavior check, its saves going to a throwaway
+   * copy of its synthetic data, and resolves with it (VER-03, BRG-06). Each later call starts it
+   * again on what it has saved so far, as reopening it would. The copy is never the person's data
+   * and is never stored: it goes with the panel. The tool this context gave is unmounted.
+   */
+  rehearse(): Promise<MountedTool>;
 };
 
 export type VerificationCheck = {

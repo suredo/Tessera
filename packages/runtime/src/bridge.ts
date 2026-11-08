@@ -13,7 +13,8 @@ import type { MountedTool } from "./host.ts";
 // The host's side of the bridge (RUN-04): it checks every call from a mounted tool against the
 // manifest (CON-03) with the one shared check, runs the action, and replies. It keeps the mount's
 // phase: a tool may write only once the person has interacted with its page (GEN-06), and a tool
-// in the staging panel never may. It answers the host clock itself (RUN-07).
+// in the staging panel never may, except to a behavior check's throwaway copy of its synthetic
+// data (BRG-06). It answers the host clock itself (RUN-07).
 
 /** Where the host's date and time come from; tests pass their own, so "the next day" is set. */
 export type HostClock = {
@@ -88,6 +89,12 @@ export type BridgeOptions = {
   clock?: HostClock;
   /** A tool in the staging panel runs against synthetic data and never writes (RUN-03). */
   staging?: boolean;
+  /**
+   * A tool a behavior check drives in the staging panel (VER-03): it may write from the start,
+   * since its data handlers are a throwaway copy of its synthetic data, never the person's data
+   * (BRG-06). Whoever passes it passes those handlers.
+   */
+  rehearsal?: boolean;
 };
 
 export type ServedBridge = {
@@ -112,7 +119,7 @@ const FAILED = "The host couldn't do that.";
  */
 export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBridge {
   const clock = options.clock ?? systemClock;
-  let phase: BridgePhase = options.staging ? "staging" : "starting";
+  let phase: BridgePhase = options.rehearsal ? "active" : options.staging ? "staging" : "starting";
   let serving = true;
 
   // One handler per action in the manifest: TypeScript refuses this object if one is missing.
@@ -173,7 +180,7 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
     }),
     // A page started again runs its start-up code again, so it waits for the person once more.
     tool.onEvent((event) => {
-      if (event === "restarted" && phase === "active") phase = "starting";
+      if (event === "restarted" && phase === "active" && !options.rehearsal) phase = "starting";
     }),
   ];
 

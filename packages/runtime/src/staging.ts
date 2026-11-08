@@ -1,13 +1,26 @@
-import type { ActivationRefusal, BridgeResult, JsonValue, Workspace } from "@tessera/contracts";
-import { BridgeError, serveBridge, type DataHandlers } from "./bridge.ts";
+import {
+  applyPatch,
+  createDataState,
+  recordOfKey,
+  type ActivationRefusal,
+  type BridgeErrorCode,
+  type BridgeResult,
+  type DataState,
+  type JsonValue,
+  type PatchRefusal,
+  type Workspace,
+} from "@tessera/contracts";
+import { BridgeError, serveBridge, type DataHandlers, type ServedBridge } from "./bridge.ts";
 import type { CheckContext, CheckOutcome, VerificationCheck } from "./checks.ts";
-import { mountTool, type WatchdogOptions } from "./host.ts";
+import { mountTool, type MountedTool, type WatchdogOptions } from "./host.ts";
 import { serverActivation, type Activate } from "./server-activation.ts";
 
 // Staging before activation (RUN-03): a candidate first runs in a hidden panel against synthetic
 // data, where it can't write (BRG-06), and its checks judge it there. Only when every check passes
 // does the host ask the server to activate it (DATA-10). A failed check activates nothing, so the
 // previous version stays, with the person's data untouched. The panel always goes afterwards.
+// A behavior check may start the candidate again to drive it, its saves then going to a throwaway
+// copy of the synthetic data, in this page's memory alone (VER-03, BRG-06).
 
 /** A tool version waiting to be activated. */
 export type Candidate = {
@@ -66,6 +79,37 @@ const syntheticData = (data: Record<string, JsonValue>): DataHandlers => ({
   // The bridge refuses a write in the staging phase before it gets here; this is a second wall.
   patch: () => Promise.reject(new BridgeError("not-active", "A tool being checked can't save.")),
 });
+
+// The patch engine's reasons, as the bridge's codes, as the server gives them.
+const PATCH_CODES: Record<PatchRefusal, BridgeErrorCode> = {
+  stale: "stale",
+  invalid: "invalid-args",
+  "too-large": "too-large",
+};
+
+// A behavior check's throwaway copy (BRG-06): changes are applied by the server's own patch engine,
+// to this copy in memory, and reach neither the server nor the person's data.
+function throwawayData(start: Record<string, JsonValue>): DataHandlers {
+  let state: DataState = createDataState(structuredClone(start));
+  return {
+    read: () => {
+      const revisions: Record<string, Record<string, number>> = {};
+      for (const [key, count] of state.revisions) {
+        const { collection, id } = recordOfKey(key);
+        (revisions[collection] ??= {})[id] = count;
+      }
+      return Promise.resolve({ data: state.data, revisions });
+    },
+    patch: (batch) => {
+      const result = applyPatch(state, batch);
+      if (!result.ok) {
+        return Promise.reject(new BridgeError(PATCH_CODES[result.reason], result.message));
+      }
+      state = result.state;
+      return Promise.resolve({ addedIds: result.addedIds });
+    },
+  };
+}
 
 // Hidden from sight, assistive technology and input, but laid out at the UI standard's narrow
 // width, so a check can measure it.
@@ -158,9 +202,36 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
         data: syntheticData(candidate.syntheticData),
         staging: true,
       });
+      // The candidate in the panel now, and the throwaway copy a behavior check's runs share.
+      let mounted: { tool: MountedTool; bridge: ServedBridge } = { tool, bridge };
+      let copy: DataHandlers | undefined;
+      const rehearse = async (): Promise<MountedTool> => {
+        mounted.bridge.stop();
+        mounted.tool.unmount();
+        copy ??= throwawayData(candidate.syntheticData);
+        const next = await mountTool(
+          panel,
+          candidate.mountId,
+          options.appLocation,
+          controller.signal,
+          options.watchdog,
+        );
+        const served = serveBridge(next, {
+          capabilities: candidate.capabilities,
+          data: copy,
+          rehearsal: true,
+        });
+        mounted = { tool: next, bridge: served };
+        return next;
+      };
       try {
         for (const check of options.checks) {
-          const outcome = await runCheck(check, { tool, panel, signal: controller.signal });
+          const outcome = await runCheck(check, {
+            tool,
+            panel,
+            signal: controller.signal,
+            rehearse,
+          });
           if (!outcome.ok) {
             verdict = { check: outcome === CANCELLED ? "cancelled" : check.name, outcome };
             break;
@@ -170,6 +241,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       } finally {
         bridge.stop();
         tool.unmount();
+        mounted.bridge.stop();
+        mounted.tool.unmount();
       }
     }
   } finally {

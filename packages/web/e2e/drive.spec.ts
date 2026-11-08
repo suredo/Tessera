@@ -44,6 +44,27 @@ document.querySelector("[data-hook=item-add]").addEventListener("click", () => {
     });
 });`,
   },
+  // A list that saves each item it adds, shows what its data holds, and says when a save fails.
+  saver: {
+    html: '<label for="name">Item</label> <input id="name" data-hook="item-name"> <button data-hook="item-add">Add</button><p data-hook="error"></p><ul></ul>',
+    css: "",
+    js: `const list = document.querySelector("ul");
+const show = () => tessera.call("data.read").then(({ data }) => {
+  list.replaceChildren(...data.items.map((record) => {
+    const item = document.createElement("li");
+    item.dataset.hook = "item";
+    item.textContent = record.name;
+    return item;
+  }));
+});
+show();
+document.querySelector("[data-hook=item-add]").addEventListener("click", () => {
+  const name = document.querySelector("[data-hook=item-name]").value;
+  tessera
+    .call("data.patch", { operations: [{ op: "add", collection: "items", record: { name } }] })
+    .then(show, (error) => { document.querySelector("[data-hook=error]").textContent = error.code; });
+});`,
+  },
   // A hooked element that is neither a field nor a button.
   text: { html: '<p data-hook="total">0</p>', css: "", js: "" },
 };
@@ -54,6 +75,54 @@ test.beforeAll(async () => {
   host = await startSandboxHost(tools);
 });
 test.afterAll(() => host.close());
+
+/**
+ * Stages the saver with one check that drives it in the smoke check's panel, then starts it again
+ * for a rehearsal and drives it, then reopens it on what it saved and reads its list. Returns the
+ * answers, the starting data as it stands afterwards, and the bridge requests the page sent.
+ */
+async function rehearse(page: Page) {
+  const bridgeRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/bridge")) bridgeRequests.push(request.url());
+  });
+  await page.goto(host.url);
+  await ready(page, "stageCandidate");
+  const result = await page.evaluate(async () => {
+    const w = window as unknown as {
+      stageCandidate(options: unknown): Promise<unknown>;
+      driveTool(tool: unknown, steps: unknown): Promise<unknown>;
+    };
+    const syntheticData = { items: [{ id: "i-1", name: "Milk" }] };
+    const add = [
+      { do: "fill", hook: "item-name", value: "Eggs" },
+      { do: "click", hook: "item-add" },
+      { do: "read", hook: "error" },
+      { do: "read", hook: "item" },
+    ];
+    const answers: unknown[] = [];
+    await w.stageCandidate({
+      candidate: { mountId: "saver", hash: "a".repeat(64), capabilities: [], syntheticData },
+      workspaceId: "00000000-0000-4000-8000-000000000000",
+      expectedDataRevision: 0,
+      activationToken: "00000000-0000-4000-8000-000000000001",
+      checks: [
+        {
+          name: "behavior",
+          run: async ({ tool, rehearse }: { tool: unknown; rehearse: () => Promise<unknown> }) => {
+            answers.push(await w.driveTool(tool, add));
+            answers.push(await w.driveTool(await rehearse(), add));
+            answers.push(await w.driveTool(await rehearse(), [{ do: "read", hook: "item" }]));
+            return { ok: true };
+          },
+        },
+      ],
+      activate: () => Promise.resolve({ ok: false, reason: "stale", message: "Not stored." }),
+    });
+    return { answers, syntheticData };
+  });
+  return { ...result, bridgeRequests };
+}
 
 /** Stages `mountId` with one check that drives it with `steps`; returns what its page answered. */
 async function drive(page: Page, mountId: string, steps: DriveStep[]): Promise<DriveReport> {
@@ -147,4 +216,30 @@ test("VER-03: a step that can't be done ends the answer, saying what was missing
     problems: [],
     steps: [{ ok: false, problem: '"total"], body" isn\'t a hook name.' }],
   });
+});
+
+test("BRG-06, VER-03: in the smoke check's panel a save is refused; in a rehearsal it goes to a throwaway copy that a reopen shows, and never to the server", async ({
+  page,
+}) => {
+  const { answers, syntheticData, bridgeRequests } = await rehearse(page);
+  const steps = (answer: unknown) => (answer as DriveReport).steps;
+  // Before the rehearsal, the candidate can't save (BRG-06).
+  expect(steps(answers[0])).toEqual([
+    { ok: true },
+    { ok: true },
+    { ok: true, count: 1, texts: ["not-active"] },
+    { ok: true, count: 1, texts: ["Milk"] },
+  ]);
+  // Rehearsing, its save goes to the throwaway copy, and it shows it.
+  expect(steps(answers[1])).toEqual([
+    { ok: true },
+    { ok: true },
+    { ok: true, count: 1, texts: [""] },
+    { ok: true, count: 2, texts: ["Milk", "Eggs"] },
+  ]);
+  // Reopened, it shows what it saved.
+  expect(steps(answers[2])).toEqual([{ ok: true, count: 2, texts: ["Milk", "Eggs"] }]);
+  // The starting data it was given is unchanged, and nothing reached the server's bridge.
+  expect(syntheticData).toEqual({ items: [{ id: "i-1", name: "Milk" }] });
+  expect(bridgeRequests).toEqual([]);
 });

@@ -154,6 +154,18 @@ export {
   type PatchBatch,
   type PatchOperation,
 } from "./patch.ts";
+export {
+  applyPatch,
+  createDataState,
+  recordKey,
+  recordOfKey,
+  revisionOf,
+  type DataState,
+  type PatchOptions,
+  type PatchRefusal,
+  type PatchResult,
+  type ToolData,
+} from "./patch-engine.ts";
 export { INTERNAL_TERMS, internalTerms } from "./plain-language.ts";
 export {
   EFFORTS,

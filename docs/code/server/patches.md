@@ -7,7 +7,7 @@ implements: [DATA-02, DATA-06]
 tests: [../../../packages/server/test/patches.test.ts, ../../../packages/contracts/test/patch.test.ts]
 tags: [code, server, data, patches]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-24T00:46:43Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T12:02:04Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ Every change to a tool's data, from the tool itself or later from chat, is a sma
 
 # Entry points
 
-- `src/patches/patches.ts`:
+- `src/patches/index.ts` gives the engine, which lives in the contracts package's `src/patch-engine.ts`, so the staging panel applies a behavior check's saves to its throwaway copy as the server applies a person's (P3, [runtime](../runtime/package.md)):
   - `createDataState` starts tracking a tool's data: every record it already holds is at revision 1. It throws if a list holds two records with one ID.
   - `applyPatch` applies a batch, given as untrusted input, and returns `{ ok: true, state, addedIds }` or `{ ok: false, reason, message, operationIndex }`, where the reason is invalid, stale or too large and the message starts with "Nothing was changed:".
   - `revisionOf` gives a record's revision count, which a change planned against that record carries.
@@ -35,7 +35,7 @@ Every change to a tool's data, from the tool itself or later from chat, is a sma
 
 # Depends on / used by
 
-Depends on the patch contract and zod. [Workspaces](workspaces.md) give it a workspace's data with its saved revisions and save the result; the bridge (#46) will apply a tool's own changes through them; activation (#50) will give it the tool's current state; chat (M2) will plan batches against a state it read earlier.
+Depends on the patch contract and zod, and on nothing of Node's, so it runs in the browser too. [Workspaces](workspaces.md) give it a workspace's data with its saved revisions and save the result; the bridge (#46) will apply a tool's own changes through them; activation (#50) will give it the tool's current state; chat (M2) will plan batches against a state it read earlier.
 
 # Pitfalls
 
@@ -50,4 +50,3 @@ Depends on the patch contract and zod. [Workspaces](workspaces.md) give it a wor
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `index.ts`: `applyPatch`, `createDataState`, `recordKey`, `recordOfKey`, `revisionOf`, `DataState` (type), `PatchOptions` (type), `PatchRefusal` (type), `PatchResult` (type), `ToolData` (type)
-- `patches.ts`: `ToolData` (type), `DataState` (type), `PatchRefusal` (type), `PatchResult` (type), `PatchOptions` (type), `recordKey`, `recordOfKey`, `createDataState`, `revisionOf`, `applyPatch`
