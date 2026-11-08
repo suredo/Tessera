@@ -4,7 +4,7 @@ title: "ADR 0014. The chart library: a host helper over Chart.js"
 description: "The first vetted library (CAP-04, A25): tools draw charts through a small declarative host helper, which renders with a pinned Chart.js, styles charts by the UI standard, gives screen readers the data, and records what it drew so the chart profile's check can verify it."
 tags: [decisions, capabilities, charts, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T21:18:03Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T21:21:50Z }
 ---
 # ADR 0014. The chart library: a host helper over Chart.js
 
@@ -16,7 +16,7 @@ A tool runs in a sandbox with no network (`RUN-01`), so a library has to be inje
 
 - **The chart profile must check what was drawn** (`VER-03`). A chart drawn on a canvas is pixels: nothing on the page says which values it shows, so a check can only look at numbers shown elsewhere.
 - **Screen readers must get the data,** as the smoke check's accessibility floor asks of every tool's fields, buttons and images (`VER-02`). A canvas chart is invisible to them unless the tool adds text.
-- **The UI standard must style it.** Colors and type have to come from the standard's tokens, not from whatever a model picks.
+- **The UI standard must style it** in standard mode, with colors and type from the standard's tokens rather than whatever a model picks; a tool in custom mode, made for an explicit design request, styles itself (`VER-06`), and its stylesheet layer isn't loaded (`RUN-05`).
 
 ## Options
 
@@ -30,7 +30,7 @@ A tool runs in a sandbox with no network (`RUN-01`), so a library has to be inje
 
 1. **Tools draw charts only through the host's helper.** A tool that declares the `chart` capability gets `tessera.chart.draw(element, spec)`, where `spec` is declarative: the chart's type (bar, line, pie or doughnut to start), its title, its labels and one or more named series of numbers, with bounds on how many of each. A tool never reaches Chart.js itself; the static check (`VER-01`) refuses code that names it, so the library stays the host's to change.
 2. **The host renders with a pinned Chart.js 4**, installed through the lockfile at an exact version and loaded into the tool's page only when the tool declares `chart`. Animation is off, so a chart is drawn when the call returns.
-3. **The UI standard styles every chart:** colors, type and spacing come from the standard's tokens (`VER-06`), whatever the spec says.
+3. **Styling follows the tool's mode** (`VER-06`, `RUN-05`). The spec carries no colors or fonts. In standard mode, a chart's colors, type and spacing come from the standard's tokens in the standard stylesheet. In custom mode that stylesheet isn't loaded, so the helper reads chart colors and type from CSS custom properties the tool sets for its own design (named in the capability's prompt text, such as a series palette, text and grid colors), and falls back to the standard's palette, which the helper carries itself, for any the tool leaves unset. Contrast in custom mode is the tool's design, as for the rest of a custom-mode tool; the hidden data table (4) is there in both modes.
 4. **Screen readers get the data:** beside each chart the helper keeps a visually hidden table of its labels and series.
 5. **The helper records what it drew,** so a behavior check can ask, through the driver, which spec each hooked element's chart shows (`VER-03`). The page's answer is the page's word, like every check's (`checks.ts`).
 6. **Updates are deliberate:** a new Chart.js version comes in its own pull request, reviewed like any change, with the chart tests rerun in Chrome and Edge.
