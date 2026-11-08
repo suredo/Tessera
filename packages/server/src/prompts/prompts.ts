@@ -87,7 +87,8 @@ export type RepairClass = (typeof REPAIR_CLASSES)[number];
  * part can't grow unnoticed. The POC's one prompt reached about 18,000. Repair's covers its larger
  * shape, the repair of a creation: the creation prompt with the failed answer quoted, about 21,400
  * when set (GEN-09). Edit's rose from 18,500 in M3 for the verification profile's part, which states
- * every rule a profile's check enforces (VER-04, #273): its fixture with the part measured 18,835.
+ * every rule a profile's check enforces (VER-04, #273): its fixture with the part measured 18,835;
+ * the owner approved 20,000 on 2026-11-08.
  * Creation's fixture is a creation that fits a profile, its largest shape: 16,997 when set.
  */
 export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
