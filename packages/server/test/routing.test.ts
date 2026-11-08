@@ -197,7 +197,7 @@ describe("the routing table (CLI-09)", () => {
 });
 
 describe("running a stage on its route (CLI-09, CLI-03)", () => {
-  it("CLI-09: calls the stage's model and effort, and gives web tools to research only", async () => {
+  it("TCL-02, CLI-09: calls the stage's model and effort, and gives web tools to research only", async () => {
     for (const stage of STAGES) {
       const { provider, calls } = recording();
       await runStage(provider, DEFAULT_ROUTES, call(stage));

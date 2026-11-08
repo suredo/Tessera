@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:50:00Z }
 ---
 # Threat model and boundary checks
 
@@ -67,17 +67,17 @@ Its limits, which stay open after M1:
 
 ## Trusted CLI checks
 
-Run against the provider adapters with a fake program that records what it was given (`TEST-02`), and once live: the M0 spike for Claude Code ([ADR 0002](../decisions/adr/0002-claude-code-cli-contract.md)) and the Codex probe ([ADR 0013](../decisions/adr/0013-codex-cli-contract.md)). The fake checks the arguments, environment and files a call starts with; what a real model is offered is shown only by the live calls, and by `codex debug prompt-input` for what reaches Codex's model. Claude Code's research stage arrives in M5, so `TCL-02` covers Codex until then.
+Run against the provider adapters with a fake program that records what it was given (`TEST-02`), and once live: the M0 spike for Claude Code ([ADR 0002](../decisions/adr/0002-claude-code-cli-contract.md)) and the Codex probe ([ADR 0013](../decisions/adr/0013-codex-cli-contract.md)). The fake checks the arguments, environment and files a call starts with. No check sees the tool list a real request carries: the live calls show what the model reports and does, and `codex debug prompt-input` what reaches Codex's model besides the request. Claude Code's research stage arrives in M5, so `TCL-02` covers Codex until then.
 
 | ID | Attempt | Expected result |
 | --- | --- | --- |
 | TCL-01 | A normal stage's call, on either program | Started with the locked flags, exactly: no file, shell, web or other tool, no approvals, a fresh empty folder (`CLI-03`). |
-| TCL-02 | A stage other than research asking for the web | Web search is off; only research gets it, live (`CLI-03`). |
+| TCL-02 | A stage other than research getting the web | The stage policy gives web tools to research alone, every stage checked (`runStage`); the Codex adapter turns that into web search `disabled`, or `live` for research (`CLI-03`). |
 | TCL-03 | API keys, Codex and Claude Code variables, and a parent session's variables in Tessera's environment | None reaches the program: it starts from an allowlist, with Codex pointed at Tessera's own home folder (`CLI-08`). |
 | TCL-04 | Codex: tools a model's metadata adds whatever is disabled, such as file editing | Taken out of every model by the restricted catalog every call is given; a call refuses to start without it (`CLI-03`). |
 | TCL-05 | Codex: instructions in its home folder, which reach every call | The setup check and every call refuse while an `AGENTS.md` or `AGENTS.override.md` is there; project instruction files are switched off (`CLI-08`). |
 | TCL-06 | Codex: a sign-in that could bill apart from the plan, such as an API key | Refused by the setup check, without a model call (`CLI-02`). |
-| TCL-07 | Live: a request that asks the model to read a file and run a command | No tool is offered or used; a tool the model names, even unused, fails the check (Codex probe, 2026-11-07). |
+| TCL-07 | Live: a request that asks the model to list its tools, read a file and run a command | The probe's scoring fails a call whose events show a tool or whose answer names one, even unused. In the Codex probe of 2026-11-07 the model named no tool and attempted neither, and no event was a tool. That is the model's own report and the events' absence, not proof of what was offered: what is offered rests on `TCL-01` and `TCL-04`, and what reaches the model on `codex debug prompt-input`. |
 
 ## Sandbox checks: the POC's 13
 

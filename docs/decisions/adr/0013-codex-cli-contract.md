@@ -4,7 +4,7 @@ title: "ADR 0013. The Codex CLI contract"
 description: "What the M3 Codex probe found on Codex CLI 0.166.0, and the rules it sets: Tessera's own Codex home folder and sign-in, a restricted catalog of models, contracts projected onto strict structured output, and the choice of program kept per data folder."
 tags: [decisions, cli, codex, contracts]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T03:50:00Z }
 ---
 # ADR 0013. The Codex CLI contract
 
@@ -22,7 +22,7 @@ Two things no setting reached, found by Codex's review of the adapter: Codex rea
 | --- | --- | --- | --- | --- |
 | 1 | 1 | "The 'gpt-5.5' model is not supported when using Codex with a ChatGPT account." No tokens. | The only bundled model without code mode isn't offered to a ChatGPT plan | Routes name the plan's models; the wording maps to an unavailable model (`CLI-05`) |
 | 2 | 1 | "Invalid schema for response_format 'codex_output_schema': 'schema.properties.answer.oneOf' is not permitted when strict is true." No tokens. | `--output-schema` is sent as strict structured output | Contracts are projected onto strict mode and turned back (rule 4) |
-| 3 | 2 | Both passed, on gpt-6-luna at low effort: a create answer passed the creation contract after being turned back; asked to list its tools, read a file and run a command, the model named none and did neither, and no event was a tool. | | |
+| 3 | 2 | Both passed, on gpt-6-luna at low effort: a create answer passed the creation contract after being turned back; asked to list its tools, read a file and run a command, the model named none and did neither, and no event was a tool. That is the model's report and the events' absence, not a view of the tool list the request carried. | | |
 
 Run 3 used 836 input tokens, none cached, and 536 output tokens; the create call's 614 input tokens show Codex's own instructions were replaced. Before the probe, `codex debug prompt-input` with the locked settings showed that a home-folder `AGENTS.md` was the only thing besides the request that reached the model.
 
