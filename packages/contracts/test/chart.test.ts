@@ -95,6 +95,13 @@ const cases: [string, unknown][] = [
     Object.assign(Object.create({ title: "Spending" }) as object, { ...good, title: undefined }),
   ],
   ["a missing title", { type: good.type, labels: good.labels, series: good.series }],
+  // A character beyond Unicode's first plane takes two UTF-16 units, and counts as one.
+  ["a title of the most emoji", { ...good, title: "\u{1F4B0}".repeat(CHART_LIMITS.title) }],
+  ["a title of too many emoji", { ...good, title: "\u{1F4B0}".repeat(CHART_LIMITS.title + 1) }],
+  [
+    "a label of the most emoji",
+    { ...good, labels: ["\u{1F355}".repeat(CHART_LIMITS.text), "Food"] },
+  ],
 ];
 
 describe("the chart spec (CAP-04)", () => {

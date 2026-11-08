@@ -127,7 +127,9 @@ export function schemaProblem(value: unknown, schema: unknown, where = "the spec
     case "string": {
       const least = typeof rule["minLength"] === "number" ? rule["minLength"] : 0;
       const most = typeof rule["maxLength"] === "number" ? rule["maxLength"] : Infinity;
-      return typeof value === "string" && value.length >= least && value.length <= most
+      // Counted in characters as Unicode has them, as a zod contract counts, not in UTF-16 units.
+      const length = typeof value === "string" ? [...value].length : -1;
+      return length >= least && length <= most
         ? null
         : `${where} must be text of ${least} to ${most} characters.`;
     }
