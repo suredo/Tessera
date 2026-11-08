@@ -4,7 +4,7 @@ title: "Decision log"
 description: "Every decision made so far (A1–A54), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-26T12:38:53Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T21:18:14Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -39,7 +39,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A22 | Judging scenarios | **Automatic host facts + AI technical review + your final verdict** | The AI reviewer checks fulfilment, standard style, working controls and coherence, the same way whichever model built the tool. You decide (`EVAL-02` to `EVAL-04`). |
 | A23 | Portuguese scenarios | **Yes, a few** | Generated tools follow the person's language; the host stays English (`EVAL-06`). |
 | A24 | Test applications | **A tiered catalogue: simple, medium, advanced; modularity later** | Simple: lists, charts, forms, calculators. Medium: video and film finder, article finder, research board, rule-based planners. Advanced: drawing, image and document editing, 2D and 3D simulation. Later: saving and reusing features across tools. See the [test application catalogue](../testing/app-catalogue.md). |
-| A25 | Vetted libraries in the sandbox | **Yes, a few** | Pinned, reviewed versions injected as declared capabilities (`CAP-04`): a chart library first (M3), three.js for 3D (M5). The UI standard covers chart styling. Each library is added by an ADR and updated deliberately. |
+| A25 | Vetted libraries in the sandbox | **Yes, a few** | Pinned, reviewed versions injected as declared capabilities (`CAP-04`): a chart library first (M3), three.js for 3D (M5). The UI standard covers chart styling. Each library is added by an ADR and updated deliberately. The chart library: [ADR 0014](adr/0014-chart-library.md), a host helper over Chart.js. |
 | A26 | First editing app | **Image editor** | Open a photo, crop, annotate, export: exercises files in and out and the canvas (`CAP-03`). The document editor comes later. |
 | A27 | AI reviewer and screenshots | **Approved screenshots as image inputs; no file tools** | The reviewer gets approved, sanitized screenshots as image inputs (CLI-08). If an adapter cannot pass images, it reviews without them and the report says so. Image input is verified in M2. Other normal stages stay tool-free; research alone has web tools. |
 | A28 | Finding saved tools by asking | **Yes: look in saved tools first** | The intent stage sees a short catalogue of saved tools; a match offers Continue or Use again; otherwise a new tool is created (`GEN-18`). The local form of the later "check the store first". |

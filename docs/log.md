@@ -2,6 +2,8 @@
 
 ## 2026-11-08
 
+* **New**: [ADR 0014](decisions/adr/0014-chart-library.md), the chart library (`CAP-04`, A25): as the owner chose, tools draw charts only through a small declarative host helper, which renders with a pinned Chart.js, styles charts by the UI standard, keeps a hidden table of the data for screen readers and records what it drew for the chart profile's check. Nothing is built yet. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T21:18:03Z.
+
 * **Update**: The owner raised the [CI workflow](code/ci/workflow.md)'s Windows job limit from 20 to 30 minutes (`ENG-02`): the verification profiles' browser tests took it past 20, and `main` was cancelled at the limit after the filtering profile merged. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T19:43:38Z.
 
 * **New**: The form profile, third of M3's verification profiles (`VER-03`, `VER-04`, `VER-07`), for T5: a form people fill in and send, whose answers it keeps and shows. The [contracts](code/contracts/package.md) define it, and the [runtime](code/runtime/package.md)'s check sends the form with a required field empty, expecting nothing saved and the tool saying what is missing, then filled in, expecting one more answer showing what was typed, and opens the tool again. The driver gains a step describing the marked fields, so the check can fill each with a value it takes. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T18:29:28Z.
