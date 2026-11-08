@@ -23,6 +23,8 @@ import type { BridgeMethodName } from "@tessera/contracts";
     byte.toString(16).padStart(2, "0"),
   ).join("");
   let lastCall = 0;
+  // Counts calls made and settled, so a behavior check can tell a quiet moment from a busy one.
+  let activity = 0;
 
   // A waiting envelope is copied now, as the port would copy it, so what can't be sent fails here,
   // and a later change to it by the tool doesn't change what is sent.
@@ -64,6 +66,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
     const call = typeof r?.requestId === "string" ? pending.get(r.requestId) : undefined;
     if (!call || !r) return;
     pending.delete(r.requestId as string);
+    activity += 1;
     if (r.ok === true) return call.resolve(r.result);
     const message = r.error?.message;
     const error = new Error(typeof message === "string" ? message : "The host refused the call.");
@@ -108,14 +111,17 @@ import type { BridgeMethodName } from "@tessera/contracts";
   const settled = async () => {
     for (let waited = 0; pending.size > 0 && waited < 3000; waited += 50) await wait(50);
   };
-  // Settled, then a moment to show the result; calls made in that moment are waited for too.
+  // Settled, then 50 quiet ms to show the result: a call made or settled in that time starts the
+  // wait again, a bounded number of times.
   const shown = async () => {
-    for (let rounds = 0; rounds < 5; rounds += 1) {
+    for (let rounds = 0; rounds < 20; rounds += 1) {
       await settled();
+      const seen = activity;
       await wait(50);
-      if (pending.size === 0) return;
+      if (pending.size === 0 && activity === seen) return;
     }
   };
+
 
   // A behavior check's question (VER-03): steps on the elements the tool marks with a hook name
   // in its `data-hook` attribute, one at a time, each once the tool's calls have settled and it
@@ -318,6 +324,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
    */
   function call(action: string, args: unknown = {}): Promise<unknown> {
     lastCall += 1;
+    activity += 1;
     const requestId = `p${page}-c${lastCall}`;
     return new Promise((resolve, reject) => {
       pending.set(requestId, { resolve, reject });

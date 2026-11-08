@@ -29,15 +29,15 @@ const show = (name) => {
 tessera.call("data.read").then(({ data }) => data.items.forEach((item) => show(item.name)));
 document.querySelector("[data-hook=item-add]").addEventListener("click", () => {
   const field = document.querySelector("[data-hook=item-name]");
-  // Adding waits on two calls, as saving and reading back would, the second made a moment after
-  // the first's reply, and shows the item a moment after the second's: the step must wait for the
-  // calls to settle, then give the tool that moment to show the result.
+  // Adding waits on two calls, as saving and reading back would, the second made after a quiet
+  // moment that follows the first's reply, and shows the item a moment after the second's: the
+  // step must wait for the calls to settle, then for a quiet moment after the last of them.
   const later = (ms) => new Promise((done) => setTimeout(done, ms));
   tessera
     .call("data.read")
-    .then(() => later(30))
+    .then(() => later(60))
     .then(() => tessera.call("data.read"))
-    .then(() => later(40))
+    .then(() => later(45))
     .then(() => {
       show(field.value);
       field.value = "";
