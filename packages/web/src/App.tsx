@@ -8,7 +8,7 @@ import { t } from "./i18n/translate.ts";
 import { History } from "./History.tsx";
 import { ImportFile } from "./ImportFile.tsx";
 import { Library } from "./Library.tsx";
-import { checkSetup, runProbe } from "./setup.ts";
+import { checkSetup, chooseProvider, runProbe } from "./setup.ts";
 import { SetupNotice, Status } from "./Status.tsx";
 import {
   carryOut,
@@ -681,6 +681,10 @@ export function App() {
               }
             }}
             onProbe={() => runProbe()}
+            onChoose={async (provider) => {
+              setSetup(await chooseProvider(provider));
+              setSetupProblem("");
+            }}
           />
         </main>
       ) : view === "trash" ? (
