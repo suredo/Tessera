@@ -197,13 +197,21 @@ export const workspaceTools =
     if (candidate) {
       const version = loadVersion(store.db, candidate);
       return version?.kind === "ok"
-        ? { code: version.artifact.code, ui: version.artifact.ui }
+        ? {
+            code: version.artifact.code,
+            ui: version.artifact.ui,
+            capabilities: version.artifact.capabilities,
+          }
         : undefined;
     }
     const workspace = getWorkspace(store, mountId);
     if (!workspace?.currentVersion) return undefined;
     const version = loadVersion(store.db, workspace.currentVersion);
     return version?.kind === "ok"
-      ? { code: version.artifact.code, ui: version.artifact.ui }
+      ? {
+          code: version.artifact.code,
+          ui: version.artifact.ui,
+          capabilities: version.artifact.capabilities,
+        }
       : undefined;
   };

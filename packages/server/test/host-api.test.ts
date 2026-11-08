@@ -307,7 +307,11 @@ describe("the host route and the tools it serves (RUN-01, SEC-03)", () => {
     const toolFor = workspaceTools(folder);
     expect(toolFor(workspace.id)).toBeUndefined();
     expect(activateVersion(folder, workspace.id, saveVersion(folder.db, tool), 0).ok).toBe(true);
-    expect(toolFor(workspace.id)).toEqual({ code: tool.code, ui: tool.ui });
+    expect(toolFor(workspace.id)).toEqual({
+      code: tool.code,
+      ui: tool.ui,
+      capabilities: tool.capabilities,
+    });
     expect(toolFor("not-a-workspace")).toBeUndefined();
     ask(folder, "workspaces.delete", { id: workspace.id });
     expect(toolFor(workspace.id)).toBeUndefined();

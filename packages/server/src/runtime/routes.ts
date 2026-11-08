@@ -4,15 +4,27 @@ import type { ServerResponse } from "node:http";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { Artifact } from "@tessera/contracts";
-import { hostStyles, TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "@tessera/runtime/policy";
+import { CHART_LIMITS, CHART_TYPES, type Artifact } from "@tessera/contracts";
+import {
+  hostStyles,
+  TOOL_CSP,
+  TOOL_SANDBOX,
+  UI_CHART_TOKENS,
+  UI_TOKENS,
+  wrapperCsp,
+} from "@tessera/runtime/policy";
 import type { Handler } from "../http/index.ts";
 
 // The runtime's documents (RUN-01), served on the runtime's origin (localhost) by the local server,
 // whose guard has already checked the Host header and that they load only as frames (SEC-03).
 
-/** The tool a mount shows, its code and its UI mode, or undefined if there is no such mount. */
-export type ToolFor = (mountId: string) => Pick<Artifact, "code" | "ui"> | undefined;
+/**
+ * The tool a mount shows, its code, its UI mode and the capabilities it declares (none when it
+ * doesn't say), or undefined if there is no such mount.
+ */
+export type ToolFor = (
+  mountId: string,
+) => (Pick<Artifact, "code" | "ui"> & Partial<Pick<Artifact, "capabilities">>) | undefined;
 
 // The browser scripts are TypeScript in @tessera/runtime; their types are stripped once, here.
 const runtimeSource = path.join(
@@ -23,12 +35,33 @@ const runtimeSource = path.join(
   "runtime",
   "src",
 );
-let scripts: { wrapper: string; preamble: string } | undefined;
+// The chart helper's values (CAP-04): the spec's limits and the standard's chart styles, which the
+// helper uses where a tool sets none, each from its one definition (P3).
+const CHART_STYLES = ["font", "size-secondary", "text", "divider", "surface"] as const;
+const chartValues = JSON.stringify({
+  types: CHART_TYPES,
+  limits: CHART_LIMITS,
+  styles: {
+    ...Object.fromEntries(
+      Object.entries(UI_TOKENS).filter(([name]) =>
+        (CHART_STYLES as readonly string[]).includes(name),
+      ),
+    ),
+    ...UI_CHART_TOKENS,
+  },
+});
+
+let scripts: { wrapper: string; preamble: string; chart: string } | undefined;
 const loadScripts = () =>
   (scripts ??= {
     wrapper: stripTypeScriptTypes(fs.readFileSync(path.join(runtimeSource, "wrapper.ts"), "utf8")),
     preamble: stripTypeScriptTypes(
       fs.readFileSync(path.join(runtimeSource, "tool-preamble.ts"), "utf8"),
+    ).replace('"__TESSERA_CHART__"', () => JSON.stringify(chartValues)),
+    // The pinned Chart.js (ADR 0014), only for a tool that declares chart.
+    chart: fs.readFileSync(
+      path.join(runtimeSource, "..", "node_modules", "chart.js", "dist", "chart.umd.min.js"),
+      "utf8",
     ),
   });
 
@@ -46,20 +79,23 @@ const html = (res: ServerResponse, body: string) => {
 };
 
 /**
- * The tool's own document: the preamble first, then the host's styles (RUN-05: the accessibility
- * floor always, the UI standard in standard mode), then the tool's styles, markup and script.
+ * The tool's own document: Chart.js for a tool that declares chart (CAP-04), the preamble, then
+ * the host's styles (RUN-05: the accessibility floor always, the UI standard in standard mode),
+ * then the tool's styles, markup and script.
  */
 export function toolDocument(
-  tool: Pick<Artifact, "code" | "ui">,
+  tool: Pick<Artifact, "code" | "ui"> & Partial<Pick<Artifact, "capabilities">>,
   preamble: string,
   // A new mark for every document, so a tool's styles can't name the host's layers.
   mark: string = randomBytes(8).toString("hex"),
+  chartLibrary: string = tool.capabilities?.includes("chart") ? loadScripts().chart : "",
 ): string {
   const { code } = tool;
   // A closing tag inside the tool's script or styles would end it early; keep it inside.
   const js = code.js.replace(/<\/(script)/gi, "<\\/$1");
   const css = code.css.replace(/<\/(style)/gi, "<\\/$1");
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><script>${preamble}</script><style>${hostStyles(tool.ui.mode, mark)}</style><style>${css}</style></head><body>${code.html}<script>${js}</script></body></html>`;
+  const library = chartLibrary.replace(/<\/(script)/gi, "<\\/$1");
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${library ? `<script>${library}</script>` : ""}<script>${preamble}</script><style>${hostStyles(tool.ui.mode, mark)}</style><style>${css}</style></head><body>${code.html}<script>${js}</script></body></html>`;
 }
 
 /** The runtime's routes for the local server: the wrapper and the tool's document. */

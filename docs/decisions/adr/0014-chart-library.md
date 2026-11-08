@@ -4,7 +4,7 @@ title: "ADR 0014. The chart library: a host helper over Chart.js"
 description: "The first vetted library (CAP-04, A25): tools draw charts through a small declarative host helper, which renders with a pinned Chart.js, styles charts by the UI standard, gives screen readers the data, and records what it drew so the chart profile's check can verify it."
 tags: [decisions, capabilities, charts, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T21:21:50Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T22:10:06Z }
 ---
 # ADR 0014. The chart library: a host helper over Chart.js
 
@@ -28,7 +28,7 @@ A tool runs in a sandbox with no network (`RUN-01`), so a library has to be inje
 
 ## Decision
 
-1. **Tools draw charts only through the host's helper.** A tool that declares the `chart` capability gets `tessera.chart.draw(element, spec)`, where `spec` is declarative: the chart's type (bar, line, pie or doughnut to start), its title, its labels and one or more named series of numbers, with bounds on how many of each. A tool never reaches Chart.js itself; the static check (`VER-01`) refuses code that names it, so the library stays the host's to change.
+1. **Tools draw charts only through the host's helper.** A tool that declares the `chart` capability gets `tessera.chart(element, spec)`, a method beside the bridge's others, where `spec` is declarative: the chart's type (bar, line, pie or doughnut to start), its title, its labels and one or more named series of numbers, with bounds on how many of each. A tool never reaches Chart.js itself; the static check (`VER-01`) refuses code that names it, so the library stays the host's to change.
 2. **The host renders with a pinned Chart.js 4**, installed through the lockfile at an exact version and loaded into the tool's page only when the tool declares `chart`. Animation is off, so a chart is drawn when the call returns.
 3. **Styling follows the tool's mode** (`VER-06`, `RUN-05`). The spec carries no colors or fonts. In standard mode, a chart's colors, type and spacing come from the standard's tokens in the standard stylesheet. In custom mode that stylesheet isn't loaded, so the helper reads chart colors and type from CSS custom properties the tool sets for its own design (named in the capability's prompt text, such as a series palette, text and grid colors), and falls back to the standard's palette, which the helper carries itself, for any the tool leaves unset. Contrast in custom mode is the tool's design, as for the rest of a custom-mode tool; the hidden data table (4) is there in both modes.
 4. **Screen readers get the data:** beside each chart the helper keeps a visually hidden table of its labels and series.

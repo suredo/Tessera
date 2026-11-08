@@ -40,6 +40,21 @@ export const UI_TOKENS = {
   target: "40px",
 } as const;
 
+/**
+ * A chart's series colors, in order (CAP-04, ADR 0014): the accent first, then hues that stay
+ * apart for most color vision. Each is a `--ui-chart-*` variable in standard mode, with the tokens,
+ * and the chart helper's own fallback in custom mode. Only a tool that draws charts is told of
+ * them, by the chart capability's prompt text, so they stay out of every prompt's token list.
+ */
+export const UI_CHART_TOKENS = {
+  "chart-1": "#526947",
+  "chart-2": "#2f6f8f",
+  "chart-3": "#b0623a",
+  "chart-4": "#7a5a99",
+  "chart-5": "#97832a",
+  "chart-6": "#4f7f78",
+} as const;
+
 // The layers are declared first in the document, so this order holds whatever a tool declares. A
 // normal declaration in a later layer wins, and a tool's unlayered styles beat both, so the
 // standard stays easy to customize. An important one in an earlier layer wins over later layers
@@ -78,7 +93,7 @@ export function accessibilityCss(mark: string): string {
 }`;
 }
 
-const variables = Object.entries(UI_TOKENS)
+const variables = Object.entries({ ...UI_TOKENS, ...UI_CHART_TOKENS })
   .map(([name, value]) => `    --ui-${name}: ${value};`)
   .join("\n");
 

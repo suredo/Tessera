@@ -7,5 +7,6 @@ export {
   hostStyles,
   standardCss,
   UI_STANDARD_VERSION,
+  UI_CHART_TOKENS,
   UI_TOKENS,
 } from "./ui-standard.ts";
