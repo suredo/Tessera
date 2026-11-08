@@ -4,7 +4,7 @@ import type { ServerResponse } from "node:http";
 import { stripTypeScriptTypes } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CHART_LIMITS, CHART_TYPES, type Artifact } from "@tessera/contracts";
+import { CHART_LIMITS, CHART_TYPES, checkChartSpec, type Artifact } from "@tessera/contracts";
 import {
   hostStyles,
   TOOL_CSP,
@@ -57,7 +57,9 @@ const loadScripts = () =>
     wrapper: stripTypeScriptTypes(fs.readFileSync(path.join(runtimeSource, "wrapper.ts"), "utf8")),
     preamble: stripTypeScriptTypes(
       fs.readFileSync(path.join(runtimeSource, "tool-preamble.ts"), "utf8"),
-    ).replace('"__TESSERA_CHART__"', () => JSON.stringify(chartValues)),
+    )
+      .replace('"__TESSERA_CHART__"', () => JSON.stringify(chartValues))
+      .replace("/*__TESSERA_CHART_CHECK__*/ undefined", () => `(${checkChartSpec.toString()})`),
     // The pinned Chart.js (ADR 0014), only for a tool that declares chart.
     chart: fs.readFileSync(
       path.join(runtimeSource, "..", "node_modules", "chart.js", "dist", "chart.umd.min.js"),

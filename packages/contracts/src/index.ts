@@ -171,6 +171,7 @@ export {
   CHART_LIMITS,
   CHART_TYPES,
   chartSpecSchema,
+  checkChartSpec,
   type ChartSpec,
   type ChartType,
 } from "./chart.ts";

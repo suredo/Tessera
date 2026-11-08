@@ -31,6 +31,18 @@ try {
 });
 
 const ui = (mode: "standard" | "custom") => ({ standardVersion: 1, mode }) as const;
+
+/** A tool that draws the spending chart, then takes it away, as a render that starts over does. */
+const cleared: Artifact["code"] = {
+  ...drawing(SPENDING),
+  js: `${drawing(SPENDING).js}
+document.querySelector("#chart").replaceChildren();`,
+};
+/** A tool whose spec has a hole among its values, which JavaScript allows and JSON can't carry. */
+const holed: Artifact["code"] = {
+  ...drawing(SPENDING),
+  js: drawing(SPENDING).js.replace("[1200,450,120,200]", "[1200, , 120, 200]"),
+};
 const tools = {
   standard: { code: drawing(SPENDING), ui: ui("standard"), capabilities: ["chart"] },
   custom: {
@@ -40,6 +52,8 @@ const tools = {
   },
   plainCustom: { code: drawing(SPENDING), ui: ui("custom"), capabilities: ["chart"] },
   undeclared: { code: drawing(SPENDING), ui: ui("standard"), capabilities: [] },
+  cleared: { code: cleared, ui: ui("standard"), capabilities: ["chart"] },
+  holed: { code: holed, ui: ui("standard"), capabilities: ["chart"] },
   mismatched: {
     code: drawing({ ...SPENDING, series: [{ name: "Spent", values: [1, 2] }] }),
     ui: ui("standard"),
@@ -147,6 +161,9 @@ test("CAP-04: a spec the helper can't draw is refused, saying what is wrong", as
   await expect((await open(page, "twoPies")).locator("#out")).toHaveText(
     "tessera.chart can't draw this chart: a pie chart has exactly one series.",
   );
+  await expect((await open(page, "holed")).locator("#out")).toHaveText(
+    `tessera.chart can't draw this chart: series "Spent" needs one number for each of its 4 labels.`,
+  );
 });
 
 test("CAP-04, VER-03: a behavior check reads what each hooked element's chart shows", async ({
@@ -221,4 +238,41 @@ test("CAP-04, VER-02: a tool that draws a chart passes the smoke check at the pa
     });
   });
   expect(result).toEqual({ outcome: "refused", reason: "stale", message: "Passed the checks." });
+});
+
+test("CAP-04, VER-03: a chart the tool has taken away isn't reported as shown", async ({
+  page,
+}) => {
+  await page.goto(host.url);
+  await ready(page, "stageCandidate");
+  const report = await page.evaluate(async () => {
+    const w = window as unknown as {
+      stageCandidate(options: unknown): Promise<unknown>;
+      driveTool(tool: unknown, steps: unknown): Promise<unknown>;
+    };
+    let answer: unknown;
+    await w.stageCandidate({
+      candidate: {
+        mountId: "cleared",
+        hash: "a".repeat(64),
+        capabilities: ["chart"],
+        syntheticData: {},
+      },
+      workspaceId: "00000000-0000-4000-8000-000000000000",
+      expectedDataRevision: 0,
+      activationToken: "00000000-0000-4000-8000-000000000001",
+      checks: [
+        {
+          name: "drive",
+          run: async ({ tool }: { tool: unknown }) => {
+            answer = await w.driveTool(tool, [{ do: "chart", hook: "chart" }]);
+            return { ok: true };
+          },
+        },
+      ],
+      activate: () => Promise.resolve({ ok: false, reason: "stale", message: "Not stored." }),
+    });
+    return answer as DriveReport;
+  });
+  expect(report).toEqual({ problems: [], steps: [{ ok: true, count: 1, charts: [null] }] });
 });

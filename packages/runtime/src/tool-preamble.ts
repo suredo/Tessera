@@ -180,6 +180,14 @@ import type { BridgeMethodName } from "@tessera/contracts";
       // What each chart shows, as the helper drew it: for the first 20, the chart drawn in the
       // element or inside it, or null.
       if (step.do === "chart") {
+        // A chart counts only while its canvas is still in its element: one the tool has since
+        // taken away isn't shown, so it is let go.
+        for (const [at, entry] of [...charts]) {
+          if (!entry.canvas.isConnected || !at.contains(entry.canvas)) {
+            entry.chart.destroy();
+            charts.delete(at);
+          }
+        }
         const drawn = [...charts.entries()];
         const shown = found.slice(0, 20).map((element) => {
           const entry = drawn.find(([at]) => at === element || element.contains(at));
@@ -394,56 +402,30 @@ import type { BridgeMethodName } from "@tessera/contracts";
     styles: Record<string, string>;
   };
   // What each element shows, for a behavior check, and the chart drawn in it.
-  const charts = new Map<Element, { spec: ChartSpecLike; chart: ChartInstance }>();
+  const charts = new Map<
+    Element,
+    { spec: ChartSpecLike; chart: ChartInstance; canvas: HTMLCanvasElement }
+  >();
 
-  /** `spec` as the helper draws it, or an error saying, in plain words, what is wrong with it. */
+  // The spec's rules: the contract's checkChartSpec, whose source the server writes in here, so
+  // the page and the contract can't disagree (P3).
+  const checkChartSpec = /*__TESSERA_CHART_CHECK__*/ undefined as unknown as (
+    spec: unknown,
+    limits: { labels: number; series: number; title: number; text: number },
+    types: string[],
+  ) => string | null;
+
+  /** `spec` as the helper draws it, a copy, or an error saying in plain words what is wrong. */
   function checkChart(spec: unknown): ChartSpecLike {
-    const s = spec as Partial<Record<string, unknown>> | null;
-    const { limits } = CHART;
-    const fail = (why: string): never => {
-      throw new Error(`tessera.chart can't draw this chart: ${why}`);
+    const problem = checkChartSpec(spec, CHART.limits, CHART.types);
+    if (problem) throw new Error(`tessera.chart can't draw this chart: ${problem}`);
+    const s = spec as ChartSpecLike;
+    return {
+      type: s.type,
+      title: s.title,
+      labels: [...s.labels],
+      series: s.series.map((one) => ({ name: one.name, values: [...one.values] })),
     };
-    const words = (value: unknown, most: number, what: string) => {
-      if (typeof value !== "string" || value.length === 0 || value.length > most) {
-        fail(`${what} must be text of 1 to ${most} characters.`);
-      }
-      return value as string;
-    };
-    if (typeof s !== "object" || s === null) return fail("the spec must be an object.");
-    const known = ["type", "title", "labels", "series"];
-    const extra = Object.keys(s).find((key) => !known.includes(key));
-    if (extra) fail(`it has "${extra.slice(0, 40)}", which a spec doesn't take.`);
-    if (typeof s.type !== "string" || !CHART.types.includes(s.type)) {
-      fail(`its type must be one of ${CHART.types.join(", ")}.`);
-    }
-    const title = words(s.title, limits.title, "its title");
-    if (!Array.isArray(s.labels) || s.labels.length === 0 || s.labels.length > limits.labels) {
-      fail(`it needs 1 to ${limits.labels} labels.`);
-    }
-    const labels = (s.labels as unknown[]).map((label) => words(label, limits.text, "each label"));
-    if (!Array.isArray(s.series) || s.series.length === 0 || s.series.length > limits.series) {
-      fail(`it needs 1 to ${limits.series} series.`);
-    }
-    if ((s.type === "pie" || s.type === "doughnut") && (s.series as unknown[]).length !== 1) {
-      fail(`a ${s.type as string} chart has exactly one series.`);
-    }
-    const series = (s.series as unknown[]).map((raw) => {
-      const one = raw as Partial<Record<string, unknown>> | null;
-      if (typeof one !== "object" || one === null) return fail("each series must be an object.");
-      const odd = Object.keys(one).find((key) => key !== "name" && key !== "values");
-      if (odd) fail(`a series has "${odd.slice(0, 40)}", which a series doesn't take.`);
-      const name = words(one.name, limits.text, "each series' name");
-      const values = one.values;
-      if (
-        !Array.isArray(values) ||
-        values.length !== labels.length ||
-        !values.every((value) => typeof value === "number" && Number.isFinite(value))
-      ) {
-        fail(`series "${name}" needs one number for each of its ${labels.length} labels.`);
-      }
-      return { name, values: [...(values as number[])] };
-    });
-    return { type: s.type as string, title, labels, series };
   }
 
   /** A style for charts in `element`: the tool's `--ui-*` value, or else the standard's. */
@@ -535,7 +517,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
         },
       },
     });
-    charts.set(element, { spec: checked, chart: instance });
+    charts.set(element, { spec: checked, chart: instance, canvas });
   }
 
   Object.defineProperty(window, "tessera", {

@@ -129,6 +129,8 @@ describe("the runtime's routes (RUN-01)", () => {
     // The served preamble carries the spec's limits and the standard's chart colors.
     const tool = await get("/runtime/tool?mount=mount-1", asFrame());
     expect(tool.body).not.toContain("__TESSERA_CHART__");
+    // And the contract's own spec rules, as plain script (P3).
+    expect(tool.body).toContain("function checkChartSpec(");
     expect(tool.body).toContain(UI_CHART_TOKENS["chart-2"]);
   });
 });
