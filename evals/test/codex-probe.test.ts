@@ -1,0 +1,56 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterAll, describe, expect, it } from "vitest";
+import { readLedger } from "../src/index.ts";
+import { runModeFrom } from "../spikes/cli-contract/claude-cli.ts";
+import {
+  fakeProvider,
+  inspectEvents,
+  PLAN,
+  plannedCalls,
+  runProbe,
+} from "../spikes/codex-probe/run.ts";
+
+// The Codex probe's dry run (#266, ENG-07): the same calls through the product adapter, on the
+// fake codex, in the system's temporary folder (ENG-19). It never reaches a model.
+const root = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-codex-probe-"));
+afterAll(() => fs.rmSync(root, { recursive: true, force: true }));
+
+describe("Codex probe (CLI-01, CLI-03, ENG-07, #266)", { timeout: 60_000 }, () => {
+  it("ENG-07: a live run needs the approved cap, and the plan never asks for more calls than it", () => {
+    expect(() => runModeFrom(["--live"], PLAN.callCap)).toThrow(/approved-cap/);
+    expect(runModeFrom(["--live", "--approved-cap", String(PLAN.callCap)], PLAN.callCap)).toBe(
+      "live",
+    );
+    expect(plannedCalls().length).toBeLessThanOrEqual(PLAN.callCap);
+  });
+
+  it("CLI-01: the dry run answers every planned call through the adapter and records it", async () => {
+    const dataFolder = path.join(root, "run");
+    const report = await runProbe({
+      mode: "dry-run",
+      provider: fakeProvider(dataFolder),
+      dataFolder,
+    });
+    expect(report.calls.map((call) => [call.check, call.passed, call.notes])).toEqual(
+      plannedCalls().map((call) => [call.check, true, []]),
+    );
+    expect(readLedger(dataFolder)).toHaveLength(plannedCalls().length);
+    expect(fs.existsSync(path.join(dataFolder, "report.json"))).toBe(true);
+  });
+
+  it("CLI-03: an event that is a tool, a failure or missing usage is a problem", () => {
+    const line = (event: object) => JSON.stringify(event);
+    const done = line({ type: "turn.completed", usage: { input_tokens: 1, output_tokens: 1 } });
+    expect(inspectEvents(done).problems).toEqual([]);
+    expect(
+      inspectEvents(
+        [line({ type: "item.completed", item: { type: "command_execution" } }), done].join("\n"),
+      ).problems,
+    ).toEqual(["a tool item: command_execution"]);
+    expect(inspectEvents(line({ type: "turn.completed" })).problems).toEqual([
+      "usage is incomplete",
+    ]);
+  });
+});

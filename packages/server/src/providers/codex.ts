@@ -14,6 +14,7 @@ import {
   type ClaudeStatus,
 } from "./claude.ts";
 import { ProviderError, type Provider, type StageResult, type StageSpec } from "./provider.ts";
+import { restoreAnswer, toStrictSchema } from "./strict-schema.ts";
 
 // The Codex CLI adapter (CLI-01): the second implementation of the provider interface, mirroring
 // the Claude Code adapter as closely as the two programs allow. Every model call goes through
@@ -297,7 +298,9 @@ export function codexFailureKind(text: string): ProviderErrorKind | undefined {
   }
   if (
     /model/.test(lower) &&
-    /not found|not available|unsupported|invalid|unknown|does not exist|no access/.test(lower)
+    /not found|not available|not supported|unsupported|invalid|unknown|does not exist|no access/.test(
+      lower,
+    )
   ) {
     return "unavailable_model";
   }
@@ -348,11 +351,14 @@ export function createCodexProvider(options: CodexOptions): Provider {
     }
     // A new, empty working folder outside the repository for every call (CLI-08).
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-cli-"));
+    // The contract's schema, wrapped as for Claude, and projected onto what strict structured
+    // output takes; the answer is turned back before the host checks it (strict-schema.ts).
+    const wrapped = wrapSchema(jsonSchemaOf(spec.schema));
     try {
       fs.writeFileSync(path.join(cwd, INSTRUCTIONS_FILE), spec.system, "utf8");
       fs.writeFileSync(
         path.join(cwd, OUTPUT_SCHEMA_FILE),
-        JSON.stringify(wrapSchema(jsonSchemaOf(spec.schema))),
+        JSON.stringify(toStrictSchema(wrapped)),
         "utf8",
       );
       const started = Date.now();
@@ -410,8 +416,8 @@ export function createCodexProvider(options: CodexOptions): Provider {
       } catch {
         throw new ProviderError("schema", CODEX_FAILURE_MESSAGES.schema, usage, clip(text));
       }
-      const wrapped = wrappedAnswer.safeParse(parsed);
-      const answer = wrapped.success ? wrapped.data[ANSWER_KEY] : undefined;
+      const unwrapped = wrappedAnswer.safeParse(restoreAnswer(parsed, wrapped));
+      const answer = unwrapped.success ? unwrapped.data[ANSWER_KEY] : undefined;
       const checked = spec.schema.safeParse(answer);
       if (!checked.success) {
         throw new ProviderError("schema", CODEX_FAILURE_MESSAGES.schema, usage, undefined, answer);
