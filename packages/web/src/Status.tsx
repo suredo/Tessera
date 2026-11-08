@@ -1,11 +1,17 @@
-import type { ProbeResult, SetupReport } from "@tessera/contracts";
+import {
+  PROVIDERS,
+  type ProbeResult,
+  type ProviderName,
+  type SetupReport,
+} from "@tessera/contracts";
 import { useState } from "react";
 import { t } from "./i18n/translate.ts";
-import { formatBytes } from "./setup.ts";
+import { chosenCheck, formatBytes } from "./setup.ts";
 
-// The status screen (APP-07): Claude Code's status, Node.js, the data folder and its size, each
-// failure in plain words with its fix (PLAT-03), and the probe, which costs a call, so it is run
-// only when asked and offered only once the checks pass (CLI-02).
+// The status screen (APP-07): the program Tessera reaches a model through, Claude Code or Codex,
+// chosen here with each one's status (CLI-01), Node.js, the data folder and its size, each failure
+// in plain words with its fix (PLAT-03), and the probe, which costs a call, so it is run only when
+// asked and offered only once the checks pass (CLI-02).
 
 type Props = {
   /** The last check's report; null until one has come. */
@@ -15,6 +21,23 @@ type Props = {
   /** Runs the check again; the screen shows the new report. */
   onRecheck: () => Promise<void>;
   onProbe: () => Promise<ProbeResult>;
+  /** Chooses the program; the screen shows the new report. */
+  onChoose: (provider: ProviderName) => Promise<void>;
+};
+
+const PROGRAM_NAMES = {
+  "claude-code": "setup.provider.claude",
+  codex: "setup.provider.codex",
+} as const;
+
+/** One program's status, in plain words. */
+const programStatus = (report: SetupReport, provider: ProviderName) => {
+  const check = provider === "codex" ? report.codex : report.claude;
+  if (!check.ok) return check.message;
+  return t(provider === "codex" ? "setup.codex.ok" : "setup.claude.ok", {
+    version: check.version,
+    path: check.executable,
+  });
 };
 
 const probeText = (result: ProbeResult) =>
@@ -27,8 +50,10 @@ const probeText = (result: ProbeResult) =>
           model: result.model,
         });
 
-export function Status({ report, problem, onRecheck, onProbe }: Props) {
+export function Status({ report, problem, onRecheck, onProbe, onChoose }: Props) {
   const [checking, setChecking] = useState(false);
+  const [choosing, setChoosing] = useState(false);
+  const [chooseProblem, setChooseProblem] = useState("");
   const [probing, setProbing] = useState(false);
   const [probed, setProbed] = useState("");
 
@@ -38,6 +63,22 @@ export function Status({ report, problem, onRecheck, onProbe }: Props) {
       await onRecheck();
     } finally {
       setChecking(false);
+    }
+  };
+  const choose = async (provider: ProviderName) => {
+    setChoosing(true);
+    setChooseProblem("");
+    setProbed("");
+    try {
+      await onChoose(provider);
+    } catch (error) {
+      setChooseProblem(
+        t("setup.provider.failed", {
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      );
+    } finally {
+      setChoosing(false);
     }
   };
   const probe = async () => {
@@ -65,15 +106,36 @@ export function Status({ report, problem, onRecheck, onProbe }: Props) {
         !problem && <p role="status">{t("setup.checking")}</p>
       ) : (
         <>
-          <h3>{t("setup.claude.heading")}</h3>
-          <p className={report.claude.ok ? "check-ok" : "check-problem"}>
-            {report.claude.ok
-              ? t("setup.claude.ok", {
-                  version: report.claude.version,
-                  path: report.claude.executable,
-                })
-              : report.claude.message}
-          </p>
+          {/* One at a time: a choice while a check runs, or a check while a choice is saved,
+              would race to the screen. */}
+          <fieldset className="programs" disabled={choosing || checking}>
+            <legend>
+              <h3>{t("setup.provider.heading")}</h3>
+            </legend>
+            <p id="programs-intro">{t("setup.provider.intro")}</p>
+            {PROVIDERS.map((provider) => {
+              const ok = (provider === "codex" ? report.codex : report.claude).ok;
+              return (
+                <div key={provider} className="program">
+                  <label>
+                    <input
+                      type="radio"
+                      name="program"
+                      value={provider}
+                      checked={report.provider === provider}
+                      aria-describedby={`program-${provider}`}
+                      onChange={() => void choose(provider)}
+                    />
+                    {t(PROGRAM_NAMES[provider])}
+                  </label>
+                  <p id={`program-${provider}`} className={ok ? "check-ok" : "check-problem"}>
+                    {programStatus(report, provider)}
+                  </p>
+                </div>
+              );
+            })}
+            {chooseProblem && <p className="check-problem">{chooseProblem}</p>}
+          </fieldset>
           <h3>{t("setup.node.heading")}</h3>
           <p className={report.node.ok ? "check-ok" : "check-problem"}>
             {report.node.ok
@@ -90,7 +152,7 @@ export function Status({ report, problem, onRecheck, onProbe }: Props) {
         </>
       )}
       {(report !== null || problem) && (
-        <button type="button" disabled={checking} onClick={() => void recheck()}>
+        <button type="button" disabled={checking || choosing} onClick={() => void recheck()}>
           {t("setup.recheck")}
         </button>
       )}
@@ -121,13 +183,14 @@ type NoticeProps = {
 
 /** Says, on the main screens, that Tessera can't reach a model yet, and where the fix is (PLAT-03). */
 export function SetupNotice({ report, problem = "", onOpen }: NoticeProps) {
+  const chosen = report === null ? null : chosenCheck(report);
   const failed =
     report === null
       ? problem
       : !report.node.ok
         ? report.node.message
-        : !report.claude.ok
-          ? report.claude.message
+        : chosen !== null && !chosen.ok
+          ? chosen.message
           : "";
   if (!failed) return null;
   return (

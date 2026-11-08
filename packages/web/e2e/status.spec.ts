@@ -260,3 +260,100 @@ test("PLAT-03: a check that couldn't be made says so, never looks endless, and c
   await expect(probeButton(page)).toBeVisible();
   expect(await violations(page)).toEqual([]);
 });
+
+test("CLI-01: chooses the program on the status screen, keeps the choice, and the notice follows it", async ({
+  page,
+}) => {
+  const codexSignedOut: ClaudeCheck = {
+    ok: false,
+    problem: "signed-out",
+    message: "Codex isn't signed in for Tessera, which keeps a Codex sign-in of its own.",
+  };
+  let codex: ClaudeCheck = codexSignedOut;
+  const host = await startApp({
+    findClaude: STATES["ready"]!,
+    findCodex: () => Promise.resolve(codex),
+  });
+  try {
+    await page.goto(host.url);
+    // Claude Code is chosen until a choice is made, and it is ready: no notice.
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await page.getByRole("button", { name: en["nav.status"] }).click();
+    const programs = status(page).getByRole("group", { name: en["setup.provider.heading"] });
+    const claude = programs.getByRole("radio", { name: en["setup.provider.claude"] });
+    const codexChoice = programs.getByRole("radio", { name: en["setup.provider.codex"] });
+    await expect(claude).toBeChecked();
+    // Each program says its own state, the one not chosen included.
+    await expect(programs.getByText(codexSignedOut.message)).toBeVisible();
+    // Clicked, not checked: the radio follows the kept choice, so it changes only once the
+    // server has kept it, which on a busy machine is later than check() waits (CI on #271).
+    await codexChoice.click();
+    await expect(codexChoice).toBeChecked();
+    // Codex can't reach a model yet, so the probe waits, and the main screens say why.
+    await expect(probeButton(page)).toHaveCount(0);
+    expect(await violations(page)).toEqual([]);
+    await page.goto(host.url);
+    await expect(page.getByRole("alert")).toContainText(
+      `Tessera can't make tools yet. ${codexSignedOut.message}`,
+    );
+    // The choice is kept: after a fix and a reload, Codex is still chosen, and ready.
+    codex = { ok: true, executable: "C:\\Tools\\codex.exe", version: "0.166.0" };
+    await page.reload();
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await page.getByRole("button", { name: en["nav.status"] }).click();
+    await expect(codexChoice).toBeChecked();
+    await expect(
+      programs.getByText("Codex 0.166.0 is ready, at C:\\Tools\\codex.exe."),
+    ).toBeVisible();
+    await expect(probeButton(page)).toBeVisible();
+  } finally {
+    await host.close();
+  }
+});
+
+test("CLI-01: a check and a choice never overlap, so an old check can't put the old program back", async ({
+  page,
+}) => {
+  // Claude Code ready, Codex signed out: which program the screen shows can be told apart.
+  const host = await startApp({
+    findClaude: STATES["ready"]!,
+    findCodex: () =>
+      Promise.resolve({ ok: false, problem: "signed-out", message: "Codex isn't signed in." }),
+  });
+  try {
+    await page.goto(host.url);
+    await page.getByRole("button", { name: en["nav.status"] }).click();
+    const programs = status(page).getByRole("group", { name: en["setup.provider.heading"] });
+    const codexChoice = programs.getByRole("radio", { name: en["setup.provider.codex"] });
+    const recheck = status(page).getByRole("button", { name: en["setup.recheck"] });
+    await expect(codexChoice).toBeEnabled();
+    // While a check is on its way, the choice waits.
+    let releaseCheck = () => {};
+    const checkHeld = new Promise<void>((resolve) => (releaseCheck = resolve));
+    await page.route("**/api/setup", async (route) => {
+      await checkHeld;
+      await route.continue();
+    });
+    await recheck.click();
+    await expect(codexChoice).toBeDisabled();
+    releaseCheck();
+    await expect(codexChoice).toBeEnabled();
+    await page.unroute("**/api/setup");
+    // While a choice is being kept, the check waits; the choice is what the screen then shows.
+    let releaseChoice = () => {};
+    const choiceHeld = new Promise<void>((resolve) => (releaseChoice = resolve));
+    await page.route("**/api/setup/provider", async (route) => {
+      await choiceHeld;
+      await route.continue();
+    });
+    // Clicked, not checked: the radio follows the kept choice, so it changes only once kept.
+    await codexChoice.click();
+    await expect(recheck).toBeDisabled();
+    releaseChoice();
+    await expect(codexChoice).toBeChecked();
+    await expect(recheck).toBeEnabled();
+    await expect(probeButton(page)).toHaveCount(0);
+  } finally {
+    await host.close();
+  }
+});
