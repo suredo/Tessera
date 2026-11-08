@@ -108,6 +108,14 @@ import type { BridgeMethodName } from "@tessera/contracts";
   const settled = async () => {
     for (let waited = 0; pending.size > 0 && waited < 3000; waited += 50) await wait(50);
   };
+  // Settled, then a moment to show the result; calls made in that moment are waited for too.
+  const shown = async () => {
+    for (let rounds = 0; rounds < 5; rounds += 1) {
+      await settled();
+      await wait(50);
+      if (pending.size === 0) return;
+    }
+  };
 
   // A behavior check's question (VER-03): steps on the elements the tool marks with a hook name
   // in its `data-hook` attribute, one at a time, each once the tool's calls have settled and it
@@ -117,7 +125,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
     const q = question as { id?: unknown; steps?: unknown } | null;
     if (typeof q?.id !== "number" || !Array.isArray(q.steps)) return;
     await codeRan;
-    await settled();
+    await shown();
     const results: object[] = [];
     for (const raw of q.steps as unknown[]) {
       const step = raw as { do?: unknown; hook?: unknown; index?: unknown; value?: unknown };
@@ -168,8 +176,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
         });
         break;
       }
-      await wait(50);
-      await settled();
+      await shown();
       results.push({ ok: true });
     }
     post({ report: { id: q.id, problems: [...problems], steps: results } });

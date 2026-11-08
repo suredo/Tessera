@@ -29,8 +29,19 @@ const show = (name) => {
 tessera.call("data.read").then(({ data }) => data.items.forEach((item) => show(item.name)));
 document.querySelector("[data-hook=item-add]").addEventListener("click", () => {
   const field = document.querySelector("[data-hook=item-name]");
-  // Adding waits on a call, as saving would, so the step must wait for it to settle.
-  tessera.call("data.read").then(() => { show(field.value); field.value = ""; });
+  // Adding waits on two calls, as saving and reading back would, the second made a moment after
+  // the first's reply, and shows the item a moment after the second's: the step must wait for the
+  // calls to settle, then give the tool that moment to show the result.
+  const later = (ms) => new Promise((done) => setTimeout(done, ms));
+  tessera
+    .call("data.read")
+    .then(() => later(30))
+    .then(() => tessera.call("data.read"))
+    .then(() => later(40))
+    .then(() => {
+      show(field.value);
+      field.value = "";
+    });
 });`,
   },
   // A hooked element that is neither a field nor a button.
@@ -83,7 +94,7 @@ async function drive(page: Page, mountId: string, steps: DriveStep[]): Promise<D
   );
 }
 
-test("VER-03: a check fills in, clicks and reads hooked elements, each step once the tool has settled", async ({
+test("VER-03: a check fills in, clicks and reads hooked elements, each step once the tool has settled and shown the result", async ({
   page,
 }) => {
   const report = await drive(page, "list", [
