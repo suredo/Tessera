@@ -470,6 +470,8 @@ export async function carryOut(
               }
               continue;
             }
+            // No repair is left for this candidate: the server can let its continuation go.
+            void control?.release();
             return {
               message: t(
                 reply.operation === "edit" ? "request.editCheckFailed" : "request.checkFailed",
