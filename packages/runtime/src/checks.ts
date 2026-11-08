@@ -1,5 +1,6 @@
 import type { MountedTool } from "./host.ts";
 import type { DriveField, DriveResult, DriveStep } from "./protocol.ts";
+import { chartSpecSchema } from "@tessera/contracts";
 
 // The checks a candidate runs in the staging panel before it may be activated (RUN-03): the smoke
 // check (VER-02), and a stub for tests. The static check (VER-01) runs on the server, before a
@@ -130,12 +131,17 @@ function readStep(value: unknown): DriveResult | undefined {
   const texts = step["texts"];
   const matches = step["matches"];
   const fields = step["fields"];
+  const charts = step["charts"];
   return {
     ok: true,
     ...(typeof step["count"] === "number" ? { count: step["count"] } : {}),
     ...(Array.isArray(texts) ? { texts: texts.map(String) } : {}),
     ...(Array.isArray(matches) ? { matches: matches.map(Number) } : {}),
     ...(Array.isArray(fields) ? { fields: fields.map(readField) } : {}),
+    // A chart as the contract reads it, or null for one that isn't (CAP-04).
+    ...(Array.isArray(charts)
+      ? { charts: charts.map((chart) => chartSpecSchema.safeParse(chart).data ?? null) }
+      : {}),
   };
 }
 

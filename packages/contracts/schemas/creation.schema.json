@@ -100,7 +100,8 @@
           "items": {
             "type": "string",
             "enum": [
-              "clock"
+              "clock",
+              "chart"
             ]
           },
           "description": "The host capabilities the tool needs, only those it uses (CAP-01)."

@@ -168,6 +168,16 @@ export {
 } from "./patch-engine.ts";
 export { INTERNAL_TERMS, internalTerms } from "./plain-language.ts";
 export {
+  CHART_LIMITS,
+  CHART_TYPES,
+  chartSpecRelations,
+  chartSpecSchema,
+  chartSpecShape,
+  schemaProblem,
+  type ChartSpec,
+  type ChartType,
+} from "./chart.ts";
+export {
   ITEM_LIST_PROFILE,
   FILTERING_PROFILE,
   FORM_PROFILE,

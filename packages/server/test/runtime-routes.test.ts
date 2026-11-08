@@ -3,7 +3,7 @@ import vm from "node:vm";
 import type { Artifact } from "@tessera/contracts";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startLocalServer, type LocalServer } from "../src/http/index.ts";
-import { accessibilityCss, standardCss, UI_TOKENS } from "@tessera/runtime/policy";
+import { accessibilityCss, standardCss, UI_CHART_TOKENS, UI_TOKENS } from "@tessera/runtime/policy";
 import { runtimeRoutes, toolDocument } from "../src/runtime/index.ts";
 
 // The runtime's documents through the real local server and its guard (RUN-01, SEC-03).
@@ -116,6 +116,25 @@ describe("the runtime's routes (RUN-01)", () => {
     );
     expect(doc).toContain("'<\\/script>'");
     expect(doc).toContain("a{}<\\/style>x");
+  });
+
+  it("CAP-04: puts the pinned Chart.js before the preamble only for a tool that declares chart, and writes in the helper's values", async () => {
+    const code = { html: "", css: "", js: "" };
+    const charted = toolDocument({ code, ui: custom, capabilities: ["chart"] }, "PREAMBLE");
+    const plain = toolDocument({ code, ui: custom, capabilities: [] }, "PREAMBLE");
+    expect(charted.indexOf("Chart.js v4.6.1")).toBeGreaterThan(0);
+    expect(charted.indexOf("Chart.js v4.6.1")).toBeLessThan(charted.indexOf("PREAMBLE"));
+    expect(plain).not.toContain("Chart.js");
+    expect(toolDocument({ code, ui: custom }, "PREAMBLE")).not.toContain("Chart.js");
+    // The served preamble carries the spec's limits and the standard's chart colors.
+    const tool = await get("/runtime/tool?mount=mount-1", asFrame());
+    expect(tool.body).not.toContain("__TESSERA_CHART__");
+    // And the contracts' own functions for the spec's rules, as plain script (P3).
+    expect(tool.body).toContain("function schemaProblem(");
+    expect(tool.body).toContain("function chartSpecRelations(");
+    expect(tool.body).not.toContain("__TESSERA_SCHEMA_PROBLEM__");
+    expect(tool.body).not.toContain("__TESSERA_CHART_RELATIONS__");
+    expect(tool.body).toContain(UI_CHART_TOKENS["chart-2"]);
   });
 });
 

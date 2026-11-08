@@ -177,6 +177,25 @@ import type { BridgeMethodName } from "@tessera/contracts";
         results.push({ ok: true, count: found.length, matches });
         continue;
       }
+      // What each chart shows, as the helper drew it: for the first 20, the chart drawn in the
+      // element or inside it, or null.
+      if (step.do === "chart") {
+        // A chart counts only while its canvas is still in its element: one the tool has since
+        // taken away isn't shown, so it is let go.
+        for (const [at, entry] of [...charts]) {
+          if (!entry.canvas.isConnected || !at.contains(entry.canvas)) {
+            entry.chart.destroy();
+            charts.delete(at);
+          }
+        }
+        const drawn = [...charts.entries()];
+        const shown = found.slice(0, 20).map((element) => {
+          const entry = drawn.find(([at]) => at === element || element.contains(at));
+          return entry ? entry[1].spec : null;
+        });
+        results.push({ ok: true, count: found.length, charts: shown });
+        continue;
+      }
       // What each field is, so a check can fill it with a value it takes: the first 100.
       if (step.do === "fields") {
         const fields = found.slice(0, 100).map((element) => {
@@ -360,6 +379,149 @@ import type { BridgeMethodName } from "@tessera/contracts";
     once: true,
   });
 
+  // The chart helper (CAP-04, ADR 0014). A tool that declares chart gets Chart.js in a script just
+  // before this one; it is taken here and removed from the page, so a tool draws only through
+  // tessera.chart. The server writes in the spec's shape and the standard's chart styles, each
+  // from its one definition (P3).
+  type ChartSpecLike = {
+    type: string;
+    title: string;
+    labels: string[];
+    series: { name: string; values: number[] }[];
+  };
+  type ChartInstance = { destroy(): void };
+  type ChartLibrary = (new (canvas: HTMLCanvasElement, config: object) => ChartInstance) & {
+    defaults: { font: { family?: string; size?: number }; color?: string; borderColor?: string };
+  };
+  const chartPage = window as unknown as { Chart?: ChartLibrary };
+  const chartLibrary = chartPage.Chart;
+  delete chartPage.Chart;
+  const CHART = JSON.parse("__TESSERA_CHART__") as {
+    schema: unknown;
+    styles: Record<string, string>;
+  };
+  // What each element shows, for a behavior check, and the chart drawn in it.
+  const charts = new Map<
+    Element,
+    { spec: ChartSpecLike; chart: ChartInstance; canvas: HTMLCanvasElement }
+  >();
+
+  // The spec's rules, from the contract (P3): its shape's JSON Schema, in CHART, applied by the
+  // contracts' schemaProblem, and the rules that tie its fields together, chartSpecRelations. The
+  // server writes in both functions' source here, so the page restates none of it.
+  const schemaProblem = /*__TESSERA_SCHEMA_PROBLEM__*/ undefined as unknown as (
+    value: unknown,
+    schema: unknown,
+  ) => string | null;
+  const chartSpecRelations = /*__TESSERA_CHART_RELATIONS__*/ undefined as unknown as (
+    spec: ChartSpecLike,
+  ) => string | null;
+
+  /** `spec` as the helper draws it, a copy, or an error saying in plain words what is wrong. */
+  function checkChart(spec: unknown): ChartSpecLike {
+    const problem = schemaProblem(spec, CHART.schema) ?? chartSpecRelations(spec as ChartSpecLike);
+    if (problem) throw new Error(`tessera.chart can't draw this chart: ${problem}`);
+    const s = spec as ChartSpecLike;
+    return {
+      type: s.type,
+      title: s.title,
+      labels: [...s.labels],
+      series: s.series.map((one) => ({ name: one.name, values: [...one.values] })),
+    };
+  }
+
+  /** A style for charts in `element`: the tool's `--ui-*` value, or else the standard's. */
+  const chartStyle = (element: Element, name: string) =>
+    getComputedStyle(element).getPropertyValue(`--ui-${name}`).trim() || (CHART.styles[name] ?? "");
+
+  /** Draws `spec` in `element`, in place of what it held (CAP-04). */
+  function chart(element: unknown, spec: unknown): void {
+    if (!chartLibrary) {
+      throw new Error("tessera.chart needs the chart capability, which this tool doesn't declare.");
+    }
+    if (!(element instanceof HTMLElement)) {
+      throw new Error("tessera.chart needs the element to draw the chart in.");
+    }
+    const checked = checkChart(spec);
+    charts.get(element)?.chart.destroy();
+    activity += 1;
+
+    const palette = [1, 2, 3, 4, 5, 6].map((n) => chartStyle(element, `chart-${n}`));
+    const text = chartStyle(element, "text");
+    const grid = chartStyle(element, "divider");
+    chartLibrary.defaults.font.family = chartStyle(element, "font");
+    chartLibrary.defaults.font.size =
+      Number.parseFloat(chartStyle(element, "size-secondary")) || 14;
+    chartLibrary.defaults.color = text;
+    chartLibrary.defaults.borderColor = grid;
+
+    // The chart, an image named by its title, and beside it a table of the same numbers that only
+    // a screen reader reaches.
+    const frame = document.createElement("div");
+    frame.style.position = "relative";
+    const canvas = document.createElement("canvas");
+    canvas.setAttribute("role", "img");
+    canvas.setAttribute("aria-label", checked.title);
+    frame.append(canvas);
+    const table = document.createElement("table");
+    const hidden = document.createElement("div");
+    Object.assign(hidden.style, {
+      position: "absolute",
+      width: "1px",
+      height: "1px",
+      overflow: "hidden",
+      clipPath: "inset(50%)",
+      whiteSpace: "nowrap",
+    });
+    const caption = document.createElement("caption");
+    caption.textContent = checked.title;
+    const cell = (tag: "th" | "td", content: string) => {
+      const made = document.createElement(tag);
+      made.textContent = content;
+      return made;
+    };
+    const head = document.createElement("tr");
+    head.append(cell("th", ""), ...checked.series.map((one) => cell("th", one.name)));
+    const rows = checked.labels.map((label, i) => {
+      const row = document.createElement("tr");
+      row.append(
+        cell("th", label),
+        ...checked.series.map((one) => cell("td", String(one.values[i]))),
+      );
+      return row;
+    });
+    table.append(caption, head, ...rows);
+    hidden.append(table);
+    element.replaceChildren(frame, hidden);
+
+    const round = checked.type === "pie" || checked.type === "doughnut";
+    const instance = new chartLibrary(canvas, {
+      type: checked.type,
+      data: {
+        labels: checked.labels,
+        datasets: checked.series.map((one, i) => ({
+          label: one.name,
+          data: one.values,
+          backgroundColor: round
+            ? checked.labels.map((_, j) => palette[j % palette.length])
+            : palette[i % palette.length],
+          borderColor: round ? chartStyle(element, "surface") : palette[i % palette.length],
+        })),
+      },
+      options: {
+        animation: false,
+        events: [],
+        responsive: true,
+        plugins: {
+          title: { display: true, text: checked.title },
+          legend: { display: round || checked.series.length > 1 },
+          tooltip: { enabled: false },
+        },
+      },
+    });
+    charts.set(element, { spec: checked, chart: instance, canvas });
+  }
+
   Object.defineProperty(window, "tessera", {
     value: Object.freeze({
       /** Sends a message to the host; it waits until the bridge is ready. */
@@ -372,6 +534,8 @@ import type { BridgeMethodName } from "@tessera/contracts";
         return () => listeners.delete(listen);
       },
       call,
+      /** Draws a chart from `spec` in `element` (CAP-04), for a tool that declares chart. */
+      chart,
       /**
        * A blob: URL showing the image `id` names, from the host's asset.read (DATA-11): the tool
        * gets bytes and a type, never a file path. Rejects as call does.

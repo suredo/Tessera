@@ -22,6 +22,12 @@
       "action": null,
       "argument": "listener",
       "copiesData": false
+    },
+    "chart": {
+      "action": null,
+      "argument": "element and spec",
+      "copiesData": false,
+      "capability": "chart"
     }
   },
   "methodUsage": "Direct tessera.method(...) calls only.",
@@ -29,6 +35,10 @@
     {
       "name": "clock",
       "description": "The current date, time and time zone, from the host's clock (RUN-07)."
+    },
+    {
+      "name": "chart",
+      "description": "Charts the host draws from a spec, with tessera.chart (CAP-04, ADR 0014)."
     }
   ],
   "actions": [

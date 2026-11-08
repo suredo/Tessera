@@ -2,6 +2,8 @@
 
 ## 2026-11-08
 
+* **New**: The chart helper, first part of [issue 283](https://github.com/suredo/Tessera/issues/283) (`CAP-04`, [ADR 0014](decisions/adr/0014-chart-library.md)): the [contracts](code/contracts/package.md) define the chart spec and a chart capability and method; the [runtime](code/runtime/package.md)'s preamble draws through `tessera.chart` with the pinned Chart.js 4.6.1, which the [tool document](code/server/runtime-routes.md) carries only for a tool that declares chart, styled by the tool's mode, with a hidden table of its numbers and a record a behavior check reads. The [threat model](spec/threat-model.md) notes the library. The static check and prompt text come next. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T22:10:06Z.
+
 * **New**: [ADR 0014](decisions/adr/0014-chart-library.md), the chart library (`CAP-04`, A25): as the owner chose, tools draw charts only through a small declarative host helper, which renders with a pinned Chart.js, styles charts by the UI standard, keeps a hidden table of the data for screen readers and records what it drew for the chart profile's check. Nothing is built yet. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T21:18:03Z.
 
 * **Update**: The owner raised the [CI workflow](code/ci/workflow.md)'s Windows job limit from 20 to 30 minutes (`ENG-02`): the verification profiles' browser tests took it past 20, and `main` was cancelled at the limit after the filtering profile merged. Recorded by `claude-code/claude-opus-5-5` at 2026-11-08T19:43:38Z.

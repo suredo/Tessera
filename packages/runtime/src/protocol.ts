@@ -1,3 +1,4 @@
+import type { ChartSpec } from "@tessera/contracts";
 // The names the host, the wrapper and the tool use to set up the bridge (RUN-01). The wrapper's and
 // the tool's scripts are inlined into their documents and can't import this, so they repeat these
 // strings; a test checks they match.
@@ -46,7 +47,8 @@ export type DriveStep =
   | { do: "click"; hook: string; index?: number }
   | { do: "read"; hook: string; start?: number }
   | { do: "find"; hook: string; value: string; start?: number }
-  | { do: "fields"; hook: string };
+  | { do: "fields"; hook: string }
+  | { do: "chart"; hook: string };
 
 /**
  * A field a fields step describes, so a check can fill it with a value it takes: its element and
@@ -71,8 +73,16 @@ export type DriveField = {
 /**
  * What a step did: a read gives how many elements have the hook and the text of 100 of them, from
  * its `start` (the first by default); a find gives how many, and the positions of the first 20
- * from its `start` whose text holds its value; a fields step describes the first 100 fields with the hook.
+ * from its `start` whose text holds its value; a fields step describes the first 100 fields with the hook; and a
+ * chart step gives, for the first 20, the chart the helper drew in each, or null (CAP-04).
  */
 export type DriveResult =
-  | { ok: true; count?: number; texts?: string[]; matches?: number[]; fields?: DriveField[] }
+  | {
+      ok: true;
+      count?: number;
+      texts?: string[];
+      matches?: number[];
+      fields?: DriveField[];
+      charts?: (ChartSpec | null)[];
+    }
   | { ok: false; problem: string };

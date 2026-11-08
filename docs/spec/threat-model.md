@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T12:02:04Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T22:10:06Z }
 ---
 # Threat model and boundary checks
 
@@ -56,7 +56,7 @@ Its limits, which stay open after M1:
 - **Data a tool may write is still its data.** A tool can store what the person types in its own data, through declared bridge calls. That stays on the machine, but it can reach a model later as tool data, where `SEC-02` treats it as quoted data.
 - **Executable migrations are disabled.** M1 accepts declarative migrations only. `SEC-01` requires a separate, negatively tested execution boundary before any generated migration code runs; none is chosen in M1. Enabling them needs an ADR from the owner naming the mechanism, with its own negative checks, first.
 - **Imports check structure, not intent.** An imported tool is generated code from an unknown author: it is stored and runs only in the sandbox, with the same checks, never in the server. Its data is checked against its schema and limits, not judged.
-- **Not covered in M1:** the CLIs' tool policy (M2, M3), outside data providers (`CAP-02`), files offered to save (`CAP-03`), vetted libraries injected into the sandbox (`CAP-04`, M3), engines and research (M5), and the broader audit, including dependencies (M6).
+- **Not covered in M1:** the CLIs' tool policy (M2, M3), outside data providers (`CAP-02`), files offered to save (`CAP-03`), vetted libraries injected into the sandbox (`CAP-04`; from M3 the pinned Chart.js, [ADR 0014](../decisions/adr/0014-chart-library.md), which runs inside the tool's sandbox with the tool's own privileges and makes no requests, so it widens nothing a tool could already do, though its code is reviewed only as a pinned, widely used library), engines and research (M5), and the broader audit, including dependencies (M6).
 
 ## How the checks run
 

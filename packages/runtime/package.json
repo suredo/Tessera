@@ -8,6 +8,7 @@
     "./policy": "./src/policy.ts"
   },
   "dependencies": {
-    "@tessera/contracts": "workspace:*"
+    "@tessera/contracts": "workspace:*",
+    "chart.js": "4.6.1"
   }
 }

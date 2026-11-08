@@ -13,6 +13,7 @@ export const BRIDGE_MANIFEST_VERSION = 1;
 /** What a tool may declare (CAP-01). Every action that needs one names it. */
 export const BRIDGE_CAPABILITIES = {
   clock: "The current date, time and time zone, from the host's clock (RUN-07).",
+  chart: "Charts the host draws from a spec, with tessera.chart (CAP-04, ADR 0014).",
 } as const;
 export type BridgeCapability = keyof typeof BRIDGE_CAPABILITIES;
 
@@ -140,15 +141,24 @@ export const BRIDGE_ACTIONS = {
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
 
-/** Public methods on the tool's tessera object (CON-03), shared with static checks and prompts. */
+/**
+ * Public methods on the tool's tessera object (CON-03), shared with static checks and prompts. One
+ * that works in the page alone, like chart, names the capability a tool declares to use it.
+ */
 export const BRIDGE_METHODS = {
   call: { action: "argument", argument: "fixed action", copiesData: true },
   assetUrl: { action: "asset.read", argument: "id", copiesData: true },
   send: { action: null, argument: "message", copiesData: true },
   onMessage: { action: null, argument: "listener", copiesData: false },
+  chart: { action: null, argument: "element and spec", copiesData: false, capability: "chart" },
 } as const satisfies Record<
   string,
-  { action: "argument" | BridgeActionName | null; argument: string; copiesData: boolean }
+  {
+    action: "argument" | BridgeActionName | null;
+    argument: string;
+    copiesData: boolean;
+    capability?: BridgeCapability;
+  }
 >;
 export type BridgeMethodName = keyof typeof BRIDGE_METHODS;
 
