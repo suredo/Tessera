@@ -1,0 +1,239 @@
+import { PROFILES, type ProfileId } from "@tessera/contracts";
+import {
+  driveTool,
+  type CheckContext,
+  type CheckOutcome,
+  type DriveReport,
+  type VerificationCheck,
+} from "./checks.ts";
+import type { MountedTool } from "./host.ts";
+import type { DriveResult, DriveStep } from "./protocol.ts";
+
+// The verification profiles' behavior checks (VER-03): each drives a candidate that fits its
+// profile through the hooks the profile names, in rehearsals whose saves go to a throwaway copy
+// (BRG-06), and checks only the rules the profile states, which its prompt part gave the tool
+// (VER-04). A failure says what was expected, what was observed and whose rule it is (VER-07).
+
+const clip = (texts: readonly string[]) =>
+  texts.length === 0
+    ? "none"
+    : texts
+        .slice(0, 5)
+        .map((text) => `"${text.slice(0, 60)}"`)
+        .join(", ") + (texts.length > 5 ? ` and ${texts.length - 5} more` : "");
+
+/** "1 item", "3 items". */
+const items = (count: number) => `${count} ${count === 1 ? "item" : "items"}`;
+
+/** A failure of a profile's rule, as repair and the details view read it (VER-07). */
+const broke = (profile: ProfileId, rule: string, expected: string, observed: string) =>
+  ({
+    ok: false,
+    reason: `The ${profile} check, a rule of Tessera's (${rule}): expected ${expected}; observed ${observed}.`,
+  }) as const;
+
+/** Drives `tool` and gives each step's result, or a failure saying what couldn't be done. */
+async function drive(
+  profile: ProfileId,
+  rule: string,
+  tool: MountedTool,
+  steps: readonly DriveStep[],
+): Promise<{ steps: DriveResult[] } | CheckOutcome> {
+  const report: DriveReport | undefined = await driveTool(tool, steps);
+  if (!report) return { ok: false, reason: "The tool's answer to the check couldn't be read." };
+  const failed = report.steps.find((step) => !step.ok);
+  if (failed && !failed.ok) {
+    return broke(profile, rule, "the elements its hooks name, as the prompt asked", failed.problem);
+  }
+  if (report.steps.length < steps.length) {
+    return { ok: false, reason: "The tool's answer to the check couldn't be read." };
+  }
+  if (report.problems.length > 0) {
+    return broke(profile, rule, "no errors", report.problems.join(" "));
+  }
+  return { steps: report.steps };
+}
+
+/** How many texts a read reports: a longer list is read a page at a time. */
+const PAGE = 100;
+
+type List = { count: number; texts: string[] };
+
+/**
+ * Every item `hook` marks, with its text: read a page at a time, each read bounded, so a list of
+ * any length the data limit allows is seen whole.
+ */
+async function readList(
+  profile: ProfileId,
+  rule: string,
+  tool: MountedTool,
+  hook: string,
+): Promise<List | CheckOutcome> {
+  const first = await drive(profile, rule, tool, [{ do: "read", hook }]);
+  if (!("steps" in first)) return first;
+  const step = first.steps[0];
+  const count = step?.ok ? (step.count ?? 0) : 0;
+  const texts = step?.ok ? [...(step.texts ?? [])] : [];
+  for (let start = PAGE; start < count; start += PAGE) {
+    const page = await drive(profile, rule, tool, [{ do: "read", hook, start }]);
+    if (!("steps" in page)) return page;
+    const read = page.steps[0];
+    texts.push(...(read?.ok ? (read.texts ?? []) : []));
+  }
+  return { count, texts };
+}
+
+/** Where items `hook` marks show `text`: the positions of the first 20. */
+async function findAll(
+  profile: ProfileId,
+  rule: string,
+  tool: MountedTool,
+  hook: string,
+  text: string,
+): Promise<number[] | CheckOutcome> {
+  const found = await drive(profile, rule, tool, [{ do: "find", hook, value: text }]);
+  if (!("steps" in found)) return found;
+  const step = found.steps[0];
+  return step?.ok ? (step.matches ?? []) : [];
+}
+
+// An item's text as the check compares it: a leading number such as "1." or "2)" is where the
+// item stands, which adding one before it may change, not what it is.
+const comparable = (text: string) => text.replace(/^\d+[.)]\s*/, "");
+
+/** What `now` holds that `was` doesn't, and the reverse, each text counted as often as it shows. */
+function difference(was: readonly string[], now: readonly string[]) {
+  const counts = new Map<string, number>();
+  for (const text of was.map(comparable)) counts.set(text, (counts.get(text) ?? 0) + 1);
+  const added: string[] = [];
+  for (const text of now.map(comparable)) {
+    const left = counts.get(text) ?? 0;
+    if (left > 0) counts.set(text, left - 1);
+    else added.push(text);
+  }
+  const gone = [...counts].flatMap(([text, left]) => Array<string>(left).fill(text));
+  return { gone, added };
+}
+
+/** The other items' change, in words, or undefined when they are as they were. */
+function changed(was: readonly string[], now: readonly string[]): string | undefined {
+  const { gone, added } = difference(was, now);
+  if (gone.length === 0 && added.length === 0) return undefined;
+  return `${gone.length > 0 ? `gone: ${clip(gone)}` : "none gone"}; ${added.length > 0 ? `new: ${clip(added)}` : "none new"}`;
+}
+
+async function itemList(context: CheckContext): Promise<CheckOutcome> {
+  const profile = PROFILES["item-list"];
+  const [adds, removes, reopens] = profile.rules;
+  // A name no starting item shows, so the item found is the one the check added.
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(3)), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  const name = `${profile.fixture.itemName} ${token}`;
+  const without = (list: List, at: number) => list.texts.filter((_, i) => i !== at);
+
+  // Adding: one more item, exactly one showing its name, and the others as they were.
+  const tool = await context.rehearse();
+  const before = await readList("item-list", adds, tool, "item");
+  if (!("texts" in before)) return before;
+  const typed = await drive("item-list", adds, tool, [
+    { do: "fill", hook: "item-name", value: name },
+    { do: "click", hook: "item-add" },
+  ]);
+  if (!("steps" in typed)) return typed;
+  const after = await readList("item-list", adds, tool, "item");
+  if (!("texts" in after)) return after;
+  if (after.count !== before.count + 1) {
+    return broke(
+      "item-list",
+      adds,
+      `${items(before.count + 1)} after adding "${name}" to ${before.count}`,
+      `${after.count}`,
+    );
+  }
+  const found = await findAll("item-list", adds, tool, "item", name);
+  if (!Array.isArray(found)) return found;
+  if (found.length !== 1) {
+    return broke(
+      "item-list",
+      adds,
+      `one item showing "${name}"`,
+      `${items(found.length)} showing it, of ${after.count}`,
+    );
+  }
+  const others = changed(before.texts, without(after, found[0]!));
+  if (others) {
+    return broke(
+      "item-list",
+      adds,
+      `the other ${items(before.count)} as they were after adding "${name}"`,
+      others,
+    );
+  }
+
+  // Opened again: the list is as it was saved.
+  const reopenedTool = await context.rehearse();
+  const reopened = await readList("item-list", reopens, reopenedTool, "item");
+  if (!("texts" in reopened)) return reopened;
+  const keptAt = await findAll("item-list", reopens, reopenedTool, "item", name);
+  if (!Array.isArray(keptAt)) return keptAt;
+  const kept = changed(after.texts, reopened.texts);
+  if (reopened.count !== after.count || keptAt.length !== 1 || kept) {
+    return broke(
+      "item-list",
+      reopens,
+      `the ${items(after.count)} it showed, one showing "${name}", after opening the tool again`,
+      `${items(reopened.count)}${kept ? `; ${kept}` : ""}`,
+    );
+  }
+
+  // Removing: that item goes, and the others are as they started.
+  const removingTool = await context.rehearse();
+  const clicked = await drive("item-list", removes, removingTool, [
+    { do: "click", hook: "item-remove", index: keptAt[0] },
+  ]);
+  if (!("steps" in clicked)) return clicked;
+  const left = await readList("item-list", removes, removingTool, "item");
+  if (!("texts" in left)) return left;
+  const leftAt = await findAll("item-list", removes, removingTool, "item", name);
+  if (!Array.isArray(leftAt)) return leftAt;
+  const stayed = changed(before.texts, left.texts);
+  if (left.count !== before.count || leftAt.length > 0 || stayed) {
+    return broke(
+      "item-list",
+      removes,
+      `the ${items(before.count)} it started with, as they were, after removing "${name}"`,
+      `${items(left.count)}${stayed ? `; ${stayed}` : ""}`,
+    );
+  }
+
+  // Opened again: still so.
+  const lastTool = await context.rehearse();
+  const last = await readList("item-list", reopens, lastTool, "item");
+  if (!("texts" in last)) return last;
+  const lastAt = await findAll("item-list", reopens, lastTool, "item", name);
+  if (!Array.isArray(lastAt)) return lastAt;
+  const end = changed(before.texts, last.texts);
+  if (last.count !== before.count || lastAt.length > 0 || end) {
+    return broke(
+      "item-list",
+      reopens,
+      `the ${items(before.count)} it started with, as they were, after removing "${name}" and opening the tool again`,
+      `${items(last.count)}${end ? `; ${end}` : ""}`,
+    );
+  }
+  return { ok: true };
+}
+
+const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<CheckOutcome>>> = {
+  "item-list": itemList,
+};
+
+/**
+ * The behavior check of the profile `id` (VER-03), run in staging after the smoke check. Its name
+ * is `behavior`, so a failure is repaired as one (GEN-09).
+ */
+export const profileCheck = (id: ProfileId): VerificationCheck => ({
+  name: "behavior",
+  run: (context) => CHECKS[id](context),
+});

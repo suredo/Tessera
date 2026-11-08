@@ -23,6 +23,7 @@ export {
   type CheckOutcome,
   type VerificationCheck,
 } from "./checks.ts";
+export { profileCheck } from "./profile-checks.ts";
 export { TOOL_CSP, TOOL_SANDBOX, wrapperCsp } from "./csp.ts";
 export { serverData, type Send } from "./server-data.ts";
 export { serverActivation, type Activate } from "./server-activation.ts";

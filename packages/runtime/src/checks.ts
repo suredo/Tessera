@@ -128,10 +128,12 @@ function readStep(value: unknown): DriveResult | undefined {
   }
   if (step["ok"] !== true) return undefined;
   const texts = step["texts"];
+  const matches = step["matches"];
   return {
     ok: true,
     ...(typeof step["count"] === "number" ? { count: step["count"] } : {}),
     ...(Array.isArray(texts) ? { texts: texts.map(String) } : {}),
+    ...(Array.isArray(matches) ? { matches: matches.map(Number) } : {}),
   };
 }
 
