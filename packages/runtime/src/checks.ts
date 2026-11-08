@@ -1,5 +1,5 @@
 import type { MountedTool } from "./host.ts";
-import type { DriveResult, DriveStep } from "./protocol.ts";
+import type { DriveField, DriveResult, DriveStep } from "./protocol.ts";
 
 // The checks a candidate runs in the staging panel before it may be activated (RUN-03): the smoke
 // check (VER-02), and a stub for tests. The static check (VER-01) runs on the server, before a
@@ -129,11 +129,37 @@ function readStep(value: unknown): DriveResult | undefined {
   if (step["ok"] !== true) return undefined;
   const texts = step["texts"];
   const matches = step["matches"];
+  const fields = step["fields"];
   return {
     ok: true,
     ...(typeof step["count"] === "number" ? { count: step["count"] } : {}),
     ...(Array.isArray(texts) ? { texts: texts.map(String) } : {}),
     ...(Array.isArray(matches) ? { matches: matches.map(Number) } : {}),
+    ...(Array.isArray(fields) ? { fields: fields.map(readField) } : {}),
+  };
+}
+
+const FIELD_KINDS = ["input", "select", "textarea", "other"] as const;
+
+/** A described field as the check uses it, whatever the page sent. */
+function readField(value: unknown): DriveField {
+  const field = (typeof value === "object" && value !== null ? value : {}) as Partial<
+    Record<string, unknown>
+  >;
+  const text = (key: string) => (typeof field[key] === "string" ? field[key] : "");
+  const kind = FIELD_KINDS.find((each) => each === field["kind"]) ?? "other";
+  const choices = field["choices"];
+  return {
+    kind,
+    type: text("type"),
+    name: text("name"),
+    required: field["required"] === true,
+    checked: field["checked"] === true,
+    min: text("min"),
+    max: text("max"),
+    step: text("step"),
+    maxLength: typeof field["maxLength"] === "number" ? field["maxLength"] : -1,
+    choices: Array.isArray(choices) ? choices.map(String) : [],
   };
 }
 

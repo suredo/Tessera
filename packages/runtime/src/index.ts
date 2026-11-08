@@ -50,6 +50,7 @@ export {
   RUNTIME_HOST,
   runtimeOriginFor,
   TOOL_EVENTS,
+  type DriveField,
   type DriveResult,
   type DriveStep,
   type ToolEvent,

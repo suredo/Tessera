@@ -7,7 +7,7 @@ import {
   type VerificationCheck,
 } from "./checks.ts";
 import type { MountedTool } from "./host.ts";
-import type { DriveResult, DriveStep } from "./protocol.ts";
+import type { DriveField, DriveResult, DriveStep } from "./protocol.ts";
 
 // The verification profiles' behavior checks (VER-03): each drives a candidate that fits its
 // profile through the hooks the profile names, in rehearsals whose saves go to a throwaway copy
@@ -324,9 +324,245 @@ const filtering = (context: CheckContext) => {
   );
 };
 
+/** Field types whose value the form profile calls text, which an answer shows as typed. */
+const TEXT_TYPES = new Set(["text", "search", ""]);
+
+/** Field types a fill can empty, so a required one of them can be left empty. */
+const EMPTIABLE = new Set([
+  "text",
+  "search",
+  "",
+  "email",
+  "url",
+  "tel",
+  "password",
+  "number",
+  "date",
+  "time",
+  "datetime-local",
+  "month",
+  "week",
+]);
+
+/** A value `field` takes, from the check's `text` for a text field, or undefined when none is known. */
+function valueFor(field: DriveField, text: string): string | undefined {
+  if (field.kind === "select") return field.choices.find((choice) => choice !== "");
+  if (field.kind === "textarea" || (field.kind === "input" && TEXT_TYPES.has(field.type))) {
+    return field.maxLength >= 0 ? text.slice(0, field.maxLength) : text;
+  }
+  const word = text.split(" ").pop() ?? "x";
+  switch (field.type) {
+    case "email":
+      return `check-${word}@example.com`;
+    case "url":
+      return `https://example.com/${word}`;
+    case "tel":
+      return "5550100";
+    case "password":
+      return `Check-${word}`;
+    case "number":
+    case "range": {
+      const fallback = field.step && field.step !== "any" ? field.step : "1";
+      const value = field.min || fallback;
+      return field.max !== "" && Number(value) > Number(field.max) ? field.max : value;
+    }
+    case "date":
+      return field.min || "2026-01-15";
+    case "time":
+      return field.min || "12:00";
+    case "datetime-local":
+      return field.min || "2026-01-15T12:00";
+    case "month":
+      return field.min || "2026-01";
+    case "week":
+      return field.min || "2026-W03";
+    default:
+      return undefined;
+  }
+}
+
+/** The steps that fill every field but `skip`, and the texts an answer should show. */
+function filling(fields: readonly DriveField[], token: string, skip?: number) {
+  const steps: DriveStep[] = [];
+  const texts: string[] = [];
+  const unfillable: string[] = [];
+  const groups = new Set<string>();
+  fields.forEach((field, index) => {
+    if (index === skip) {
+      steps.push({ do: "fill", hook: "form-field", index, value: "" });
+      return;
+    }
+    if (field.type === "checkbox") {
+      if (field.required && !field.checked) steps.push({ do: "click", hook: "form-field", index });
+      return;
+    }
+    if (field.type === "radio") {
+      // One choice in each group that must be answered, unless one is chosen already.
+      const group = field.name || `#${index}`;
+      const answered = fields.some(
+        (other) => other.type === "radio" && (other.name || "") === field.name && other.checked,
+      );
+      const needed = fields.some(
+        (other) => other.type === "radio" && (other.name || "") === field.name && other.required,
+      );
+      if (needed && !answered && !groups.has(group)) {
+        groups.add(group);
+        steps.push({ do: "click", hook: "form-field", index });
+      }
+      return;
+    }
+    if (field.type === "color" || field.type === "hidden") return;
+    const value = valueFor(field, `${token} ${index + 1}`);
+    if (value === undefined) {
+      if (field.required) unfillable.push(field.type || field.kind);
+      return;
+    }
+    steps.push({ do: "fill", hook: "form-field", index, value });
+    const text =
+      field.kind === "textarea" || (field.kind === "input" && TEXT_TYPES.has(field.type));
+    if (text && value === `${token} ${index + 1}`) texts.push(value);
+  });
+  return { steps, texts, unfillable };
+}
+
+/**
+ * The form profile's check (VER-03): it reads what the form's fields are; sends the form with a
+ * required field left empty, if one can be, and expects nothing saved and form-error to say so;
+ * sends it filled in and expects one more answer, showing each text typed, and the others as they
+ * were; and opens the tool again and expects the answers as they were shown.
+ */
+async function form(context: CheckContext): Promise<CheckOutcome> {
+  const profile = PROFILES.form;
+  const [sends, refuses, reopens] = profile.rules;
+  const token = unique(profile.fixture.text);
+  const answers = (count: number) => `${count} ${count === 1 ? "answer" : "answers"}`;
+
+  const tool = await context.rehearse();
+  const described = await drive("form", sends, tool, [{ do: "fields", hook: "form-field" }]);
+  if (!("steps" in described)) return described;
+  const first = described.steps[0];
+  const fields = first?.ok ? (first.fields ?? []) : [];
+  if (fields.length === 0) {
+    return broke("form", sends, "the form's fields, marked form-field", "none");
+  }
+  const whole = filling(fields, token);
+  if (whole.unfillable.length > 0) {
+    return broke(
+      "form",
+      sends,
+      "fields the check can fill in",
+      `a required field of a kind it can't: ${clip(whole.unfillable)}`,
+    );
+  }
+  const before = await readList("form", sends, tool, "answer");
+  if (!("texts" in before)) return before;
+
+  // Sent with a required field empty: nothing saved, and form-error says what is missing.
+  const empty = fields.findIndex(
+    (field) => field.required && (field.kind === "textarea" || EMPTIABLE.has(field.type)),
+  );
+  if (empty >= 0) {
+    const partial = filling(fields, token, empty);
+    const sent = await drive("form", refuses, tool, [
+      ...partial.steps,
+      { do: "click", hook: "form-submit" },
+    ]);
+    if (!("steps" in sent)) return sent;
+    const kept = await readList("form", refuses, tool, "answer");
+    if (!("texts" in kept)) return kept;
+    const error = await readList("form", refuses, tool, "form-error");
+    if (!("texts" in error)) return error;
+    const saved = changed(before.texts, kept.texts);
+    const said = error.texts.some((text) => text !== "");
+    if (kept.count !== before.count || saved || !said) {
+      return broke(
+        "form",
+        refuses,
+        `${answers(before.count)} as before, and form-error saying what is missing, after sending the form with required field ${empty + 1} empty`,
+        `${answers(kept.count)}${saved ? `; ${saved}` : ""}; form-error ${said ? `saying ${clip(error.texts.filter(Boolean))}` : "saying nothing"}`,
+      );
+    }
+  }
+
+  // Sent filled in: one more answer, showing each text typed, and the others as they were. The
+  // fields are read again first, since the refused send may have ticked a box this would untick.
+  const again = await drive("form", sends, tool, [{ do: "fields", hook: "form-field" }]);
+  if (!("steps" in again)) return again;
+  const now = again.steps[0];
+  const filled = filling(now?.ok ? (now.fields ?? []) : [], token);
+  const sent = await drive("form", sends, tool, [
+    ...filled.steps,
+    { do: "click", hook: "form-submit" },
+  ]);
+  if (!("steps" in sent)) return sent;
+  const after = await readList("form", sends, tool, "answer");
+  if (!("texts" in after)) return after;
+  if (after.count !== before.count + 1) {
+    return broke(
+      "form",
+      sends,
+      `${answers(before.count + 1)} after sending the form filled in, with ${before.count} before`,
+      `${after.count}`,
+    );
+  }
+  let at: number | undefined;
+  if (filled.texts.length > 0) {
+    const found = await findAll("form", sends, tool, "answer", filled.texts[0]!);
+    if (!Array.isArray(found)) return found;
+    const shows = found.length === 1 ? (after.texts[found[0]!] ?? "") : "";
+    const missing = filled.texts.filter((text) => !shows.includes(text));
+    if (found.length !== 1 || missing.length > 0) {
+      return broke(
+        "form",
+        sends,
+        `one answer showing what was typed: ${clip(filled.texts)}`,
+        found.length === 1
+          ? `it without ${clip(missing)}`
+          : `${answers(found.length)} showing "${filled.texts[0]}"`,
+      );
+    }
+    at = found[0];
+  }
+  // Without a text to find the new answer by, the others are those the answers held before.
+  const gone = difference(before.texts, after.texts).gone;
+  const others =
+    at === undefined
+      ? gone.length > 0
+        ? `gone: ${clip(gone)}`
+        : undefined
+      : changed(
+          before.texts,
+          after.texts.filter((_, i) => i !== at),
+        );
+  if (others) {
+    return broke(
+      "form",
+      sends,
+      `the other ${answers(before.count)} as they were after sending the form`,
+      others,
+    );
+  }
+
+  // Opened again: the answers as they were shown.
+  const reopened = await context.rehearse();
+  const shown = await readList("form", reopens, reopened, "answer");
+  if (!("texts" in shown)) return shown;
+  const kept = changed(after.texts, shown.texts);
+  if (shown.count !== after.count || kept) {
+    return broke(
+      "form",
+      reopens,
+      `the ${answers(after.count)} it showed, after opening the tool again`,
+      `${answers(shown.count)}${kept ? `; ${kept}` : ""}`,
+    );
+  }
+  return { ok: true };
+}
+
 const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<CheckOutcome>>> = {
   "item-list": itemList,
   filtering,
+  form,
 };
 
 /**

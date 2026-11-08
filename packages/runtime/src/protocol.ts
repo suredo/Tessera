@@ -45,13 +45,33 @@ export type DriveStep =
   | { do: "fill"; hook: string; value: string; index?: number }
   | { do: "click"; hook: string; index?: number }
   | { do: "read"; hook: string; start?: number }
-  | { do: "find"; hook: string; value: string };
+  | { do: "find"; hook: string; value: string }
+  | { do: "fields"; hook: string };
+
+/**
+ * A field a fields step describes, so a check can fill it with a value it takes: its element and
+ * type, its name, whether it must be filled and is checked, its limits as the page states them
+ * (empty when it states none; a max length of -1 when none), and a select's choices' values, the
+ * first 50 that can be chosen.
+ */
+export type DriveField = {
+  kind: "input" | "select" | "textarea" | "other";
+  type: string;
+  name: string;
+  required: boolean;
+  checked: boolean;
+  min: string;
+  max: string;
+  step: string;
+  maxLength: number;
+  choices: string[];
+};
 
 /**
  * What a step did: a read gives how many elements have the hook and the text of 100 of them, from
  * its `start` (the first by default); a find gives how many, and the positions of the first 20
- * whose text holds its value.
+ * whose text holds its value; a fields step describes the first 100 fields with the hook.
  */
 export type DriveResult =
-  | { ok: true; count?: number; texts?: string[]; matches?: number[] }
+  | { ok: true; count?: number; texts?: string[]; matches?: number[]; fields?: DriveField[] }
   | { ok: false; problem: string };
