@@ -57,6 +57,13 @@ const common = {
     .describe(
       "The verification profile the tool fits once the request is done, from the list given; null when none fits or no tool is built or changed (VER-03).",
     ),
+  // Absent in answers recorded before charts existed, which read as none.
+  drawsCharts: z
+    .boolean()
+    .default(false)
+    .describe(
+      "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
+    ),
 };
 
 export const intentSchema = z

@@ -393,6 +393,42 @@ describe("bridge static checks (VER-01, CAP-01)", () => {
     expect(result.findings[0]!.message).toContain('"clock" capability');
     expect(staticCheck(code, ["clock"])).toEqual({ ok: true });
   });
+
+  it("CAP-04, VER-01: tessera.chart needs the chart capability, though it works in the page alone", () => {
+    const draw = `
+const spec = { type: "bar", title: "Spent", labels: ["Rent"], series: [{ name: "Spent", values: [1200] }] };
+tessera.chart(document.querySelector("#chart"), spec);`;
+    const code = { html: '<div id="chart"></div>', css: "", js: draw };
+    const result = staticCheck(code, []);
+    if (result.ok) throw new Error("The undeclared chart must fail");
+    expect(result.findings).toEqual([
+      expect.objectContaining({
+        part: "js",
+        line: 3,
+        message: 'tessera.chart needs the "chart" capability. Declare it or remove this call.',
+      }),
+    ]);
+    expect(staticCheck(code, ["chart"])).toEqual({ ok: true });
+  });
+
+  it("CAP-04, VER-01: a tool that names Chart.js directly is refused, however it reaches it", () => {
+    for (const js of [
+      'new Chart(document.querySelector("canvas"), {});',
+      "const C = window.Chart;",
+      "const C = globalThis.Chart;",
+      'const C = self["Chart"];',
+      "const Chart = 1; console.log(Chart);",
+    ]) {
+      const result = staticCheck({ html: "<canvas></canvas>", css: "", js }, ["chart"]);
+      if (result.ok) throw new Error(`${js} must fail`);
+      expect(result.findings.map((finding) => finding.message)).toContain(
+        'The JavaScript uses Chart directly. Draw charts with tessera.chart(element, spec) and the "chart" capability.',
+      );
+    }
+    // A property of the tool's own that happens to be called Chart is just a name.
+    const own = { html: "", css: "", js: 'const labels = { Chart: "Spending" }; labels.Chart;' };
+    expect(staticCheck(own, [])).toEqual({ ok: true });
+  });
 });
 
 describe("startup data writes (VER-01, GEN-06)", () => {

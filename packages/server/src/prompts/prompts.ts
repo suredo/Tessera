@@ -3,6 +3,8 @@ import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
   bridgeManifest,
+  CHART_LIMITS,
+  CHART_TYPES,
   PROFILE_IDS,
   PROFILES,
   type Artifact,
@@ -32,6 +34,7 @@ export const PROMPT_PARTS = [
   "ui-edit",
   "accessibility",
   "profile",
+  "chart",
   "request",
   "source",
   "source-style",
@@ -88,14 +91,17 @@ export type RepairClass = (typeof REPAIR_CLASSES)[number];
  * shape, the repair of a creation: the creation prompt with the failed answer quoted, about 21,400
  * when set (GEN-09). Edit's rose from 18,500 in M3 for the verification profile's part, which states
  * every rule a profile's check enforces (VER-04, #273): its fixture with the part measured 18,835;
- * the owner approved 20,000 on 2026-11-08.
+ * the owner approved 20,000 on 2026-11-08. With the chart part too (CAP-04, #283), the largest edit,
+ * the filtering profile's and a chart's, measured 20,306, and the owner approved 22,000 the same
+ * day, room for the chart profile's part.
  * Creation's fixture is a creation that fits a profile, its largest shape: with the item list,
  * 16,997 when set at 17,000; with the filtering profile, 17,530, and the owner approved 20,000 on
- * 2026-11-08, room for the profiles still to come. Every profile's part is measured in both.
+ * 2026-11-08, room for the profiles still to come. Every profile's part is measured in both, with
+ * and without the chart part.
  */
 export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
   create: 20_000,
-  edit: 20_000,
+  edit: 22_000,
   repair: 23_500,
 };
 
@@ -296,6 +302,21 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   }
   // In custom mode too: a custom look drops the standard's look, never its accessibility (UX-04).
   addSystem("accessibility");
+  // How to draw a chart through the host (CAP-04, ADR 0014), for a tool that will show one or
+  // already declares chart: the spec in words, from its one definition's types and limits.
+  if (
+    input.intent?.drawsCharts ||
+    input.editArtifact?.capabilities.includes("chart") ||
+    input.attempt?.capabilities.includes("chart")
+  ) {
+    addSystem("chart", {
+      types: CHART_TYPES.join(", "),
+      title: String(CHART_LIMITS.title),
+      labels: String(CHART_LIMITS.labels),
+      series: String(CHART_LIMITS.series),
+      text: String(CHART_LIMITS.text),
+    });
+  }
   // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
   // every rule its check enforces is stated here (VER-03, VER-04).
   if (input.intent?.profile) addSystem("profile", profileValues(input.intent.profile));

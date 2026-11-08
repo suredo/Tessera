@@ -2,7 +2,14 @@ import fs from "node:fs";
 import { checkJs } from "../src/checks/js-check.ts";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { bridgeManifest, ITEM_LIST_PROFILE, PROFILE_IDS, type Intent } from "@tessera/contracts";
+import {
+  bridgeManifest,
+  CHART_LIMITS,
+  CHART_TYPES,
+  ITEM_LIST_PROFILE,
+  PROFILE_IDS,
+  type Intent,
+} from "@tessera/contracts";
 import { Ajv } from "ajv";
 import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
 import { describe, expect, it } from "vitest";
@@ -454,6 +461,49 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     }
   });
 
+  it("CAP-04: a tool that will show a chart, or already declares chart, is told how to draw one, from the spec's one definition", () => {
+    const request = "Show my spending this month as a chart.";
+    const charted = assemblePrompt({
+      stage: "create",
+      request,
+      intent: intent({ kind: "create", drawsCharts: true }),
+      uiMode: "standard",
+    });
+    expect(names(charted.parts)).toContain("chart");
+    expect(charted.system).toContain("tessera.chart(element, spec)");
+    expect(charted.system).toContain(`type: ${CHART_TYPES.join(", ")};`);
+    expect(charted.system).toContain(`labels: 1 to ${CHART_LIMITS.labels} texts`);
+    expect(charted.system).toContain(`--ui-chart-${CHART_LIMITS.series}`);
+    for (const drawsCharts of [false, undefined]) {
+      const plain = assemblePrompt({
+        stage: "create",
+        request,
+        intent: intent({ kind: "create", drawsCharts }),
+        uiMode: "standard",
+      });
+      expect(names(plain.parts)).not.toContain("chart");
+    }
+    // Repairing a creation that declared chart keeps the part, whatever the intent says.
+    const repair = assemblePrompt({
+      stage: "repair",
+      request,
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      failure: "static",
+      diagnostics: ["The JavaScript uses Chart directly."],
+      attempt: {
+        outcome: "tool",
+        name: "Spending",
+        summary: "A chart of this month's spending.",
+        code: { html: "<div></div>", css: "", js: "" },
+        data: { schema: { type: "object" }, reusableDefaults: {}, initialState: {} },
+        capabilities: ["chart"],
+        uiMode: "standard",
+      },
+    });
+    expect(names(repair.parts)).toContain("chart");
+  });
+
   it("GEN-03: each stage's fixture prompt stays within its budget", () => {
     const sizes = {
       // A creation that fits a profile, with its language: the largest creation shape (VER-03).
@@ -489,27 +539,31 @@ describe("assembling a stage's prompt (GEN-03)", () => {
         PROMPT_BUDGETS[stage],
       );
     }
-    // Every profile's part fits, the largest setting the largest shape (VER-03).
+    // Every profile's part fits, with the chart part too, the largest setting the largest shape
+    // (VER-03, CAP-04).
     for (const profile of PROFILE_IDS) {
-      const create = assemblePrompt({
-        stage: "create",
-        request: "I need a shopping list I can tick off at the store.",
-        intent: intent({ kind: "create", profile }),
-        uiMode: "standard",
-      }).size;
-      expect(create, `create with ${profile} is ${create} characters`).toBeLessThanOrEqual(
-        PROMPT_BUDGETS.create,
-      );
-      const edit = assemblePrompt({
-        stage: "edit",
-        request: "Add a quantity next to each item, and sort them by name",
-        uiMode: "standard",
-        source: shoppingList,
-        intent: intent({ profile }),
-      }).size;
-      expect(edit, `edit with ${profile} is ${edit} characters`).toBeLessThanOrEqual(
-        PROMPT_BUDGETS.edit,
-      );
+      for (const drawsCharts of [false, true]) {
+        const shape = `${profile}${drawsCharts ? " and charts" : ""}`;
+        const create = assemblePrompt({
+          stage: "create",
+          request: "I need a shopping list I can tick off at the store.",
+          intent: intent({ kind: "create", profile, drawsCharts }),
+          uiMode: "standard",
+        }).size;
+        expect(create, `create with ${shape} is ${create} characters`).toBeLessThanOrEqual(
+          PROMPT_BUDGETS.create,
+        );
+        const edit = assemblePrompt({
+          stage: "edit",
+          request: "Add a quantity next to each item, and sort them by name",
+          uiMode: "standard",
+          source: shoppingList,
+          intent: intent({ profile, drawsCharts }),
+        }).size;
+        expect(edit, `edit with ${shape} is ${edit} characters`).toBeLessThanOrEqual(
+          PROMPT_BUDGETS.edit,
+        );
+      }
     }
     // Repair's larger shape: a creation's repair quotes the whole failed answer (GEN-09).
     const item = { type: "object", required: ["id", "title"], properties: {} };

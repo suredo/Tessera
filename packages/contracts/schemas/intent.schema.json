@@ -95,6 +95,11 @@
               "type": "null"
             }
           ]
+        },
+        "drawsCharts": {
+          "default": false,
+          "description": "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
+          "type": "boolean"
         }
       },
       "required": [
@@ -107,7 +112,8 @@
         "targetsCurrentTool",
         "language",
         "features",
-        "profile"
+        "profile",
+        "drawsCharts"
       ],
       "additionalProperties": false
     },
@@ -208,6 +214,11 @@
               "type": "null"
             }
           ]
+        },
+        "drawsCharts": {
+          "default": false,
+          "description": "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
+          "type": "boolean"
         }
       },
       "required": [
@@ -219,7 +230,8 @@
         "targetsCurrentTool",
         "language",
         "features",
-        "profile"
+        "profile",
+        "drawsCharts"
       ],
       "additionalProperties": false
     }

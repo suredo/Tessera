@@ -16,6 +16,7 @@ const base = {
   language: "en",
   features: [{ name: "guest list", request: "a table of my guests" }],
   profile: null,
+  drawsCharts: false,
 };
 const withoutFeatures: Record<string, unknown> = { kind: "create", ...base };
 delete withoutFeatures["features"];
@@ -33,6 +34,7 @@ const valid: Record<string, unknown> = {
     features: [],
   },
   "a behavior statement": { ...base, kind: "edit", interfacePart: null, behaviorChange: true },
+  "a tool that draws charts (CAP-04)": { kind: "create", ...base, drawsCharts: true },
   "a tool that fits a verification profile (VER-03)": {
     ...base,
     kind: "create",
@@ -73,5 +75,11 @@ describe("recorded intents", () => {
     const recorded: Record<string, unknown> = { kind: "create", ...base };
     delete recorded["profile"];
     expect(intentSchema.parse(recorded).profile).toBeNull();
+  });
+
+  it("CAP-04: an answer recorded before charts existed reads as showing none", () => {
+    const recorded: Record<string, unknown> = { kind: "create", ...base };
+    delete recorded["drawsCharts"];
+    expect(intentSchema.parse(recorded).drawsCharts).toBe(false);
   });
 });
