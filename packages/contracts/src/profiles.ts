@@ -57,7 +57,7 @@ export const FILTERING_PROFILE = {
     },
     {
       name: "category",
-      says: "inside each item, the element whose text is the item's category and nothing else",
+      says: "inside each item, the element whose text is the item's category, exactly as typed, and nothing else",
     },
     {
       name: "filter",
@@ -68,7 +68,7 @@ export const FILTERING_PROFILE = {
     "Typing a name in item-name and a category in item-category, then pressing item-add, adds one item with that name and category to the list, and saves it.",
     ITEM_LIST_PROFILE.rules[1],
     ITEM_LIST_PROFILE.rules[2],
-    "Setting filter to a category shows every item in that category and hides the rest; emptying it shows every item again.",
+    "Setting filter to a category shows every item whose category is exactly that, and hides the rest; emptying it shows every item again.",
   ],
   fixture: { itemName: ITEM_LIST_PROFILE.fixture.itemName, category: "Tessera check category" },
 } as const satisfies VerificationProfile;

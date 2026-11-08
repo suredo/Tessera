@@ -129,13 +129,13 @@ type Adding = { name: string; steps: DriveStep[] };
  * The list check the item-list and filtering profiles share: it adds an item, opens the tool
  * again, removes the item and opens it again, through the item list's hooks and by its rules,
  * which come first in both profiles. `whileKept`, when given, checks more on the tool opened again
- * with the item added, whose list it is given as read.
+ * with the item added, given its list as read and where the item is in it.
  */
 async function listCheck(
   context: CheckContext,
   profile: "item-list" | "filtering",
   adding: Adding,
-  whileKept?: (tool: MountedTool, list: List) => Promise<CheckOutcome | undefined>,
+  whileKept?: (tool: MountedTool, list: List, at: number) => Promise<CheckOutcome | undefined>,
 ): Promise<CheckOutcome> {
   const [adds, removes, reopens] = PROFILES[profile].rules;
   const { name } = adding;
@@ -195,7 +195,7 @@ async function listCheck(
       `${items(reopened.count)}${kept ? `; ${kept}` : ""}`,
     );
   }
-  const more = await whileKept?.(reopenedTool, reopened);
+  const more = await whileKept?.(reopenedTool, reopened, keptAt[0]!);
   if (more) return more;
 
   // Removing: that item goes, and the others are as they started.
@@ -250,21 +250,20 @@ const itemList = (context: CheckContext) => {
   });
 };
 
-/** Whether two categories are the same as the filter check compares them: whatever their case. */
-const sameCategory = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
-
 /**
  * The filtering profile's check (VER-03): the item list's, adding the item in a category of its
- * own, and, with it added and the tool opened again, the filter set to that category, then to one
- * a starting item has, if any has one, then emptied.
+ * own, and, with it added and the tool opened again, the item showing that category, then the
+ * filter set to it, to one a starting item has, if any has one, and emptied. A category is its
+ * text as shown, exactly; each item's is the one inside it, so the items a filter should show are
+ * known, and are compared with those it shows, each as often as it shows.
  */
 const filtering = (context: CheckContext) => {
   const profile = PROFILES.filtering;
-  const narrows = profile.rules[3];
+  const [adds, , , narrows] = profile.rules;
   const name = unique(profile.fixture.itemName);
   const category = unique(profile.fixture.category);
 
-  /** The filter set to `chosen`: the items in it, all of them, or every item when it's empty. */
+  /** The filter set to `chosen`: the items in that category, or, emptied, every item. */
   async function filterTo(tool: MountedTool, all: List, categories: string[], chosen: string) {
     const set = await drive("filtering", narrows, tool, [
       { do: "fill", hook: "filter", value: chosen },
@@ -272,21 +271,16 @@ const filtering = (context: CheckContext) => {
     if (!("steps" in set)) return set;
     const shown = await readList("filtering", narrows, tool, "item");
     if (!("texts" in shown)) return shown;
-    const theirs = await readList("filtering", narrows, tool, "category");
-    if (!("texts" in theirs)) return theirs;
-    const expected = chosen
-      ? categories.filter((each) => sameCategory(each, chosen)).length
-      : all.count;
-    const strays = chosen ? theirs.texts.filter((each) => !sameCategory(each, chosen)) : [];
-    const otherwise = chosen ? undefined : changed(all.texts, shown.texts);
-    if (shown.count === expected && strays.length === 0 && !otherwise) return undefined;
+    const expected = chosen ? all.texts.filter((_, i) => categories[i] === chosen) : all.texts;
+    const otherwise = changed(expected, shown.texts);
+    if (shown.count === expected.length && !otherwise) return undefined;
     return broke(
       "filtering",
       narrows,
       chosen
-        ? `the ${items(expected)} in "${chosen}", and no other, with filter set to it`
+        ? `the ${items(expected.length)} in "${chosen}", and no other, with filter set to it`
         : `all ${items(all.count)}, as they were, with filter emptied`,
-      `${items(shown.count)}${strays.length > 0 ? `, in ${clip(strays)} too` : ""}${otherwise ? `; ${otherwise}` : ""}`,
+      `${items(shown.count)}${otherwise ? `; ${otherwise}` : ""}`,
     );
   }
 
@@ -300,7 +294,7 @@ const filtering = (context: CheckContext) => {
         { do: "fill", hook: "item-category", value: category },
       ],
     },
-    async (tool, all) => {
+    async (tool, all, at) => {
       const read = await readList("filtering", narrows, tool, "category");
       if (!("texts" in read)) return read;
       if (read.count !== all.count) {
@@ -311,7 +305,16 @@ const filtering = (context: CheckContext) => {
           `${read.count} ${read.count === 1 ? "category" : "categories"}`,
         );
       }
-      const theirs = read.texts.find((each) => each.trim() !== "" && !sameCategory(each, category));
+      const kept = read.texts[at] ?? "";
+      if (kept !== category) {
+        return broke(
+          "filtering",
+          adds,
+          `"${name}" in the category "${category}"`,
+          `it in ${kept ? `"${kept.slice(0, 60)}"` : "none"}`,
+        );
+      }
+      const theirs = read.texts.find((each, i) => i !== at && each !== "");
       for (const chosen of [category, ...(theirs ? [theirs] : []), ""]) {
         const failed = await filterTo(tool, all, read.texts, chosen);
         if (failed) return failed;
