@@ -208,6 +208,44 @@ import type { BridgeMethodName } from "@tessera/contracts";
         results.push({ ok: true, count: found.length, charts: shown });
         continue;
       }
+      // The date each marks, 100 from `start`: its own datetime if it is a time element, or else
+      // that of the first time element inside it with one, as YYYY-MM-DD, or null when neither is
+      // a real date, or a date and time, in the form HTML gives them, so a check reads dates
+      // whatever language the page shows them in.
+      if (step.do === "dates") {
+        const start = typeof step.start === "number" && step.start > 0 ? Math.floor(step.start) : 0;
+        const dates = found.slice(start, start + 100).map((element) => {
+          const time =
+            element instanceof HTMLTimeElement && element.hasAttribute("datetime")
+              ? element
+              : element.querySelector("time[datetime]");
+          const value = time instanceof HTMLTimeElement ? time.dateTime.trim() : "";
+          const parts =
+            /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/.exec(
+              value,
+            );
+          if (!parts) return null;
+          const [year, month, day, hour, minute, second, zoneHours, zoneMinutes] = parts
+            .slice(1)
+            .map((part) => (part === undefined ? 0 : Number(part)));
+          const leap = (year! % 4 === 0 && year! % 100 !== 0) || year! % 400 === 0;
+          const length = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month! - 1];
+          // A real date, and a real time and zone when it gives them; no leap second.
+          const real =
+            year! >= 1 &&
+            length !== undefined &&
+            day! >= 1 &&
+            day! <= length &&
+            hour! <= 23 &&
+            minute! <= 59 &&
+            second! <= 59 &&
+            zoneHours! <= 23 &&
+            zoneMinutes! <= 59;
+          return real ? value.slice(0, 10) : null;
+        });
+        results.push({ ok: true, count: found.length, dates });
+        continue;
+      }
       // What each field is, so a check can fill it with a value it takes: the first 100.
       if (step.do === "fields") {
         const fields = found.slice(0, 100).map((element) => {

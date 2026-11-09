@@ -119,6 +119,15 @@ export type DriveReport = {
   steps: DriveResult[];
 };
 
+/** Whether `date` is a real calendar date written YYYY-MM-DD, from year 1 on. */
+function realDate(date: unknown): date is string {
+  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date.startsWith("0000")) {
+    return false;
+  }
+  const at = new Date(`${date}T00:00:00Z`);
+  return !Number.isNaN(at.getTime()) && at.toISOString().slice(0, 10) === date;
+}
+
 function readStep(value: unknown): DriveResult | undefined {
   const step = value as Partial<Record<string, unknown>> | null;
   if (typeof step !== "object" || step === null) return undefined;
@@ -133,6 +142,7 @@ function readStep(value: unknown): DriveResult | undefined {
   const matches = step["matches"];
   const fields = step["fields"];
   const charts = step["charts"];
+  const dates = step["dates"];
   return {
     ok: true,
     ...(typeof step["count"] === "number" ? { count: step["count"] } : {}),
@@ -144,6 +154,8 @@ function readStep(value: unknown): DriveResult | undefined {
     ...(Array.isArray(charts)
       ? { charts: charts.map((chart) => chartSpecSchema.safeParse(chart).data ?? null) }
       : {}),
+    // A real date as YYYY-MM-DD, or null for anything else.
+    ...(Array.isArray(dates) ? { dates: dates.map((date) => (realDate(date) ? date : null)) } : {}),
   };
 }
 
