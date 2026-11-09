@@ -2,6 +2,8 @@
 
 ## 2026-11-09
 
+* **New**: The [M3 live run's plan](../evals/reports/2026-11-09-m3-live-plan.md) (`ENG-07`): T1, T2 in Portuguese, T3, T5, T10 and T6 as the tool no profile fits, their frozen measures (first-attempt pass rate, behavior checks and their diagnostics, profile matching, verified status, cost), a hard cap of 46 calls in M3's envelope of about 65, expected tokens and time, and stop rules. It asks the owner to approve the cap; no call is made before. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T13:00:29Z.
+
 * **New**: T10, the study planner, last of M3's live-set scenarios ([scenario files](code/evals/scenarios.md)): a planner checked by the scheduling profile that starts kept off Fridays, a topic added with its own controls, the rule changed in words ("Fridays are fine now"), which changes its data, the next day, and flashcards from pasted notes in a second tool, checked by the cards profile; with a hand-written rehearsal that passes ([runner](code/evals/runner.md)). T6 is the set's tool no profile fits. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T12:52:09Z.
 
 * **New**: The first of M3's live-set scenarios ([milestone sets](testing/milestone-sets.md)): T2 (a Portuguese reading list, filtering), T3 (a spending chart, with a what-if edit) and T5 (an RSVP form), each with a hand-written rehearsal whose tools pass their profiles' checks, and do steps that use the tool's own controls ([scenario files](code/evals/scenarios.md), [runner](code/evals/runner.md)). A do step can now find one of several fields by its label ([format](testing/scenario-format.md)). T10 and a tool no profile fits come next, then the live-run plan. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T12:38:06Z.
