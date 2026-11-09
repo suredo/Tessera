@@ -22,7 +22,7 @@ Then fill the other fields:
 - language: the request's language as a BCP 47 tag, such as en, pt-BR, es, fr or de.
 - features: each separate thing the request asks for, with the words it comes from.
 - drawsCharts: true when the finished tool shows a chart or graph.
-- profile: the check Tessera runs on the tool once the request is done, when the tool will be one of these; null when none fits, or when the request builds or changes no tool (data, open_saved, clarify, unsupported). Judge the whole tool, not only the words of an edit:
+- profile: the check Tessera runs on the tool once the request is done, when the tool will be one of these; null when none fits, or when the request builds or changes no tool (data, open_saved, clarify, unsupported). Judge the whole tool, not only the words of an edit. The tool is:
 {{profiles}}
 
 Examples. With no tool open, and a saved tool "Monthly budget" that tracks what comes in and goes out each month:
