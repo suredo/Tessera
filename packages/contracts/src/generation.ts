@@ -30,7 +30,7 @@ const leftOut = z
   .array(z.string().min(1).max(200))
   .max(5)
   .describe(
-    "The parts of the request this tool doesn't do because no tool here can, such as reaching the internet or playing videos, each in plain words for the person. Left out when the tool does all of it.",
+    "The parts of the request this tool doesn't do because no tool here can, such as reaching the internet or playing videos, each in plain words for the person. Never a part another tool here could do, or one the person says comes later. Left out when the tool does all of it.",
   );
 
 export const creationSchema = z
