@@ -161,7 +161,11 @@ export const SCHEDULING_PROFILE = {
     { name: "task-add", says: "the button that adds the task" },
     {
       name: "session",
-      says: "each session scheduled, one element per session, its text holding its task's name, with a time element inside whose datetime attribute is its date as YYYY-MM-DD",
+      says: "each session scheduled, one element per session, with a time element inside whose datetime attribute is its date as YYYY-MM-DD",
+    },
+    {
+      name: "session-task",
+      says: "inside each session, the element whose text is its task's name, exactly as typed",
     },
     {
       name: "rule-day",

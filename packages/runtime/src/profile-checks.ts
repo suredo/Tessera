@@ -926,32 +926,15 @@ function weekdayOf(date: string): number | undefined {
   return at.toISOString().slice(0, 10) === date ? at.getUTCDay() : undefined;
 }
 
-/** Every item `hook` marks whose whole text shows `text`, found a page of 20 at a time. */
-async function findEvery(
-  profile: ProfileId,
-  rule: string,
-  tool: MountedTool,
-  hook: string,
-  text: string,
-): Promise<number[] | CheckOutcome> {
-  const every: number[] = [];
-  for (let start = 0; ;) {
-    const page = await findAll(profile, rule, tool, hook, text, start);
-    if (!Array.isArray(page)) return page;
-    every.push(...page);
-    if (page.length < 20) return every;
-    start = page[page.length - 1]! + 1;
-  }
-}
-
 /**
  * The scheduling profile's check (VER-03): it adds a task of a name of its own and expects it in
  * one or more sessions, today or later by the host's clock (RUN-07); adds a rule against the
- * weekday of one of them and expects the rule shown, no session on that weekday and the task
- * still in one; opens the tool again and expects so still; removes the rule and expects the rules
- * it started with; and opens the tool again and expects so still. It reads each session's date
- * from a time element, so the page may show dates in any language, and doesn't ask that removing
- * a rule bring back the sessions as they were.
+ * weekday of one of them and expects the rule shown, no session on that weekday and every task
+ * that had a session still in one; opens the tool again and expects so still; removes the rule
+ * and expects the rules it started with; and opens the tool again and expects so still. It reads
+ * each session's date from a time element, so the page may show dates in any language, and its
+ * task's name from the element inside it, and doesn't ask that removing a rule bring back the
+ * sessions as they were.
  */
 async function scheduling(context: CheckContext): Promise<CheckOutcome> {
   const profile = PROFILES.scheduling;
@@ -959,16 +942,29 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
   const name = unique(profile.fixture.taskName);
   const sessions = (n: number) => `${n} ${n === 1 ? "session" : "sessions"}`;
   const ruleCount = (n: number) => `${n} ${n === 1 ? "rule" : "rules"}`;
-  // A rule is its text as read, then a fingerprint of the whole, so one changed past what a read
-  // shows counts too; a read's text never holds a line break.
+  // A rule, or a session's task, is its text as read, then a fingerprint of the whole, so one
+  // changed past what a read shows counts too; a read's text never holds a line break.
   const keys = (list: List) => list.texts.map((text, i) => `${text}\n${list.digests[i] ?? ""}`);
   const said = (keys: readonly string[]) => keys.map((key) => key.split("\n")[0] ?? "");
   const exact = (text: string) => text;
 
-  /** Each session's text and date, or a failure when one has no date the check can read. */
+  /**
+   * Each session's text, task and date, or a failure when one has no task the check can read, or
+   * no date.
+   */
   async function read(tool: MountedTool, rule: string) {
     const list = await readList("scheduling", rule, tool, "session");
     if (!("texts" in list)) return list;
+    const tasks = await readList("scheduling", rule, tool, "session-task");
+    if (!("texts" in tasks)) return tasks;
+    if (tasks.count !== list.count) {
+      return broke(
+        "scheduling",
+        rule,
+        `a session-task in each of the ${sessions(list.count)}`,
+        `${tasks.count} session-task`,
+      );
+    }
     const dates: (string | null)[] = [];
     for (let start = 0; start < list.count; start += PAGE) {
       const page = await drive("scheduling", rule, tool, [
@@ -989,11 +985,21 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
         `none that is a real date in session ${unreadable + 1}, "${(list.texts[unreadable] ?? "").slice(0, 60)}"`,
       );
     }
-    return list.texts.map((text, i) => ({ text, date: dates[i]! }));
+    const task = keys(tasks);
+    return list.texts.map((text, i) => ({ text, task: task[i]!, date: dates[i]! }));
   }
 
-  /** A failure when a session falls on `weekday` or the check's task has none, as `rule` says. */
-  async function keptOff(tool: MountedTool, rule: string, weekday: number, when: string) {
+  /**
+   * A failure when a session falls on `weekday`, or one of `tasks`, those that had a session, has
+   * none, as `rule` says.
+   */
+  async function keptOff(
+    tool: MountedTool,
+    rule: string,
+    weekday: number,
+    tasks: ReadonlySet<string>,
+    when: string,
+  ) {
     const shown = await read(tool, rule);
     if (!Array.isArray(shown)) return shown;
     const on = shown.filter(({ date }) => weekdayOf(date) === weekday);
@@ -1005,14 +1011,14 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
         `${sessions(on.length)} on one: ${clip(on.map(({ text, date }) => `${date} ${text}`))}`,
       );
     }
-    const mine = await findEvery("scheduling", rule, tool, "session", name);
-    if (!Array.isArray(mine)) return mine;
-    if (mine.length === 0) {
+    const still = new Set(shown.map(({ task }) => task));
+    const lost = [...tasks].filter((task) => !still.has(task));
+    if (lost.length > 0) {
       return broke(
         "scheduling",
         rule,
-        `"${name}" still in one or more sessions ${when}`,
-        `it in none, of ${sessions(shown.length)}`,
+        `every task that had a session still in one or more ${when}`,
+        `none for ${clip(said(lost))}, of ${sessions(shown.length)}`,
       );
     }
     return undefined;
@@ -1029,18 +1035,19 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
   if (!("steps" in typed)) return typed;
   const shown = await read(tool, adds);
   if (!Array.isArray(shown)) return shown;
-  const mine = await findEvery("scheduling", adds, tool, "session", name);
-  if (!Array.isArray(mine)) return mine;
+  // The check's task's sessions: their task is its name, exactly, which is short enough to be
+  // read whole.
+  const mine = shown.filter(({ task }) => said([task])[0] === name);
   if (mine.length === 0) {
     return broke(
       "scheduling",
       adds,
-      `one or more sessions showing "${name}" after adding it`,
+      `one or more sessions whose session-task is "${name}" after adding it`,
       `none, of ${sessions(shown.length)}`,
     );
   }
   const today = clockReading(systemClock.now(), systemClock.timeZone()).date;
-  const early = mine.map((at) => shown[at]?.date ?? "").find((date) => date < today);
+  const early = mine.map(({ date }) => date).find((date) => date < today);
   if (early) {
     return broke(
       "scheduling",
@@ -1051,7 +1058,8 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
   }
 
   // Adding a rule against the weekday of one of its sessions: it is shown, and kept to.
-  const weekday = weekdayOf(shown[mine[0]!]!.date)!;
+  const weekday = weekdayOf(mine[0]!.date)!;
+  const scheduled = new Set(shown.map(({ task }) => task));
   const ruled = await drive("scheduling", rules, tool, [
     { do: "fill", hook: "rule-day", value: String(weekday) },
     { do: "click", hook: "rule-add" },
@@ -1068,7 +1076,7 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
       `${ruleCount(withRule.count)}${gone.length > 0 ? `; gone: ${clip(said(gone))}` : ""}`,
     );
   }
-  const offAfterAdding = await keptOff(tool, rules, weekday, "after adding the rule");
+  const offAfterAdding = await keptOff(tool, rules, weekday, scheduled, "after adding the rule");
   if (offAfterAdding) return offAfterAdding;
 
   // Opened again: the rule is kept, and kept to.
@@ -1084,7 +1092,13 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
       `${ruleCount(kept.count)}${keptDiff.gone.length > 0 ? `; gone: ${clip(said(keptDiff.gone))}` : ""}${keptDiff.added.length > 0 ? `; new: ${clip(said(keptDiff.added))}` : ""}`,
     );
   }
-  const offReopened = await keptOff(reopened, reopens, weekday, "after opening the tool again");
+  const offReopened = await keptOff(
+    reopened,
+    reopens,
+    weekday,
+    scheduled,
+    "after opening the tool again",
+  );
   if (offReopened) return offReopened;
 
   // Removing the rule: the rules are as they started.

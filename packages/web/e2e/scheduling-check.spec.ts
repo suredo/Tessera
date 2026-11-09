@@ -17,7 +17,8 @@ type Flaw =
   | "ruleNotSaved"
   | "removeNotSaved"
   | "removesAll"
-  | "noDates";
+  | "noDates"
+  | "dropsOthers";
 
 /** A study planner that fits the scheduling profile, with `flaw` built in. */
 const planner = (flaw: Flaw): Artifact["code"] => ({
@@ -59,7 +60,9 @@ const render = () => {
     item.append(remove);
     return item;
   }));
-  document.getElementById("sessions").replaceChildren(...state.data.tasks.flatMap((task, i) =>
+  // One flaw, once a rule has been added to the one it starts with, schedules only the last task.
+  const tasks = flaw === "dropsOthers" && state.data.rules.length > 1 ? state.data.tasks.slice(-1) : state.data.tasks;
+  document.getElementById("sessions").replaceChildren(...tasks.flatMap((task, i) =>
     [0, 3, 6].map((step) => {
       // One flaw puts each task's first session on the day before today.
       const { date, weekday } =
@@ -72,7 +75,7 @@ const render = () => {
         time.dateTime = date;
         item.append(time);
       }
-      item.append(" " + task.name);
+      item.append(" ", element("span", "session-task", task.name));
       return item;
     })));
 };
@@ -110,6 +113,7 @@ const flaws: Flaw[] = [
   "removeNotSaved",
   "removesAll",
   "noDates",
+  "dropsOthers",
 ];
 let host: SandboxHost;
 
@@ -241,5 +245,15 @@ test("VER-03, VER-04: a planner that shows dates only in words, without the time
     new RegExp(
       `expected a date in each of the 9 sessions, as a time element's datetime, YYYY-MM-DD; observed none that is a real date in session 1, "${WEEKDAY} Algebra"\\.$`,
     ),
+  );
+});
+
+test("VER-03: a planner that drops the other tasks' sessions when a rule is added fails", async ({
+  page,
+}) => {
+  const result = await check(page, "dropsOthers");
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toMatch(
+    /expected every task that had a session still in one or more after adding the rule; observed none for "Algebra", "Geometry", of 3 sessions\.$/,
   );
 });
