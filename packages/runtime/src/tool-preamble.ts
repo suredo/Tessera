@@ -209,8 +209,9 @@ import type { BridgeMethodName } from "@tessera/contracts";
         continue;
       }
       // The date each marks, 100 from `start`: its own datetime if it is a time element, or else
-      // that of the first time element inside it with one, as YYYY-MM-DD, or null when neither
-      // gives a date in that form, so a check reads dates whatever language the page shows them in.
+      // that of the first time element inside it with one, as YYYY-MM-DD, or null when neither is
+      // a real date, or a date and time, in the form HTML gives them, so a check reads dates
+      // whatever language the page shows them in.
       if (step.do === "dates") {
         const start = typeof step.start === "number" && step.start > 0 ? Math.floor(step.start) : 0;
         const dates = found.slice(start, start + 100).map((element) => {
@@ -219,7 +220,17 @@ import type { BridgeMethodName } from "@tessera/contracts";
               ? element
               : element.querySelector("time[datetime]");
           const value = time instanceof HTMLTimeElement ? time.dateTime.trim() : "";
-          return /^\d{4}-\d{2}-\d{2}(?![\d-])/.test(value) ? value.slice(0, 10) : null;
+          const parts =
+            /^(\d{4})-(\d{2})-(\d{2})(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/.exec(
+              value,
+            );
+          if (!parts) return null;
+          const [year, month, day] = parts.slice(1, 4).map(Number) as [number, number, number];
+          const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+          const length = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+          return year >= 1 && length !== undefined && day >= 1 && day <= length
+            ? value.slice(0, 10)
+            : null;
         });
         results.push({ ok: true, count: found.length, dates });
         continue;

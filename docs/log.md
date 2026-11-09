@@ -2,7 +2,7 @@
 
 ## 2026-11-09
 
-* **New**: The [runtime](code/runtime/package.md)'s driver gains a dates step (`VER-03`): it reads the date each hooked element marks with a time element's `datetime`, as YYYY-MM-DD, whatever language the page shows it in, for the scheduling profile's check, which comes next. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T08:02:59Z.
+* **New**: The [runtime](code/runtime/package.md)'s driver gains a dates step (`VER-03`): it reads the date each hooked element marks with a time element's `datetime`, as YYYY-MM-DD, or none when it isn't a real date, whatever language the page shows it in, for the scheduling profile's check, which comes next. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T08:02:59Z.
 
 * **New**: The cards profile, fifth of M3's verification profiles (`VER-03`, `VER-04`, `VER-07`), for T10's notes to flashcards, as the owner chose: one card a line of notes, its front before the first colon and its back after it. The [contracts](code/contracts/package.md) define it, and the [runtime](code/runtime/package.md)'s check pastes notes of its own, expects exactly the cards they give more, each front with its back, and the others as they were, and opens the tool again. A driver read now gives a fingerprint of each whole text too, so the check tells long cards apart past the 200 characters a read shows. The other profiles' descriptions for the intent stage were shortened again to keep its prompt within budget. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T07:09:58Z.
 
