@@ -3,6 +3,7 @@ import {
   type HostResult,
   type LedgerCall,
   type LedgerRequest,
+  type ProfileId,
   type Workspace,
 } from "@tessera/contracts";
 import { useEffect, useState } from "react";
@@ -157,9 +158,17 @@ function Body({ details, hasWorkspace }: { details: Details; hasWorkspace: boole
 }
 
 /**
- * The current version's checks (APP-05, VER-08): each the host's own words, and for a behavior
- * check the rules of its profile, from their one definition (P3), so the detail is the check's own;
- * a version whose behavior wasn't checked says it isn't verified (UX-03).
+ * What a profile's behavior check checks, in plain words for the person (GEN-12, UX-05): one line
+ * for each of its rules, by its place among them, so the lines follow the profile's one definition
+ * (P3) without showing it, as profiles never appear to the person (VER-03).
+ */
+export const ruleTexts = (profile: ProfileId): string[] =>
+  PROFILES[profile].rules.map((_, i) => t(`details.rule.${profile}.${i + 1}` as MessageKey));
+
+/**
+ * The current version's checks (APP-05, VER-08): each in the host's own words, and for a behavior
+ * check what it tried and checked, in plain words; a version whose behavior wasn't checked says
+ * it isn't verified (UX-03).
  */
 function Checks({ details }: { details: Details }) {
   const { checks, profile } = details;
@@ -173,9 +182,9 @@ function Checks({ details }: { details: Details }) {
         {checks.includes("start") && <li>{t("details.check.start")}</li>}
         {behavior ? (
           <li>
-            {t("details.check.behavior", { profile: behavior })}
+            {t("details.check.behavior", { what: t(`history.tried.${behavior}`) })}
             <ul>
-              {PROFILES[behavior].rules.map((rule) => (
+              {ruleTexts(behavior).map((rule) => (
                 <li key={rule}>{rule}</li>
               ))}
             </ul>

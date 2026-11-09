@@ -242,8 +242,34 @@ export const en = {
   "details.checksHeading": "How this version was checked",
   "details.check.code": "Tessera's check of its code passed.",
   "details.check.start": "Tessera's check of how it opens passed.",
-  "details.check.behavior":
-    "Tessera's {profile} check of its behavior passed. It held the tool to these rules:",
+  "details.check.behavior": "Tessera tried it out: {what}. It checked that:",
+  "details.rule.item-list.1": "Adding an item puts it in the list, and saves it.",
+  "details.rule.item-list.2": "Removing an item takes it out of the list, and saves that.",
+  "details.rule.item-list.3": "Opened again, the tool shows the list as it was saved.",
+  "details.rule.filtering.1":
+    "Adding an item with a category puts it in the list in that category, and saves it.",
+  "details.rule.filtering.2": "Removing an item takes it out of the list, and saves that.",
+  "details.rule.filtering.3": "Opened again, the tool shows the list as it was saved.",
+  "details.rule.filtering.4":
+    "Choosing a category shows exactly the items in it, and clearing the choice shows them all.",
+  "details.rule.form.1": "Sending the form filled in saves one answer, and shows it.",
+  "details.rule.form.2":
+    "Sending it with a required field empty saves nothing, and says what is missing.",
+  "details.rule.form.3": "Opened again, the tool shows every answer saved.",
+  "details.rule.chart.1": "Adding an entry with a name and a number saves it.",
+  "details.rule.chart.2": "The chart shows each entry, by its name and its number.",
+  "details.rule.chart.3": "The total is the sum of the entries' numbers.",
+  "details.rule.chart.4": "Opened again, the tool shows the entries as they were saved.",
+  "details.rule.cards.1":
+    "Pasting notes makes one card for each line with a colon in it, its front before the colon and its back after it; other lines make none. The cards are added to those already made, and saved.",
+  "details.rule.cards.2": "Opened again, the tool shows the cards as they were saved.",
+  "details.rule.scheduling.1":
+    "Adding a task schedules it on one or more days, today or later, and saves it.",
+  "details.rule.scheduling.2":
+    "Adding a rule keeps a weekday free: the sessions on it move to other days, every task keeps at least one, and the rule is saved.",
+  "details.rule.scheduling.3": "Removing a rule takes it away, and saves that.",
+  "details.rule.scheduling.4":
+    "Opened again, the tool shows the sessions and rules as they were saved.",
   "details.check.noBehavior": "Its behavior wasn't checked, so it isn't verified.",
   "details.check.none": "It passed none of Tessera's checks: it was made or changed without them.",
   "details.sourceHeading": "The tool's code",
