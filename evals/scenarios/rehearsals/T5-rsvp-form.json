@@ -1,0 +1,75 @@
+{
+  "about": "A rehearsal of T5-rsvp-form, written by hand: no model answered these.",
+  "scenario": "T5-rsvp-form",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [],
+          "profile": "form"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Party RSVP",
+          "summary": "A form for your guests, with their answers listed below it.",
+          "code": {
+            "html": "<h1>Party RSVP</h1>\n<form>\n<label for=\"name\">Name</label> <input id=\"name\" name=\"name\" data-hook=\"form-field\" required>\n<label for=\"people\">How many people</label> <input id=\"people\" name=\"people\" type=\"number\" min=\"1\" max=\"20\" data-hook=\"form-field\" required>\n<label for=\"allergies\">Food allergies</label> <textarea id=\"allergies\" name=\"allergies\" data-hook=\"form-field\"></textarea>\n<button type=\"button\" data-hook=\"form-submit\">Send</button>\n<p data-hook=\"form-error\" role=\"alert\"></p>\n</form>\n<h2>Answers</h2>\n<ul id=\"answers\" aria-label=\"Answers\"></ul>",
+            "css": "",
+            "js": "let state;\nconst form = document.querySelector(\"form\");\nconst error = document.querySelector(\"[data-hook=form-error]\");\nconst list = document.getElementById(\"answers\");\nconst render = () => list.replaceChildren(...state.data.answers.map((answer) => {\n  const item = document.createElement(\"li\");\n  item.dataset.hook = \"answer\";\n  item.textContent = [answer.name, answer.people + (answer.people === 1 ? \" person\" : \" people\"), answer.allergies].filter(Boolean).join(\", \");\n  return item;\n}));\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; render(); });\nload();\n// A form never submits in Tessera, so the button's click sends it.\ndocument.querySelector(\"[data-hook=form-submit]\").addEventListener(\"click\", () => {\n  const missing = [...form.elements].filter((field) => field.required && !field.value.trim());\n  if (missing.length > 0) {\n    error.textContent = \"Please fill in: \" + missing.map((field) => field.labels[0].textContent.trim()).join(\", \") + \".\";\n    return;\n  }\n  error.textContent = \"\";\n  const record = {\n    name: form.elements.name.value.trim(),\n    people: Number(form.elements.people.value),\n    allergies: form.elements.allergies.value.trim(),\n  };\n  tessera.call(\"data.patch\", { operations: [{ op: \"add\", collection: \"answers\", record }] }).then(() => {\n    form.reset();\n    return load();\n  });\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "answers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "name", "people", "allergies"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "people": {
+                        "type": "number"
+                      },
+                      "allergies": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "answers": []
+            },
+            "initialState": {
+              "answers": []
+            }
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    }
+  ]
+}

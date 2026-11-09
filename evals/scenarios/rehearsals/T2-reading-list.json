@@ -1,0 +1,94 @@
+{
+  "about": "A rehearsal of T2-reading-list, written by hand: no model answered these.",
+  "scenario": "T2-reading-list",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "pt-BR",
+          "features": [],
+          "profile": "filtering"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Livros para ler",
+          "summary": "Uma lista dos livros que você quer ler, com nota de 1 a 5 e filtro por gênero.",
+          "code": {
+            "html": "<h1>Livros para ler</h1>\n<label for=\"name\">Livro</label> <input id=\"name\" data-hook=\"item-name\">\n<label for=\"genre\">Gênero</label> <input id=\"genre\" data-hook=\"item-category\">\n<label for=\"rating\">Nota (1 a 5)</label> <input id=\"rating\" type=\"number\" min=\"1\" max=\"5\" value=\"3\">\n<button data-hook=\"item-add\">Adicionar</button>\n<label for=\"filter\">Mostrar</label> <select id=\"filter\" data-hook=\"filter\"></select>\n<ul id=\"books\" aria-label=\"Livros\"></ul>",
+            "css": "",
+            "js": "let state;\nconst list = document.getElementById(\"books\");\nconst filter = document.querySelector(\"[data-hook=filter]\");\n// A genre as the filter compares it: spaces at either end aside, and repeated ones as one.\nconst spaced = (text) => text.trim().split(\" \").filter(Boolean).join(\" \");\nconst render = () => {\n  const books = state.data.items;\n  const chosen = filter.value;\n  const genres = [...new Set(books.map((book) => book.genre))];\n  filter.replaceChildren(new Option(\"Todos\", \"\"), ...genres.map((genre) => new Option(genre, genre)));\n  filter.value = genres.includes(chosen) ? chosen : \"\";\n  list.replaceChildren(...books.map((record) => {\n    const item = document.createElement(\"li\");\n    item.dataset.hook = \"item\";\n    item.hidden = Boolean(filter.value) && spaced(record.genre) !== spaced(filter.value);\n    const genre = document.createElement(\"span\");\n    genre.dataset.hook = \"category\";\n    genre.textContent = record.genre;\n    const remove = document.createElement(\"button\");\n    remove.dataset.hook = \"item-remove\";\n    remove.textContent = \"Remover \" + record.name;\n    remove.addEventListener(\"click\", () =>\n      tessera\n        .call(\"data.patch\", { operations: [{ op: \"remove\", collection: \"items\", id: record.id, revisionCount: state.revisions.items[record.id] }] })\n        .then(load),\n    );\n    item.append(record.name + \" (nota \" + record.rating + \") \", genre, \" \", remove);\n    return item;\n  }));\n};\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; render(); });\nload();\nfilter.addEventListener(\"change\", render);\ndocument.querySelector(\"[data-hook=item-add]\").addEventListener(\"click\", () => {\n  const name = document.querySelector(\"[data-hook=item-name]\").value.trim();\n  const genre = document.querySelector(\"[data-hook=item-category]\").value;\n  const rating = Math.min(5, Math.max(1, Math.round(Number(document.getElementById(\"rating\").value) || 3)));\n  if (!name) return;\n  tessera.call(\"data.patch\", { operations: [{ op: \"add\", collection: \"items\", record: { name, genre, rating } }] }).then(load);\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "name", "genre", "rating"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "genre": {
+                        "type": "string"
+                      },
+                      "rating": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "items": []
+            },
+            "initialState": {
+              "items": [
+                {
+                  "id": "b-1",
+                  "name": "Grande Sertão: Veredas",
+                  "genre": "Romance",
+                  "rating": 5
+                },
+                {
+                  "id": "b-2",
+                  "name": "Sapiens",
+                  "genre": "História",
+                  "rating": 4
+                },
+                {
+                  "id": "b-3",
+                  "name": "A Hora da Estrela",
+                  "genre": "Romance",
+                  "rating": 4
+                }
+              ]
+            }
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    }
+  ]
+}

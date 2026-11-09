@@ -4,7 +4,7 @@ title: "Scenario file format"
 description: "The scenario file format, step types and fields, with a full example."
 tags: [testing, scenario-format]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T11:31:18Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T12:38:06Z }
 ---
 # Scenario file format
 
@@ -44,7 +44,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 
 **Step types:**
 - `say`: a chat request
-- `do`: use one of the tool's controls, through a hook of one of the scenario's profiles (from M3): `{ click: <hook> }` or `{ fill: <hook>, value: <text> }` (a select takes the choice with that text or value), acting on the one shown element with that hook, or with `in: { hook: <hook>, text: <text> }` on the one inside the one shown element with that hook showing that text, such as one item. A hook none of the scenario's profiles has is refused when the file loads.
+- `do`: use one of the tool's controls, through a hook of one of the scenario's profiles (from M3): `{ click: <hook> }` or `{ fill: <hook>, value: <text> }` (a select takes the choice with that text or value), acting on the one shown element with that hook, or with `in: { hook: <hook>, text: <text> }` on the one inside the one shown element with that hook showing that text, such as one item; with `label: <text>`, of several elements with that hook, the one whose label shows that text, such as one field of a form. A hook none of the scenario's profiles has is refused when the file loads.
 - `next-day`: move the host clock and reload
 - `reload`
 - `save`, `continue`, `use-again`: save the tool, or open a saved one in its two ways

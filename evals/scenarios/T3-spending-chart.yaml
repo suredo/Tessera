@@ -1,0 +1,36 @@
+# T3, spending chart (docs/testing/app-catalogue.md), in its M3 form: a chart from entered numbers,
+# drawn with the chart helper (CAP-04) and checked by the chart profile (VER-03) before it opens.
+# The person adds an entry with the tool's own controls (EVAL-01), it is still there after a
+# reload, and a "what if" question shows its numbers (food 360, total 1880) without changing what
+# was spent. The exact numbers and the chart's look are the AI review's.
+id: T3-spending-chart
+tier: intermediate
+language: en
+person: "Someone checking where the month's money went"
+goal: "See this month's spending as a chart, add to it, and ask what if"
+clock: { start: "2026-11-02T18:30:00", zone: "Europe/Lisbon" }
+budget: { calls: 10 }
+profiles: [chart]
+steps:
+  - say: "Show my spending this month as a chart: rent 1200, food 450, transport 120, fun 200."
+    expect: { created: true, workspace: new }
+  - do: { fill: entry-name, value: Books }
+    expect: { version: unchanged, data: unchanged }
+  - do: { fill: entry-value, value: "35" }
+    expect: { version: unchanged, data: unchanged }
+  - do: { click: entry-add }
+    expect: { version: unchanged, data: changed }
+  - reload: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+  # A question about the numbers, not a change to them: whatever the tool shows, what was spent stays.
+  - say: "What if food was 20% less?"
+    expect: { data: unchanged }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence

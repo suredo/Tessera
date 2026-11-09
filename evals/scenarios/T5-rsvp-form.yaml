@@ -1,0 +1,34 @@
+# T5, RSVP form (docs/testing/app-catalogue.md), in its M3 form, without export (CAP-03, M4): a
+# form checked by the form profile (VER-03) before it opens. The person sends it empty, which
+# saves nothing, then fills each field, found by its label, and sends it, which saves an answer
+# that is still there the next day. Whether the form says what is missing in plain words, and
+# shows the answers well, is the AI review's.
+id: T5-rsvp-form
+tier: intermediate
+language: en
+person: "Someone planning a birthday party"
+goal: "A form guests fill in, with their answers kept and shown"
+clock: { start: "2026-11-03T20:00:00", zone: "America/Sao_Paulo" }
+budget: { calls: 8 }
+profiles: [form]
+steps:
+  - say: "Make a form for my party guests: name, how many people, food allergies. Show me the answers."
+    expect: { created: true, workspace: new }
+  - do: { click: form-submit }
+    expect: { version: unchanged, data: unchanged }
+  - do: { fill: form-field, label: name, value: "Ana Souza" }
+  - do: { fill: form-field, label: people, value: "2" }
+  - do: { fill: form-field, label: allerg, value: "Peanuts" }
+  - do: { click: form-submit }
+    expect: { version: unchanged, data: changed }
+  - next-day: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence

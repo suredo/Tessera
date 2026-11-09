@@ -53,14 +53,27 @@ const within = z
   .strictObject({ hook: hookName, text: z.string().min(1).max(200) })
   .describe("Inside the one shown element marked hook whose text shows text, such as one item.");
 
+/** Of several elements marked with the hook, the one whose label shows this text, as a field. */
+const label = z
+  .string()
+  .min(1)
+  .max(200)
+  .describe("Of the elements marked with the hook, the one whose label shows this text.");
+
 /**
  * Using one of the tool's own controls, as the person would (EVAL-01, from M3): clicking the
  * element marked with a hook, or typing a value into it (a select takes the choice it names), the
- * one shown, or the one inside an element `in` names.
+ * one shown, or the one inside an element `in` names, or of several, the one whose label shows
+ * `label`, as a person finds one field of a form.
  */
 const doSchema = z.union([
-  z.strictObject({ click: hookName, in: within.optional() }),
-  z.strictObject({ fill: hookName, value: z.string().max(2000), in: within.optional() }),
+  z.strictObject({ click: hookName, in: within.optional(), label: label.optional() }),
+  z.strictObject({
+    fill: hookName,
+    value: z.string().max(2000),
+    in: within.optional(),
+    label: label.optional(),
+  }),
 ]);
 export type DoAction = z.infer<typeof doSchema>;
 

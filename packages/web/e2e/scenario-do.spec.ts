@@ -95,8 +95,9 @@ const scenario = scenarioSchema.parse({
   profiles: ["item-list"],
   steps: [
     { say: "A shopping list with milk", expect: { created: true } },
+    // The field found by its label, as a person finds one field of a form.
     {
-      do: { fill: "item-name", value: "Eggs" },
+      do: { fill: "item-name", label: "Item", value: "Eggs" },
       expect: { version: "unchanged", data: "unchanged" },
     },
     { do: { click: "item-add" }, expect: { version: "unchanged", data: "changed" } },
