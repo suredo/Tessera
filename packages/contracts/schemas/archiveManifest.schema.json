@@ -122,10 +122,32 @@
                     "type": "string",
                     "enum": [
                       "code",
-                      "start"
+                      "start",
+                      "behavior"
                     ]
                   },
-                  "description": "The code check (static) and the start check (smoke) its candidate passed."
+                  "description": "The code check (static), the start check (smoke) and the behavior check its candidate passed."
+                },
+                "profile": {
+                  "default": null,
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "item-list",
+                        "filtering",
+                        "form",
+                        "chart",
+                        "cards",
+                        "scheduling"
+                      ],
+                      "description": "A verification profile: a behavior pattern the host checks (VER-03)."
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "The verification profile whose behavior check it passed, with behavior among its checks; none without one (VER-08)."
                 }
               },
               "required": [
@@ -133,7 +155,8 @@
                 "hash",
                 "createdAt",
                 "summary",
-                "checks"
+                "checks",
+                "profile"
               ],
               "additionalProperties": false
             },

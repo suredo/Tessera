@@ -9,6 +9,7 @@ import {
   type GenerateReply,
   type ActivationRequest,
   type VersionNote,
+  type ProfileId,
   FINISH_DATA_ROUTE,
   finishDataRequestSchema,
   FOLLOW_UP_ROUTE,
@@ -78,7 +79,11 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   const offers = new Map<string, { offer: DataOffer; expires: number }>();
   const activations = new Map<
     string,
-    Omit<ActivationRequest, "token"> & { expires: number; summary: string }
+    Omit<ActivationRequest, "token"> & {
+      expires: number;
+      summary: string;
+      profile: ProfileId | null;
+    }
   >();
   const controls = new RequestControls(options.jobs, (token) => {
     pending.delete(token);
@@ -98,6 +103,8 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       expectedDataRevision: reply.expectedDataRevision,
       expires,
       summary: reply.summary,
+      // The profile the server's own intent named, whose check staging runs (VER-03, VER-08).
+      profile: reply.profile ?? null,
     });
     return { ...reply, activation: { token, expiresAt: expires } };
   };
@@ -114,10 +121,18 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     activations.delete(request.token);
     const control = controls.owner(request.token);
     // The version keeps its summary and the checks its candidate passed (APP-05): the host's own
-    // code check before it was stored, and the start check only when the app's staging reports it.
+    // code check before it was stored, and the start check only when the app's staging reports
+    // it; the behavior check, with its profile, only when staging reports that too and the
+    // server named a profile for this candidate, so the browser can't name one (VER-08).
+    const behavior = Boolean(request.startChecked && request.behaviorChecked && entry.profile);
     const note: VersionNote = {
       summary: entry.summary,
-      checks: request.startChecked ? ["code", "start"] : ["code"],
+      checks: [
+        "code",
+        ...(request.startChecked ? (["start"] as const) : []),
+        ...(behavior ? (["behavior"] as const) : []),
+      ],
+      profile: behavior ? entry.profile : null,
     };
     return Object.assign(
       () => Date.now() < entry.expires && (!control || !control.controller.signal.aborted),

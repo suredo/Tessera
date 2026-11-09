@@ -428,13 +428,15 @@ function writeImport(
       );
       for (const version of workspace.versions) {
         store.db.run(
-          "INSERT INTO workspace_versions (workspace_id, number, hash, created_at, summary, checks) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT INTO workspace_versions (workspace_id, number, hash, created_at, summary, checks, profile) VALUES (?, ?, ?, ?, ?, ?, ?)",
           id,
           version.index,
           version.hash,
           version.createdAt,
           version.summary,
           JSON.stringify(version.checks),
+          // A profile only with the behavior check it names (VER-08).
+          version.checks.includes("behavior") ? version.profile : null,
         );
       }
     }

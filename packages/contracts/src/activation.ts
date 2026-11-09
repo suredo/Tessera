@@ -43,6 +43,12 @@ export const activationRequestSchema = z
       .describe(
         "The app's staging ran the start check (smoke) on this candidate and it passed: the app's report, recorded as such (APP-05).",
       ),
+    behaviorChecked: z
+      .literal(true)
+      .optional()
+      .describe(
+        "The app's staging also ran the behavior check of the profile the server named for this candidate, and it passed: the app's report, recorded as such with that profile (VER-08).",
+      ),
   })
   .describe("What the host page sends to activate a tool version that passed its checks.");
 export type ActivationRequest = z.infer<typeof activationRequestSchema>;

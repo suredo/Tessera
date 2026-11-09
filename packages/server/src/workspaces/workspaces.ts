@@ -60,6 +60,7 @@ const versionFromRow = z
     created_at: z.string(),
     summary: z.string().nullable(),
     checks: z.string(),
+    profile: z.string().nullable(),
   })
   .transform((row) => ({
     index: row.number,
@@ -67,10 +68,15 @@ const versionFromRow = z
     createdAt: row.created_at,
     summary: row.summary,
     checks: JSON.parse(row.checks) as unknown,
+    profile: row.profile,
   }))
   .pipe(workspaceVersionSchema);
 
-const noteRow = z.object({ summary: z.string().nullable(), checks: z.string() });
+const noteRow = z.object({
+  summary: z.string().nullable(),
+  checks: z.string(),
+  profile: z.string().nullable(),
+});
 
 const savedToolFromRow = z
   .object({
@@ -225,12 +231,16 @@ export function addWorkspaceVersion(store: Store, id: string, hash: string): Wor
 export function noteOf(store: Store, workspaceId: string, hash: string): VersionNote | undefined {
   const row = store.db.get(
     noteRow,
-    "SELECT summary, checks FROM workspace_versions WHERE workspace_id = ? AND hash = ? ORDER BY number DESC LIMIT 1",
+    "SELECT summary, checks, profile FROM workspace_versions WHERE workspace_id = ? AND hash = ? ORDER BY number DESC LIMIT 1",
     workspaceId,
     hash,
   );
   return row
-    ? versionNoteSchema.parse({ summary: row.summary, checks: JSON.parse(row.checks) as unknown })
+    ? versionNoteSchema.parse({
+        summary: row.summary,
+        checks: JSON.parse(row.checks) as unknown,
+        profile: row.profile,
+      })
     : undefined;
 }
 
@@ -248,6 +258,8 @@ export function appendVersion(
 ): WorkspaceVersion {
   const kept = note ?? noteOf(store, id, hash);
   const summary = kept?.summary ?? null;
+  // A profile only with the behavior check it names (VER-08).
+  const profile = kept?.checks.includes("behavior") ? (kept.profile ?? null) : null;
   const checks =
     kept === undefined
       ? "[]"
@@ -262,13 +274,14 @@ export function appendVersion(
   const number = (last?.number ?? 0) + 1;
   const at = stamp(store);
   store.db.run(
-    "INSERT INTO workspace_versions (workspace_id, number, hash, created_at, summary, checks) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO workspace_versions (workspace_id, number, hash, created_at, summary, checks, profile) VALUES (?, ?, ?, ?, ?, ?, ?)",
     id,
     number,
     hash,
     at,
     summary,
     checks,
+    profile,
   );
   store.db.run("UPDATE workspaces SET updated_at = ? WHERE id = ?", at, id);
   return workspaceVersionSchema.parse({
@@ -277,6 +290,7 @@ export function appendVersion(
     createdAt: at,
     summary,
     checks: JSON.parse(checks) as unknown,
+    profile,
   });
 }
 
@@ -285,7 +299,7 @@ export function workspaceVersions(store: Store, id: string): WorkspaceVersion[] 
   existingWorkspace(store, id);
   return store.db.all(
     versionFromRow,
-    "SELECT number, hash, created_at, summary, checks FROM workspace_versions WHERE workspace_id = ? ORDER BY number",
+    "SELECT number, hash, created_at, summary, checks, profile FROM workspace_versions WHERE workspace_id = ? ORDER BY number",
     id,
   );
 }

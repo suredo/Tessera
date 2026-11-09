@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { jsonObjectSchema } from "./json.ts";
+import { profileIdSchema } from "./profiles.ts";
 
 // Workspaces and the saved-tools library (DATA-08): what the local server stores and hands to the
 // host app. Each is saved as it changes; there is no "unsaved work".
@@ -37,8 +38,11 @@ export const workspaceSchema = z
   .describe("A workspace: one tool in use, its version history and its data (DATA-08).");
 export type Workspace = z.infer<typeof workspaceSchema>;
 
-/** The host's checks a version can have passed before it was activated (APP-05, VER-01, VER-02). */
-export const VERSION_CHECKS = ["code", "start"] as const;
+/**
+ * The host's checks a version can have passed before it was activated (APP-05): the code check
+ * (VER-01), the start check (VER-02) and a verification profile's behavior check (VER-03, VER-08).
+ */
+export const VERSION_CHECKS = ["code", "start", "behavior"] as const;
 export type VersionCheck = (typeof VERSION_CHECKS)[number];
 
 /** What a version was made for and which checks it passed; none for one written by hand. */
@@ -52,7 +56,14 @@ export const versionNoteSchema = z.strictObject({
     .describe("The generation's plain change summary (GEN-12), or none."),
   checks: z
     .array(z.enum(VERSION_CHECKS))
-    .describe("The code check (static) and the start check (smoke) its candidate passed."),
+    .describe(
+      "The code check (static), the start check (smoke) and the behavior check its candidate passed.",
+    ),
+  profile: profileIdSchema
+    .nullable()
+    .describe(
+      "The verification profile whose behavior check it passed, with behavior among its checks; none without one (VER-08).",
+    ),
 });
 export type VersionNote = z.infer<typeof versionNoteSchema>;
 
