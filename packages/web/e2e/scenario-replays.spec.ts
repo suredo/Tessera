@@ -21,9 +21,8 @@ const replays = path.join(scenarios, "replays");
 // corrected after it (T1 step 2 expects its data kept, T13 step 3 no new version), so they pass
 // now. The run's score stays as its report froze it (evals/reports/2026-11-05-m2-live-run.md).
 // T1 and T6 are the M3 live run's recordings, and so are T2, T3, T5 and T10
-// (evals/reports/2026-11-09-m3-live-run.md). T10's creation failed the static check after its one
-// repair, so its first step fails and the steps after it are blocked: it is listed in
-// stoppedLive, and its blocked steps follow from that.
+// (evals/reports/2026-11-09-m3-live-run.md); T10's is its rerun after L-89, which passed. A run
+// whose first step failed would be listed in stoppedLive, with every later step blocked.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "J6-limits": [],
   "T1-shopping-list": [],
@@ -31,11 +30,11 @@ const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "T3-spending-chart": [],
   "T5-rsvp-form": [],
   "T6-tip-calculator": [],
-  "T10-study-planner": [[1, ["No tool was created.", "No new workspace is open."]]],
+  "T10-study-planner": [],
   "T13-drawing-board": [],
 };
 // The recorded runs whose first step failed, so the runner stopped there (the stop rule).
-const stoppedLive = new Set(["T10-study-planner"]);
+const stoppedLive = new Set<string>();
 
 test("EVAL-07: every recorded live run has its expected steps listed here", () => {
   const recorded = fs.readdirSync(replays).map((f) => path.basename(f, ".json"));
