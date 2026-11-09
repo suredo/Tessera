@@ -56,7 +56,12 @@ const load = () => tessera.call("data.read").then((read) => { state = read; rend
 load();
 document.querySelector("[data-hook=item-add]").addEventListener("click", () => {
   const name = document.getElementById("name").value.trim();
-  if (name) tessera.call("data.patch", { operations: [{ op: "add", collection: "items", record: { name } }] }).then(load);
+  // Eggs, the item this scenario adds, is saved a second and a half after the click, as a tool
+  // that reads or waits first might, so the step must wait for that save, not just a quiet moment.
+  // Any other name, such as the one staging's item-list check types, is saved at once, so the
+  // check, which doesn't wait for timers, passes.
+  const save = () => tessera.call("data.patch", { operations: [{ op: "add", collection: "items", record: { name } }] }).then(load);
+  if (name) setTimeout(save, name === "Eggs" ? 1500 : 0);
 });`,
   },
   data: {

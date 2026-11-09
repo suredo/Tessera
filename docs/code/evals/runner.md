@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T11:31:18Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T11:43:21Z }
 ---
 
 # Purpose
@@ -29,7 +29,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 # Invariants
 
 - **The person's way in.** Each step uses the host app's own controls: the request box, the review's Apply, Save to my tools, the offer's Continue and Use again or my tools, History's undo and restore, the trash. A change to existing entries waits for review, and the runner applies it, as the person would. One exception: the app has no control for an empty workspace yet (#132), so `switch: new` makes one through the store and then opens it in the app.
-- **A `do` step uses the tool's own control** (`EVAL-01`, from M3). The runner finds, in the open tool's own frame, the one shown element marked with the step's hook (a hook of one of the scenario's verification profiles, `VER-03`), inside the one shown element its `in` names when it names one, such as the item showing Milk, and clicks it or types the value into it, as the person would; a select takes the choice whose text or value it is. A real click is the person's first interaction, so the tool may save (`GEN-06`). It then waits until the workspace's data has been quiet for a second, at most ten, and checks the step's host facts. A hook shown no times or several times fails the step in plain words, with how many it found. `packages/web/e2e/scenario-do.spec.ts` plays one from scripted answers: typing an item, adding it, removing another inside its item, and a step whose item isn't there.
+- **A `do` step uses the tool's own control** (`EVAL-01`, from M3). The runner finds, in the open tool's own frame, the one shown element marked with the step's hook (a hook of one of the scenario's verification profiles, `VER-03`), inside the one shown element its `in` names when it names one, such as the item showing Milk, and clicks it or types the value into it, as the person would; a select takes the choice whose text or value it is. A real click is the person's first interaction, so the tool may save (`GEN-06`). It then waits for the control's save (`dataSettled`, `DO_WAIT`): a step that expects the data to change or be kept waits for the first change, up to ten seconds, and any other step watches for three; once the data has changed, it waits for a second of quiet. Only then are the step's host facts read, so a save that comes late is the step's own, never the next one's. A hook shown no times or several times fails the step in plain words, with how many it found. `packages/web/e2e/scenario-do.spec.ts` plays one from scripted answers: typing an item, adding it, removing another inside its item, and a step whose item isn't there; the added item is saved a second and a half after its click.
 - **The open workspace is read, never chosen.** It comes from the tool panel's `data-workspace-id` hook (`VER-03`). After a reload the runner doesn't reopen anything: whatever the app opens is what the facts check.
 - **No model in a rehearsal or a replay.** The harness's dry run refuses a provider that can reach one (`ENG-07`).
 - **A live run's cap is the approved one:** it must be given, and may be lower than the scenario file's budget, never higher; the runner checks it before anything starts, and the harness refuses any call past it.
@@ -66,6 +66,6 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `record.ts`: `CANCELLED_WAIT_MS`, `recordAnswers`
 - `replay.ts`: `replayScenario`
 - `report.ts`: `reportMarkdown`
-- `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `Screenshot` (type), `RunReport` (type), `zonedInstant`, `runScenario`
+- `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `Screenshot` (type), `RunReport` (type), `zonedInstant`, `runScenario`, `DO_WAIT`, `dataSettled`
 - `script.ts`: `answersSchema`, `Answers` (type), `loadAnswers`, `mapStrings`, `AnswersProvider` (type), `answersProvider`
 - `speed.ts`: `SPEED_TARGETS`, `RequestKind` (type), `Figures` (type), `Speed` (type), `figures`, `speedOf`, `speedMarkdown`, `readRun`

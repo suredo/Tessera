@@ -8,7 +8,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { loadScenario } from "../src/scenarios/index.ts";
 import { featuresMissed, outcomeOf, say } from "../src/runner/messages.ts";
 import { reportMarkdown } from "../src/runner/report.ts";
-import { runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
+import { dataSettled, runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
 import { answersProvider, loadAnswers, type Answers } from "../src/runner/script.ts";
 import { CANCELLED_WAIT_MS, recordAnswers } from "../src/runner/record.ts";
 import { startHarness } from "../src/harness/index.ts";
@@ -385,5 +385,33 @@ describe("the report (EVAL-02, A40)", () => {
     expect(text).toContain("**Stale replay:** one answer was recorded with other prompt parts");
     // A table cell keeps its text whole, even with a bar in it.
     expect(text).toContain("| 2 | say: Group \\| them | failed | — | The tool didn't change. |");
+  });
+});
+
+describe("a do step's wait for its save (EVAL-01, EVAL-02)", () => {
+  /** When dataSettled returns, on a virtual clock, with the data's revision moving at `changes`. */
+  async function settledAt(changes: number[], expectsChange: boolean): Promise<number> {
+    let now = 0;
+    const revision = () => changes.filter((at) => at <= now).length;
+    await dataSettled(revision, expectsChange, (ms) => {
+      now += ms;
+      return Promise.resolve();
+    });
+    return now;
+  }
+
+  it("EVAL-02: a step expecting a change waits for a save that comes after a second, then for quiet", async () => {
+    expect(await settledAt([1_400], true)).toBe(2_400);
+    // Two writes, the second half a second after the first: quiet counts from the last.
+    expect(await settledAt([1_400, 1_900], true)).toBe(2_900);
+  });
+
+  it("EVAL-02: any other step watches for three seconds, and waits for quiet after a change it sees", async () => {
+    expect(await settledAt([], false)).toBe(3_000);
+    expect(await settledAt([500], false)).toBe(1_500);
+  });
+
+  it("EVAL-02: a change that never comes ends the wait at ten seconds, and the facts say so", async () => {
+    expect(await settledAt([], true)).toBe(10_000);
   });
 });
