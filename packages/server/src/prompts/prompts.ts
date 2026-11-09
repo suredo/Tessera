@@ -257,7 +257,7 @@ function profileValues(id: keyof typeof PROFILES): Record<string, string> {
 
 /** The intent part's list of profiles, from their one definitions (VER-03). */
 export const profilesForIntent = (): string =>
-  PROFILE_IDS.map((id) => `  - ${id}: the tool is ${PROFILES[id].fits}.`).join("\n");
+  PROFILE_IDS.map((id) => `  - ${id}: ${PROFILES[id].fits}.`).join("\n");
 
 /**
  * Builds a generation stage's prompt from the parts it needs. The instructions always have the

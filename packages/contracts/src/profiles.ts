@@ -24,7 +24,7 @@ export type VerificationProfile = {
 /** Something with a list of items: T1, T2, T12 (the M3 scenario sets). */
 export const ITEM_LIST_PROFILE = {
   id: "item-list",
-  fits: "a list of items the person adds to and removes from, such as a shopping list or a to-do list",
+  fits: "a list the person adds items to and removes them from, as a to-do list",
   hooks: [
     { name: "item-name", says: "the field for a new item's name" },
     { name: "item-add", says: "the button that adds the item named there" },
@@ -106,7 +106,7 @@ export const FORM_PROFILE = {
  */
 export const CHART_PROFILE = {
   id: "chart",
-  fits: "a chart of numbers the person enters, with their total, such as spending",
+  fits: "a chart of numbers the person enters and their total, as spending",
   hooks: [
     { name: "entry-name", says: "the field for a new entry's name" },
     { name: "entry-value", says: "the field for its number" },
@@ -148,6 +148,42 @@ export const CARDS_PROFILE = {
   },
 } as const satisfies VerificationProfile;
 
+/**
+ * Tasks a tool schedules into sessions on days, kept off the weekdays its rules rule out: T10 (the
+ * M3 scenario sets). Its check adds a rule of its own and removes it again; it reads each
+ * session's date from a time element, so dates may be shown in any language.
+ */
+export const SCHEDULING_PROFILE = {
+  id: "scheduling",
+  fits: "a planner putting tasks on days, kept off weekdays its rules rule out",
+  hooks: [
+    { name: "task-name", says: "the field for a new task's name" },
+    { name: "task-add", says: "the button that adds the task" },
+    {
+      name: "session",
+      says: "each session scheduled, one element per session, with a time element inside whose datetime attribute is its date as YYYY-MM-DD",
+    },
+    {
+      name: "session-task",
+      says: "inside each session, the element whose text is its task's name, exactly as typed",
+    },
+    {
+      name: "rule-day",
+      says: "the select of a new rule's weekday, each choice's value the weekday's number, 0 for Sunday to 6 for Saturday",
+    },
+    { name: "rule-add", says: "the button that adds the rule" },
+    { name: "rule", says: "each rule, one element per rule" },
+    { name: "rule-remove", says: "inside each rule, the button that removes it" },
+  ],
+  rules: [
+    "Typing a name in task-name and pressing task-add schedules that task in one or more sessions, today or later, and saves it.",
+    "Choosing a weekday in rule-day and pressing rule-add adds a rule, shown as a rule, that no session falls on that weekday: the sessions on it move to other days, and every task keeps at least one session. It saves the rule.",
+    "Pressing a rule's rule-remove removes that rule, and saves that.",
+    "Opened again, the tool shows the sessions and rules as they were saved.",
+  ],
+  fixture: { taskName: "Tessera check task" },
+} as const satisfies VerificationProfile;
+
 /** Every profile, by ID. */
 export const PROFILES = {
   "item-list": ITEM_LIST_PROFILE,
@@ -155,6 +191,7 @@ export const PROFILES = {
   form: FORM_PROFILE,
   chart: CHART_PROFILE,
   cards: CARDS_PROFILE,
+  scheduling: SCHEDULING_PROFILE,
 } as const satisfies Record<string, VerificationProfile>;
 
 export const PROFILE_IDS = [
@@ -163,6 +200,7 @@ export const PROFILE_IDS = [
   "form",
   "chart",
   "cards",
+  "scheduling",
 ] as const satisfies readonly (keyof typeof PROFILES)[];
 export type ProfileId = (typeof PROFILE_IDS)[number];
 
