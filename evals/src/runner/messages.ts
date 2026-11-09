@@ -8,12 +8,15 @@ import type { StepOutcome } from "../scenarios/index.ts";
 
 type Key = keyof typeof en;
 
-/** A message as a pattern: its fixed words exactly, each `{value}` as any text. */
+/**
+ * A message as a pattern: its fixed words exactly, each `{value}` as any text. A line break, which
+ * keeps the model's words apart from the app's (GEN-12), may be read back as any whitespace.
+ */
 const pattern = (key: Key) =>
   new RegExp(
     en[key]
       .split(/\{\w+\}/)
-      .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+      .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"))
       .join("[\\s\\S]*"),
   );
 

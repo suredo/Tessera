@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T19:41:20Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T21:30:00Z }
 ---
 
 # Purpose
@@ -20,7 +20,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 - `src/runner/run.ts`: `runScenario` plays one scenario (`RunReport`, `StepResult`, `RunMode`); `zonedInstant` is a wall time's instant in a zone. `STEP_LIMIT_MS` is how long a request may take; `NEW_WORKSPACE` is the title of the empty workspace a `switch: new` step opens.
 - `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit and each stale one (`AnswersProvider`). `mapStrings` changes an answer's strings, never its JSON text, so a saved tool's name with quotes or backslashes stays whole.
 - `src/runner/speed.ts`: how fast a run was against the speed targets (`OBS-04`). `speedOf` takes runs as `readRun` reads them from a run folder (its report and harness ledger) and gives `Speed`: each stage's model time and each kind of request's time as the person waited (`RequestKind`), as `figures` (count, p50, p95 and slowest, by nearest rank), and each of `SPEED_TARGETS` met, missed or not measured. `speedMarkdown` writes them as tables. `node evals/src/runner/speed.ts <run folder>...` prints them; the [M2 speed report](../../../evals/reports/2026-11-07-m2-speed.md) is its first use.
-- `src/runner/messages.ts`: `outcomeOf` reads what a notice claims, in the app's own words from `en.ts`; `say` fills one of them.
+- `src/runner/messages.ts`: `outcomeOf` reads what a notice claims, in the app's own words from `en.ts`, where a line break may be read back as any whitespace; `say` fills one of them.
 - `src/runner/replay.ts`: `replayScenario` plays a scenario from an answers file, a rehearsal or a recorded live run, with no call: the command's rehearsal and replay modes use it, and so does `packages/web/e2e/scenario-replays.spec.ts`, which replays every file in `evals/scenarios/replays/` in CI and expects each run's steps to pass or fail as listed there, with their problems, and a run whose first step failed to stop there with every later step blocked (`EVAL-07`, `TEST-04`). The list follows today's scenario files, so after a scenario's expectation is corrected it can differ from the live report, whose score stays frozen. A new recording needs its expected failed steps listed there.
 - `src/runner/record.ts`: `recordAnswers` turns a run's ledger and request log into answers that replay it (`EVAL-07`); `CANCELLED_WAIT_MS` is how long a cancelled call's answer waits in the replay.
 - `src/runner/report.ts`: `reportMarkdown`, the report a person reads.

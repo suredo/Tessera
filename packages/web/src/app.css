@@ -109,6 +109,10 @@ button.primary {
   margin: 0;
   padding: 0 var(--ui-padding);
 }
+/* The model's words follow the app's on a line of their own, never in its sentence (GEN-12). */
+[role="status"] {
+  white-space: pre-line;
+}
 @media (max-width: 40rem) {
   .app {
     grid-template-columns: 1fr;
