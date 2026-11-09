@@ -127,6 +127,23 @@ test("TEST-03, VER-03, GEN-09: a list that doesn't keep what it adds fails the i
     timeout: 60_000,
   });
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk Remove"]);
+  // The history says the version was tried out, and how; the details give the check's rules
+  // (VER-08).
+  const history = page.getByRole("region", { name: en["history.heading"] });
+  await expect(history).toContainText(
+    en["history.triedOut"].replace("{what}", en["history.tried.item-list"]),
+  );
+  const details = page.getByRole("region", { name: en["details.heading"] });
+  await details.getByRole("button", { name: en["details.show"] }).click();
+  await expect(details).toContainText(
+    en["details.check.behavior"].replace("{what}", en["history.tried.item-list"]),
+  );
+  await expect(details).toContainText(en["details.rule.item-list.2"]);
+  // How it was checked never shows the profile's own name or its prompt's rules, with their hook
+  // names (VER-03); the tool's code and the repair's reasons further down may.
+  const checks = details.locator(".details-checks");
+  await expect(checks).not.toContainText("item-list");
+  await expect(checks).not.toContainText("item-remove");
 
   // The made list was told the profile's hooks and rules, and the repair was told which rule
   // it broke, what was expected and what was observed.

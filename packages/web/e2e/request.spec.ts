@@ -159,6 +159,11 @@ test("TEST-03, GEN-05, APP-05: a request becomes a running tool, staged and acti
   const history = page.getByRole("region", { name: en["history.heading"] });
   await expect(history).toContainText("A list of what to buy.");
   await expect(history).toContainText(en["history.checkedBoth"]);
+  // It fits no verification profile, so it says its behavior isn't verified (VER-08, UX-03).
+  await expect(history).toContainText(en["history.notTriedOut"]);
+  const details = page.getByRole("region", { name: en["details.heading"] });
+  await details.getByRole("button", { name: en["details.show"] }).click();
+  await expect(details).toContainText(en["details.check.noBehavior"]);
 });
 
 test("GEN-08: an unclear request is answered in plain words, and nothing is made", async ({

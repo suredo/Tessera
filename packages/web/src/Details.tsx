@@ -1,4 +1,11 @@
-import type { HostResult, LedgerCall, LedgerRequest, Workspace } from "@tessera/contracts";
+import {
+  PROFILES,
+  type HostResult,
+  type LedgerCall,
+  type LedgerRequest,
+  type ProfileId,
+  type Workspace,
+} from "@tessera/contracts";
 import { useEffect, useState } from "react";
 import { ask, problemText } from "./host-api.ts";
 import type { MessageKey } from "./i18n/en.ts";
@@ -121,6 +128,7 @@ function Body({ details, hasWorkspace }: { details: Details; hasWorkspace: boole
       )}
       <h3>{t("details.unattachedHeading")}</h3>
       <Requests requests={details.unattached} empty={t("details.noUnattached")} />
+      {hasWorkspace && details.source !== null && <Checks details={details} />}
       {hasWorkspace && (
         <>
           <h3>{t("details.sourceHeading")}</h3>
@@ -145,6 +153,46 @@ function Body({ details, hasWorkspace }: { details: Details; hasWorkspace: boole
           )}
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * What a profile's behavior check checks, in plain words for the person (GEN-12, UX-05): one line
+ * for each of its rules, by its place among them, so the lines follow the profile's one definition
+ * (P3) without showing it, as profiles never appear to the person (VER-03).
+ */
+export const ruleTexts = (profile: ProfileId): string[] =>
+  PROFILES[profile].rules.map((_, i) => t(`details.rule.${profile}.${i + 1}` as MessageKey));
+
+/**
+ * The current version's checks (APP-05, VER-08): each in the host's own words, and for a behavior
+ * check what it tried and checked, in plain words; a version whose behavior wasn't checked says
+ * it isn't verified (UX-03).
+ */
+function Checks({ details }: { details: Details }) {
+  const { checks, profile } = details;
+  const behavior = checks.includes("behavior") && profile ? profile : null;
+  return (
+    <>
+      <h3>{t("details.checksHeading")}</h3>
+      {checks.length === 0 && <p>{t("details.check.none")}</p>}
+      <ul className="details-checks">
+        {checks.includes("code") && <li>{t("details.check.code")}</li>}
+        {checks.includes("start") && <li>{t("details.check.start")}</li>}
+        {behavior ? (
+          <li>
+            {t("details.check.behavior", { what: t(`history.tried.${behavior}`) })}
+            <ul>
+              {ruleTexts(behavior).map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+          </li>
+        ) : (
+          <li>{t("details.check.noBehavior")}</li>
+        )}
+      </ul>
     </>
   );
 }

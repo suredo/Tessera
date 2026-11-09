@@ -6,6 +6,7 @@ import { trashEntrySchema, trashSchema } from "./trash.ts";
 import {
   savedToolSchema,
   versionHashSchema,
+  versionNoteSchema,
   workspaceSchema,
   workspaceVersionSchema,
 } from "./workspace.ts";
@@ -147,6 +148,12 @@ export const HOST_ACTIONS = {
           .nullable()
           .describe("The current tool's code; none without a tool or a workspace."),
         capabilities: z.array(z.string()).describe("What the current tool declares (CAP-01)."),
+        checks: versionNoteSchema.shape.checks.describe(
+          "The host's checks the current version passed (APP-05, VER-08); none without a tool.",
+        ),
+        profile: versionNoteSchema.shape.profile.describe(
+          "The verification profile whose behavior check the current version passed, or none (VER-08).",
+        ),
         requests: z
           .array(ledgerRequestSchema)
           .describe("The workspace's newest requests first, from the call ledger (OBS-01)."),
