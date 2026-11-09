@@ -1027,7 +1027,15 @@ export function checkJs(
           }
         }
         break;
-      case "ObjectPattern":
+      case "ObjectPattern": {
+        // What the pattern takes properties out of, when it says: a declaration's value or an
+        // assignment's right side.
+        const source =
+          parent?.type === "VariableDeclarator" && parent["id"] === node
+            ? (parent["init"] as AnyNode | null)
+            : parent?.type === "AssignmentExpression" && parent["left"] === node
+              ? (parent["right"] as AnyNode)
+              : null;
         for (const property of node["properties"] as AnyNode[]) {
           const key = property["key"] as AnyNode | undefined;
           const name =
@@ -1040,6 +1048,9 @@ export function checkJs(
             );
           } else if (name !== undefined && FORBIDDEN_NAMES.has(name)) {
             found(property, `The JavaScript takes out ${name}, which a tool can't use.`);
+          } else if (name === "Chart" && source && page.isPage(source)) {
+            // const { Chart: C } = window names Chart.js as window.Chart does (CAP-04).
+            found(property, CHART_DIRECT);
           } else if (
             target?.type === "MemberExpression" &&
             ADDRESS_NAMES.has(propertyName(target) ?? "")
@@ -1052,6 +1063,7 @@ export function checkJs(
           }
         }
         break;
+      }
       case "ClassDeclaration":
       case "ClassExpression": {
         const superClass = node["superClass"] as AnyNode | null;
@@ -1091,9 +1103,15 @@ export function checkJs(
     );
   };
 
+  // Chart.js is the host's, behind tessera.chart, so it can change without changing tools (CAP-04,
+  // ADR 0014): a tool that names it, even its own binding of that name, is refused.
+  const CHART_DIRECT =
+    'The JavaScript uses Chart directly. Draw charts with tessera.chart(element, spec) and the "chart" capability.';
+
   const checkIdentifier = (node: AnyNode, parent: AnyNode | null) => {
     const name = node["name"] as string;
     if (parent && isNameNotReference(node, parent)) return;
+    if (name === "Chart") found(node, CHART_DIRECT);
     if (name === "Date") checkDate(node, parent);
     if (FORBIDDEN_GLOBALS.has(name)) {
       found(node, `The JavaScript uses ${name}, which a tool can't use.`);
@@ -1123,6 +1141,7 @@ export function checkJs(
     const name = propertyName(node);
     const object = node["object"] as AnyNode;
     if (isDate(node)) checkDate(node, parent);
+    if (name === "Chart" && page.isPage(object)) found(node, CHART_DIRECT);
     if (name === "tessera" && page.isPage(object)) {
       found(
         node,
@@ -1215,6 +1234,15 @@ export function checkJs(
       return;
     }
     const definition = BRIDGE_METHODS[method as BridgeMethodName];
+    // A method that works in the page alone, like chart, still needs its capability declared.
+    const needs = "capability" in definition ? definition.capability : undefined;
+    if (needs && !capabilities.includes(needs)) {
+      found(
+        node,
+        `tessera.${method} needs the "${needs}" capability. Declare it or remove this call.`,
+      );
+      return;
+    }
     if (definition.action === null) return;
     const args = parent["arguments"] as AnyNode[];
     const action = definition.action === "argument" ? fixedText(args[0]) : definition.action;

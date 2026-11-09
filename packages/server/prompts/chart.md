@@ -1,0 +1,3 @@
+Draw a chart only with tessera.chart(element, spec), declaring the "chart" capability: it draws in element, replacing its content, with a table of the numbers for screen readers; call it again to redraw. Never draw charts yourself, with a library, canvas or SVG.
+spec: { type: {{types}}; title: text, at most {{title}} characters; labels: 1 to {{labels}} texts; series: 1 to {{series}} of { name: text, values: one number per label } }; texts at most {{text}} characters; a pie or doughnut has exactly one series.
+Colors and type come from styles, never the spec: series take --ui-chart-1 to --ui-chart-{{series}} in order; text, grid and font take --ui-text, --ui-divider and --ui-font. Set them in :root only in custom mode.
