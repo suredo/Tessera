@@ -1,0 +1,40 @@
+# T10, study planner (docs/testing/app-catalogue.md), in its M3 form: a planner checked by the
+# scheduling profile (VER-03) before it opens, kept off the weekday the person rules out, then a
+# second tool, flashcards from pasted notes, checked by the cards profile. The person adds a topic
+# with the planner's own controls (EVAL-01); changes the rule in words ("Fridays are fine now"),
+# which changes the data, not the tool (the milestone sets ask to change a scheduling policy); and
+# the next day finds it as they left it. Whether sessions fall in the evenings, and how the cards
+# look, is the AI review's.
+id: T10-study-planner
+tier: advanced
+language: en
+person: "A student two weeks from an exam"
+goal: "A study plan that keeps to their rules, and flashcards from their notes"
+clock: { start: "2026-11-05T19:30:00", zone: "Europe/Lisbon" }
+budget: { calls: 14 }
+profiles: [scheduling, cards]
+steps:
+  - say: "My exam is in two weeks. Help me organize topics; I study evenings, never Fridays. Later I'll paste notes to make flashcards."
+    expect: { created: true, workspace: new }
+  - do: { fill: task-name, value: Statistics }
+  - do: { click: task-add }
+    expect: { version: unchanged, data: changed }
+  # The rule changes in words: a change to the data the tool keeps, not to the tool.
+  - say: "Fridays are fine now."
+    expect: { version: unchanged, data: changed }
+  - next-day: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+  - say: "Make flashcards from these notes: Mean: the average of the values. Median: the middle value."
+    expect: { created: true, workspace: new }
+  - do: { fill: notes, value: "Mode: the value that appears most often" }
+  - do: { click: cards-make }
+    expect: { version: unchanged, data: changed }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence
