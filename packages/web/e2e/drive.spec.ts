@@ -93,6 +93,10 @@ pick.addEventListener("change", () => {
 <li data-hook="session"><time datetime="2026-13-01">Month 13</time></li>
 <li data-hook="session"><time datetime="0000-00-00">Zero</time></li>
 <li data-hook="session"><time datetime="2028-02-29 09:30:15.5+01:00">Leap day</time></li>
+<li data-hook="session"><time datetime="2026-11-12T99:99">Hour 99</time></li>
+<li data-hook="session"><time datetime="2026-11-12T23:59:60">Second 60</time></li>
+<li data-hook="session"><time datetime="2026-11-12T18:00+99:99">Zone 99</time></li>
+<li data-hook="session"><time datetime="2026-11-12T23:59:59-03:00">Last second</time></li>
 <li data-hook="session" hidden><time datetime="2026-11-16">Hidden</time></li>
 </ul>`,
     css: "",
@@ -271,7 +275,7 @@ test("VER-03: a check reads the date each hooked element marks with a time eleme
     steps: [
       {
         ok: true,
-        count: 12,
+        count: 16,
         dates: [
           "2026-11-12",
           "2026-11-13",
@@ -285,9 +289,17 @@ test("VER-03: a check reads the date each hooked element marks with a time eleme
           null,
           null,
           "2028-02-29",
+          null,
+          null,
+          null,
+          "2026-11-12",
         ],
       },
-      { ok: true, count: 12, dates: [null, null, null, null, null, null, "2028-02-29"] },
+      {
+        ok: true,
+        count: 16,
+        dates: [null, null, null, null, null, null, "2028-02-29", null, null, null, "2026-11-12"],
+      },
     ],
   });
 });

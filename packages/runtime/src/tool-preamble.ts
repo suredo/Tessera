@@ -221,16 +221,27 @@ import type { BridgeMethodName } from "@tessera/contracts";
               : element.querySelector("time[datetime]");
           const value = time instanceof HTMLTimeElement ? time.dateTime.trim() : "";
           const parts =
-            /^(\d{4})-(\d{2})-(\d{2})(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?(?:Z|[+-]\d{2}:?\d{2})?)?$/.exec(
+            /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?(?:Z|[+-](\d{2}):?(\d{2}))?)?$/.exec(
               value,
             );
           if (!parts) return null;
-          const [year, month, day] = parts.slice(1, 4).map(Number) as [number, number, number];
-          const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-          const length = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
-          return year >= 1 && length !== undefined && day >= 1 && day <= length
-            ? value.slice(0, 10)
-            : null;
+          const [year, month, day, hour, minute, second, zoneHours, zoneMinutes] = parts
+            .slice(1)
+            .map((part) => (part === undefined ? 0 : Number(part)));
+          const leap = (year! % 4 === 0 && year! % 100 !== 0) || year! % 400 === 0;
+          const length = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month! - 1];
+          // A real date, and a real time and zone when it gives them; no leap second.
+          const real =
+            year! >= 1 &&
+            length !== undefined &&
+            day! >= 1 &&
+            day! <= length &&
+            hour! <= 23 &&
+            minute! <= 59 &&
+            second! <= 59 &&
+            zoneHours! <= 23 &&
+            zoneMinutes! <= 59;
+          return real ? value.slice(0, 10) : null;
         });
         results.push({ ok: true, count: found.length, dates });
         continue;
