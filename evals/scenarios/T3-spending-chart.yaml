@@ -1,8 +1,9 @@
 # T3, spending chart (docs/testing/app-catalogue.md), in its M3 form: a chart from entered numbers,
 # drawn with the chart helper (CAP-04) and checked by the chart profile (VER-03) before it opens.
 # The person adds an entry with the tool's own controls (EVAL-01), it is still there after a
-# reload, and a "what if" question shows its numbers (food 360, total 1880) without changing what
-# was spent. The exact numbers and the chart's look are the AI review's.
+# reload, and a "what if" question shows its numbers without changing what was spent: with Books
+# 35 added, food 360 and a total of 1915 (the catalogue's 1880 is before that entry). The exact
+# numbers and the chart's look are the AI review's.
 id: T3-spending-chart
 tier: intermediate
 language: en

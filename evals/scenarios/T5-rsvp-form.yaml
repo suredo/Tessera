@@ -1,7 +1,8 @@
 # T5, RSVP form (docs/testing/app-catalogue.md), in its M3 form, without export (CAP-03, M4): a
 # form checked by the form profile (VER-03) before it opens. The person sends it empty, which
-# saves nothing, then fills each field, found by its label, and sends it, which saves an answer
-# that is still there the next day. Whether the form says what is missing in plain words, and
+# saves nothing, then fills each field, found by the label the request names, and sends it, which
+# saves an answer that is still there the next day. The request names the labels, so finding a
+# field by one asks nothing the generated tool wasn't told. Whether the form says what is missing in plain words, and
 # shows the answers well, is the AI review's.
 id: T5-rsvp-form
 tier: intermediate
@@ -12,13 +13,13 @@ clock: { start: "2026-11-03T20:00:00", zone: "America/Sao_Paulo" }
 budget: { calls: 8 }
 profiles: [form]
 steps:
-  - say: "Make a form for my party guests: name, how many people, food allergies. Show me the answers."
+  - say: 'Make a form for my party guests with the fields "Name", "How many people" and "Food allergies". Show me the answers.'
     expect: { created: true, workspace: new }
   - do: { click: form-submit }
     expect: { version: unchanged, data: unchanged }
-  - do: { fill: form-field, label: name, value: "Ana Souza" }
-  - do: { fill: form-field, label: people, value: "2" }
-  - do: { fill: form-field, label: allerg, value: "Peanuts" }
+  - do: { fill: form-field, label: Name, value: "Ana Souza" }
+  - do: { fill: form-field, label: How many people, value: "2" }
+  - do: { fill: form-field, label: Food allergies, value: "Peanuts" }
   - do: { click: form-submit }
     expect: { version: unchanged, data: changed }
   - next-day: true
