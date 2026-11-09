@@ -7,7 +7,6 @@ import {
   checkFacts,
   loadScenario,
   loadScenarios,
-  m2Problems,
   stepKind,
   type HostState,
   type StepOutcome,
@@ -31,7 +30,7 @@ function scenarioFile(id: string, rest: string): string {
 }
 
 describe("scenario files (EVAL-01)", () => {
-  it("EVAL-01: every scenario loads, starts with a request, and the M2 set plays without the tool's own controls", () => {
+  it("EVAL-01: every scenario loads and starts with a request", () => {
     const all = loadScenarios(scenarios);
     expect(all.map((s) => s.id)).toEqual([
       "B10-study-planner",
@@ -45,7 +44,6 @@ describe("scenario files (EVAL-01)", () => {
     for (const scenario of all) {
       // Every scenario starts from an empty Tessera, so its first step is a request.
       expect(stepKind(scenario.steps[0]!)).toBe("say");
-      expect(m2Problems(scenario)).toEqual([]);
     }
     // The M2 live set's budgets (docs/roadmap/m2-generation-pipeline.md), and the two-pass
     // comparison's, each fitting its two-pass run (evals/reports/2026-11-07-two-pass-plan.md).
@@ -73,16 +71,51 @@ describe("scenario files (EVAL-01)", () => {
     expect(() => loadScenario(misnamed)).toThrow(/its id is T95-other/);
   });
 
-  it("EVAL-01: a step that drives the tool's own controls waits for verification profiles (M3)", () => {
+  it("EVAL-01, VER-04: a do step clicks or fills a hook of one of the scenario's profiles, perhaps inside one element", () => {
     const scenario = loadScenario(
       scenarioFile(
         "T96-controls",
-        "steps:\n  - say: hi\n  - do: { hook: toggle-item, item: milk }\n",
+        "profiles: [item-list]\nsteps:\n  - say: hi\n" +
+          "  - do: { fill: item-name, value: Eggs }\n" +
+          "  - do: { click: item-add }\n    expect: { data: changed }\n" +
+          "  - do: { click: item-remove, in: { hook: item, text: Milk } }\n",
       ),
     );
-    expect(m2Problems(scenario)).toEqual([
-      "Step 2 uses the tool's own controls, which need verification profiles (M3).",
+    expect(scenario.steps.slice(1).map((s) => [stepKind(s), "do" in s && s.do])).toEqual([
+      ["do", { fill: "item-name", value: "Eggs" }],
+      ["do", { click: "item-add" }],
+      ["do", { click: "item-remove", in: { hook: "item", text: "Milk" } }],
     ]);
+    const refused = (id: string, rest: string, problem: RegExp) =>
+      expect(() => loadScenario(scenarioFile(id, rest))).toThrow(problem);
+    // A hook none of its profiles has, or any hook with no profile, would guess at the markup.
+    refused(
+      "T97-unknown-hook",
+      "profiles: [item-list]\nsteps:\n  - say: hi\n  - do: { click: toggle-item }\n",
+      /the hook toggle-item isn't one of the scenario's profiles' hooks/,
+    );
+    refused(
+      "T98-no-profile",
+      "steps:\n  - say: hi\n  - do: { click: item-add }\n",
+      /the hook item-add isn't one/,
+    );
+    refused(
+      "T99-unknown-in",
+      "profiles: [item-list]\nsteps:\n  - say: hi\n  - do: { click: item-remove, in: { hook: row, text: Milk } }\n",
+      /the hook row isn't one/,
+    );
+    // The old shape, a fill with no value, and a profile that doesn't exist are refused too.
+    refused(
+      "T89-old-shape",
+      "profiles: [item-list]\nsteps:\n  - say: hi\n  - do: { hook: item-add }\n",
+      /steps\.1/,
+    );
+    refused(
+      "T88-fill-no-value",
+      "profiles: [item-list]\nsteps:\n  - say: hi\n  - do: { fill: item-name }\n",
+      /steps\.1/,
+    );
+    refused("T87-unknown-profile", "profiles: [todo]\nsteps:\n  - say: hi\n", /profiles/);
   });
 });
 

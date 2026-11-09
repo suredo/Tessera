@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/scenarios.test.ts]
 tags: [code, evals, scenarios]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T04:53:16Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T11:31:18Z }
 ---
 
 # Purpose
@@ -20,7 +20,8 @@ The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01
 - `src/scenarios/scenario.ts`:
   - `scenarioSchema`, `stepSchema` and `expectationSchema`, the format's one definition (P3), and their types `Scenario`, `Step` and `Expectation`.
   - `loadScenario` reads and checks one file, whose name must be its ID, and `loadScenarios` every file in a folder; a file that isn't a scenario raises `ScenarioError` with each problem in plain words.
-  - `stepKind` names a step's kind. `M2_STEPS` are the kinds the M2 runner plays, and `m2Problems` says why a scenario can't be played in M2: a step that drives the tool's own controls needs verification profiles (M3).
+  - `stepKind` names a step's kind, one of `STEPS`, the kinds the runner plays.
+  - A do step (`DoAction`) clicks the element marked with a hook, or fills it with a value, perhaps inside the one element its in field names by a hook and the text it shows. The scenario lists its verification profiles, by their IDs in the registry, and each hook a do step names must be one of theirs: any other name would be guessing at the tool's markup (`VER-04`).
 - `src/scenarios/facts.ts`:
   - `readHostState` reads what Tessera stored (each workspace's tool version and a hash of its data, the saved tools) with the workspace the host app has open (`HostState`, `WorkspaceFacts`).
   - `checkFacts` compares the state before and after a step, with what the host app showed (`StepOutcome`) and what the step acts on by name (`StepTarget`: the saved tool a Continue or Use again opens, by name, and the one workspace a delete moves to the trash, by ID, since titles repeat), against the step's expectation, and gives each difference in plain words.
@@ -51,5 +52,5 @@ Depends on `yaml` (2.9.1, already in the lockfile through other packages) to rea
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `facts.ts`: `WorkspaceFacts` (type), `HostState` (type), `StepOutcome` (type), `StepTarget` (type), `keeps`, `readHostState`, `checkFacts`
-- `index.ts`: `expectationSchema`, `loadScenario`, `loadScenarios`, `M2_STEPS`, `m2Problems`, `ScenarioError`, `scenarioSchema`, `stepKind`, `stepSchema`, `Expectation` (type), `Scenario` (type), `Step` (type), `checkFacts`, `readHostState`, `HostState` (type), `StepOutcome` (type), `StepTarget` (type), `WorkspaceFacts` (type)
-- `scenario.ts`: `expectationSchema`, `Expectation` (type), `stepSchema`, `Step` (type), `M2_STEPS`, `scenarioSchema`, `Scenario` (type), `stepKind`, `ScenarioError`, `loadScenario`, `loadScenarios`, `m2Problems`
+- `index.ts`: `expectationSchema`, `loadScenario`, `loadScenarios`, `STEPS`, `DoAction` (type), `ScenarioError`, `scenarioSchema`, `stepKind`, `stepSchema`, `Expectation` (type), `Scenario` (type), `Step` (type), `checkFacts`, `readHostState`, `HostState` (type), `StepOutcome` (type), `StepTarget` (type), `WorkspaceFacts` (type)
+- `scenario.ts`: `expectationSchema`, `Expectation` (type), `DoAction` (type), `stepSchema`, `Step` (type), `STEPS`, `scenarioSchema`, `Scenario` (type), `stepKind`, `ScenarioError`, `loadScenario`, `loadScenarios`

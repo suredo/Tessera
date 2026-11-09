@@ -4,7 +4,7 @@ title: "Scenario file format"
 description: "The scenario file format, step types and fields, with a full example."
 tags: [testing, scenario-format]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-06T03:36:07Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T11:31:18Z }
 ---
 # Scenario file format
 
@@ -21,8 +21,8 @@ profiles: [item-list]
 steps:
   - say: "I need a shopping list I can tick off at the store. We need milk, eggs, bread and apples."
     expect: { created: true, profile: item-list, items: [milk, eggs, bread, apples] }
-  - do: { hook: toggle-item, item: milk }          # the tool's own control (from M3)
-    expect: { item: { milk: done }, version: unchanged }
+  - do: { click: item-remove, in: { hook: item, text: milk } }   # the tool's own control (from M3)
+    expect: { data: changed, version: unchanged }
   - say: "Group them by aisle."                    # look/structure change
     expect: { version: new, data: unchanged }
   - say: "Add cheese and take the apples off."     # data change through chat
@@ -44,7 +44,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 
 **Step types:**
 - `say`: a chat request
-- `do`: use one of the tool's controls, through a profile hook (from M3)
+- `do`: use one of the tool's controls, through a hook of one of the scenario's profiles (from M3): `{ click: <hook> }` or `{ fill: <hook>, value: <text> }` (a select takes the choice with that text or value), acting on the one shown element with that hook, or with `in: { hook: <hook>, text: <text> }` on the one inside the one shown element with that hook showing that text, such as one item. A hook none of the scenario's profiles has is refused when the file loads.
 - `next-day`: move the host clock and reload
 - `reload`
 - `save`, `continue`, `use-again`: save the tool, or open a saved one in its two ways
@@ -56,7 +56,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 **Scenario fields:**
 - `clock`: the starting date, time and time zone (`RUN-07`)
 - `budget`: the maximum calls for the live run
-- `profiles`: the verification profiles the person's tools should match
+- `profiles`: the verification profiles the person's tools should match, by their IDs in the registry; a `do` step uses their hooks
 - `review`: the AI review items that apply ([AI technical review](judging.md#ai-technical-review-each-scenario-eval-03))
 
 **Answers.** A rehearsal (`evals/scenarios/rehearsals/<id>.json`, written by hand) or a replay (a live run's recording) gives the answers each stage asks for, in order. A saved tool is named as `{{saved:<name>}}`, since its ID is new on every run, and an answer can take its time (`delayMs`) so a `cancel` has something to stop. The [runner](../code/evals/runner.md) plays them.

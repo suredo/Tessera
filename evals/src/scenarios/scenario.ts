@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
+import { PROFILES, profileIdSchema } from "@tessera/contracts";
 
 // Scenario files (EVAL-01): one person, one goal, a language, a budget and steps, each with the
 // host facts it expects (EVAL-02). Every scenario starts from an empty Tessera. The format is in
@@ -44,6 +45,25 @@ export type Expectation = z.infer<typeof expectationSchema>;
 const expect = expectationSchema.optional();
 const name = z.string().min(1).max(200);
 
+/** A verification profile's hook name, as a tool marks it in `data-hook` (VER-03). */
+const hookName = z.string().regex(/^[a-z][a-z0-9-]{0,40}$/, "a hook name such as item-add");
+
+/** Where a `do` step acts: inside the one shown element marked `hook` whose text shows `text`. */
+const within = z
+  .strictObject({ hook: hookName, text: z.string().min(1).max(200) })
+  .describe("Inside the one shown element marked hook whose text shows text, such as one item.");
+
+/**
+ * Using one of the tool's own controls, as the person would (EVAL-01, from M3): clicking the
+ * element marked with a hook, or typing a value into it (a select takes the choice it names), the
+ * one shown, or the one inside an element `in` names.
+ */
+const doSchema = z.union([
+  z.strictObject({ click: hookName, in: within.optional() }),
+  z.strictObject({ fill: hookName, value: z.string().max(2000), in: within.optional() }),
+]);
+export type DoAction = z.infer<typeof doSchema>;
+
 /** One step of a scenario: what the person does, and what the host should show after it. */
 export const stepSchema = z.union([
   z.strictObject({
@@ -51,9 +71,9 @@ export const stepSchema = z.union([
     expect,
   }),
   z.strictObject({
-    do: z
-      .looseObject({ hook: z.string().min(1) })
-      .describe("The tool's own control, through a verification profile's hook (from M3)."),
+    do: doSchema.describe(
+      "The tool's own control, through a hook of one of the scenario's verification profiles.",
+    ),
     expect,
   }),
   z.strictObject({
@@ -90,9 +110,10 @@ export const stepSchema = z.union([
 ]);
 export type Step = z.infer<typeof stepSchema>;
 
-/** The steps the M2 runner can drive: no `do`, which needs verification profiles (M3). */
-export const M2_STEPS = [
+/** The steps the runner plays. */
+export const STEPS = [
   "say",
+  "do",
   "next-day",
   "reload",
   "save",
@@ -119,7 +140,12 @@ export const scenarioSchema = z
     budget: z.strictObject({
       calls: z.int().min(1).describe("The most model calls its live run may make (ENG-07)."),
     }),
-    profiles: z.array(z.string().min(1)).default([]),
+    profiles: z
+      .array(profileIdSchema)
+      .default([])
+      .describe(
+        "The verification profiles the person's tools should match; a do step uses their hooks.",
+      ),
     steps: z.array(stepSchema).min(1),
     review: z.array(z.string().min(1)).default([]),
   })
@@ -137,13 +163,29 @@ export const scenarioSchema = z
         });
       }
     });
+    // A do step drives the tool through hooks its profiles name, which the prompt asked it to
+    // mark (VER-04); any other name would be guessing at the tool's markup.
+    const hooks = new Set<string>(
+      scenario.profiles.flatMap((id) => PROFILES[id].hooks.map((h) => h.name)),
+    );
+    scenario.steps.forEach((s, index) => {
+      if (!("do" in s)) return;
+      const used = ["click" in s.do ? s.do.click : s.do.fill, ...(s.do.in ? [s.do.in.hook] : [])];
+      for (const hook of used.filter((each) => !hooks.has(each))) {
+        context.addIssue({
+          code: "custom",
+          path: ["steps", index, "do"],
+          message: `the hook ${hook} isn't one of the scenario's profiles' hooks`,
+        });
+      }
+    });
   })
   .describe("A scenario file (EVAL-01).");
 export type Scenario = z.infer<typeof scenarioSchema>;
 
 /** A step's kind: the one key it has besides `expect`. */
-export const stepKind = (s: Step): (typeof M2_STEPS)[number] | "do" =>
-  Object.keys(s).find((key) => key !== "expect") as (typeof M2_STEPS)[number] | "do";
+export const stepKind = (s: Step): (typeof STEPS)[number] =>
+  Object.keys(s).find((key) => key !== "expect") as (typeof STEPS)[number];
 
 /** A scenario file that isn't one, with every problem in plain words. */
 export class ScenarioError extends Error {
@@ -184,16 +226,4 @@ export function loadScenarios(folder: string): Scenario[] {
     .filter((file) => file.endsWith(".yaml"))
     .sort()
     .map((file) => loadScenario(path.join(folder, file)));
-}
-
-/**
- * Why the M2 runner can't play a scenario, or nothing: a `do` step needs verification profiles,
- * which arrive in M3.
- */
-export function m2Problems(scenario: Scenario): string[] {
-  return scenario.steps.flatMap((s, index) =>
-    stepKind(s) === "do"
-      ? [`Step ${index + 1} uses the tool's own controls, which need verification profiles (M3).`]
-      : [],
-  );
 }

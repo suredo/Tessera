@@ -18,9 +18,9 @@ import {
 import { refuseRealDataFolder, startHarness, type LedgerSummary } from "../harness/index.ts";
 import {
   checkFacts,
-  m2Problems,
   readHostState,
   stepKind,
+  type DoAction,
   type Scenario,
   type Step,
   type StepOutcome,
@@ -155,8 +155,6 @@ export async function runScenario(
     twoPass?: TwoPassOptions;
   },
 ): Promise<RunReport> {
-  const unplayable = m2Problems(scenario);
-  if (unplayable.length > 0) throw new Error(`${scenario.id} can't run in M2: ${unplayable[0]}`);
   // The cap first: it is what the owner approved, so it is checked before anything else.
   const callCap = options.callCap ?? scenario.budget.calls;
   if (!Number.isInteger(callCap) || callCap < 1 || callCap > scenario.budget.calls) {
@@ -326,11 +324,7 @@ async function openWorkspace(page: Page): Promise<string | null> {
  */
 async function toolShown(page: Page): Promise<Screenshot> {
   if ((await page.locator(".tool-frame iframe").count()) === 0) return "no tool";
-  const tool = page
-    .frameLocator(".tool-frame iframe")
-    .frameLocator("iframe")
-    .frameLocator("iframe");
-  return tool
+  return toolFrame(page)
     .locator("body *:visible")
     .first()
     .waitFor({ timeout: 5_000 })
@@ -338,6 +332,65 @@ async function toolShown(page: Page): Promise<Screenshot> {
       () => "tool" as const,
       () => "empty" as const,
     );
+}
+
+/** The open tool's own page, inside the host's frame and the wrapper's (RUN-01). */
+const toolFrame = (page: Page) =>
+  page.frameLocator(".tool-frame iframe").frameLocator("iframe").frameLocator("iframe");
+
+/**
+ * Waits until the open workspace's data stops changing: a control's save goes through the bridge
+ * after the click, perhaps after a read, so the facts are read once it has been quiet for a
+ * second, or after ten seconds, when they say whatever happened.
+ */
+async function dataSettled(store: Store, id: string): Promise<void> {
+  const revision = () => getWorkspace(store, id)?.dataRevision;
+  let last = revision();
+  let quiet = 0;
+  for (let waited = 0; waited < 10_000 && quiet < 1_000; waited += 200) {
+    await new Promise((done) => setTimeout(done, 200));
+    const now = revision();
+    quiet = now === last ? quiet + 200 : 0;
+    last = now;
+  }
+}
+
+/**
+ * Uses one of the open tool's controls, as the person would (EVAL-01): finds the one shown element
+ * marked with the step's hook, inside the one shown element `in` names when it names one, and
+ * clicks it or types the value into it; a select takes the choice whose text or value it is. A
+ * hook the tool doesn't show once, or shows more than once, fails the step in plain words.
+ */
+async function useControl(page: Page, action: DoAction): Promise<void> {
+  const tool = toolFrame(page);
+  const marked = (hook: string) => `[data-hook~="${hook}"]:visible`;
+  const hook = "click" in action ? action.click : action.fill;
+  let scope = tool.locator("body");
+  if (action.in) {
+    const holders = tool.locator(marked(action.in.hook)).filter({ hasText: action.in.text });
+    const count = await holders.count();
+    if (count !== 1) {
+      throw new Error(
+        `The tool shows ${count} elements marked ${action.in.hook} with "${action.in.text}"; the step needs one.`,
+      );
+    }
+    scope = holders;
+  }
+  const control = scope.locator(marked(hook));
+  const count = await control.count();
+  if (count !== 1) {
+    throw new Error(
+      `The tool shows ${count} elements marked ${hook}${action.in ? ` there` : ""}; the step needs one.`,
+    );
+  }
+  if ("click" in action) {
+    await control.click();
+  } else if ((await scope.locator(`select${marked(hook)}`).count()) === 1) {
+    // Playwright picks the choice whose value or text is the value, or fails saying it has none.
+    await control.selectOption(action.value);
+  } else {
+    await control.fill(action.value);
+  }
 }
 
 /** Tessera's newest reply in the chat, where a request's outcome is said (APP-01), as text. */
@@ -501,5 +554,12 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     await requestBox(page).waitFor();
     return { claim: "none" };
   }
-  throw new Error(`The ${stepKind(s)} step isn't played in M2.`);
+  if ("do" in s) {
+    const id = await openWorkspace(page);
+    if (!id) throw new Error("No tool is open to use.");
+    await useControl(page, s.do);
+    await dataSettled(store, id);
+    return { claim: "none" };
+  }
+  throw new Error(`The runner doesn't play ${stepKind(s)} steps.`);
 }
