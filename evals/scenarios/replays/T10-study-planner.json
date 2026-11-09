@@ -2,8 +2,8 @@
   "about": "A live run of T10-study-planner, recorded for replay.",
   "scenario": "T10-study-planner",
   "recorded": {
-    "head": "954c5f2ce50579c4fa6d707ecbae074616275fbd",
-    "at": "2026-11-09T19:33:44.447Z",
+    "head": "eb5944f656220ccbf76c7c0ee34cea11e1aceb87",
+    "at": "2026-11-09T21:24:58.882Z",
     "cliVersion": "2.1.321"
   },
   "answers": [
@@ -25,16 +25,12 @@
               "request": "Help me organize topics"
             },
             {
-              "name": "Schedule evening study",
-              "request": "My exam is in two weeks... I study evenings"
+              "name": "Evening study schedule",
+              "request": "I study evenings"
             },
             {
               "name": "No Friday study",
               "request": "never Fridays"
-            },
-            {
-              "name": "Flashcards from notes (later)",
-              "request": "Later I'll paste notes to make flashcards"
             }
           ],
           "profile": "scheduling",
@@ -55,14 +51,11 @@
         "value": {
           "outcome": "tool",
           "name": "Exam study planner",
-          "summary": "Add your exam topics and they are spread over your evening study sessions from today until the exam, never on the weekdays you rule out (Friday is set). Tick sessions off as you go.",
-          "uiMode": "standard",
-          "capabilities": ["clock"],
-          "leftOut": [],
+          "summary": "Add your exam topics and the tool spreads them over your evening sessions in the next two weeks. Rules like \"never Fridays\" keep sessions off those days. Making flashcards from notes isn't part of this tool yet.",
           "code": {
-            "html": "<main>\n<h1>Exam study planner</h1>\n<p class=\"muted\">Evening sessions, spread from today until the exam.</p>\n<p id=\"status\" role=\"status\" aria-live=\"polite\" class=\"status\"></p>\n\n<section aria-labelledby=\"h-exam\">\n<h2 id=\"h-exam\">Exam</h2>\n<div class=\"row\">\n<label for=\"exam\">Exam date</label>\n<input type=\"date\" id=\"exam\">\n<span id=\"left\" class=\"muted\"></span>\n</div>\n<p class=\"muted\">Changing the date does not move sessions already planned.</p>\n</section>\n\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a topic</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"tname\">Topic</label>\n<input type=\"text\" id=\"tname\" data-hook=\"task-name\" placeholder=\"e.g. Chapter 3: Cell biology\"></div>\n<div class=\"field\"><label for=\"tcount\">Evening sessions</label>\n<input type=\"number\" id=\"tcount\" min=\"1\" max=\"7\" value=\"2\"></div>\n<button type=\"button\" id=\"addtask\" data-hook=\"task-add\">Add topic</button>\n</div>\n<p id=\"terr\" class=\"error\"></p>\n</section>\n\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days I don't study</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rday\">Weekday</label>\n<select id=\"rday\" data-hook=\"rule-day\"></select></div>\n<button type=\"button\" id=\"addrule\" data-hook=\"rule-add\">Add rule</button>\n</div>\n<p id=\"rerr\" class=\"error\"></p>\n<ul id=\"rules\" class=\"plain\"></ul>\n<p class=\"muted\">Adding a rule moves the sessions on that day to other days. Removing a rule does not move them back.</p>\n</section>\n\n<section aria-labelledby=\"h-plan\">\n<h2 id=\"h-plan\">Plan</h2>\n<div id=\"plan\"></div>\n</section>\n\n<section aria-labelledby=\"h-topics\">\n<h2 id=\"h-topics\">Topics</h2>\n<ul id=\"topics\" class=\"plain\"></ul>\n</section>\n</main>",
-            "css": "main{max-width:720px;margin:0 auto;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-1)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\nh3{font-size:var(--ui-size-body);font-weight:600;margin:var(--ui-space-3) 0 var(--ui-space-1)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 160px}\nlabel{font-size:var(--ui-size-secondary)}\ninput[type=text],input[type=number],input[type=date],select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;max-width:100%}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\n#addtask,#addrule{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul.plain{list-style:none;padding:0;margin:var(--ui-space-2) 0}\nul.plain li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\nli.session label{display:flex;gap:var(--ui-space-2);align-items:center;font-size:var(--ui-size-body);min-height:var(--ui-target)}\nli.session input{width:20px;height:20px}\nli.done .tn{text-decoration:line-through;color:var(--ui-text-secondary)}\n.error{color:var(--ui-error);margin:var(--ui-space-1) 0;min-height:0}\n.status{color:var(--ui-success);margin:var(--ui-space-2) 0}\n.status.bad{color:var(--ui-error)}",
-            "js": "const WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nconst MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nlet state={tasks:[],rules:[],settings:[]};\nlet revs=new Map();\nlet today='';\nconst $=(id)=>document.getElementById(id);\n\nfunction pad(n){return String(n).padStart(2,'0');}\nfunction toDays(s){\n  const [y0,m,d]=s.split('-').map(Number);\n  const y=m<=2?y0-1:y0;\n  const era=Math.floor(y/400);\n  const yoe=y-era*400;\n  const doy=Math.floor((153*(m+(m>2?-3:9))+2)/5)+d-1;\n  const doe=yoe*365+Math.floor(yoe/4)-Math.floor(yoe/100)+doy;\n  return era*146097+doe-719468;\n}\nfunction fromDays(n){\n  const z=n+719468;\n  const era=Math.floor(z/146097);\n  const doe=z-era*146097;\n  const yoe=Math.floor((doe-Math.floor(doe/1460)+Math.floor(doe/36524)-Math.floor(doe/146096))/365);\n  const doy=doe-(365*yoe+Math.floor(yoe/4)-Math.floor(yoe/100));\n  const mp=Math.floor((5*doy+2)/153);\n  const d=doy-Math.floor((153*mp+2)/5)+1;\n  const m=mp<10?mp+3:mp-9;\n  const y=yoe+era*400+(m<=2?1:0);\n  return y+'-'+pad(m)+'-'+pad(d);\n}\nfunction weekday(n){return ((n+4)%7+7)%7;}\nfunction pretty(s){\n  const n=toDays(s);\n  const [y,m,d]=s.split('-').map(Number);\n  return WD[weekday(n)]+', '+d+' '+MO[m-1]+' '+y;\n}\nfunction examDate(){\n  const [s]=state.settings;\n  if(s&&s.exam){return s.exam;}\n  return fromDays(toDays(today)+14);\n}\nfunction blockedSet(extra){\n  const set=new Set();\n  for(const r of state.rules){set.add(r.weekday);}\n  if(extra!==undefined){set.add(extra);}\n  return set;\n}\nfunction candidateDays(blocked){\n  const start=toDays(today);\n  const end=Math.max(toDays(examDate())-1,start+6);\n  const out=[];\n  for(let n=start;n<=end;n++){\n    if(!blocked.has(weekday(n))){out.push(fromDays(n));}\n  }\n  return out;\n}\nfunction loadMap(skip){\n  const m=new Map();\n  for(const t of state.tasks){\n    for(const s of t.sessions){\n      if(skip&&skip(t,s)){continue;}\n      m.set(s.date,(m.get(s.date)||0)+1);\n    }\n  }\n  return m;\n}\nfunction place(days,load,used){\n  let best=null;let bestScore=Infinity;\n  for(const day of days){\n    const score=(used.has(day)?100:0)+(load.get(day)||0);\n    if(score<bestScore){bestScore=score;best=day;}\n  }\n  if(best!==null){\n    load.set(best,(load.get(best)||0)+1);\n    used.add(best);\n  }\n  return best;\n}\n\nfunction say(text,bad){\n  const s=$('status');\n  s.textContent=text;\n  s.className='status'+(bad?' bad':'');\n}\nasync function load(){\n  const res=await tessera.call('data.read',{});\n  const d=res.data;\n  state={tasks:d.tasks||[],rules:d.rules||[],settings:d.settings||[]};\n  revs=new Map();\n  for(const [c,o] of Object.entries(res.revisions)){\n    for(const [id,n] of Object.entries(o)){revs.set(c+'/'+id,n);}\n  }\n  render();\n}\nfunction rv(c,id){return revs.get(c+'/'+id)||1;}\nasync function patch(ops){\n  await tessera.call('data.patch',{operations:ops});\n  await load();\n}\n\nfunction render(){\n  const exam=examDate();\n  $('exam').value=exam;\n  const left=toDays(exam)-toDays(today);\n  $('left').textContent=left>=0?(left===1?'1 day left':left+' days left'):'The exam date has passed.';\n\n  const rl=$('rules');rl.textContent='';\n  const sorted=state.rules.slice().sort((a,b)=>a.weekday-b.weekday);\n  if(sorted.length===0){\n    const li=document.createElement('li');\n    li.textContent='No rules yet: sessions can fall on any day.';\n    rl.appendChild(li);\n  }\n  for(const r of sorted){\n    const li=document.createElement('li');\n    li.setAttribute('data-hook','rule');\n    const sp=document.createElement('span');\n    sp.textContent='No sessions on '+WD[r.weekday];\n    const b=document.createElement('button');\n    b.type='button';\n    b.setAttribute('data-hook','rule-remove');\n    b.textContent='Remove rule';\n    b.setAttribute('aria-label','Remove rule: no sessions on '+WD[r.weekday]);\n    b.addEventListener('click',()=>removeRule(r.id));\n    li.appendChild(sp);li.appendChild(b);\n    rl.appendChild(li);\n  }\n\n  const all=[];\n  for(const t of state.tasks){\n    t.sessions.forEach((s,i)=>all.push({task:t,i:i,date:s.date,done:s.done}));\n  }\n  all.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.task.name.localeCompare(b.task.name));\n  const plan=$('plan');plan.textContent='';\n  if(all.length===0){\n    const p=document.createElement('p');\n    p.className='muted';\n    p.textContent='No sessions yet. Add a topic above and it will be scheduled for you.';\n    plan.appendChild(p);\n  }\n  let curDate=null;let ul=null;\n  for(const e of all){\n    if(e.date!==curDate){\n      curDate=e.date;\n      const h=document.createElement('h3');\n      h.textContent=pretty(e.date)+' (evening)';\n      plan.appendChild(h);\n      ul=document.createElement('ul');ul.className='plain';\n      plan.appendChild(ul);\n    }\n    const li=document.createElement('li');\n    li.className='session'+(e.done?' done':'');\n    li.setAttribute('data-hook','session');\n    const lab=document.createElement('label');\n    const cb=document.createElement('input');\n    cb.type='checkbox';cb.checked=!!e.done;\n    cb.addEventListener('change',()=>toggle(e.task.id,e.i,cb.checked));\n    const tn=document.createElement('span');\n    tn.className='tn';\n    tn.setAttribute('data-hook','session-task');\n    tn.textContent=e.task.name;\n    lab.appendChild(cb);lab.appendChild(tn);\n    const tm=document.createElement('time');\n    tm.setAttribute('datetime',e.date);\n    tm.className='muted';\n    const [yy,mm,dd]=e.date.split('-').map(Number);\n    tm.textContent=dd+' '+MO[mm-1];\n    li.appendChild(lab);li.appendChild(tm);\n    ul.appendChild(li);\n  }\n\n  const tl=$('topics');tl.textContent='';\n  if(state.tasks.length===0){\n    const li=document.createElement('li');\n    li.textContent='No topics yet.';\n    tl.appendChild(li);\n  }\n  for(const t of state.tasks){\n    const li=document.createElement('li');\n    const sp=document.createElement('span');\n    const dn=t.sessions.filter((s)=>s.done).length;\n    sp.textContent=t.name+' — '+dn+' of '+t.sessions.length+' sessions done';\n    const b=document.createElement('button');\n    b.type='button';\n    b.textContent='Remove topic';\n    b.setAttribute('aria-label','Remove topic '+t.name);\n    b.addEventListener('click',()=>removeTask(t.id,t.name));\n    li.appendChild(sp);li.appendChild(b);\n    tl.appendChild(li);\n  }\n}\n\nasync function addTask(){\n  const input=$('tname');\n  const name=input.value.trim();\n  $('terr').textContent='';\n  if(!name){$('terr').textContent='Type the topic’s name first.';input.focus();return;}\n  let n=parseInt($('tcount').value,10);\n  if(!(n>=1)){n=1;}\n  if(n>7){n=7;}\n  const days=candidateDays(blockedSet());\n  if(days.length===0){$('terr').textContent='Every weekday is ruled out, so there is no day to study. Remove a rule first.';return;}\n  const ld=loadMap();\n  const used=new Set();\n  const sessions=[];\n  for(let i=0;i<n;i++){\n    const day=place(days,ld,used);\n    sessions.push({date:day,done:false});\n  }\n  sessions.sort((a,b)=>a.date<b.date?-1:1);\n  try{\n    await patch([{op:'add',collection:'tasks',record:{name:name,sessions:sessions}}]);\n    input.value='';\n    say('Added “'+name+'” with '+n+(n===1?' session.':' sessions.'));\n    input.focus();\n  }catch(err){\n    say('Could not add the topic. Nothing was changed; please try again.',true);\n  }\n}\nasync function toggle(id,i,val){\n  const t=state.tasks.find((x)=>x.id===id);\n  if(!t){return;}\n  const sessions=t.sessions.map((s,k)=>k===i?{date:s.date,done:val}:s);\n  try{\n    await patch([{op:'replace',collection:'tasks',id:id,revisionCount:rv('tasks',id),fields:{sessions:sessions}}]);\n  }catch(err){\n    say('Could not update that session. Please try again.',true);\n    await load();\n  }\n}\nasync function removeTask(id,name){\n  try{\n    await patch([{op:'remove',collection:'tasks',id:id,revisionCount:rv('tasks',id)}]);\n    say('Removed “'+name+'” and its sessions.');\n  }catch(err){\n    say('Could not remove the topic. Please try again.',true);\n  }\n}\nasync function addRule(){\n  $('rerr').textContent='';\n  const day=parseInt($('rday').value,10);\n  if(state.rules.some((r)=>r.weekday===day)){\n    $('rerr').textContent='There is already a rule for '+WD[day]+'.';return;\n  }\n  const blocked=blockedSet(day);\n  if(blocked.size>=7){\n    $('rerr').textContent='That would rule out every day of the week. Keep at least one study day.';return;\n  }\n  const days=candidateDays(blocked);\n  const isMoved=(s)=>s.date>=today&&weekday(toDays(s.date))===day;\n  const ld=loadMap((t,s)=>isMoved(s));\n  const ops=[{op:'add',collection:'rules',record:{weekday:day}}];\n  let moved=0;\n  for(const t of state.tasks){\n    if(!t.sessions.some(isMoved)){continue;}\n    const used=new Set();\n    for(const s of t.sessions){if(!isMoved(s)){used.add(s.date);}}\n    const sessions=t.sessions.map((s)=>{\n      if(!isMoved(s)){return s;}\n      const nd=place(days,ld,used);\n      moved++;\n      return {date:nd===null?s.date:nd,done:s.done};\n    });\n    sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);\n    ops.push({op:'replace',collection:'tasks',id:t.id,revisionCount:rv('tasks',t.id),fields:{sessions:sessions}});\n  }\n  try{\n    await patch(ops);\n    say('Rule added: no sessions on '+WD[day]+'. '+moved+(moved===1?' session moved.':' sessions moved.'));\n  }catch(err){\n    say('Could not add the rule. Nothing was changed; please try again.',true);\n  }\n}\nasync function removeRule(id){\n  try{\n    await patch([{op:'remove',collection:'rules',id:id,revisionCount:rv('rules',id)}]);\n    say('Rule removed. Planned sessions stay where they are.');\n  }catch(err){\n    say('Could not remove the rule. Please try again.',true);\n  }\n}\nasync function saveExam(){\n  const v=$('exam').value;\n  if(!v){return;}\n  const [s]=state.settings;\n  try{\n    if(s){await patch([{op:'replace',collection:'settings',id:s.id,revisionCount:rv('settings',s.id),fields:{exam:v}}]);}\n    else{await patch([{op:'add',collection:'settings',record:{exam:v}}]);}\n    say('Exam date saved.');\n  }catch(err){\n    say('Could not save the exam date. Please try again.',true);\n  }\n}\n\nfor(let i=0;i<7;i++){\n  const o=document.createElement('option');\n  o.value=String(i);o.textContent=WD[i];\n  $('rday').appendChild(o);\n}\n$('rday').value='5';\n$('addtask').addEventListener('click',addTask);\n$('addrule').addEventListener('click',addRule);\n$('exam').addEventListener('change',saveExam);\n$('tname').addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();addTask();}});\n\n(async()=>{\n  try{\n    const c=await tessera.call('clock.now',{});\n    today=c.date;\n    await load();\n  }catch(err){\n    say('Could not open your plan. Please reopen the tool.',true);\n  }\n})();"
+            "html": "<h1>Exam study planner</h1>\n<p class=\"muted\" id=\"intro\">Evening sessions for the next two weeks.</p>\n<p id=\"status\" role=\"status\" aria-live=\"polite\" class=\"status\"></p>\n\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a topic</h2>\n<div class=\"row\">\n<div class=\"field grow\"><label for=\"task-name\">Topic name</label>\n<input id=\"task-name\" data-hook=\"task-name\" type=\"text\" autocomplete=\"off\" placeholder=\"e.g. Chapter 3: Cell biology\"></div>\n<button id=\"task-add\" data-hook=\"task-add\" type=\"button\">Add topic</button>\n</div>\n<p id=\"task-error\" class=\"error\"></p>\n</section>\n\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days I don't study</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rule-day\">Weekday</label>\n<select id=\"rule-day\" data-hook=\"rule-day\">\n<option value=\"0\">Sunday</option><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option><option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\" selected>Friday</option><option value=\"6\">Saturday</option>\n</select></div>\n<button id=\"rule-add\" data-hook=\"rule-add\" type=\"button\">Add rule</button>\n</div>\n<p id=\"rule-error\" class=\"error\"></p>\n<ul id=\"rules\" class=\"list\"></ul>\n</section>\n\n<section aria-labelledby=\"h-topics\">\n<h2 id=\"h-topics\">Topics</h2>\n<ul id=\"topics\" class=\"list\"></ul>\n<p id=\"topics-empty\" class=\"muted\">No topics yet. Add your first topic above.</p>\n</section>\n\n<section aria-labelledby=\"h-sessions\">\n<h2 id=\"h-sessions\">Schedule</h2>\n<p id=\"exam-day\" class=\"muted\"></p>\n<ul id=\"sessions\" class=\"list\"></ul>\n<p id=\"sessions-empty\" class=\"muted\">No sessions yet.</p>\n</section>",
+            "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-1)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1)}\n.grow{flex:1 1 200px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select,button{font:inherit;min-height:var(--ui-target);border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:disabled{opacity:.6;cursor:default}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface)}\n.list:empty{display:none}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2) var(--ui-space-3);align-items:center;justify-content:space-between;padding:var(--ui-space-2) var(--ui-space-3);border-top:1px solid var(--ui-divider)}\n.list li:first-child{border-top:0}\n.when{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:baseline}\ntime{font-weight:600;min-width:8.5em}\n.error{color:var(--ui-error);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0;min-height:0}\n.status{color:var(--ui-success);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0;min-height:1.2em}\n.status.bad{color:var(--ui-error)}",
+            "js": "let today = '';\nlet tasks = [];\nlet sessions = [];\nlet rules = [];\nlet revs = new Map();\nlet busy = false;\nconst DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nconst WINDOW = 14;\n\nfunction $(id) { return document.getElementById(id); }\nfunction say(text, bad) {\n  const s = $('status');\n  s.textContent = text;\n  s.className = bad ? 'status bad' : 'status';\n}\nfunction addDays(str, n) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);\n}\nfunction weekdayOf(str) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();\n}\nfunction pretty(str) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });\n}\nfunction revKey(c, id) { return c + '/' + id; }\nfunction rev(c, id) { return revs.get(revKey(c, id)) || 1; }\n\nasync function load() {\n  const r = await tessera.call('data.read', {});\n  const d = r.data;\n  tasks = Array.isArray(d.tasks) ? d.tasks : [];\n  sessions = Array.isArray(d.sessions) ? d.sessions : [];\n  rules = Array.isArray(d.rules) ? d.rules : [];\n  revs = new Map();\n  for (const [c, recs] of Object.entries(r.revisions || {})) {\n    for (const [id, n] of Object.entries(recs)) revs.set(revKey(c, id), n);\n  }\n}\n\nfunction blockedSet(list) {\n  const s = new Set();\n  for (const r of list) s.add(Number(r.weekday));\n  return s;\n}\nfunction allowedDays(blocked) {\n  const out = [];\n  for (let i = 0; i < WINDOW; i++) {\n    const day = addDays(today, i);\n    if (!blocked.has(weekdayOf(day))) out.push(day);\n  }\n  return out;\n}\nfunction loadCounts(list) {\n  const m = new Map();\n  for (const s of list) m.set(s.date, (m.get(s.date) || 0) + 1);\n  return m;\n}\nfunction pickDays(allowed, counts, n) {\n  const len = allowed.length;\n  const chosen = [];\n  for (let k = 0; k < n; k++) {\n    const target = Math.floor((k + 0.5) * len / n);\n    let best = null;\n    let bestScore = Infinity;\n    for (let o = -1; o <= 1; o++) {\n      const idx = target + o;\n      if (idx < 0 || idx >= len) continue;\n      const day = allowed[idx];\n      if (chosen.includes(day)) continue;\n      const score = (counts.get(day) || 0) * 10 + Math.abs(o);\n      if (score < bestScore) { bestScore = score; best = day; }\n    }\n    if (best === null) {\n      for (const day of allowed) if (!chosen.includes(day)) { best = day; break; }\n    }\n    if (best !== null) chosen.push(best);\n  }\n  return chosen;\n}\n\nasync function run(fn) {\n  if (busy) return;\n  busy = true;\n  $('task-add').disabled = true;\n  $('rule-add').disabled = true;\n  try { await fn(); } catch (e) {\n    say('That didn\\'t work, nothing was changed. Please try again.', true);\n    try { await load(); } catch (e2) { /* keep the screen as is */ }\n  }\n  busy = false;\n  $('task-add').disabled = false;\n  $('rule-add').disabled = false;\n  render();\n}\n\nasync function addTask() {\n  const input = $('task-name');\n  const name = input.value.trim();\n  $('task-error').textContent = '';\n  if (!name) {\n    $('task-error').textContent = 'Type a topic name first.';\n    input.focus();\n    return;\n  }\n  await run(async () => {\n    const blocked = blockedSet(rules);\n    const allowed = allowedDays(blocked);\n    if (allowed.length === 0) {\n      $('task-error').textContent = 'Every weekday is ruled out, so there is no day to study. Remove a rule first.';\n      return;\n    }\n    const days = pickDays(allowed, loadCounts(sessions), Math.min(3, allowed.length));\n    const res = await tessera.call('data.patch', { operations: [{ op: 'add', collection: 'tasks', record: { name } }] });\n    const [taskId] = res.addedIds;\n    const ops = [];\n    for (const day of days) ops.push({ op: 'add', collection: 'sessions', record: { taskId, date: day } });\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    input.value = '';\n    say('Added \"' + name + '\" with ' + days.length + (days.length === 1 ? ' session.' : ' sessions.'));\n  });\n  input.focus();\n}\n\nasync function addRule() {\n  const day = Number($('rule-day').value);\n  $('rule-error').textContent = '';\n  await run(async () => {\n    const blocked = blockedSet(rules);\n    if (blocked.has(day)) {\n      $('rule-error').textContent = 'You already have a rule for ' + DAYS[day] + '.';\n      return;\n    }\n    const next = new Set(blocked);\n    next.add(day);\n    const allowed = allowedDays(next);\n    if (allowed.length === 0) {\n      $('rule-error').textContent = 'That would leave no day to study.';\n      return;\n    }\n    const affected = sessions.filter(s => weekdayOf(s.date) === day).sort((a, b) => a.date.localeCompare(b.date));\n    const kept = sessions.filter(s => weekdayOf(s.date) !== day);\n    const counts = loadCounts(kept);\n    const taskDates = new Map();\n    const remaining = new Map();\n    for (const s of kept) {\n      if (!taskDates.has(s.taskId)) taskDates.set(s.taskId, new Set());\n      taskDates.get(s.taskId).add(s.date);\n      remaining.set(s.taskId, (remaining.get(s.taskId) || 0) + 1);\n    }\n    const ops = [{ op: 'add', collection: 'rules', record: { weekday: day } }];\n    let moved = 0;\n    for (const s of affected) {\n      const has = taskDates.get(s.taskId) || new Set();\n      let cands = allowed.filter(d => !has.has(d));\n      if (cands.length === 0) {\n        if ((remaining.get(s.taskId) || 0) > 0) {\n          ops.push({ op: 'remove', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id) });\n          continue;\n        }\n        cands = allowed;\n      }\n      let best = cands[0];\n      for (const d of cands) if ((counts.get(d) || 0) < (counts.get(best) || 0)) best = d;\n      counts.set(best, (counts.get(best) || 0) + 1);\n      has.add(best);\n      taskDates.set(s.taskId, has);\n      remaining.set(s.taskId, (remaining.get(s.taskId) || 0) + 1);\n      ops.push({ op: 'replace', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id), fields: { date: best } });\n      moved++;\n    }\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    say('No studying on ' + DAYS[day] + 's now. ' + (affected.length === 0 ? 'No sessions had to move.' : affected.length + (affected.length === 1 ? ' session was' : ' sessions were') + ' moved to other days.'));\n  });\n  $('rule-add').focus();\n}\n\nasync function removeRule(rule) {\n  await run(async () => {\n    await tessera.call('data.patch', { operations: [{ op: 'remove', collection: 'rules', id: rule.id, revisionCount: rev('rules', rule.id) }] });\n    await load();\n    say('Rule removed. Existing sessions stay where they are; new topics may use ' + DAYS[Number(rule.weekday)] + 's again.');\n  });\n  $('rule-day').focus();\n}\n\nasync function removeTask(task) {\n  await run(async () => {\n    const ops = [];\n    for (const s of sessions) if (s.taskId === task.id) ops.push({ op: 'remove', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id) });\n    ops.push({ op: 'remove', collection: 'tasks', id: task.id, revisionCount: rev('tasks', task.id) });\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    say('Removed \"' + task.name + '\" and its sessions.');\n  });\n  $('task-name').focus();\n}\n\nfunction mk(tag, text, cls) {\n  const e = document.createElement(tag);\n  if (text !== undefined) e.textContent = text;\n  if (cls) e.className = cls;\n  return e;\n}\n\nfunction render() {\n  $('exam-day').textContent = today ? 'Today is ' + pretty(today) + '. Exam day: ' + pretty(addDays(today, WINDOW)) + '.' : '';\n\n  const rl = $('rules');\n  rl.replaceChildren();\n  const sortedRules = rules.slice().sort((a, b) => Number(a.weekday) - Number(b.weekday));\n  for (const r of sortedRules) {\n    const li = mk('li');\n    li.setAttribute('data-hook', 'rule');\n    li.appendChild(mk('span', 'No studying on ' + DAYS[Number(r.weekday)] + 's'));\n    const b = mk('button', 'Remove rule', 'secondary');\n    b.type = 'button';\n    b.setAttribute('data-hook', 'rule-remove');\n    b.setAttribute('aria-label', 'Remove rule: no studying on ' + DAYS[Number(r.weekday)] + 's');\n    b.addEventListener('click', () => removeRule(r));\n    li.appendChild(b);\n    rl.appendChild(li);\n  }\n\n  const byId = new Map();\n  for (const t of tasks) byId.set(t.id, t);\n\n  const tl = $('topics');\n  tl.replaceChildren();\n  for (const t of tasks) {\n    const n = sessions.filter(s => s.taskId === t.id).length;\n    const li = mk('li');\n    const w = mk('span', t.name);\n    li.appendChild(w);\n    li.appendChild(mk('span', n + (n === 1 ? ' session' : ' sessions'), 'muted'));\n    const b = mk('button', 'Remove', 'secondary');\n    b.type = 'button';\n    b.setAttribute('aria-label', 'Remove topic ' + t.name);\n    b.addEventListener('click', () => removeTask(t));\n    li.appendChild(b);\n    tl.appendChild(li);\n  }\n  $('topics-empty').hidden = tasks.length > 0;\n\n  const sl = $('sessions');\n  sl.replaceChildren();\n  const sorted = sessions.filter(s => byId.has(s.taskId)).sort((a, b) => a.date.localeCompare(b.date));\n  for (const s of sorted) {\n    const li = mk('li');\n    li.setAttribute('data-hook', 'session');\n    const wrap = mk('span', undefined, 'when');\n    const t = document.createElement('time');\n    t.setAttribute('datetime', s.date);\n    t.textContent = pretty(s.date);\n    wrap.appendChild(t);\n    const nm = mk('span', byId.get(s.taskId).name);\n    nm.setAttribute('data-hook', 'session-task');\n    wrap.appendChild(nm);\n    li.appendChild(wrap);\n    li.appendChild(mk('span', 'Evening', 'muted'));\n    sl.appendChild(li);\n  }\n  $('sessions-empty').hidden = sorted.length > 0;\n}\n\n$('task-add').addEventListener('click', addTask);\n$('task-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });\n$('rule-add').addEventListener('click', addRule);\n\n(async () => {\n  try {\n    const c = await tessera.call('clock.now', {});\n    today = c.date;\n    await load();\n  } catch (e) {\n    say('Could not load your plan. Please reopen the tool.', true);\n  }\n  render();\n})();"
           },
           "data": {
             "schema": {
@@ -77,25 +70,29 @@
                         "type": "string"
                       },
                       "name": {
-                        "type": "string"
-                      },
-                      "sessions": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "date": {
-                              "type": "string"
-                            },
-                            "done": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": ["date", "done"]
-                        }
+                        "type": "string",
+                        "minLength": 1
                       }
                     },
-                    "required": ["id", "name", "sessions"]
+                    "required": ["id", "name"]
+                  }
+                },
+                "sessions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "date": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "taskId", "date"]
                   }
                 },
                 "rules": {
@@ -114,39 +111,34 @@
                     },
                     "required": ["id", "weekday"]
                   }
-                },
-                "settings": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "exam": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["id"]
-                  }
                 }
               },
-              "required": ["tasks", "rules", "settings"]
+              "required": ["tasks", "sessions", "rules"]
             },
             "reusableDefaults": {
               "tasks": [],
-              "rules": [],
-              "settings": []
+              "sessions": [],
+              "rules": [
+                {
+                  "id": "rule-friday",
+                  "weekday": 5
+                }
+              ]
             },
             "initialState": {
               "rules": [
                 {
-                  "id": "no-friday",
+                  "id": "rule-friday",
                   "weekday": 5
                 }
-              ]
+              ],
+              "tasks": [],
+              "sessions": []
             }
-          }
+          },
+          "capabilities": ["clock"],
+          "uiMode": "standard",
+          "leftOut": ["Making flashcards from pasted notes (not included yet)"]
         }
       },
       "parts": [
@@ -167,13 +159,11 @@
         "value": {
           "outcome": "tool",
           "name": "Exam study planner",
-          "summary": "Add your exam topics and they are spread over your evening study sessions from today until the exam, never on the weekdays you rule out (Friday is set). Tick sessions off as you go.",
-          "capabilities": ["clock"],
-          "uiMode": "standard",
+          "summary": "Add your exam topics and the tool spreads them over your evening sessions in the next two weeks. Rules like \"never Fridays\" keep sessions off those days. Making flashcards from notes isn't part of this tool yet.",
           "code": {
-            "html": "<main>\n<h1>Exam study planner</h1>\n<p class=\"muted\">Evening sessions, spread from today until the exam.</p>\n<p id=\"status\" role=\"status\" aria-live=\"polite\" class=\"status\"></p>\n\n<section aria-labelledby=\"h-exam\">\n<h2 id=\"h-exam\">Exam</h2>\n<div class=\"row\">\n<label for=\"exam\">Exam date</label>\n<input type=\"date\" id=\"exam\">\n<span id=\"left\" class=\"muted\"></span>\n</div>\n<p class=\"muted\">Changing the date does not move sessions already planned.</p>\n</section>\n\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a topic</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"tname\">Topic</label>\n<input type=\"text\" id=\"tname\" data-hook=\"task-name\" placeholder=\"e.g. Chapter 3: Cell biology\"></div>\n<div class=\"field\"><label for=\"tcount\">Evening sessions</label>\n<input type=\"number\" id=\"tcount\" min=\"1\" max=\"7\" value=\"2\"></div>\n<button type=\"button\" id=\"addtask\" data-hook=\"task-add\">Add topic</button>\n</div>\n<p id=\"terr\" class=\"error\"></p>\n</section>\n\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days I don't study</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rday\">Weekday</label>\n<select id=\"rday\" data-hook=\"rule-day\"></select></div>\n<button type=\"button\" id=\"addrule\" data-hook=\"rule-add\">Add rule</button>\n</div>\n<p id=\"rerr\" class=\"error\"></p>\n<ul id=\"rules\" class=\"plain\"></ul>\n<p class=\"muted\">Adding a rule moves the sessions on that day to other days. Removing a rule does not move them back.</p>\n</section>\n\n<section aria-labelledby=\"h-plan\">\n<h2 id=\"h-plan\">Plan</h2>\n<div id=\"plan\"></div>\n</section>\n\n<section aria-labelledby=\"h-topics\">\n<h2 id=\"h-topics\">Topics</h2>\n<ul id=\"topics\" class=\"plain\"></ul>\n</section>\n</main>",
-            "css": "main{max-width:720px;margin:0 auto;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-1)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\nh3{font-size:var(--ui-size-body);font-weight:600;margin:var(--ui-space-3) 0 var(--ui-space-1)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 160px}\nlabel{font-size:var(--ui-size-secondary)}\ninput[type=text],input[type=number],input[type=date],select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;max-width:100%}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\n#addtask,#addrule{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul.plain{list-style:none;padding:0;margin:var(--ui-space-2) 0}\nul.plain li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\nli.session label{display:flex;gap:var(--ui-space-2);align-items:center;font-size:var(--ui-size-body);min-height:var(--ui-target)}\nli.session input{width:20px;height:20px}\nli.done .tn{text-decoration:line-through;color:var(--ui-text-secondary)}\n.error{color:var(--ui-error);margin:var(--ui-space-1) 0;min-height:0}\n.status{color:var(--ui-success);margin:var(--ui-space-2) 0}\n.status.bad{color:var(--ui-error)}",
-            "js": "const WD=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nconst MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];\nlet state={tasks:[],rules:[],settings:[]};\nlet revs=new Map();\nlet today='';\nconst $=(id)=>document.getElementById(id);\n\nfunction pad(n){return String(n).padStart(2,'0');}\nfunction toDays(s){\n  const [y0,m,d]=s.split('-').map(Number);\n  const y=m<=2?y0-1:y0;\n  const era=Math.floor(y/400);\n  const yoe=y-era*400;\n  const doy=Math.floor((153*(m+(m>2?-3:9))+2)/5)+d-1;\n  const doe=yoe*365+Math.floor(yoe/4)-Math.floor(yoe/100)+doy;\n  return era*146097+doe-719468;\n}\nfunction fromDays(n){\n  const z=n+719468;\n  const era=Math.floor(z/146097);\n  const doe=z-era*146097;\n  const yoe=Math.floor((doe-Math.floor(doe/1460)+Math.floor(doe/36524)-Math.floor(doe/146096))/365);\n  const doy=doe-(365*yoe+Math.floor(yoe/4)-Math.floor(yoe/100));\n  const mp=Math.floor((5*doy+2)/153);\n  const d=doy-Math.floor((153*mp+2)/5)+1;\n  const m=mp<10?mp+3:mp-9;\n  const y=yoe+era*400+(m<=2?1:0);\n  return y+'-'+pad(m)+'-'+pad(d);\n}\nfunction weekday(n){return ((n+4)%7+7)%7;}\nfunction pretty(s){\n  const n=toDays(s);\n  const [y,m,d]=s.split('-').map(Number);\n  return WD[weekday(n)]+', '+d+' '+MO[m-1]+' '+y;\n}\nfunction examDate(){\n  const [s]=state.settings;\n  if(s&&s.exam){return s.exam;}\n  return fromDays(toDays(today)+14);\n}\nfunction blockedSet(extra){\n  const set=new Set();\n  for(const r of state.rules){set.add(r.weekday);}\n  if(extra!==undefined){set.add(extra);}\n  return set;\n}\nfunction candidateDays(blocked){\n  const start=toDays(today);\n  const end=Math.max(toDays(examDate())-1,start+6);\n  const out=[];\n  for(let n=start;n<=end;n++){\n    if(!blocked.has(weekday(n))){out.push(fromDays(n));}\n  }\n  return out;\n}\nfunction loadMap(skip){\n  const m=new Map();\n  for(const t of state.tasks){\n    for(const s of t.sessions){\n      if(skip&&skip(t,s)){continue;}\n      m.set(s.date,(m.get(s.date)||0)+1);\n    }\n  }\n  return m;\n}\nfunction place(days,load,used){\n  let best=null;let bestScore=Infinity;\n  for(const day of days){\n    const score=(used.has(day)?100:0)+(load.get(day)||0);\n    if(score<bestScore){bestScore=score;best=day;}\n  }\n  if(best!==null){\n    load.set(best,(load.get(best)||0)+1);\n    used.add(best);\n  }\n  return best;\n}\n\nfunction say(text,bad){\n  const s=$('status');\n  s.textContent=text;\n  s.className='status'+(bad?' bad':'');\n}\nasync function load(){\n  const res=await tessera.call('data.read',{});\n  const d=res.data;\n  state={tasks:d.tasks||[],rules:d.rules||[],settings:d.settings||[]};\n  revs=new Map();\n  const rr=res.revisions||{};\n  const groups=[['tasks',rr.tasks],['rules',rr.rules],['settings',rr.settings]];\n  for(const [c,o] of groups){\n    if(!o){continue;}\n    for(const id in o){revs.set(c+'/'+id,o[id]);}\n  }\n  render();\n}\nfunction rv(c,id){return revs.get(c+'/'+id)||1;}\nasync function patch(ops){\n  await tessera.call('data.patch',{operations:ops});\n  await load();\n}\n\nfunction render(){\n  const exam=examDate();\n  $('exam').value=exam;\n  const left=toDays(exam)-toDays(today);\n  $('left').textContent=left>=0?(left===1?'1 day left':left+' days left'):'The exam date has passed.';\n\n  const rl=$('rules');rl.textContent='';\n  const sorted=state.rules.slice().sort((a,b)=>a.weekday-b.weekday);\n  if(sorted.length===0){\n    const li=document.createElement('li');\n    li.textContent='No rules yet: sessions can fall on any day.';\n    rl.appendChild(li);\n  }\n  for(const r of sorted){\n    const li=document.createElement('li');\n    li.setAttribute('data-hook','rule');\n    const sp=document.createElement('span');\n    sp.textContent='No sessions on '+WD[r.weekday];\n    const b=document.createElement('button');\n    b.type='button';\n    b.setAttribute('data-hook','rule-remove');\n    b.textContent='Remove rule';\n    b.setAttribute('aria-label','Remove rule: no sessions on '+WD[r.weekday]);\n    b.addEventListener('click',()=>removeRule(r.id));\n    li.appendChild(sp);li.appendChild(b);\n    rl.appendChild(li);\n  }\n\n  const all=[];\n  for(const t of state.tasks){\n    t.sessions.forEach((s,i)=>all.push({task:t,i:i,date:s.date,done:s.done}));\n  }\n  all.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.task.name.localeCompare(b.task.name));\n  const plan=$('plan');plan.textContent='';\n  if(all.length===0){\n    const p=document.createElement('p');\n    p.className='muted';\n    p.textContent='No sessions yet. Add a topic above and it will be scheduled for you.';\n    plan.appendChild(p);\n  }\n  let curDate=null;let ul=null;\n  for(const e of all){\n    if(e.date!==curDate){\n      curDate=e.date;\n      const h=document.createElement('h3');\n      h.textContent=pretty(e.date)+' (evening)';\n      plan.appendChild(h);\n      ul=document.createElement('ul');ul.className='plain';\n      plan.appendChild(ul);\n    }\n    const li=document.createElement('li');\n    li.className='session'+(e.done?' done':'');\n    li.setAttribute('data-hook','session');\n    const lab=document.createElement('label');\n    const cb=document.createElement('input');\n    cb.type='checkbox';cb.checked=!!e.done;\n    cb.addEventListener('change',()=>toggle(e.task.id,e.i,cb.checked));\n    const tn=document.createElement('span');\n    tn.className='tn';\n    tn.setAttribute('data-hook','session-task');\n    tn.textContent=e.task.name;\n    lab.appendChild(cb);lab.appendChild(tn);\n    const tm=document.createElement('time');\n    tm.setAttribute('datetime',e.date);\n    tm.className='muted';\n    const [yy,mm,dd]=e.date.split('-').map(Number);\n    tm.textContent=dd+' '+MO[mm-1];\n    li.appendChild(lab);li.appendChild(tm);\n    ul.appendChild(li);\n  }\n\n  const tl=$('topics');tl.textContent='';\n  if(state.tasks.length===0){\n    const li=document.createElement('li');\n    li.textContent='No topics yet.';\n    tl.appendChild(li);\n  }\n  for(const t of state.tasks){\n    const li=document.createElement('li');\n    const sp=document.createElement('span');\n    const dn=t.sessions.filter((s)=>s.done).length;\n    sp.textContent=t.name+' — '+dn+' of '+t.sessions.length+' sessions done';\n    const b=document.createElement('button');\n    b.type='button';\n    b.textContent='Remove topic';\n    b.setAttribute('aria-label','Remove topic '+t.name);\n    b.addEventListener('click',()=>removeTask(t.id,t.name));\n    li.appendChild(sp);li.appendChild(b);\n    tl.appendChild(li);\n  }\n}\n\nasync function addTask(){\n  const input=$('tname');\n  const name=input.value.trim();\n  $('terr').textContent='';\n  if(!name){$('terr').textContent='Type the topic’s name first.';input.focus();return;}\n  let n=parseInt($('tcount').value,10);\n  if(!(n>=1)){n=1;}\n  if(n>7){n=7;}\n  const days=candidateDays(blockedSet());\n  if(days.length===0){$('terr').textContent='Every weekday is ruled out, so there is no day to study. Remove a rule first.';return;}\n  const ld=loadMap();\n  const used=new Set();\n  const sessions=[];\n  for(let i=0;i<n;i++){\n    const day=place(days,ld,used);\n    sessions.push({date:day,done:false});\n  }\n  sessions.sort((a,b)=>a.date<b.date?-1:1);\n  try{\n    await patch([{op:'add',collection:'tasks',record:{name:name,sessions:sessions}}]);\n    input.value='';\n    say('Added “'+name+'” with '+n+(n===1?' session.':' sessions.'));\n    input.focus();\n  }catch(err){\n    say('Could not add the topic. Nothing was changed; please try again.',true);\n  }\n}\nasync function toggle(id,i,val){\n  const t=state.tasks.find((x)=>x.id===id);\n  if(!t){return;}\n  const sessions=t.sessions.map((s,k)=>k===i?{date:s.date,done:val}:s);\n  try{\n    await patch([{op:'replace',collection:'tasks',id:id,revisionCount:rv('tasks',id),fields:{sessions:sessions}}]);\n  }catch(err){\n    say('Could not update that session. Please try again.',true);\n    await load();\n  }\n}\nasync function removeTask(id,name){\n  try{\n    await patch([{op:'remove',collection:'tasks',id:id,revisionCount:rv('tasks',id)}]);\n    say('Removed “'+name+'” and its sessions.');\n  }catch(err){\n    say('Could not remove the topic. Please try again.',true);\n  }\n}\nasync function addRule(){\n  $('rerr').textContent='';\n  const day=parseInt($('rday').value,10);\n  if(state.rules.some((r)=>r.weekday===day)){\n    $('rerr').textContent='There is already a rule for '+WD[day]+'.';return;\n  }\n  const blocked=blockedSet(day);\n  if(blocked.size>=7){\n    $('rerr').textContent='That would rule out every day of the week. Keep at least one study day.';return;\n  }\n  const days=candidateDays(blocked);\n  const isMoved=(s)=>s.date>=today&&weekday(toDays(s.date))===day;\n  const ld=loadMap((t,s)=>isMoved(s));\n  const ops=[{op:'add',collection:'rules',record:{weekday:day}}];\n  let moved=0;\n  for(const t of state.tasks){\n    if(!t.sessions.some(isMoved)){continue;}\n    const used=new Set();\n    for(const s of t.sessions){if(!isMoved(s)){used.add(s.date);}}\n    const sessions=t.sessions.map((s)=>{\n      if(!isMoved(s)){return s;}\n      const nd=place(days,ld,used);\n      moved++;\n      return {date:nd===null?s.date:nd,done:s.done};\n    });\n    sessions.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);\n    ops.push({op:'replace',collection:'tasks',id:t.id,revisionCount:rv('tasks',t.id),fields:{sessions:sessions}});\n  }\n  try{\n    await patch(ops);\n    say('Rule added: no sessions on '+WD[day]+'. '+moved+(moved===1?' session moved.':' sessions moved.'));\n  }catch(err){\n    say('Could not add the rule. Nothing was changed; please try again.',true);\n  }\n}\nasync function removeRule(id){\n  try{\n    await patch([{op:'remove',collection:'rules',id:id,revisionCount:rv('rules',id)}]);\n    say('Rule removed. Planned sessions stay where they are.');\n  }catch(err){\n    say('Could not remove the rule. Please try again.',true);\n  }\n}\nasync function saveExam(){\n  const v=$('exam').value;\n  if(!v){return;}\n  const [s]=state.settings;\n  try{\n    if(s){await patch([{op:'replace',collection:'settings',id:s.id,revisionCount:rv('settings',s.id),fields:{exam:v}}]);}\n    else{await patch([{op:'add',collection:'settings',record:{exam:v}}]);}\n    say('Exam date saved.');\n  }catch(err){\n    say('Could not save the exam date. Please try again.',true);\n  }\n}\n\nfor(let i=0;i<7;i++){\n  const o=document.createElement('option');\n  o.value=String(i);o.textContent=WD[i];\n  $('rday').appendChild(o);\n}\n$('rday').value='5';\n$('addtask').addEventListener('click',addTask);\n$('addrule').addEventListener('click',addRule);\n$('exam').addEventListener('change',saveExam);\n$('tname').addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();addTask();}});\n\n(async()=>{\n  try{\n    const c=await tessera.call('clock.now',{});\n    today=c.date;\n    await load();\n  }catch(err){\n    say('Could not open your plan. Please reopen the tool.',true);\n  }\n})();"
+            "html": "<h1>Exam study planner</h1>\n<p class=\"muted\" id=\"intro\">Evening sessions for the next two weeks.</p>\n<p id=\"status\" role=\"status\" aria-live=\"polite\" class=\"status\"></p>\n\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a topic</h2>\n<div class=\"row\">\n<div class=\"field grow\"><label for=\"task-name\">Topic name</label>\n<input id=\"task-name\" data-hook=\"task-name\" type=\"text\" autocomplete=\"off\" placeholder=\"e.g. Chapter 3: Cell biology\"></div>\n<button id=\"task-add\" data-hook=\"task-add\" type=\"button\">Add topic</button>\n</div>\n<p id=\"task-error\" class=\"error\"></p>\n</section>\n\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days I don't study</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rule-day\">Weekday</label>\n<select id=\"rule-day\" data-hook=\"rule-day\">\n<option value=\"0\">Sunday</option><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option><option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\" selected>Friday</option><option value=\"6\">Saturday</option>\n</select></div>\n<button id=\"rule-add\" data-hook=\"rule-add\" type=\"button\">Add rule</button>\n</div>\n<p id=\"rule-error\" class=\"error\"></p>\n<ul id=\"rules\" class=\"list\"></ul>\n</section>\n\n<section aria-labelledby=\"h-topics\">\n<h2 id=\"h-topics\">Topics</h2>\n<ul id=\"topics\" class=\"list\"></ul>\n<p id=\"topics-empty\" class=\"muted\">No topics yet. Add your first topic above.</p>\n</section>\n\n<section aria-labelledby=\"h-sessions\">\n<h2 id=\"h-sessions\">Schedule</h2>\n<p id=\"exam-day\" class=\"muted\"></p>\n<ul id=\"sessions\" class=\"list\"></ul>\n<p id=\"sessions-empty\" class=\"muted\">No sessions yet.</p>\n</section>",
+            "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-1)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1)}\n.grow{flex:1 1 200px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select,button{font:inherit;min-height:var(--ui-target);border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:disabled{opacity:.6;cursor:default}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface)}\n.list:empty{display:none}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2) var(--ui-space-3);align-items:center;justify-content:space-between;padding:var(--ui-space-2) var(--ui-space-3);border-top:1px solid var(--ui-divider)}\n.list li:first-child{border-top:0}\n.when{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:baseline}\ntime{font-weight:600;min-width:8.5em}\n.error{color:var(--ui-error);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0;min-height:0}\n.status{color:var(--ui-success);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0;min-height:1.2em}\n.status.bad{color:var(--ui-error)}",
+            "js": "let today = '';\nlet tasks = [];\nlet sessions = [];\nlet rules = [];\nlet revs = new Map();\nlet busy = false;\nconst DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nconst WINDOW = 14;\n\nfunction $(id) { return document.getElementById(id); }\nfunction say(text, bad) {\n  const s = $('status');\n  s.textContent = text;\n  s.className = bad ? 'status bad' : 'status';\n}\nfunction addDays(str, n) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);\n}\nfunction weekdayOf(str) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();\n}\nfunction pretty(str) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });\n}\nfunction revKey(c, id) { return c + '/' + id; }\nfunction rev(c, id) { return revs.get(revKey(c, id)) || 1; }\n\nasync function load() {\n  const r = await tessera.call('data.read', {});\n  const d = r.data;\n  tasks = Array.isArray(d.tasks) ? d.tasks : [];\n  sessions = Array.isArray(d.sessions) ? d.sessions : [];\n  rules = Array.isArray(d.rules) ? d.rules : [];\n  revs = new Map();\n  for (const [c, recs] of Object.entries(r.revisions || {})) {\n    for (const [id, n] of Object.entries(recs)) revs.set(revKey(c, id), n);\n  }\n}\n\nfunction blockedSet(list) {\n  const s = new Set();\n  for (const r of list) s.add(Number(r.weekday));\n  return s;\n}\nfunction allowedDays(blocked) {\n  const out = [];\n  for (let i = 0; i < WINDOW; i++) {\n    const day = addDays(today, i);\n    if (!blocked.has(weekdayOf(day))) out.push(day);\n  }\n  return out;\n}\nfunction loadCounts(list) {\n  const m = new Map();\n  for (const s of list) m.set(s.date, (m.get(s.date) || 0) + 1);\n  return m;\n}\nfunction pickDays(allowed, counts, n) {\n  const len = allowed.length;\n  const chosen = [];\n  for (let k = 0; k < n; k++) {\n    const target = Math.floor((k + 0.5) * len / n);\n    let best = null;\n    let bestScore = Infinity;\n    for (let o = -1; o <= 1; o++) {\n      const idx = target + o;\n      if (idx < 0 || idx >= len) continue;\n      const day = allowed[idx];\n      if (chosen.includes(day)) continue;\n      const score = (counts.get(day) || 0) * 10 + Math.abs(o);\n      if (score < bestScore) { bestScore = score; best = day; }\n    }\n    if (best === null) {\n      for (const day of allowed) if (!chosen.includes(day)) { best = day; break; }\n    }\n    if (best !== null) chosen.push(best);\n  }\n  return chosen;\n}\n\nasync function run(fn) {\n  if (busy) return;\n  busy = true;\n  $('task-add').disabled = true;\n  $('rule-add').disabled = true;\n  try { await fn(); } catch (e) {\n    say('That didn\\'t work, nothing was changed. Please try again.', true);\n    try { await load(); } catch (e2) { /* keep the screen as is */ }\n  }\n  busy = false;\n  $('task-add').disabled = false;\n  $('rule-add').disabled = false;\n  render();\n}\n\nasync function addTask() {\n  const input = $('task-name');\n  const name = input.value.trim();\n  $('task-error').textContent = '';\n  if (!name) {\n    $('task-error').textContent = 'Type a topic name first.';\n    input.focus();\n    return;\n  }\n  await run(async () => {\n    const blocked = blockedSet(rules);\n    const allowed = allowedDays(blocked);\n    if (allowed.length === 0) {\n      $('task-error').textContent = 'Every weekday is ruled out, so there is no day to study. Remove a rule first.';\n      return;\n    }\n    const days = pickDays(allowed, loadCounts(sessions), Math.min(3, allowed.length));\n    const res = await tessera.call('data.patch', { operations: [{ op: 'add', collection: 'tasks', record: { name } }] });\n    const [taskId] = res.addedIds;\n    const ops = [];\n    for (const day of days) ops.push({ op: 'add', collection: 'sessions', record: { taskId, date: day } });\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    input.value = '';\n    say('Added \"' + name + '\" with ' + days.length + (days.length === 1 ? ' session.' : ' sessions.'));\n  });\n  input.focus();\n}\n\nasync function addRule() {\n  const day = Number($('rule-day').value);\n  $('rule-error').textContent = '';\n  await run(async () => {\n    const blocked = blockedSet(rules);\n    if (blocked.has(day)) {\n      $('rule-error').textContent = 'You already have a rule for ' + DAYS[day] + '.';\n      return;\n    }\n    const next = new Set(blocked);\n    next.add(day);\n    const allowed = allowedDays(next);\n    if (allowed.length === 0) {\n      $('rule-error').textContent = 'That would leave no day to study.';\n      return;\n    }\n    const affected = sessions.filter(s => weekdayOf(s.date) === day).sort((a, b) => a.date.localeCompare(b.date));\n    const kept = sessions.filter(s => weekdayOf(s.date) !== day);\n    const counts = loadCounts(kept);\n    const taskDates = new Map();\n    const remaining = new Map();\n    for (const s of kept) {\n      if (!taskDates.has(s.taskId)) taskDates.set(s.taskId, new Set());\n      taskDates.get(s.taskId).add(s.date);\n      remaining.set(s.taskId, (remaining.get(s.taskId) || 0) + 1);\n    }\n    const ops = [{ op: 'add', collection: 'rules', record: { weekday: day } }];\n    let moved = 0;\n    for (const s of affected) {\n      const has = taskDates.get(s.taskId) || new Set();\n      let cands = allowed.filter(d => !has.has(d));\n      if (cands.length === 0) {\n        if ((remaining.get(s.taskId) || 0) > 0) {\n          ops.push({ op: 'remove', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id) });\n          continue;\n        }\n        cands = allowed;\n      }\n      let best = cands[0];\n      for (const d of cands) if ((counts.get(d) || 0) < (counts.get(best) || 0)) best = d;\n      counts.set(best, (counts.get(best) || 0) + 1);\n      has.add(best);\n      taskDates.set(s.taskId, has);\n      remaining.set(s.taskId, (remaining.get(s.taskId) || 0) + 1);\n      ops.push({ op: 'replace', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id), fields: { date: best } });\n      moved++;\n    }\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    say('No studying on ' + DAYS[day] + 's now. ' + (affected.length === 0 ? 'No sessions had to move.' : affected.length + (affected.length === 1 ? ' session was' : ' sessions were') + ' moved to other days.'));\n  });\n  $('rule-add').focus();\n}\n\nasync function removeRule(rule) {\n  await run(async () => {\n    await tessera.call('data.patch', { operations: [{ op: 'remove', collection: 'rules', id: rule.id, revisionCount: rev('rules', rule.id) }] });\n    await load();\n    say('Rule removed. Existing sessions stay where they are; new topics may use ' + DAYS[Number(rule.weekday)] + 's again.');\n  });\n  $('rule-day').focus();\n}\n\nasync function removeTask(task) {\n  await run(async () => {\n    const ops = [];\n    for (const s of sessions) if (s.taskId === task.id) ops.push({ op: 'remove', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id) });\n    ops.push({ op: 'remove', collection: 'tasks', id: task.id, revisionCount: rev('tasks', task.id) });\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    say('Removed \"' + task.name + '\" and its sessions.');\n  });\n  $('task-name').focus();\n}\n\nfunction mk(tag, text, cls) {\n  const e = document.createElement(tag);\n  if (text !== undefined) e.textContent = text;\n  if (cls) e.className = cls;\n  return e;\n}\n\nfunction render() {\n  $('exam-day').textContent = today ? 'Today is ' + pretty(today) + '. Exam day: ' + pretty(addDays(today, WINDOW)) + '.' : '';\n\n  const rl = $('rules');\n  rl.replaceChildren();\n  const sortedRules = rules.slice().sort((a, b) => Number(a.weekday) - Number(b.weekday));\n  for (const r of sortedRules) {\n    const li = mk('li');\n    li.setAttribute('data-hook', 'rule');\n    li.appendChild(mk('span', 'No studying on ' + DAYS[Number(r.weekday)] + 's'));\n    const b = mk('button', 'Remove rule', 'secondary');\n    b.type = 'button';\n    b.setAttribute('data-hook', 'rule-remove');\n    b.setAttribute('aria-label', 'Remove rule: no studying on ' + DAYS[Number(r.weekday)] + 's');\n    b.addEventListener('click', () => removeRule(r));\n    li.appendChild(b);\n    rl.appendChild(li);\n  }\n\n  const byId = new Map();\n  for (const t of tasks) byId.set(t.id, t);\n\n  const tl = $('topics');\n  tl.replaceChildren();\n  for (const t of tasks) {\n    const n = sessions.filter(s => s.taskId === t.id).length;\n    const li = mk('li');\n    const w = mk('span', t.name);\n    li.appendChild(w);\n    li.appendChild(mk('span', n + (n === 1 ? ' session' : ' sessions'), 'muted'));\n    const b = mk('button', 'Remove', 'secondary');\n    b.type = 'button';\n    b.setAttribute('aria-label', 'Remove topic ' + t.name);\n    b.addEventListener('click', () => removeTask(t));\n    li.appendChild(b);\n    tl.appendChild(li);\n  }\n  $('topics-empty').hidden = tasks.length > 0;\n\n  const sl = $('sessions');\n  sl.replaceChildren();\n  const sorted = sessions.filter(s => byId.has(s.taskId)).sort((a, b) => a.date.localeCompare(b.date));\n  for (const s of sorted) {\n    const li = mk('li');\n    li.setAttribute('data-hook', 'session');\n    const wrap = mk('span', undefined, 'when');\n    const t = document.createElement('time');\n    t.setAttribute('datetime', s.date);\n    t.textContent = pretty(s.date);\n    wrap.appendChild(t);\n    const nm = mk('span', byId.get(s.taskId).name);\n    nm.setAttribute('data-hook', 'session-task');\n    wrap.appendChild(nm);\n    li.appendChild(wrap);\n    li.appendChild(mk('span', 'Evening', 'muted'));\n    sl.appendChild(li);\n  }\n  $('sessions-empty').hidden = sorted.length > 0;\n}\n\n$('task-add').addEventListener('click', addTask);\n$('task-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });\n$('rule-add').addEventListener('click', addRule);\n\n(async () => {\n  try {\n    const c = await tessera.call('clock.now', {});\n    today = c.date;\n    await load();\n  } catch (e) {\n    say('Could not load your plan. Please reopen the tool.', true);\n  }\n  render();\n})();"
           },
           "data": {
             "schema": {
@@ -188,25 +178,29 @@
                         "type": "string"
                       },
                       "name": {
-                        "type": "string"
-                      },
-                      "sessions": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "date": {
-                              "type": "string"
-                            },
-                            "done": {
-                              "type": "boolean"
-                            }
-                          },
-                          "required": ["date", "done"]
-                        }
+                        "type": "string",
+                        "minLength": 1
                       }
                     },
-                    "required": ["id", "name", "sessions"]
+                    "required": ["id", "name"]
+                  }
+                },
+                "sessions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "date": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "taskId", "date"]
                   }
                 },
                 "rules": {
@@ -225,8 +219,63 @@
                     },
                     "required": ["id", "weekday"]
                   }
-                },
-                "settings": {
+                }
+              },
+              "required": ["tasks", "sessions", "rules"]
+            },
+            "reusableDefaults": {
+              "tasks": [],
+              "sessions": [],
+              "rules": []
+            },
+            "initialState": {
+              "rules": [
+                {
+                  "id": "rule-friday",
+                  "weekday": 5
+                }
+              ],
+              "tasks": [],
+              "sessions": []
+            }
+          },
+          "capabilities": ["clock"],
+          "uiMode": "standard",
+          "leftOut": ["making flashcards from pasted notes"]
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@3877bf3c212e",
+        "create@4eb0fe4a04c9",
+        "repair-schema-shape@1fdc6c120869",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "attempt@db8c6b71b427",
+        "diagnostics@0b26a00a48fd"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "tool",
+          "name": "Exam study planner",
+          "summary": "Add your exam topics and the tool spreads them over your evening sessions in the next two weeks. Rules like \"never Fridays\" keep sessions off those days. Making flashcards from notes isn't part of this tool yet.",
+          "code": {
+            "html": "<h1>Exam study planner</h1>\n<p class=\"muted\" id=\"intro\">Evening sessions for the next two weeks.</p>\n<p id=\"status\" role=\"status\" aria-live=\"polite\" class=\"status\"></p>\n\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a topic</h2>\n<div class=\"row\">\n<div class=\"field grow\"><label for=\"task-name\">Topic name</label>\n<input id=\"task-name\" data-hook=\"task-name\" type=\"text\" autocomplete=\"off\" placeholder=\"e.g. Chapter 3: Cell biology\"></div>\n<button id=\"task-add\" data-hook=\"task-add\" type=\"button\">Add topic</button>\n</div>\n<p id=\"task-error\" class=\"error\"></p>\n</section>\n\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days I don't study</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rule-day\">Weekday</label>\n<select id=\"rule-day\" data-hook=\"rule-day\">\n<option value=\"0\">Sunday</option><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option><option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\" selected>Friday</option><option value=\"6\">Saturday</option>\n</select></div>\n<button id=\"rule-add\" data-hook=\"rule-add\" type=\"button\">Add rule</button>\n</div>\n<p id=\"rule-error\" class=\"error\"></p>\n<ul id=\"rules\" class=\"list\"></ul>\n</section>\n\n<section aria-labelledby=\"h-topics\">\n<h2 id=\"h-topics\">Topics</h2>\n<ul id=\"topics\" class=\"list\"></ul>\n<p id=\"topics-empty\" class=\"muted\">No topics yet. Add your first topic above.</p>\n</section>\n\n<section aria-labelledby=\"h-sessions\">\n<h2 id=\"h-sessions\">Schedule</h2>\n<p id=\"exam-day\" class=\"muted\"></p>\n<ul id=\"sessions\" class=\"list\"></ul>\n<p id=\"sessions-empty\" class=\"muted\">No sessions yet.</p>\n</section>",
+            "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-1)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1)}\n.grow{flex:1 1 200px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select,button{font:inherit;min-height:var(--ui-target);border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:disabled{opacity:.6;cursor:default}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface)}\n.list:empty{display:none}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2) var(--ui-space-3);align-items:center;justify-content:space-between;padding:var(--ui-space-2) var(--ui-space-3);border-top:1px solid var(--ui-divider)}\n.list li:first-child{border-top:0}\n.when{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:baseline}\ntime{font-weight:600;min-width:8.5em}\n.error{color:var(--ui-error);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0;min-height:0}\n.status{color:var(--ui-success);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0;min-height:1.2em}\n.status.bad{color:var(--ui-error)}",
+            "js": "let today = '';\nlet tasks = [];\nlet sessions = [];\nlet rules = [];\nlet revs = new Map();\nlet busy = false;\nconst DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nconst WINDOW = 14;\n\nfunction $(id) { return document.getElementById(id); }\nfunction say(text, bad) {\n  const s = $('status');\n  s.textContent = text;\n  s.className = bad ? 'status bad' : 'status';\n}\nfunction addDays(str, n) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);\n}\nfunction weekdayOf(str) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();\n}\nfunction pretty(str) {\n  const [y, m, d] = str.split('-').map(Number);\n  return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });\n}\nfunction revKey(c, id) { return c + '/' + id; }\nfunction rev(c, id) { return revs.get(revKey(c, id)) || 1; }\n\nfunction addRevs(collName, group) {\n  if (!group) return;\n  for (const [recId, count] of Object.entries(group)) revs.set(revKey(collName, recId), count);\n}\n\nasync function load() {\n  const reply = await tessera.call('data.read', {});\n  const stored = reply.data;\n  tasks = Array.isArray(stored.tasks) ? stored.tasks : [];\n  sessions = Array.isArray(stored.sessions) ? stored.sessions : [];\n  rules = Array.isArray(stored.rules) ? stored.rules : [];\n  revs = new Map();\n  const rv = reply.revisions || {};\n  addRevs('tasks', rv.tasks);\n  addRevs('sessions', rv.sessions);\n  addRevs('rules', rv.rules);\n}\n\nfunction blockedSet(list) {\n  const s = new Set();\n  for (const item of list) s.add(Number(item.weekday));\n  return s;\n}\nfunction allowedDays(blocked) {\n  const out = [];\n  for (let i = 0; i < WINDOW; i++) {\n    const day = addDays(today, i);\n    if (!blocked.has(weekdayOf(day))) out.push(day);\n  }\n  return out;\n}\nfunction loadCounts(list) {\n  const m = new Map();\n  for (const s of list) m.set(s.date, (m.get(s.date) || 0) + 1);\n  return m;\n}\nfunction pickDays(openDays, counts, n) {\n  const len = openDays.length;\n  const chosen = [];\n  for (let k = 0; k < n; k++) {\n    const target = Math.floor((k + 0.5) * len / n);\n    let best = null;\n    let bestScore = Infinity;\n    for (let o = -1; o <= 1; o++) {\n      const idx = target + o;\n      if (idx < 0 || idx >= len) continue;\n      const [day] = openDays.slice(idx, idx + 1);\n      if (chosen.includes(day)) continue;\n      const score = (counts.get(day) || 0) * 10 + Math.abs(o);\n      if (score < bestScore) { bestScore = score; best = day; }\n    }\n    if (best === null) {\n      for (const day of openDays) if (!chosen.includes(day)) { best = day; break; }\n    }\n    if (best !== null) chosen.push(best);\n  }\n  return chosen;\n}\n\nasync function run(fn) {\n  if (busy) return;\n  busy = true;\n  $('task-add').disabled = true;\n  $('rule-add').disabled = true;\n  try { await fn(); } catch (e) {\n    say('That didn\\'t work, nothing was changed. Please try again.', true);\n    try { await load(); } catch (e2) { /* keep the screen as is */ }\n  }\n  busy = false;\n  $('task-add').disabled = false;\n  $('rule-add').disabled = false;\n  render();\n}\n\nasync function addTask() {\n  const input = $('task-name');\n  const name = input.value.trim();\n  $('task-error').textContent = '';\n  if (!name) {\n    $('task-error').textContent = 'Type a topic name first.';\n    input.focus();\n    return;\n  }\n  await run(async () => {\n    const blocked = blockedSet(rules);\n    const openDays = allowedDays(blocked);\n    if (openDays.length === 0) {\n      $('task-error').textContent = 'Every weekday is ruled out, so there is no day to study. Remove a rule first.';\n      return;\n    }\n    const days = pickDays(openDays, loadCounts(sessions), Math.min(3, openDays.length));\n    const res = await tessera.call('data.patch', { operations: [{ op: 'add', collection: 'tasks', record: { name } }] });\n    const [taskId] = res.addedIds;\n    const ops = [];\n    for (const day of days) ops.push({ op: 'add', collection: 'sessions', record: { taskId, date: day } });\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    input.value = '';\n    say('Added \"' + name + '\" with ' + days.length + (days.length === 1 ? ' session.' : ' sessions.'));\n  });\n  input.focus();\n}\n\nasync function addRule() {\n  const day = Number($('rule-day').value);\n  $('rule-error').textContent = '';\n  await run(async () => {\n    const blocked = blockedSet(rules);\n    if (blocked.has(day)) {\n      $('rule-error').textContent = 'You already have a rule for ' + DAYS[day] + '.';\n      return;\n    }\n    const next = new Set(blocked);\n    next.add(day);\n    const openDays = allowedDays(next);\n    if (openDays.length === 0) {\n      $('rule-error').textContent = 'That would leave no day to study.';\n      return;\n    }\n    const affected = sessions.filter(s => weekdayOf(s.date) === day).sort((a, b) => a.date.localeCompare(b.date));\n    const kept = sessions.filter(s => weekdayOf(s.date) !== day);\n    const counts = loadCounts(kept);\n    const taskDates = new Map();\n    const remaining = new Map();\n    for (const s of kept) {\n      if (!taskDates.has(s.taskId)) taskDates.set(s.taskId, new Set());\n      taskDates.get(s.taskId).add(s.date);\n      remaining.set(s.taskId, (remaining.get(s.taskId) || 0) + 1);\n    }\n    const ops = [{ op: 'add', collection: 'rules', record: { weekday: day } }];\n    let moved = 0;\n    for (const s of affected) {\n      const has = taskDates.get(s.taskId) || new Set();\n      let cands = openDays.filter(d => !has.has(d));\n      if (cands.length === 0) {\n        if ((remaining.get(s.taskId) || 0) > 0) {\n          ops.push({ op: 'remove', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id) });\n          continue;\n        }\n        cands = openDays;\n      }\n      let [best] = cands;\n      for (const d of cands) if ((counts.get(d) || 0) < (counts.get(best) || 0)) best = d;\n      counts.set(best, (counts.get(best) || 0) + 1);\n      has.add(best);\n      taskDates.set(s.taskId, has);\n      remaining.set(s.taskId, (remaining.get(s.taskId) || 0) + 1);\n      ops.push({ op: 'replace', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id), fields: { date: best } });\n      moved++;\n    }\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    say('No studying on ' + DAYS[day] + 's now. ' + (affected.length === 0 ? 'No sessions had to move.' : affected.length + (affected.length === 1 ? ' session was' : ' sessions were') + ' moved to other days.'));\n  });\n  $('rule-add').focus();\n}\n\nasync function removeRule(rule) {\n  await run(async () => {\n    await tessera.call('data.patch', { operations: [{ op: 'remove', collection: 'rules', id: rule.id, revisionCount: rev('rules', rule.id) }] });\n    await load();\n    say('Rule removed. Existing sessions stay where they are; new topics may use ' + DAYS[Number(rule.weekday)] + 's again.');\n  });\n  $('rule-day').focus();\n}\n\nasync function removeTask(task) {\n  await run(async () => {\n    const ops = [];\n    for (const s of sessions) if (s.taskId === task.id) ops.push({ op: 'remove', collection: 'sessions', id: s.id, revisionCount: rev('sessions', s.id) });\n    ops.push({ op: 'remove', collection: 'tasks', id: task.id, revisionCount: rev('tasks', task.id) });\n    await tessera.call('data.patch', { operations: ops });\n    await load();\n    say('Removed \"' + task.name + '\" and its sessions.');\n  });\n  $('task-name').focus();\n}\n\nfunction mkLi() {\n  return document.createElement('li');\n}\nfunction mkSpan(text, cls) {\n  const e = document.createElement('span');\n  if (text !== undefined) e.textContent = text;\n  if (cls) e.className = cls;\n  return e;\n}\nfunction mkBtn(text, cls) {\n  const e = document.createElement('button');\n  e.textContent = text;\n  if (cls) e.className = cls;\n  return e;\n}\n\nfunction render() {\n  $('exam-day').textContent = today ? 'Today is ' + pretty(today) + '. Exam day: ' + pretty(addDays(today, WINDOW)) + '.' : '';\n\n  const rl = $('rules');\n  rl.replaceChildren();\n  const sortedRules = rules.slice().sort((a, b) => Number(a.weekday) - Number(b.weekday));\n  for (const rule of sortedRules) {\n    const li = mkLi();\n    li.setAttribute('data-hook', 'rule');\n    li.appendChild(mkSpan('No studying on ' + DAYS[Number(rule.weekday)] + 's'));\n    const b = mkBtn('Remove rule', 'secondary');\n    b.type = 'button';\n    b.setAttribute('data-hook', 'rule-remove');\n    b.setAttribute('aria-label', 'Remove rule: no studying on ' + DAYS[Number(rule.weekday)] + 's');\n    b.addEventListener('click', () => removeRule(rule));\n    li.appendChild(b);\n    rl.appendChild(li);\n  }\n\n  const byId = new Map();\n  for (const t of tasks) byId.set(t.id, t);\n\n  const tl = $('topics');\n  tl.replaceChildren();\n  for (const t of tasks) {\n    const n = sessions.filter(s => s.taskId === t.id).length;\n    const li = mkLi();\n    li.appendChild(mkSpan(t.name));\n    li.appendChild(mkSpan(n + (n === 1 ? ' session' : ' sessions'), 'muted'));\n    const b = mkBtn('Remove', 'secondary');\n    b.type = 'button';\n    b.setAttribute('aria-label', 'Remove topic ' + t.name);\n    b.addEventListener('click', () => removeTask(t));\n    li.appendChild(b);\n    tl.appendChild(li);\n  }\n  $('topics-empty').hidden = tasks.length > 0;\n\n  const sl = $('sessions');\n  sl.replaceChildren();\n  const sorted = sessions.filter(s => byId.has(s.taskId)).sort((a, b) => a.date.localeCompare(b.date));\n  for (const s of sorted) {\n    const li = mkLi();\n    li.setAttribute('data-hook', 'session');\n    const wrap = mkSpan(undefined, 'when');\n    const t = document.createElement('time');\n    t.setAttribute('datetime', s.date);\n    t.textContent = pretty(s.date);\n    wrap.appendChild(t);\n    const nm = mkSpan(byId.get(s.taskId).name);\n    nm.setAttribute('data-hook', 'session-task');\n    wrap.appendChild(nm);\n    li.appendChild(wrap);\n    li.appendChild(mkSpan('Evening', 'muted'));\n    sl.appendChild(li);\n  }\n  $('sessions-empty').hidden = sorted.length > 0;\n}\n\n$('task-add').addEventListener('click', addTask);\n$('task-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } });\n$('rule-add').addEventListener('click', addRule);\n\n(async () => {\n  try {\n    const c = await tessera.call('clock.now', {});\n    today = c.date;\n    await load();\n  } catch (e) {\n    say('Could not load your plan. Please reopen the tool.', true);\n  }\n  render();\n})();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "tasks": {
                   "type": "array",
                   "items": {
                     "type": "object",
@@ -234,30 +283,71 @@
                       "id": {
                         "type": "string"
                       },
-                      "exam": {
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": ["id", "name"]
+                  }
+                },
+                "sessions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "taskId": {
+                        "type": "string"
+                      },
+                      "date": {
                         "type": "string"
                       }
                     },
-                    "required": ["id"]
+                    "required": ["id", "taskId", "date"]
+                  }
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      }
+                    },
+                    "required": ["id", "weekday"]
                   }
                 }
               },
-              "required": ["tasks", "rules", "settings"]
+              "required": ["tasks", "sessions", "rules"]
             },
             "reusableDefaults": {
               "tasks": [],
-              "rules": [],
-              "settings": []
+              "sessions": [],
+              "rules": []
             },
             "initialState": {
               "rules": [
                 {
-                  "id": "no-friday",
+                  "id": "rule-friday",
                   "weekday": 5
                 }
-              ]
+              ],
+              "tasks": [],
+              "sessions": []
             }
-          }
+          },
+          "capabilities": ["clock"],
+          "uiMode": "standard",
+          "leftOut": ["making flashcards from pasted notes"]
         }
       },
       "parts": [
@@ -272,6 +362,164 @@
         "language@2a8e10d77d23",
         "attempt@db8c6b71b427",
         "diagnostics@0b26a00a48fd"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "data",
+          "interfacePart": null,
+          "dataPart": "Fridays are fine now.",
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "Allow Fridays",
+              "request": "Fridays are fine now."
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Removes the Friday rule so Fridays are no longer restricted. The tasks and sessions stay unchanged.",
+          "patch": {
+            "operations": [
+              {
+                "op": "remove",
+                "collection": "rules",
+                "id": "rule-friday",
+                "revisionCount": 2
+              }
+            ]
+          }
+        }
+      },
+      "parts": [
+        "data-plan@2ce101112867",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "data-context@f23d03154e01"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "new_tool",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Flashcards from notes",
+              "request": "Make flashcards from these notes"
+            }
+          ],
+          "profile": "cards",
+          "drawsCharts": false
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Flashcards from notes",
+          "summary": "Paste notes with one \"front: back\" pair per line and press the button to turn them into flashcards. Your cards are kept and new ones are added to them.",
+          "code": {
+            "html": "<main class=\"wrap\">\n<h1>Flashcards from notes</h1>\n<p class=\"hint\">Write one card per line as <strong>front: back</strong>. Lines without text on both sides of a colon are skipped.</p>\n<label for=\"notes\">Notes</label>\n<textarea id=\"notes\" data-hook=\"notes\" rows=\"5\" placeholder=\"Mode: the most frequent value\"></textarea>\n<div class=\"row\"><button type=\"button\" id=\"make\" data-hook=\"cards-make\">Make cards</button></div>\n<p id=\"status\" role=\"status\" aria-live=\"polite\"></p>\n<h2>Cards <span id=\"count\"></span></h2>\n<p id=\"empty\" hidden>No cards yet. Paste some notes above and press Make cards.</p>\n<ul id=\"list\" class=\"list\"></ul>\n</main>",
+            "css": ".wrap{max-width:720px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.hint{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-3)}\nlabel{display:block;margin-bottom:var(--ui-space-1)}\ntextarea{width:100%;box-sizing:border-box;padding:var(--ui-space-2);font:inherit;color:inherit;background:var(--ui-surface);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control)}\n.row{margin-top:var(--ui-space-3)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);font:inherit;color:var(--ui-text);background:var(--ui-surface);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);cursor:pointer}\n#make{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}\nbutton:focus-visible,textarea:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n#status{min-height:1.5em;font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0 0}\n#status.err{color:var(--ui-error)}\n#status.ok{color:var(--ui-success)}\n.list{list-style:none;margin:0;padding:0;display:grid;gap:var(--ui-space-2)}\n.list li{display:flex;gap:var(--ui-space-3);align-items:flex-start;justify-content:space-between;flex-wrap:wrap;padding:var(--ui-space-3);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel)}\n.txt{flex:1 1 200px;min-width:0;overflow-wrap:anywhere}\n.front{font-weight:600}\n.back{color:var(--ui-text-secondary)}",
+            "js": "const notes = document.getElementById('notes');\nconst makeBtn = document.getElementById('make');\nconst statusEl = document.getElementById('status');\nconst listEl = document.getElementById('list');\nconst emptyEl = document.getElementById('empty');\nconst countEl = document.getElementById('count');\n\nfunction say(text, kind) {\n  statusEl.textContent = text;\n  statusEl.className = kind || '';\n}\n\nasync function load() {\n  const res = await tessera.call('data.read', {});\n  const cards = Array.isArray(res.data.cards) ? res.data.cards : [];\n  const revs = new Map();\n  for (const [id, rev] of Object.entries(res.revisions.cards || {})) revs.set(id, rev);\n  render(cards, revs);\n}\n\nfunction render(cards, revs) {\n  listEl.textContent = '';\n  emptyEl.hidden = cards.length > 0;\n  countEl.textContent = cards.length ? '(' + cards.length + ')' : '';\n  for (const card of cards) {\n    const li = document.createElement('li');\n    li.setAttribute('data-hook', 'card');\n    const box = document.createElement('div');\n    box.className = 'txt';\n    const f = document.createElement('div');\n    f.className = 'front';\n    f.setAttribute('data-hook', 'card-front');\n    f.textContent = card.front;\n    const b = document.createElement('div');\n    b.className = 'back';\n    b.setAttribute('data-hook', 'card-back');\n    b.textContent = card.back;\n    box.appendChild(f);\n    box.appendChild(b);\n    const del = document.createElement('button');\n    del.type = 'button';\n    del.textContent = 'Delete';\n    del.setAttribute('aria-label', 'Delete card: ' + card.front);\n    del.addEventListener('click', async () => {\n      try {\n        await tessera.call('data.patch', { operations: [{ op: 'remove', collection: 'cards', id: card.id, revisionCount: revs.get(card.id) }] });\n        await load();\n        say('Card deleted.', 'ok');\n      } catch (e) {\n        say('The card could not be deleted. Please try again.', 'err');\n      }\n    });\n    li.appendChild(box);\n    li.appendChild(del);\n    listEl.appendChild(li);\n  }\n}\n\nfunction parse(text) {\n  const out = [];\n  for (const line of text.split(/\\r?\\n/)) {\n    const i = line.indexOf(':');\n    if (i < 0) continue;\n    const front = line.slice(0, i).trim();\n    const back = line.slice(i + 1).trim();\n    if (front && back) out.push({ front, back });\n  }\n  return out;\n}\n\nmakeBtn.addEventListener('click', async () => {\n  const found = parse(notes.value);\n  if (!found.length) {\n    say('No cards made. Write each card as \"front: back\", one per line.', 'err');\n    return;\n  }\n  try {\n    await tessera.call('data.patch', { operations: found.map((r) => ({ op: 'add', collection: 'cards', record: r })) });\n    notes.value = '';\n    await load();\n    say(found.length === 1 ? '1 card made and saved.' : found.length + ' cards made and saved.', 'ok');\n  } catch (e) {\n    say('The cards could not be saved. Your notes are still here; please try again.', 'err');\n  }\n});\n\nload().catch(() => say('The cards could not be loaded.', 'err'));"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "cards": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "front": {
+                        "type": "string"
+                      },
+                      "back": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "front", "back"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["cards"],
+              "additionalProperties": false
+            },
+            "reusableDefaults": {
+              "cards": []
+            },
+            "initialState": {
+              "cards": [
+                {
+                  "id": "card-mean",
+                  "front": "Mean",
+                  "back": "the average of the values."
+                },
+                {
+                  "id": "card-median",
+                  "front": "Median",
+                  "back": "the middle value."
+                }
+              ]
+            }
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@2eb4d5f2b3f3",
+        "create@4eb0fe4a04c9",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
       ]
     }
   ]
