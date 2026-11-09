@@ -78,6 +78,21 @@ pick.addEventListener("change", () => {
   }
 });`,
   },
+  // Sessions that mark their dates in each way a check reads, or don't, and one hidden.
+  dated: {
+    html: `<ul>
+<li data-hook="session"><time datetime="2026-11-12">Thursday</time> Algebra</li>
+<li data-hook="session">Geometry <time datetime="2026-11-13T18:00">6 pm</time></li>
+<li><time data-hook="session" datetime=" 2026-11-14 ">Saturday</time></li>
+<li data-hook="session">No date</li>
+<li data-hook="session"><time datetime="14/11/2026">14 Nov</time></li>
+<li data-hook="session"><time>2026-11-15</time></li>
+<li data-hook="session"><time datetime="2026-11-150">Typo</time></li>
+<li data-hook="session" hidden><time datetime="2026-11-16">Hidden</time></li>
+</ul>`,
+    css: "",
+    js: "",
+  },
 };
 
 let host: SandboxHost;
@@ -237,6 +252,26 @@ test("VER-03: a read gives the first 200 characters of each text and a fingerpri
   expect(all!.texts[1]).toBe(all!.texts[2]);
   expect(new Set(all!.digests).size).toBe(3);
   expect(from!.digests).toEqual(all!.digests.slice(1));
+});
+
+test("VER-03: a check reads the date each hooked element marks with a time element, whatever language it shows it in", async ({
+  page,
+}) => {
+  const report = await drive(page, "dated", [
+    { do: "dates", hook: "session" },
+    { do: "dates", hook: "session", start: 5 },
+  ]);
+  expect(report).toEqual({
+    problems: [],
+    steps: [
+      {
+        ok: true,
+        count: 7,
+        dates: ["2026-11-12", "2026-11-13", "2026-11-14", null, null, null, null],
+      },
+      { ok: true, count: 7, dates: [null, null] },
+    ],
+  });
 });
 
 test("VER-03: a check chooses a select's choice by its value or by what it says, and reads only what is shown", async ({

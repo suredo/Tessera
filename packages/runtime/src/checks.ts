@@ -133,6 +133,7 @@ function readStep(value: unknown): DriveResult | undefined {
   const matches = step["matches"];
   const fields = step["fields"];
   const charts = step["charts"];
+  const dates = step["dates"];
   return {
     ok: true,
     ...(typeof step["count"] === "number" ? { count: step["count"] } : {}),
@@ -143,6 +144,14 @@ function readStep(value: unknown): DriveResult | undefined {
     // A chart as the contract reads it, or null for one that isn't (CAP-04).
     ...(Array.isArray(charts)
       ? { charts: charts.map((chart) => chartSpecSchema.safeParse(chart).data ?? null) }
+      : {}),
+    // A date as YYYY-MM-DD, or null for anything else.
+    ...(Array.isArray(dates)
+      ? {
+          dates: dates.map((date) =>
+            typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null,
+          ),
+        }
       : {}),
   };
 }

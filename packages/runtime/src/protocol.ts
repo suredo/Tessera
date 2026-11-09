@@ -39,7 +39,8 @@ export const runtimeOriginFor = (appLocation: { protocol: string; port: string }
 /**
  * One step a behavior check takes on a candidate (VER-03), on the elements it marks with `hook` in
  * their `data-hook` attribute: fill in the `index`th one (the first by default) with `value`, click
- * it, read what they show, or find which of them show `value`. The tool's page takes the steps
+ * it, read what they show, find which of them show `value`, describe them as fields, read the
+ * charts drawn in them, or read the dates they mark. The tool's page takes the steps
  * (src/tool-preamble.ts, which repeats these names).
  */
 export type DriveStep =
@@ -48,7 +49,8 @@ export type DriveStep =
   | { do: "read"; hook: string; start?: number }
   | { do: "find"; hook: string; value: string; start?: number }
   | { do: "fields"; hook: string }
-  | { do: "chart"; hook: string };
+  | { do: "chart"; hook: string }
+  | { do: "dates"; hook: string; start?: number };
 
 /**
  * A field a fields step describes, so a check can fill it with a value it takes: its element and
@@ -71,10 +73,13 @@ export type DriveField = {
 };
 
 /**
- * What a step did: a read gives how many elements have the hook and the text of 100 of them, from
- * its `start` (the first by default); a find gives how many, and the positions of the first 20
- * from its `start` whose text holds its value; a fields step describes the first 100 fields with the hook; and a
- * chart step gives, for the first 20, the chart the helper drew in each, or null (CAP-04).
+ * What a step did: a read gives how many elements have the hook and, for 100 of them from its
+ * `start` (the first by default), the first 200 characters of each text and a fingerprint of the
+ * whole; a find gives how many, and the positions of the first 20 from its `start` whose text
+ * holds its value; a fields step describes the first 100 fields with the hook; a chart step gives,
+ * for the first 20, the chart the helper drew in each, or null (CAP-04); and a dates step gives,
+ * for 100 from its `start`, the date each marks with a time element's datetime, as YYYY-MM-DD, or
+ * null.
  */
 export type DriveResult =
   | {
@@ -85,5 +90,6 @@ export type DriveResult =
       matches?: number[];
       fields?: DriveField[];
       charts?: (ChartSpec | null)[];
+      dates?: (string | null)[];
     }
   | { ok: false; problem: string };

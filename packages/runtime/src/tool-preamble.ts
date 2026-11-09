@@ -208,6 +208,22 @@ import type { BridgeMethodName } from "@tessera/contracts";
         results.push({ ok: true, count: found.length, charts: shown });
         continue;
       }
+      // The date each marks, 100 from `start`: its own datetime if it is a time element, or else
+      // that of the first time element inside it with one, as YYYY-MM-DD, or null when neither
+      // gives a date in that form, so a check reads dates whatever language the page shows them in.
+      if (step.do === "dates") {
+        const start = typeof step.start === "number" && step.start > 0 ? Math.floor(step.start) : 0;
+        const dates = found.slice(start, start + 100).map((element) => {
+          const time =
+            element instanceof HTMLTimeElement && element.hasAttribute("datetime")
+              ? element
+              : element.querySelector("time[datetime]");
+          const value = time instanceof HTMLTimeElement ? time.dateTime.trim() : "";
+          return /^\d{4}-\d{2}-\d{2}(?![\d-])/.test(value) ? value.slice(0, 10) : null;
+        });
+        results.push({ ok: true, count: found.length, dates });
+        continue;
+      }
       // What each field is, so a check can fill it with a value it takes: the first 100.
       if (step.do === "fields") {
         const fields = found.slice(0, 100).map((element) => {
