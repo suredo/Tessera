@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import type { Creation, Intent } from "../../contracts/src/index.ts";
 import { RequestLedger } from "../../server/src/ledger/index.ts";
 import { UNKNOWN_USAGE, type Provider, type StageSpec } from "../../server/src/providers/index.ts";
-import { listWorkspaces } from "../../server/src/workspaces/index.ts";
+import { listWorkspaces, workspaceVersions } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
@@ -139,6 +139,10 @@ test("TEST-03, VER-03, GEN-09: a list that doesn't keep what it adds fails the i
   // Only the starting data the host installed: nothing the check typed was saved.
   const [workspace] = listWorkspaces(app.folder);
   expect(workspace?.data).toEqual({ items: [{ id: "i-1", name: "Milk" }] });
+  // Its version keeps that its behavior was checked, and by which profile (VER-08).
+  expect(workspaceVersions(app.folder, workspace!.id)).toMatchObject([
+    { checks: ["code", "start", "behavior"], profile: "item-list" },
+  ]);
   // The ledger keeps why the repair happened (GEN-10).
   const [request] = new RequestLedger(app.folder).forWorkspace(workspace!.id);
   const repair = request?.calls.find((call) => call.stage === "repair");

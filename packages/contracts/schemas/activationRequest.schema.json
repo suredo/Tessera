@@ -28,6 +28,11 @@
       "description": "The app's staging ran the start check (smoke) on this candidate and it passed: the app's report, recorded as such (APP-05).",
       "type": "boolean",
       "const": true
+    },
+    "behaviorChecked": {
+      "description": "The app's staging also ran the behavior check of the profile the server named for this candidate, and it passed: the app's report, recorded as such with that profile (VER-08).",
+      "type": "boolean",
+      "const": true
     }
   },
   "required": [

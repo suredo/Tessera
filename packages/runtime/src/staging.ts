@@ -275,6 +275,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
     token: options.activationToken,
     // Said only when the start check (smoke) ran here and passed, so the version's history can say so.
     ...(!verdict && passed.includes("smoke") ? { startChecked: true as const } : {}),
+    // And only when the behavior check (VER-03) ran here and passed, so it can say that too.
+    ...(!verdict && passed.includes("behavior") ? { behaviorChecked: true as const } : {}),
   });
   return reply.ok
     ? { outcome: "activated", workspace: reply.workspace, migrationCount: reply.migrationCount }

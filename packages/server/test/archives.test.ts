@@ -629,11 +629,14 @@ describe("images in archives (DATA-05, DATA-11)", () => {
       formatVersion: 3,
       workspaces: manifest.workspaces.map((w) => ({
         ...w,
-        versions: (w.versions as Record<string, unknown>[]).map(({ summary, checks, ...rest }) => {
-          void summary;
-          void checks;
-          return rest;
-        }),
+        versions: (w.versions as Record<string, unknown>[]).map(
+          ({ summary, checks, profile, ...rest }) => {
+            void summary;
+            void checks;
+            void profile;
+            return rest;
+          },
+        ),
       })),
     };
     const into = await openDataFolder(newFolder());
@@ -646,11 +649,15 @@ describe("images in archives (DATA-05, DATA-11)", () => {
     into.close();
   });
 
-  it("DATA-05, APP-05: a version's summary and checks go out in an export and come back with it", async () => {
+  it("DATA-05, APP-05, VER-08: a version's summary, checks and profile go out in an export and come back with it", async () => {
     const from = await openDataFolder(newFolder());
     const { id, dataRevision } = createWorkspace(from, "Steps");
     const hash = saveVersion(from.db, artifact("<ol></ol>"));
-    const note = { summary: "Turned the list into steps.", checks: ["code", "start"] as const };
+    const note = {
+      summary: "Turned the list into steps.",
+      checks: ["code", "start", "behavior"] as const,
+      profile: "item-list" as const,
+    };
     expect(
       activateVersion(from, id, hash, dataRevision, { note: { ...note, checks: [...note.checks] } })
         .ok,
@@ -661,14 +668,55 @@ describe("images in archives (DATA-05, DATA-11)", () => {
     const imported = await importArchive(into, bytes);
     expect(workspaceVersions(into, imported.workspaces[0]!.id)[0]).toMatchObject({
       summary: "Turned the list into steps.",
-      checks: ["code", "start"],
+      checks: ["code", "start", "behavior"],
+      profile: "item-list",
     });
+    into.close();
+  });
+
+  it("CON-04, VER-08: an archive from before profiles, format 4, imports with none, and a profile without the behavior check it names is dropped", async () => {
+    const { files, manifest } = await exportedFiles();
+    const older = {
+      ...manifest,
+      formatVersion: 4,
+      workspaces: manifest.workspaces.map((w) => ({
+        ...w,
+        versions: (w.versions as Record<string, unknown>[]).map(({ profile, ...rest }) => {
+          void profile;
+          return rest;
+        }),
+      })),
+    };
+    const into = await openDataFolder(newFolder());
+    const imported = await importArchive(into, pack(older, files));
+    expect(workspaceVersions(into, imported.workspaces[0]!.id).map((v) => v.profile)).toEqual([
+      null,
+      null,
+      null,
+    ]);
+    const claimed = {
+      ...manifest,
+      workspaces: manifest.workspaces.map((w) => ({
+        ...w,
+        versions: (w.versions as Record<string, unknown>[]).map((version) => ({
+          ...version,
+          checks: ["code", "start"],
+          profile: "item-list",
+        })),
+      })),
+    };
+    const again = await importArchive(into, pack(claimed, files));
+    expect(workspaceVersions(into, again.workspaces[0]!.id).map((v) => v.profile)).toEqual([
+      null,
+      null,
+      null,
+    ]);
     into.close();
   });
 
   it("CON-04, APP-04: an archive from before descriptions, format 2, imports with none", async () => {
     const { files, manifest } = await exportedFiles();
-    expect(manifest["formatVersion"]).toBe(4);
+    expect(manifest["formatVersion"]).toBe(5);
     const strip = (value: Record<string, unknown>) => {
       const rest = { ...value };
       delete rest["description"];
