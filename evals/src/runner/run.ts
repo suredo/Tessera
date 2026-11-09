@@ -339,26 +339,25 @@ const toolFrame = (page: Page) =>
   page.frameLocator(".tool-frame iframe").frameLocator("iframe").frameLocator("iframe");
 
 /** How long a do step waits for its control's save, and the quiet that ends it (EVAL-01). */
-export const DO_WAIT = { changeMs: 10_000, watchMs: 3_000, quietMs: 1_000 } as const;
+export const DO_WAIT = { changeMs: 10_000, quietMs: 1_000 } as const;
 
 /**
  * Waits for a control's effect on the open workspace's data (EVAL-01, EVAL-02): its save goes
- * through the bridge after the click, perhaps after a read or a delay, so a step that expects the
- * data to change waits for the first change, up to ten seconds, and any other step watches for
- * three; once the data has changed, it waits until it has been quiet for a second. Only then are
- * the step's facts read, so a late save is the step's own, never the next one's.
+ * through the bridge after the click, perhaps after a read or a delay, so every step waits for the
+ * first change, up to ten seconds, whatever it expects: a step expecting the data unchanged is
+ * watched as long, so a late write fails it instead of passing it. Once the data has changed, it
+ * waits until it has been quiet for a second. Only then are the step's facts read, so a save
+ * within that window is the step's own; one later still is the next step's.
  */
 export async function dataSettled(
   revision: () => number | undefined,
-  expectsChange: boolean,
   wait: (ms: number) => Promise<void> = (ms) => new Promise((done) => setTimeout(done, ms)),
 ): Promise<void> {
   const tick = 100;
   const first = revision();
   let waited = 0;
-  // Until the data first changes: as long as a change is expected, or the watch.
-  const limit = expectsChange ? DO_WAIT.changeMs : DO_WAIT.watchMs;
-  while (waited < limit && revision() === first) {
+  // Until the data first changes, or the window ends.
+  while (waited < DO_WAIT.changeMs && revision() === first) {
     await wait(tick);
     waited += tick;
   }
@@ -578,8 +577,7 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     const id = await openWorkspace(page);
     if (!id) throw new Error("No tool is open to use.");
     await useControl(page, s.do);
-    const expectsChange = s.expect?.data === "changed" || s.expect?.data === "kept";
-    await dataSettled(() => getWorkspace(store, id)?.dataRevision, expectsChange);
+    await dataSettled(() => getWorkspace(store, id)?.dataRevision);
     return { claim: "none" };
   }
   throw new Error(`The runner doesn't play ${stepKind(s)} steps.`);

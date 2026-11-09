@@ -390,28 +390,27 @@ describe("the report (EVAL-02, A40)", () => {
 
 describe("a do step's wait for its save (EVAL-01, EVAL-02)", () => {
   /** When dataSettled returns, on a virtual clock, with the data's revision moving at `changes`. */
-  async function settledAt(changes: number[], expectsChange: boolean): Promise<number> {
+  async function settledAt(changes: number[]): Promise<number> {
     let now = 0;
     const revision = () => changes.filter((at) => at <= now).length;
-    await dataSettled(revision, expectsChange, (ms) => {
+    await dataSettled(revision, (ms) => {
       now += ms;
       return Promise.resolve();
     });
     return now;
   }
 
-  it("EVAL-02: a step expecting a change waits for a save that comes after a second, then for quiet", async () => {
-    expect(await settledAt([1_400], true)).toBe(2_400);
+  it("EVAL-02: a save that comes after a second is waited for, then the quiet after it", async () => {
+    expect(await settledAt([1_400])).toBe(2_400);
     // Two writes, the second half a second after the first: quiet counts from the last.
-    expect(await settledAt([1_400, 1_900], true)).toBe(2_900);
+    expect(await settledAt([1_400, 1_900])).toBe(2_900);
   });
 
-  it("EVAL-02: any other step watches for three seconds, and waits for quiet after a change it sees", async () => {
-    expect(await settledAt([], false)).toBe(3_000);
-    expect(await settledAt([500], false)).toBe(1_500);
+  it("EVAL-02: a write four seconds late is seen, so a step expecting the data unchanged fails instead of passing", async () => {
+    expect(await settledAt([4_000])).toBe(5_000);
   });
 
-  it("EVAL-02: a change that never comes ends the wait at ten seconds, and the facts say so", async () => {
-    expect(await settledAt([], true)).toBe(10_000);
+  it("EVAL-02: with no write, the wait ends at ten seconds, and the facts say what happened", async () => {
+    expect(await settledAt([])).toBe(10_000);
   });
 });
