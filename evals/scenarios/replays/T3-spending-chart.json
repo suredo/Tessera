@@ -1,0 +1,261 @@
+{
+  "about": "A live run of T3-spending-chart, recorded for replay.",
+  "scenario": "T3-spending-chart",
+  "recorded": {
+    "head": "954c5f2ce50579c4fa6d707ecbae074616275fbd",
+    "at": "2026-11-09T19:30:08.496Z",
+    "cliVersion": "2.1.321"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": "Show my spending this month as a chart",
+          "dataPart": "rent 1200, food 450, transport 120, fun 200",
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Monthly spending chart",
+              "request": "Show my spending this month as a chart"
+            },
+            {
+              "name": "Spending amounts",
+              "request": "rent 1200, food 450, transport 120, fun 200"
+            }
+          ],
+          "profile": "chart",
+          "drawsCharts": true
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Monthly spending chart",
+          "summary": "Shows this month's spending as a chart, with your total. Rent, food, transport and fun are already in; add or remove expenses as you like.",
+          "code": {
+            "html": "<main class=\"wrap\">\n<h1>Spending this month</h1>\n<p class=\"total-line\">Total: <strong data-hook=\"total\" id=\"total\">0</strong></p>\n<div class=\"row\">\n<label for=\"ctype\">Chart type</label>\n<select id=\"ctype\"><option value=\"bar\">Bars</option><option value=\"pie\">Pie</option><option value=\"doughnut\">Doughnut</option></select>\n</div>\n<div data-hook=\"chart\" id=\"chart\" class=\"chart\"></div>\n<p id=\"empty\" class=\"muted\" hidden>No expenses yet. Add one below to see the chart.</p>\n<h2>Expenses</h2>\n<ul id=\"list\" class=\"list\"></ul>\n<h2>Add an expense</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"name\">Name</label><input id=\"name\" data-hook=\"entry-name\" type=\"text\" maxlength=\"80\" autocomplete=\"off\"></div>\n<div class=\"field\"><label for=\"value\">Amount</label><input id=\"value\" data-hook=\"entry-value\" type=\"number\" min=\"0\" step=\"0.01\" inputmode=\"decimal\"></div>\n<button id=\"add\" data-hook=\"entry-add\" type=\"button\">Add</button>\n</div>\n<p id=\"msg\" role=\"status\" class=\"msg\"></p>\n</main>",
+            "css": ".wrap{max-width:640px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.total-line{margin:0 0 var(--ui-space-3)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end;margin-bottom:var(--ui-space-2)}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;width:100%}\nselect{width:auto}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.chart{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3);margin-top:var(--ui-space-2)}\n.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--ui-divider)}\n.list li{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\n.list .n{flex:1;overflow-wrap:anywhere}\n.muted{color:var(--ui-text-secondary)}\n.msg{min-height:1.5em;margin:var(--ui-space-2) 0 0}\n.msg.err{color:var(--ui-error)}\n.msg.ok{color:var(--ui-success)}",
+            "js": "const nameEl = document.getElementById('name');\nconst valueEl = document.getElementById('value');\nconst msgEl = document.getElementById('msg');\nconst listEl = document.getElementById('list');\nconst totalEl = document.getElementById('total');\nconst chartEl = document.getElementById('chart');\nconst emptyEl = document.getElementById('empty');\nconst typeEl = document.getElementById('ctype');\nlet items = [];\nconst revs = new Map();\n\nfunction say(text, kind) {\n  msgEl.textContent = text;\n  msgEl.className = 'msg ' + (kind || '');\n}\n\nfunction render() {\n  let total = 0;\n  for (const it of items) total += it.amount;\n  total = Math.round(total * 100) / 100;\n  totalEl.textContent = String(total);\n  listEl.textContent = '';\n  for (const it of items) {\n    const li = document.createElement('li');\n    const n = document.createElement('span');\n    n.className = 'n';\n    n.textContent = it.name;\n    const a = document.createElement('span');\n    a.textContent = String(it.amount);\n    const b = document.createElement('button');\n    b.type = 'button';\n    b.className = 'secondary';\n    b.textContent = 'Remove';\n    b.setAttribute('aria-label', 'Remove ' + it.name);\n    b.addEventListener('click', () => removeItem(it.id));\n    li.append(n, a, b);\n    listEl.appendChild(li);\n  }\n  emptyEl.hidden = items.length > 0;\n  chartEl.hidden = items.length === 0;\n  if (items.length > 0) {\n    const labels = [];\n    const values = [];\n    for (const it of items) { labels.push(it.name.slice(0, 80)); values.push(it.amount); }\n    tessera.chart(chartEl, {\n      type: typeEl.value,\n      title: 'Spending this month',\n      labels: labels,\n      series: [{ name: 'Amount', values: values }]\n    });\n  }\n}\n\nasync function load() {\n  const res = await tessera.call('data.read', {});\n  const list = Array.isArray(res.data.expenses) ? res.data.expenses : [];\n  items = [];\n  for (const r of list) {\n    items.push({ id: r.id, name: String(r.name), amount: Number(r.amount) || 0 });\n  }\n  revs.clear();\n  for (const [id, rev] of Object.entries(res.revisions.expenses || {})) revs.set(id, rev);\n  render();\n}\n\nasync function addItem() {\n  const name = nameEl.value.trim();\n  const raw = valueEl.value.trim();\n  const amount = Number(raw);\n  if (!name) { say('Type a name for the expense.', 'err'); nameEl.focus(); return; }\n  if (raw === '' || !Number.isFinite(amount) || amount < 0) { say('Type an amount of 0 or more.', 'err'); valueEl.focus(); return; }\n  try {\n    await tessera.call('data.patch', { operations: [{ op: 'add', collection: 'expenses', record: { name: name, amount: amount } }] });\n    nameEl.value = '';\n    valueEl.value = '';\n    await load();\n    say('Added ' + name + '.', 'ok');\n    nameEl.focus();\n  } catch (e) {\n    say('Could not add the expense. Your entry is still here; try again.', 'err');\n  }\n}\n\nasync function removeItem(id) {\n  const rev = revs.get(id);\n  let label = '';\n  for (const it of items) { if (it.id === id) label = it.name; }\n  try {\n    await tessera.call('data.patch', { operations: [{ op: 'remove', collection: 'expenses', id: id, revisionCount: rev }] });\n    await load();\n    say('Removed ' + label + '.', 'ok');\n    nameEl.focus();\n  } catch (e) {\n    say('Could not remove ' + label + '. Try again.', 'err');\n  }\n}\n\ndocument.getElementById('add').addEventListener('click', addItem);\nfor (const el of [nameEl, valueEl]) {\n  el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') addItem(); });\n}\ntypeEl.addEventListener('change', render);\nload().catch(() => say('Could not load your expenses.', 'err'));"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "expenses": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "amount": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["id", "name", "amount"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["expenses"],
+              "additionalProperties": false
+            },
+            "reusableDefaults": {
+              "expenses": []
+            },
+            "initialState": {
+              "expenses": [
+                {
+                  "id": "rent",
+                  "name": "Rent",
+                  "amount": 1200
+                },
+                {
+                  "id": "food",
+                  "name": "Food",
+                  "amount": 450
+                },
+                {
+                  "id": "transport",
+                  "name": "Transport",
+                  "amount": 120
+                },
+                {
+                  "id": "fun",
+                  "name": "Fun",
+                  "amount": 200
+                }
+              ]
+            }
+          },
+          "capabilities": ["chart"],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "chart@4c5b56cace80",
+        "profile@20cd0c9c7df0",
+        "create@4eb0fe4a04c9",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "tool",
+          "name": "Monthly spending chart",
+          "summary": "Shows this month's spending as a chart, with your total. Rent, food, transport and fun are already in; add or remove expenses as you like.",
+          "code": {
+            "html": "<main class=\"wrap\">\n<h1>Spending this month</h1>\n<p class=\"total-line\">Total: <strong data-hook=\"total\" id=\"total\">0</strong></p>\n<div class=\"row\">\n<label for=\"ctype\">Chart type</label>\n<select id=\"ctype\"><option value=\"bar\">Bars</option><option value=\"pie\">Pie</option><option value=\"doughnut\">Doughnut</option></select>\n</div>\n<div data-hook=\"chart\" id=\"chart\" class=\"chart\"></div>\n<p id=\"empty\" class=\"muted\" hidden>No expenses yet. Add one below to see the chart.</p>\n<h2>Expenses</h2>\n<ul id=\"list\" class=\"list\"></ul>\n<h2>Add an expense</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"name\">Name</label><input id=\"name\" data-hook=\"entry-name\" type=\"text\" maxlength=\"80\" autocomplete=\"off\"></div>\n<div class=\"field\"><label for=\"value\">Amount</label><input id=\"value\" data-hook=\"entry-value\" type=\"number\" min=\"0\" step=\"0.01\" inputmode=\"decimal\"></div>\n<button id=\"add\" data-hook=\"entry-add\" type=\"button\">Add</button>\n</div>\n<p id=\"msg\" role=\"status\" class=\"msg\"></p>\n</main>",
+            "css": ".wrap{max-width:640px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.total-line{margin:0 0 var(--ui-space-3)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end;margin-bottom:var(--ui-space-2)}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;width:100%}\nselect{width:auto}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.chart{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3);margin-top:var(--ui-space-2);min-height:var(--ui-space-5)}\n.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--ui-divider)}\n.list li{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\n.list .n{flex:1;overflow-wrap:anywhere}\n.muted{color:var(--ui-text-secondary)}\n.msg{min-height:1.5em;margin:var(--ui-space-2) 0 0}\n.msg.err{color:var(--ui-error)}\n.msg.ok{color:var(--ui-success)}",
+            "js": "const nameEl = document.getElementById('name');\nconst valueEl = document.getElementById('value');\nconst msgEl = document.getElementById('msg');\nconst listEl = document.getElementById('list');\nconst totalEl = document.getElementById('total');\nconst chartEl = document.getElementById('chart');\nconst emptyEl = document.getElementById('empty');\nconst typeEl = document.getElementById('ctype');\nlet items = [];\nconst revs = new Map();\n\nfunction say(text, kind) {\n  msgEl.textContent = text;\n  msgEl.className = 'msg ' + (kind || '');\n}\n\nfunction render() {\n  let total = 0;\n  for (const it of items) total += it.amount;\n  total = Math.round(total * 100) / 100;\n  totalEl.textContent = String(total);\n  listEl.textContent = '';\n  for (const it of items) {\n    const li = document.createElement('li');\n    const n = document.createElement('span');\n    n.className = 'n';\n    n.textContent = it.name;\n    const a = document.createElement('span');\n    a.textContent = String(it.amount);\n    const b = document.createElement('button');\n    b.type = 'button';\n    b.className = 'secondary';\n    b.textContent = 'Remove';\n    b.setAttribute('aria-label', 'Remove ' + it.name);\n    b.addEventListener('click', () => removeItem(it.id));\n    li.append(n, a, b);\n    listEl.appendChild(li);\n  }\n  emptyEl.hidden = items.length > 0;\n  if (items.length > 0) {\n    const labels = [];\n    const values = [];\n    for (const it of items) { labels.push(it.name.slice(0, 80)); values.push(it.amount); }\n    tessera.chart(chartEl, {\n      type: typeEl.value,\n      title: 'Spending this month',\n      labels: labels,\n      series: [{ name: 'Amount', values: values }]\n    });\n  } else {\n    chartEl.textContent = '';\n  }\n}\n\nasync function load() {\n  const res = await tessera.call('data.read', {});\n  const list = Array.isArray(res.data.expenses) ? res.data.expenses : [];\n  items = [];\n  for (const r of list) {\n    items.push({ id: r.id, name: String(r.name), amount: Number(r.amount) || 0 });\n  }\n  revs.clear();\n  for (const [id, rev] of Object.entries(res.revisions.expenses || {})) revs.set(id, rev);\n  render();\n}\n\nasync function addItem() {\n  const name = nameEl.value.trim();\n  const raw = valueEl.value.trim();\n  const amount = Number(raw);\n  if (!name) { say('Type a name for the expense.', 'err'); nameEl.focus(); return; }\n  if (raw === '' || !Number.isFinite(amount) || amount < 0) { say('Type an amount of 0 or more.', 'err'); valueEl.focus(); return; }\n  try {\n    await tessera.call('data.patch', { operations: [{ op: 'add', collection: 'expenses', record: { name: name, amount: amount } }] });\n    nameEl.value = '';\n    valueEl.value = '';\n    await load();\n    say('Added ' + name + '.', 'ok');\n    nameEl.focus();\n  } catch (e) {\n    say('Could not add the expense. Your entry is still here; try again.', 'err');\n  }\n}\n\nasync function removeItem(id) {\n  const rev = revs.get(id);\n  let label = '';\n  for (const it of items) { if (it.id === id) label = it.name; }\n  try {\n    await tessera.call('data.patch', { operations: [{ op: 'remove', collection: 'expenses', id: id, revisionCount: rev }] });\n    await load();\n    say('Removed ' + label + '.', 'ok');\n    nameEl.focus();\n  } catch (e) {\n    say('Could not remove ' + label + '. Try again.', 'err');\n  }\n}\n\ndocument.getElementById('add').addEventListener('click', addItem);\nfor (const el of [nameEl, valueEl]) {\n  el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') addItem(); });\n}\ntypeEl.addEventListener('change', render);\nload().catch(() => say('Could not load your expenses.', 'err'));"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "additionalProperties": false,
+              "properties": {
+                "expenses": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "amount": {
+                        "minimum": 0,
+                        "type": "number"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "maxLength": 80,
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "name", "amount"],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": ["expenses"],
+              "type": "object"
+            },
+            "reusableDefaults": {
+              "expenses": []
+            },
+            "initialState": {}
+          },
+          "capabilities": ["chart"],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "chart@4c5b56cace80",
+        "profile@20cd0c9c7df0",
+        "create@4eb0fe4a04c9",
+        "repair-behavior@753b4c0deca3",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "attempt@db8c6b71b427",
+        "diagnostics@0b26a00a48fd"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "food what-if scenario",
+              "request": "What if food was 20% less?"
+            }
+          ],
+          "profile": "chart",
+          "drawsCharts": true
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Adds a \"What if?\" section that shows your total if expenses named \"Food\" were 20% less. You can change the word and the percentage. Your saved expenses and the real total stay as they are.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<main class=\"wrap\">\n<h1>Spending this month</h1>\n<p class=\"total-line\">Total: <strong data-hook=\"total\" id=\"total\">0</strong></p>\n<div class=\"row\">\n<label for=\"ctype\">Chart type</label>\n<select id=\"ctype\"><option value=\"bar\">Bars</option><option value=\"pie\">Pie</option><option value=\"doughnut\">Doughnut</option></select>\n</div>\n<div data-hook=\"chart\" id=\"chart\" class=\"chart\"></div>\n<p id=\"empty\" class=\"muted\" hidden>No expenses yet. Add one below to see the chart.</p>\n<h2>What if?</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"wname\">Expenses with this in the name</label><input id=\"wname\" type=\"text\" maxlength=\"80\" value=\"Food\" autocomplete=\"off\"></div>\n<div class=\"field\"><label for=\"wpct\">Percent less</label><input id=\"wpct\" type=\"number\" min=\"0\" max=\"100\" step=\"1\" value=\"20\" inputmode=\"decimal\"></div>\n</div>\n<p id=\"what\" class=\"what\" role=\"status\"></p>\n<h2>Expenses</h2>\n<ul id=\"list\" class=\"list\"></ul>\n<h2>Add an expense</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"name\">Name</label><input id=\"name\" data-hook=\"entry-name\" type=\"text\" maxlength=\"80\" autocomplete=\"off\"></div>\n<div class=\"field\"><label for=\"value\">Amount</label><input id=\"value\" data-hook=\"entry-value\" type=\"number\" min=\"0\" step=\"0.01\" inputmode=\"decimal\"></div>\n<button id=\"add\" data-hook=\"entry-add\" type=\"button\">Add</button>\n</div>\n<p id=\"msg\" role=\"status\" class=\"msg\"></p>\n</main>",
+              "css": ".wrap{max-width:640px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.total-line{margin:0 0 var(--ui-space-3)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end;margin-bottom:var(--ui-space-2)}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;width:100%}\nselect{width:auto}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.chart{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3);margin-top:var(--ui-space-2);min-height:var(--ui-space-5)}\n.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--ui-divider)}\n.list li{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\n.list .n{flex:1;overflow-wrap:anywhere}\n.muted{color:var(--ui-text-secondary)}\n.what{margin:0;padding:var(--ui-space-3);background:var(--ui-accent-soft);border-radius:var(--ui-radius-control);min-height:1.5em}\n.msg{min-height:1.5em;margin:var(--ui-space-2) 0 0}\n.msg.err{color:var(--ui-error)}\n.msg.ok{color:var(--ui-success)}",
+              "js": "const nameEl = document.getElementById('name');\nconst valueEl = document.getElementById('value');\nconst msgEl = document.getElementById('msg');\nconst listEl = document.getElementById('list');\nconst totalEl = document.getElementById('total');\nconst chartEl = document.getElementById('chart');\nconst emptyEl = document.getElementById('empty');\nconst typeEl = document.getElementById('ctype');\nconst wnameEl = document.getElementById('wname');\nconst wpctEl = document.getElementById('wpct');\nconst whatEl = document.getElementById('what');\nlet items = [];\nconst revs = new Map();\n\nfunction say(text, kind) {\n  msgEl.textContent = text;\n  msgEl.className = 'msg ' + (kind || '');\n}\n\nfunction round2(n) { return Math.round(n * 100) / 100; }\n\nfunction renderWhat(total) {\n  const term = wnameEl.value.trim();\n  const pct = Number(wpctEl.value);\n  if (!term) { whatEl.textContent = 'Type a word to look for in the expense names.'; return; }\n  if (wpctEl.value.trim() === '' || !Number.isFinite(pct) || pct < 0 || pct > 100) { whatEl.textContent = 'Type a percent from 0 to 100.'; return; }\n  if (items.length === 0) { whatEl.textContent = 'Add some expenses to see the what-if.'; return; }\n  const low = term.toLowerCase();\n  let matched = 0;\n  let count = 0;\n  for (const it of items) {\n    if (it.name.toLowerCase().includes(low)) { matched += it.amount; count += 1; }\n  }\n  if (count === 0) { whatEl.textContent = 'No expenses have \"' + term + '\" in the name.'; return; }\n  const saving = round2(matched * pct / 100);\n  const next = round2(total - saving);\n  whatEl.textContent = 'If ' + term + ' (' + round2(matched) + ') were ' + pct + '% less, you would spend ' + saving + ' less. New total: ' + next + '.';\n}\n\nfunction render() {\n  let total = 0;\n  for (const it of items) total += it.amount;\n  total = round2(total);\n  totalEl.textContent = String(total);\n  renderWhat(total);\n  listEl.textContent = '';\n  for (const it of items) {\n    const li = document.createElement('li');\n    const n = document.createElement('span');\n    n.className = 'n';\n    n.textContent = it.name;\n    const a = document.createElement('span');\n    a.textContent = String(it.amount);\n    const b = document.createElement('button');\n    b.type = 'button';\n    b.className = 'secondary';\n    b.textContent = 'Remove';\n    b.setAttribute('aria-label', 'Remove ' + it.name);\n    b.addEventListener('click', () => removeItem(it.id));\n    li.append(n, a, b);\n    listEl.appendChild(li);\n  }\n  emptyEl.hidden = items.length > 0;\n  if (items.length > 0) {\n    const labels = [];\n    const values = [];\n    for (const it of items) { labels.push(it.name.slice(0, 80)); values.push(it.amount); }\n    tessera.chart(chartEl, {\n      type: typeEl.value,\n      title: 'Spending this month',\n      labels: labels,\n      series: [{ name: 'Amount', values: values }]\n    });\n  } else {\n    chartEl.textContent = '';\n  }\n}\n\nasync function load() {\n  const res = await tessera.call('data.read', {});\n  const list = Array.isArray(res.data.expenses) ? res.data.expenses : [];\n  items = [];\n  for (const r of list) {\n    items.push({ id: r.id, name: String(r.name), amount: Number(r.amount) || 0 });\n  }\n  revs.clear();\n  for (const [id, rev] of Object.entries(res.revisions.expenses || {})) revs.set(id, rev);\n  render();\n}\n\nasync function addItem() {\n  const name = nameEl.value.trim();\n  const raw = valueEl.value.trim();\n  const amount = Number(raw);\n  if (!name) { say('Type a name for the expense.', 'err'); nameEl.focus(); return; }\n  if (raw === '' || !Number.isFinite(amount) || amount < 0) { say('Type an amount of 0 or more.', 'err'); valueEl.focus(); return; }\n  try {\n    await tessera.call('data.patch', { operations: [{ op: 'add', collection: 'expenses', record: { name: name, amount: amount } }] });\n    nameEl.value = '';\n    valueEl.value = '';\n    await load();\n    say('Added ' + name + '.', 'ok');\n    nameEl.focus();\n  } catch (e) {\n    say('Could not add the expense. Your entry is still here; try again.', 'err');\n  }\n}\n\nasync function removeItem(id) {\n  const rev = revs.get(id);\n  let label = '';\n  for (const it of items) { if (it.id === id) label = it.name; }\n  try {\n    await tessera.call('data.patch', { operations: [{ op: 'remove', collection: 'expenses', id: id, revisionCount: rev }] });\n    await load();\n    say('Removed ' + label + '.', 'ok');\n    nameEl.focus();\n  } catch (e) {\n    say('Could not remove ' + label + '. Try again.', 'err');\n  }\n}\n\ndocument.getElementById('add').addEventListener('click', addItem);\nfor (const el of [nameEl, valueEl]) {\n  el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') addItem(); });\n}\nfor (const el of [wnameEl, wpctEl]) {\n  el.addEventListener('input', () => {\n    let total = 0;\n    for (const it of items) total += it.amount;\n    renderWhat(round2(total));\n  });\n}\ntypeEl.addEventListener('change', render);\nload().catch(() => say('Could not load your expenses.', 'err'));"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "chart@4c5b56cace80",
+        "profile@20cd0c9c7df0",
+        "edit@f0e0e0e98dda",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "source@0eae49d84708",
+        "edit-declarations@7eb300505e9f"
+      ]
+    }
+  ]
+}

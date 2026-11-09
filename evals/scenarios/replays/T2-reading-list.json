@@ -1,0 +1,114 @@
+{
+  "about": "A live run of T2-reading-list, recorded for replay.",
+  "scenario": "T2-reading-list",
+  "recorded": {
+    "head": "954c5f2ce50579c4fa6d707ecbae074616275fbd",
+    "at": "2026-11-09T19:27:52.296Z",
+    "cliVersion": "2.1.321"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": "com nota de 1 a 5 e filtro por gênero",
+          "dataPart": "uma lista dos livros que quero ler",
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "pt",
+          "features": [
+            {
+              "name": "Lista de livros para ler",
+              "request": "uma lista dos livros que quero ler"
+            },
+            {
+              "name": "Nota de 1 a 5",
+              "request": "com nota de 1 a 5"
+            },
+            {
+              "name": "Filtro por gênero",
+              "request": "filtro por gênero"
+            }
+          ],
+          "profile": "filtering",
+          "drawsCharts": false
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Livros para ler",
+          "summary": "Lista dos livros que você quer ler, cada um com gênero e nota de 1 a 5. Dá para mudar a nota e filtrar a lista por gênero.",
+          "uiMode": "standard",
+          "capabilities": [],
+          "code": {
+            "html": "<main class=\"app\">\n<h1>Livros para ler</h1>\n<section aria-labelledby=\"t-add\" class=\"panel\">\n<h2 id=\"t-add\">Adicionar livro</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"name\">Título</label><input id=\"name\" data-hook=\"item-name\" type=\"text\" placeholder=\"Ex.: Dom Casmurro\" autocomplete=\"off\"></div>\n<div class=\"field\"><label for=\"cat\">Gênero</label><input id=\"cat\" data-hook=\"item-category\" type=\"text\" placeholder=\"Ex.: Romance\" autocomplete=\"off\"></div>\n<div class=\"field small\"><label for=\"rate\">Nota</label><select id=\"rate\"><option value=\"1\">1</option><option value=\"2\">2</option><option value=\"3\" selected>3</option><option value=\"4\">4</option><option value=\"5\">5</option></select></div>\n<button id=\"add\" data-hook=\"item-add\" type=\"button\" class=\"primary\">Adicionar</button>\n</div>\n<p id=\"err\" class=\"error\" role=\"alert\"></p>\n</section>\n<section aria-labelledby=\"t-list\" class=\"panel\">\n<div class=\"row between\">\n<h2 id=\"t-list\">Minha lista</h2>\n<div class=\"field\"><label for=\"filter\">Filtrar por gênero</label><select id=\"filter\" data-hook=\"filter\"><option value=\"\">Todos os gêneros</option></select></div>\n</div>\n<p id=\"status\" class=\"muted\" role=\"status\">Carregando…</p>\n<ul id=\"list\" class=\"list\"></ul>\n</section>\n</main>",
+            "css": ".app{max-width:720px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-4)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:0 0 var(--ui-space-3)}\n.panel{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-padding);margin-bottom:var(--ui-space-4)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.between{justify-content:space-between;align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 160px;min-width:0}\n.field.small{flex:0 0 80px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select,button{font:inherit;min-height:var(--ui-target);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text)}\nbutton{cursor:pointer}\nbutton.primary{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.error{color:var(--ui-error);margin:var(--ui-space-2) 0 0;min-height:0}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.list{list-style:none;margin:0;padding:0}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;padding:var(--ui-space-3) 0;border-top:1px solid var(--ui-divider)}\n.info{flex:1 1 200px;min-width:0}\n.title{font-weight:600;overflow-wrap:anywhere}\n.genre{display:inline-block;background:var(--ui-accent-soft);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-2);font-size:var(--ui-size-secondary)}\n.stars{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.ctl{display:flex;gap:var(--ui-space-2);align-items:center}",
+            "js": "const nameEl=document.getElementById('name');\nconst catEl=document.getElementById('cat');\nconst rateEl=document.getElementById('rate');\nconst addBtn=document.getElementById('add');\nconst errEl=document.getElementById('err');\nconst filterEl=document.getElementById('filter');\nconst listEl=document.getElementById('list');\nconst statusEl=document.getElementById('status');\nlet books=[];\nlet revs={};\n\nfunction norm(s){return String(s).trim().replace(/\\s+/g,' ');}\n\nasync function load(){\n  try{\n    const res=await tessera.call('data.read',{});\n    const data=res.data||{};\n    books=Array.isArray(data.books)?data.books:[];\n    revs=(res.revisions&&res.revisions.books)||{};\n    render();\n  }catch(e){\n    statusEl.textContent='Não foi possível carregar a lista. Tente abrir a ferramenta de novo.';\n  }\n}\n\nfunction refreshFilter(){\n  const current=filterEl.value;\n  while(filterEl.options.length>1){filterEl.remove(1);}\n  const seen=[];\n  for(const b of books){\n    const c=norm(b.category||'');\n    if(c&&!seen.includes(c)){seen.push(c);}\n  }\n  seen.sort((a,b)=>a.localeCompare(b,'pt'));\n  for(const c of seen){\n    const o=document.createElement('option');\n    o.value=c;o.textContent=c;\n    filterEl.appendChild(o);\n  }\n  filterEl.value=seen.includes(current)?current:'';\n}\n\nfunction render(){\n  refreshFilter();\n  const f=filterEl.value;\n  listEl.textContent='';\n  let shown=0;\n  for(const b of books){\n    if(f&&norm(b.category||'')!==f){continue;}\n    shown++;\n    const li=document.createElement('li');\n    li.setAttribute('data-hook','item');\n    const info=document.createElement('div');\n    info.className='info';\n    const t=document.createElement('div');\n    t.className='title';\n    t.textContent=b.name;\n    const g=document.createElement('span');\n    g.className='genre';\n    g.setAttribute('data-hook','category');\n    g.textContent=b.category;\n    const r=Number(b.rating)||0;\n    const s=document.createElement('div');\n    s.className='stars';\n    s.textContent='Nota: '+'★'.repeat(r)+'☆'.repeat(5-r)+' ('+r+' de 5)';\n    info.appendChild(t);info.appendChild(g);info.appendChild(s);\n    const ctl=document.createElement('div');\n    ctl.className='ctl';\n    const sel=document.createElement('select');\n    const sid='r-'+b.id;\n    sel.id=sid;\n    for(let i=1;i<=5;i++){\n      const o=document.createElement('option');\n      o.value=String(i);o.textContent=String(i);\n      if(i===r){o.selected=true;}\n      sel.appendChild(o);\n    }\n    const lab=document.createElement('label');\n    lab.setAttribute('for',sid);\n    lab.textContent='Mudar nota';\n    sel.addEventListener('change',()=>changeRate(b.id,Number(sel.value)));\n    const rm=document.createElement('button');\n    rm.type='button';\n    rm.setAttribute('data-hook','item-remove');\n    rm.textContent='Remover';\n    rm.setAttribute('aria-label','Remover '+b.name);\n    rm.addEventListener('click',()=>removeBook(b.id));\n    ctl.appendChild(lab);ctl.appendChild(sel);ctl.appendChild(rm);\n    li.appendChild(info);li.appendChild(ctl);\n    listEl.appendChild(li);\n  }\n  if(books.length===0){\n    statusEl.textContent='Sua lista está vazia. Adicione o primeiro livro acima.';\n  }else if(shown===0){\n    statusEl.textContent='Nenhum livro nesse gênero.';\n  }else{\n    statusEl.textContent=shown+(shown===1?' livro':' livros')+(f?' em “'+f+'”':' na lista')+'.';\n  }\n}\n\nasync function addBook(){\n  const name=norm(nameEl.value);\n  if(!name){\n    errEl.textContent='Digite o título do livro.';\n    nameEl.focus();\n    return;\n  }\n  const typed=catEl.value;\n  const category=norm(typed)?typed.trim():'Sem gênero';\n  errEl.textContent='';\n  try{\n    await tessera.call('data.patch',{operations:[{op:'add',collection:'books',record:{name:name,category:category,rating:Number(rateEl.value)}}]});\n    nameEl.value='';\n    await load();\n    statusEl.textContent='Livro adicionado e salvo. '+statusEl.textContent;\n    nameEl.focus();\n  }catch(e){\n    errEl.textContent='Não foi possível salvar o livro. O que você digitou foi mantido; tente de novo.';\n  }\n}\n\nasync function removeBook(id){\n  try{\n    await tessera.call('data.patch',{operations:[{op:'remove',collection:'books',id:id,revisionCount:revs[id]}]});\n    await load();\n  }catch(e){\n    errEl.textContent='Não foi possível remover o livro. Tente de novo.';\n  }\n}\n\nasync function changeRate(id,value){\n  try{\n    await tessera.call('data.patch',{operations:[{op:'replace',collection:'books',id:id,revisionCount:revs[id],fields:{rating:value}}]});\n    await load();\n  }catch(e){\n    errEl.textContent='Não foi possível mudar a nota. Tente de novo.';\n    await load();\n  }\n}\n\naddBtn.addEventListener('click',addBook);\nfor(const el of [nameEl,catEl]){\n  el.addEventListener('keydown',(ev)=>{if(ev.key==='Enter'){ev.preventDefault();addBook();}});\n}\nfilterEl.addEventListener('change',render);\nload();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "books": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "category": {
+                        "type": "string"
+                      },
+                      "rating": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                      }
+                    },
+                    "required": ["id", "name", "category", "rating"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["books"],
+              "additionalProperties": false
+            },
+            "reusableDefaults": {
+              "books": []
+            },
+            "initialState": {}
+          }
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@cc3d58b48db9",
+        "create@4eb0fe4a04c9",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    }
+  ]
+}

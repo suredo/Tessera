@@ -1,0 +1,107 @@
+{
+  "about": "A live run of T5-rsvp-form, recorded for replay.",
+  "scenario": "T5-rsvp-form",
+  "recorded": {
+    "head": "954c5f2ce50579c4fa6d707ecbae074616275fbd",
+    "at": "2026-11-09T19:31:37.005Z",
+    "cliVersion": "2.1.321"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Guest form",
+              "request": "Make a form for my party guests with the fields \"Name\", \"How many people\" and \"Food allergies\""
+            },
+            {
+              "name": "Show answers",
+              "request": "Show me the answers"
+            }
+          ],
+          "profile": "form",
+          "drawsCharts": false
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Party guest form",
+          "summary": "A form where each guest gives their name, how many people are coming and any food allergies. Every answer is saved and listed below the form.",
+          "uiMode": "standard",
+          "capabilities": [],
+          "code": {
+            "html": "<h1>Party guests</h1>\n<form id=\"f\" novalidate>\n<div class=\"row\"><label for=\"name\">Name</label><input id=\"name\" data-hook=\"form-field\" required autocomplete=\"off\"></div>\n<div class=\"row\"><label for=\"count\">How many people</label><input id=\"count\" type=\"number\" min=\"1\" step=\"1\" data-hook=\"form-field\" required></div>\n<div class=\"row\"><label for=\"allergies\">Food allergies</label><input id=\"allergies\" data-hook=\"form-field\" autocomplete=\"off\" placeholder=\"e.g. peanuts, or none\"></div>\n<p id=\"err\" data-hook=\"form-error\" role=\"alert\" class=\"err\"></p>\n<button type=\"button\" id=\"send\" data-hook=\"form-submit\">Send answer</button>\n<p id=\"status\" role=\"status\"></p>\n</form>\n<h2>Answers</h2>\n<p id=\"summary\"></p>\n<ul id=\"list\"></ul>",
+            "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);padding:var(--ui-padding);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-3)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.row{display:flex;flex-direction:column;gap:var(--ui-space-1);margin-bottom:var(--ui-space-3);max-width:420px}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box;width:100%}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;border-radius:var(--ui-radius-control);font:inherit;cursor:pointer}\n:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\n.err{color:var(--ui-error);margin:0 0 var(--ui-space-2);min-height:1em}\n#status{color:var(--ui-success)}\nul{list-style:none;padding:0;margin:0;display:grid;gap:var(--ui-space-2)}\nli{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3)}\n.sub{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}",
+            "js": "const nameEl=document.getElementById('name');\nconst countEl=document.getElementById('count');\nconst allEl=document.getElementById('allergies');\nconst err=document.getElementById('err');\nconst status=document.getElementById('status');\nconst list=document.getElementById('list');\nconst summary=document.getElementById('summary');\nconst send=document.getElementById('send');\n\nfunction render(items){\n  list.textContent='';\n  let total=0;\n  for(const it of items){\n    total+=Number(it.count)||0;\n    const li=document.createElement('li');\n    li.setAttribute('data-hook','answer');\n    const a=document.createElement('div');\n    a.textContent=it.name+' — '+it.count+(Number(it.count)===1?' person':' people');\n    const b=document.createElement('div');\n    b.className='sub';\n    b.textContent='Food allergies: '+(it.allergies||'none given');\n    li.appendChild(a);li.appendChild(b);\n    list.appendChild(li);\n  }\n  summary.textContent=items.length?(items.length+(items.length===1?' answer, ':' answers, ')+total+' people in total.'):'No answers yet.';\n}\n\nasync function load(){\n  try{\n    const r=await tessera.call('data.read',{});\n    const items=Array.isArray(r.data.guests)?r.data.guests:[];\n    render(items);\n  }catch(e){\n    summary.textContent='The answers could not be loaded. Please reopen the tool.';\n  }\n}\n\nasync function submit(){\n  status.textContent='';\n  const missing=[];\n  if(!nameEl.value.trim())missing.push('Name');\n  if(!countEl.value.trim()||Number(countEl.value)<1)missing.push('How many people');\n  if(missing.length){\n    err.textContent='Please fill in: '+missing.join(', ')+'.';\n    return;\n  }\n  err.textContent='';\n  try{\n    await tessera.call('data.patch',{operations:[{op:'add',collection:'guests',record:{name:nameEl.value.trim(),count:Number(countEl.value),allergies:allEl.value.trim()}}]});\n    nameEl.value='';countEl.value='';allEl.value='';\n    status.textContent='Answer saved.';\n    await load();\n  }catch(e){\n    err.textContent='The answer could not be saved. What you typed is still here; please try again.';\n  }\n}\nsend.addEventListener('click',submit);\nfor(const el of [nameEl,countEl,allEl]){\n  el.addEventListener('keydown',function(ev){if(ev.key==='Enter'){ev.preventDefault();submit();}});\n}\nload();"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "guests": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "count": {
+                        "type": "number",
+                        "minimum": 1
+                      },
+                      "allergies": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "name", "count"]
+                  }
+                }
+              },
+              "required": ["guests"]
+            },
+            "reusableDefaults": {
+              "guests": []
+            },
+            "initialState": {}
+          }
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@6dc8ca1aa6e2",
+        "create@4eb0fe4a04c9",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    }
+  ]
+}
