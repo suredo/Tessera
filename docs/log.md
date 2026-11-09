@@ -2,6 +2,8 @@
 
 ## 2026-11-09
 
+* **Fix**: L-90, from T10's rerun in the [M3 live run](../evals/reports/2026-11-09-m3-live-run.md): the creation prompt and the `leftOut` field's description in the [contracts](code/contracts/package.md) now say the list is only for what no tool here can do, never a part another tool could do or one the person says comes later ([generation](code/server/generation.md), [lessons](lessons/tessera-issues.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T22:30:00Z.
+
 * **Update**: A55, chosen by the owner after the [M3 live run](../evals/reports/2026-11-09-m3-live-run.md)'s T2: the app's replies put the model's own words (a tool's summary, a reason, what was left out) on a line of their own after the app's sentence, never inside it, so "Livros para ler is ready." and the Portuguese summary no longer share a sentence. The app stays English (A10, A23). The [decision log](decisions/decision-log.md), the [app](code/web/package.md) and the [runner](code/evals/runner.md), which reads a line break as any whitespace, say so. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T21:30:00Z.
 
 * **Update**: T10's rerun after L-89, in the [M3 live run's report](../evals/reports/2026-11-09-m3-live-run.md): 8 of 8 steps in 8 calls (cap 12). The fixed finding named a reused name, `r`, and its repair held. The scheduling and cards checks passed, and all 7 profile matches in the set were right. It found L-90: the creation answer put a feature asked for later in `leftOut`, which the host shows as something no tool can do. Its recording replaces T10's [replay](code/evals/runner.md), and the [budgets](roadmap/budgets.md) record M3's 38 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T21:45:00Z.

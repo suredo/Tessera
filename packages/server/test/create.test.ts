@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_ROUTES, TOOL_DATA_LIMIT_BYTES, type Creation } from "@tessera/contracts";
 import { describe, expect, it } from "vitest";
+import { z } from "zod";
 import {
   candidateFrom,
   createTool,
@@ -389,6 +390,13 @@ describe("the create stage (CLI-09, GEN-11)", () => {
     const result = await createTool(provider, DEFAULT_ROUTES, { request: "A video playlist" });
     expect(result).toMatchObject({ kind: "candidate", leftOut });
     expect(calls[0]!.system).toContain("name each part it leaves out in leftOut");
+    // L-90: T10's planner listed the flashcards asked for later, which another tool then made.
+    expect(calls[0]!.system).toContain(
+      "leftOut is only for what no tool here can do: a part another tool here could do, or one the person says comes later, is never in it",
+    );
+    expect(JSON.stringify(z.toJSONSchema(calls[0]!.schema))).toContain(
+      "Never a part another tool here could do, or one the person says comes later.",
+    );
     const { provider: none } = answering({ kind: "value", stage: "create", value: tool() });
     expect(await createTool(none, DEFAULT_ROUTES, { request: "A list" })).not.toHaveProperty(
       "leftOut",
