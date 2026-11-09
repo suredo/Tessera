@@ -104,12 +104,19 @@ async function findAll(
 // item stands, which adding one before it may change, not what it is.
 const comparable = (text: string) => text.replace(/^\d+[.)]\s*/, "");
 
-/** What `now` holds that `was` doesn't, and the reverse, each text counted as often as it shows. */
-function difference(was: readonly string[], now: readonly string[]) {
+/**
+ * What `now` holds that `was` doesn't, and the reverse, each text counted as often as it shows, as
+ * `key` reads it: by default as a list item, a leading number aside.
+ */
+function difference(
+  was: readonly string[],
+  now: readonly string[],
+  key: (text: string) => string = comparable,
+) {
   const counts = new Map<string, number>();
-  for (const text of was.map(comparable)) counts.set(text, (counts.get(text) ?? 0) + 1);
+  for (const text of was.map(key)) counts.set(text, (counts.get(text) ?? 0) + 1);
   const added: string[] = [];
-  for (const text of now.map(comparable)) {
+  for (const text of now.map(key)) {
     const left = counts.get(text) ?? 0;
     if (left > 0) counts.set(text, left - 1);
     else added.push(text);
@@ -119,8 +126,12 @@ function difference(was: readonly string[], now: readonly string[]) {
 }
 
 /** The other items' change, in words, or undefined when they are as they were. */
-function changed(was: readonly string[], now: readonly string[]): string | undefined {
-  const { gone, added } = difference(was, now);
+function changed(
+  was: readonly string[],
+  now: readonly string[],
+  key: (text: string) => string = comparable,
+): string | undefined {
+  const { gone, added } = difference(was, now, key);
   if (gone.length === 0 && added.length === 0) return undefined;
   return `${gone.length > 0 ? `gone: ${clip(gone)}` : "none gone"}; ${added.length > 0 ? `new: ${clip(added)}` : "none new"}`;
 }
@@ -643,10 +654,162 @@ async function form(context: CheckContext): Promise<CheckOutcome> {
   return { ok: true };
 }
 
+/**
+ * The numbers `text` shows, each read every way its separators allow: "1,970.5" and "1.970,5"
+ * both read as 1970.5, and "1,970" as 1970 or 1.97, since a check can't know the tool's
+ * convention, only whether one reading is the number it expects.
+ */
+function readings(text: string): number[] {
+  const tokens = text.match(/-?\d(?:[\d.,'\s]*\d)?/g) ?? [];
+  const found = new Set<number>();
+  for (const raw of tokens) {
+    const token = raw.replace(/['\s]/g, "");
+    found.add(Number(token.replace(/,/g, "")));
+    found.add(Number(token.replace(/\./g, "").replace(",", ".")));
+  }
+  return [...found].filter((value) => Number.isFinite(value));
+}
+
+/** Whether `text` shows `sum`, to the cent. */
+const shows = (text: string, sum: number) =>
+  readings(text).some((value) => Math.abs(value - sum) < 0.005);
+
+/** "1200", "37.5": a number as the check writes it in what it says. */
+const number = (value: number) => String(Math.round(value * 100) / 100);
+
+/**
+ * The chart profile's check (VER-03): it reads what the chart helper drew in the element marked
+ * chart, and the total; adds an entry of a name of its own, and expects the chart to show it, in
+ * its one series, with the other entries as they were, and the total to be the new sum; and opens
+ * the tool again and expects both as they were saved. It reads the helper's record of the chart,
+ * not its pixels (CAP-04).
+ */
+async function chart(context: CheckContext): Promise<CheckOutcome> {
+  const profile = PROFILES.chart;
+  const [adds, draws, totals, reopens] = profile.rules;
+  const name = unique(profile.fixture.entryName);
+  const value = Number(profile.fixture.entryValue);
+  const entries = (count: number) => `${count} ${count === 1 ? "entry" : "entries"}`;
+
+  /** The entries the chart shows, as "name: number", or a failure; none while it shows no chart. */
+  async function shown(
+    tool: MountedTool,
+    rule: string,
+    needed: boolean,
+  ): Promise<{ pairs: [string, number][] } | CheckOutcome> {
+    const read = await drive("chart", rule, tool, [{ do: "chart", hook: "chart" }]);
+    if (!("steps" in read)) return read;
+    const step = read.steps[0];
+    if (!step?.ok || !step.count) {
+      return broke("chart", draws, "the element marked chart", "none");
+    }
+    const spec = step.charts?.[0] ?? null;
+    if (!spec) {
+      return needed
+        ? broke("chart", draws, "a chart drawn with tessera.chart", "none")
+        : { pairs: [] };
+    }
+    if (spec.series.length !== 1) {
+      return broke("chart", draws, "a chart with one series", `${spec.series.length} series`);
+    }
+    const values = spec.series[0]!.values;
+    return { pairs: spec.labels.map((label, i): [string, number] => [label, values[i]!]) };
+  }
+
+  /** The total's text, if it shows the sum of `pairs`; a failure saying what it shows if not. */
+  async function totalOf(tool: MountedTool, pairs: [string, number][]) {
+    const read = await readList("chart", totals, tool, "total");
+    if (!("texts" in read)) return read;
+    const sum = pairs.reduce((all, [, each]) => all + each, 0);
+    const text = read.texts[0] ?? "";
+    if (read.count === 0) return broke("chart", totals, "the element marked total", "none");
+    if (!shows(text, sum)) {
+      return broke(
+        "chart",
+        totals,
+        `a total of ${number(sum)} for the ${entries(pairs.length)} the chart shows`,
+        `"${text.slice(0, 60)}"`,
+      );
+    }
+    return undefined;
+  }
+
+  const said = (pairs: [string, number][]) =>
+    pairs.map(([label, each]) => `${label}: ${number(each)}`);
+  // A label is the entry's name, exactly: a leading number in it is part of the name, not a place.
+  const exact = (text: string) => text;
+
+  const tool = await context.rehearse();
+  const before = await shown(tool, draws, false);
+  if (!("pairs" in before)) return before;
+  const startTotal = await totalOf(tool, before.pairs);
+  if (startTotal) return startTotal;
+
+  // Adding: the chart shows the entry, by its name and number, and the others as they were.
+  const typed = await drive("chart", adds, tool, [
+    { do: "fill", hook: "entry-name", value: name },
+    { do: "fill", hook: "entry-value", value: profile.fixture.entryValue },
+    { do: "click", hook: "entry-add" },
+  ]);
+  if (!("steps" in typed)) return typed;
+  const after = await shown(tool, draws, true);
+  if (!("pairs" in after)) return after;
+  const mine = after.pairs.filter(([label]) => label === name);
+  if (mine.length !== 1) {
+    return broke(
+      "chart",
+      adds,
+      `the chart showing "${name}" once after adding it`,
+      `it ${mine.length === 0 ? "not shown" : `shown ${mine.length} times`}; the labels ${clip(after.pairs.map(([label]) => label))}`,
+    );
+  }
+  if (Math.abs(mine[0]![1] - value) >= 0.005) {
+    return broke(
+      "chart",
+      draws,
+      `"${name}" at ${number(value)}, the number typed`,
+      `${number(mine[0]![1])}`,
+    );
+  }
+  const others = changed(
+    said(before.pairs),
+    said(after.pairs.filter(([label]) => label !== name)),
+    exact,
+  );
+  if (others) {
+    return broke(
+      "chart",
+      adds,
+      `the other ${entries(before.pairs.length)} as they were after adding "${name}"`,
+      others,
+    );
+  }
+  const addedTotal = await totalOf(tool, after.pairs);
+  if (addedTotal) return addedTotal;
+
+  // Opened again: the chart and total as they were saved.
+  const reopened = await context.rehearse();
+  const again = await shown(reopened, reopens, true);
+  if (!("pairs" in again)) return again;
+  const kept = changed(said(after.pairs), said(again.pairs), exact);
+  if (kept) {
+    return broke(
+      "chart",
+      reopens,
+      `the ${entries(after.pairs.length)} the chart showed, after opening the tool again`,
+      `${entries(again.pairs.length)}; ${kept}`,
+    );
+  }
+  const keptTotal = await totalOf(reopened, again.pairs);
+  if (keptTotal) return keptTotal;
+  return { ok: true };
+}
+
 const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<CheckOutcome>>> = {
   "item-list": itemList,
   filtering,
   form,
+  chart,
 };
 
 /**

@@ -24,7 +24,7 @@ export type VerificationProfile = {
 /** Something with a list of items: T1, T2, T12 (the M3 scenario sets). */
 export const ITEM_LIST_PROFILE = {
   id: "item-list",
-  fits: "a list of items the person adds to and removes from, such as a shopping list, a reading list or a to-do list",
+  fits: "a list of items the person adds to and removes from, such as a shopping list or a to-do list",
   hooks: [
     { name: "item-name", says: "the field for a new item's name" },
     { name: "item-add", says: "the button that adds the item named there" },
@@ -48,7 +48,7 @@ export const ITEM_LIST_PROFILE = {
  */
 export const FILTERING_PROFILE = {
   id: "filtering",
-  fits: "a list of items, each in a category, that the person adds to, removes from and narrows to one category, such as a reading list filtered by genre",
+  fits: "a list of items in categories that the person adds to, removes from and narrows to one category, as books by genre",
   hooks: [
     ...ITEM_LIST_PROFILE.hooks,
     {
@@ -76,7 +76,7 @@ export const FILTERING_PROFILE = {
 /** A form people fill in and send, whose answers it keeps and shows: T5 (the M3 scenario sets). */
 export const FORM_PROFILE = {
   id: "form",
-  fits: "a form people fill in and send, whose answers it keeps and shows, such as an RSVP, a sign-up sheet or a survey",
+  fits: "a form people fill in and send, whose answers it keeps and shows, as an RSVP or a survey",
   hooks: [
     {
       name: "form-field",
@@ -100,17 +100,42 @@ export const FORM_PROFILE = {
   fixture: { text: "Tessera check answer" },
 } as const satisfies VerificationProfile;
 
+/**
+ * A chart of numbers the person enters, with their total: T3 (the M3 scenario sets). It draws with
+ * the chart helper (CAP-04), whose record of what it drew is what its check reads.
+ */
+export const CHART_PROFILE = {
+  id: "chart",
+  fits: "a chart of numbers the person enters, with their total, such as spending",
+  hooks: [
+    { name: "entry-name", says: "the field for a new entry's name" },
+    { name: "entry-value", says: "the field for its number" },
+    { name: "entry-add", says: "the button that adds the entry" },
+    { name: "chart", says: "the element tessera.chart draws the chart in" },
+    { name: "total", says: "the element whose text is the entries' total, as a number" },
+  ],
+  rules: [
+    "Typing a name in entry-name and a number in entry-value, then pressing entry-add, adds that entry, and saves it.",
+    "The chart in chart has one series, with a label and a value for each entry: its name and its number.",
+    "total shows the sum of the entries' numbers.",
+    "Opened again, the tool shows the entries as they were saved.",
+  ],
+  fixture: { entryName: "Tessera check entry", entryValue: "37.5" },
+} as const satisfies VerificationProfile;
+
 /** Every profile, by ID. */
 export const PROFILES = {
   "item-list": ITEM_LIST_PROFILE,
   filtering: FILTERING_PROFILE,
   form: FORM_PROFILE,
+  chart: CHART_PROFILE,
 } as const satisfies Record<string, VerificationProfile>;
 
 export const PROFILE_IDS = [
   "item-list",
   "filtering",
   "form",
+  "chart",
 ] as const satisfies readonly (keyof typeof PROFILES)[];
 export type ProfileId = (typeof PROFILE_IDS)[number];
 
