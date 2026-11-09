@@ -405,6 +405,8 @@ function rootName(node: AnyNode): string | undefined {
  */
 class PageValues {
   readonly names = new Set<string>();
+  /** For each name in `names`, the line where it was first found to hold the page's objects. */
+  private readonly origins = new Map<string, number>();
   readonly returning = new Set<string>();
   thisIsPage = false;
   /** Set when the tracking gave up: every value may then be the page's. */
@@ -524,17 +526,62 @@ class PageValues {
     }
   }
 
+  /**
+   * Why an expression counts as the page's, when the reason is a name of the tool's own that holds
+   * the page's objects somewhere else: that name and the line where it first does. Only explains a
+   * finding; it never decides one (VER-07). Undefined when the reason is the page itself, a name
+   * the tool never declares, or something else.
+   */
+  borrowedName(node: AnyNode | null | undefined): { name: string; line: number } | undefined {
+    if (!node || this.everything) return undefined;
+    switch (node.type) {
+      case "Identifier": {
+        const name = node["name"] as string;
+        const line = this.origins.get(name);
+        return line !== undefined && this.declared.has(name) && !PAGE_GLOBALS.has(name)
+          ? { name, line }
+          : undefined;
+      }
+      case "MemberExpression":
+        return this.borrowedName(node["object"] as AnyNode);
+      case "ChainExpression":
+      case "ParenthesizedExpression":
+      case "AwaitExpression":
+      case "SpreadElement":
+        return this.borrowedName((node["expression"] ?? node["argument"]) as AnyNode);
+      case "ConditionalExpression":
+      case "LogicalExpression": {
+        const [a, b] =
+          node.type === "LogicalExpression"
+            ? [node["left"] as AnyNode, node["right"] as AnyNode]
+            : [node["consequent"] as AnyNode, node["alternate"] as AnyNode];
+        return this.isPage(a) ? this.borrowedName(a) : this.borrowedName(b);
+      }
+      default:
+        return undefined;
+    }
+  }
+
   /** One pass; true if it found something new. */
   private round(): boolean {
     const before = this.names.size + this.returning.size + (this.thisIsPage ? 1 : 0);
-    const mark = (names: string[]) => names.forEach((name) => this.names.add(name));
+    const mark = (names: string[], at: AnyNode) =>
+      names.forEach((name) => {
+        this.names.add(name);
+        if (!this.origins.has(name)) this.origins.set(name, lineOf(at));
+      });
     const markParams = (fn: AnyNode | undefined) => {
-      if (fn && isFunction(fn)) mark((fn["params"] as AnyNode[]).flatMap((p) => boundNames(p)));
+      if (fn && isFunction(fn)) {
+        mark(
+          (fn["params"] as AnyNode[]).flatMap((p) => boundNames(p)),
+          fn,
+        );
+      }
     };
     this.visit(this.program, (node) => {
       switch (node.type) {
         case "VariableDeclarator":
-          if (this.isPage(node["init"] as AnyNode)) mark(boundNames(node["id"] as AnyNode));
+          if (this.isPage(node["init"] as AnyNode)) mark(boundNames(node["id"] as AnyNode), node);
           break;
         case "AssignmentExpression": {
           if (!this.isPage(node["right"] as AnyNode)) break;
@@ -542,9 +589,9 @@ class PageValues {
           if (left.type === "MemberExpression") {
             if ((left["object"] as AnyNode).type === "ThisExpression") this.thisIsPage = true;
             const root = rootName(left);
-            if (root) this.names.add(root);
+            if (root) mark([root], node);
           } else {
-            mark(boundNames(left));
+            mark(boundNames(left), node);
           }
           break;
         }
@@ -556,6 +603,7 @@ class PageValues {
             left.type === "VariableDeclaration"
               ? (left["declarations"] as AnyNode[]).flatMap((d) => boundNames(d["id"] as AnyNode))
               : boundNames(left),
+            node,
           );
           break;
         }
@@ -581,7 +629,7 @@ class PageValues {
             // A container given them (list.push(el), map.set(k, el)) holds them.
             // The bridge copies what it is given, so it never holds the page's objects.
             const root = callee.type === "MemberExpression" ? rootName(callee) : undefined;
-            if (root && !isBridgeCall(callee)) this.names.add(root);
+            if (root && !isBridgeCall(callee)) mark([root], node);
           }
           break;
         }
@@ -625,6 +673,11 @@ class PageValues {
       this.visit(child, see, ownBody);
     }
   }
+}
+
+/** A node's line, or 0 when the parser gave it none. */
+function lineOf(node: AnyNode): number {
+  return (node.loc as { start: { line: number } } | undefined)?.start.line ?? 0;
 }
 
 /**
@@ -945,6 +998,14 @@ export function checkJs(
       line: (node.loc as { start: { line: number } } | undefined)?.start.line,
       message,
     });
+  // A name the check follows through the whole script can hold the tool's own data in one place
+  // and an element in another; the finding then says which line made it count (VER-07).
+  const because = (value: AnyNode | null | undefined) => {
+    const borrowed = page.borrowedName(value);
+    return borrowed
+      ? ` Here \`${borrowed.name}\` counts as one because line ${borrowed.line} gives \`${borrowed.name}\` an element or the page, and the check follows a name through the whole JavaScript. If this \`${borrowed.name}\` is the tool's own data, give one of them another name.`
+      : "";
+  };
 
   /**
    * `thisIs`: what `this` is where the node runs: "instance" inside a class's methods and fields,
@@ -1013,7 +1074,8 @@ export function checkJs(
         if (page.isPage(node["right"] as AnyNode)) {
           found(
             node,
-            "The JavaScript lists the properties of an element or the page with for…in. Name the properties you need.",
+            "The JavaScript lists the properties of an element or the page with for…in. Name the properties you need." +
+              because(node["right"] as AnyNode),
           );
         }
         break;
@@ -1022,7 +1084,8 @@ export function checkJs(
           if (property.type === "SpreadElement" && page.isPage(property["argument"] as AnyNode)) {
             found(
               property,
-              "The JavaScript copies an element or the page with `...`. Name the properties you need.",
+              "The JavaScript copies an element or the page with `...`. Name the properties you need." +
+                because(property["argument"] as AnyNode),
             );
           }
         }
@@ -1156,7 +1219,8 @@ export function checkJs(
       if (!isNumberKey(key) && page.isPage(object)) {
         found(
           node,
-          "The JavaScript reaches a property of an element or the page by a name computed at run time. Write the name out.",
+          "The JavaScript reaches a property of an element or the page by a name computed at run time. Write the name out." +
+            because(object),
         );
       }
       return;
@@ -1205,10 +1269,12 @@ export function checkJs(
         found(node, `The JavaScript uses Object.${name}, which a tool can't use.`);
       } else if (REFLECTING.has(name) && parent?.type === "CallExpression") {
         const args = parent["arguments"] as AnyNode[];
-        if (args.some((a) => page.isPage(a))) {
+        const onPageArg = args.find((a) => page.isPage(a));
+        if (onPageArg) {
           found(
             node,
-            `The JavaScript uses Object.${name} on an element or the page. Name the properties you need.`,
+            `The JavaScript uses Object.${name} on an element or the page. Name the properties you need.` +
+              because(onPageArg),
           );
         }
       }

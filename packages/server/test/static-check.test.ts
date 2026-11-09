@@ -190,6 +190,61 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
     }
   });
 
+  it("VER-07, L-89: a name that holds an element elsewhere is still refused, and the finding says which line made it count", () => {
+    // M3's live T10: `o` held the tool's own revisions in one loop and an <option> further down.
+    // The check follows names through the whole script, so both loops count as the page; the
+    // finding said only "on an element or the page", and the repair kept the name and was refused.
+    const tool = (loop: string) =>
+      [
+        "async function load() {",
+        "  const res = await tessera.call('data.read', {});",
+        loop,
+        "}",
+        "function fill() {",
+        "  for (const day of [1, 2]) {",
+        "    const o = document.createElement('option');",
+        "    o.textContent = String(day);",
+        "  }",
+        "}",
+      ].join("\n");
+    const cases = [
+      [
+        "for (const [c, o] of Object.entries(res.revisions)) { Object.entries(o); }",
+        "Object.entries on an element or the page",
+      ],
+      [
+        "for (const c of ['tasks']) { const o = res.revisions[c]; for (const id in o) {} }",
+        "for…in",
+      ],
+      [
+        "const revs = new Map(); const id = 'a'; for (const c of ['tasks']) { const o = res.revisions[c]; revs.set(c, o[id]); }",
+        "by a name computed at run time",
+      ],
+      ["const o = res.revisions; const copy = { ...o };", "copies an element or the page"],
+    ] as const;
+    for (const [loop, rule] of cases) {
+      const findings = checkJs(tool(loop));
+      const finding = findings.find((f) => f.message.includes(rule));
+      expect(finding, loop).toBeDefined();
+      expect(finding?.line, loop).toBe(3);
+      expect(finding?.message, loop).toContain(
+        "Here `o` counts as one because line 7 gives `o` an element or the page, and the check follows a name through the whole JavaScript. If this `o` is the tool's own data, give one of them another name.",
+      );
+    }
+    // Renamed, the tool's own data is plain again, and indexing it is fine.
+    expect(
+      checkJs(
+        tool(cases[2][0])
+          .replace("const o = document", "const opt = document")
+          .replace("o.textContent", "opt.textContent"),
+      ),
+    ).toEqual([]);
+    // The page itself, or a name the tool never declares, needs no explanation.
+    for (const js of ["for (const name in document.body) {}", "box[key] = html;"]) {
+      for (const finding of checkJs(js)) expect(finding.message, js).not.toContain("counts as one");
+    }
+  });
+
   it("ADR 0009: fails closed when the tracking can't finish (Codex's loop, longer than its round limit)", () => {
     // At run time the loop carries document.body back to p0; each round of the tracking moves it
     // one step, so a chain longer than its limit must make it refuse, never accept.
