@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T12:45:59Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T12:52:09Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 - `src/runner/replay.ts`: `replayScenario` plays a scenario from an answers file, a rehearsal or a recorded live run, with no call: the command's rehearsal and replay modes use it, and so does `packages/web/e2e/scenario-replays.spec.ts`, which replays every file in `evals/scenarios/replays/` in CI and expects each run's steps to pass or fail as listed there, with their problems (`EVAL-07`, `TEST-04`). The list follows today's scenario files, so after a scenario's expectation is corrected it can differ from the live report, whose score stays frozen. A new recording needs its expected failed steps listed there.
 - `src/runner/record.ts`: `recordAnswers` turns a run's ledger and request log into answers that replay it (`EVAL-07`); `CANCELLED_WAIT_MS` is how long a cancelled call's answer waits in the replay.
 - `src/runner/report.ts`: `reportMarkdown`, the report a person reads.
-- `evals/scenarios/rehearsals/`: a rehearsal for each M2 scenario, written by hand: `J6-limits`, `T1-shopping-list`, `T6-tip-calculator` and `T13-drawing-board`; and for the first of the M3 live set, `T2-reading-list`, `T3-spending-chart` and `T5-rsvp-form`, whose tools pass their profiles' behavior checks (`VER-03`), the chart's after its edit too. The tools in them pass creation's checks; the calculator works in whole cents, so it shows the catalogue's 100.63 and 25.16 each.
+- `evals/scenarios/rehearsals/`: a rehearsal for each M2 scenario, written by hand: `J6-limits`, `T1-shopping-list`, `T6-tip-calculator` and `T13-drawing-board`; and for the first of the M3 live set, `T2-reading-list`, `T3-spending-chart`, `T5-rsvp-form` and `T10-study-planner`, whose tools pass their profiles' behavior checks (`VER-03`), the chart's after its edit too. The tools in them pass creation's checks; the calculator works in whole cents, so it shows the catalogue's 100.63 and 25.16 each.
 
 # Invariants
 

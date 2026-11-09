@@ -1,0 +1,204 @@
+{
+  "about": "A rehearsal of T10-study-planner, written by hand: no model answered these.",
+  "scenario": "T10-study-planner",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [],
+          "profile": "scheduling"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Study plan",
+          "summary": "Evening study sessions for your topics over the next two weeks, never on Fridays.",
+          "code": {
+            "html": "<h1>Study plan</h1>\n<label for=\"task\">Topic</label> <input id=\"task\" data-hook=\"task-name\">\n<button data-hook=\"task-add\">Add topic</button>\n<label for=\"day\">Never study on</label> <select id=\"day\" data-hook=\"rule-day\">\n<option value=\"0\">Sunday</option><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option>\n<option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\">Friday</option>\n<option value=\"6\">Saturday</option></select>\n<button data-hook=\"rule-add\">Add rule</button>\n<h2>Rules</h2>\n<ul id=\"rules\" aria-label=\"Rules\"></ul>\n<h2>Evening sessions</h2>\n<ul id=\"sessions\" aria-label=\"Sessions\"></ul>",
+            "css": "",
+            "js": "const DAYS = [\"Sunday\", \"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\"];\nlet state;\nlet today;\n// The day offset days from today, as YYYY-MM-DD with its weekday.\nconst dayAt = (offset) => {\n  const [y, m, d] = today.split(\"-\").map(Number);\n  const at = new Date(Date.UTC(y, m - 1, d + offset));\n  return { date: at.toISOString().slice(0, 10), weekday: at.getUTCDay() };\n};\nconst render = () => {\n  const ruled = new Set(state.data.rules.map((rule) => rule.weekday));\n  // The next two weeks, kept off the weekdays the rules rule out.\n  const freeDays = Array.from({ length: 14 }, (_, i) => dayAt(i)).filter(({ weekday }) => !ruled.has(weekday));\n  document.getElementById(\"rules\").replaceChildren(...state.data.rules.map((rule) => {\n    const item = document.createElement(\"li\");\n    item.dataset.hook = \"rule\";\n    item.textContent = \"Never on \" + DAYS[rule.weekday] + \" \";\n    const remove = document.createElement(\"button\");\n    remove.dataset.hook = \"rule-remove\";\n    remove.textContent = \"Remove\";\n    remove.addEventListener(\"click\", () =>\n      save([{ op: \"remove\", collection: \"rules\", id: rule.id, revisionCount: state.revisions.rules[rule.id] }]),\n    );\n    item.append(remove);\n    return item;\n  }));\n  const sessions = [];\n  if (freeDays.length > 0) {\n    state.data.tasks.forEach((task, i) => {\n      for (const step of [0, 3, 6]) {\n        const day = freeDays[(i + step) % freeDays.length];\n        const item = document.createElement(\"li\");\n        item.dataset.hook = \"session\";\n        const time = document.createElement(\"time\");\n        time.dateTime = day.date + \"T19:00\";\n        time.textContent = DAYS[day.weekday] + \" \" + day.date + \", 19:00\";\n        const name = document.createElement(\"span\");\n        name.dataset.hook = \"session-task\";\n        name.textContent = task.name;\n        item.append(time, \" \", name);\n        sessions.push(item);\n      }\n    });\n  }\n  document.getElementById(\"sessions\").replaceChildren(...sessions);\n};\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; render(); });\nconst save = (operations) => tessera.call(\"data.patch\", { operations }).then(load);\ntessera.call(\"clock.now\").then((now) => { today = now.date; return load(); });\ndocument.querySelector(\"[data-hook=task-add]\").addEventListener(\"click\", () => {\n  const name = document.querySelector(\"[data-hook=task-name]\").value.trim();\n  if (name) save([{ op: \"add\", collection: \"tasks\", record: { name } }]);\n});\ndocument.querySelector(\"[data-hook=rule-add]\").addEventListener(\"click\", () => {\n  const weekday = Number(document.querySelector(\"[data-hook=rule-day]\").value);\n  if (!state.data.rules.some((rule) => rule.weekday === weekday)) save([{ op: \"add\", collection: \"rules\", record: { weekday } }]);\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "tasks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "name"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "weekday"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "tasks": [],
+              "rules": []
+            },
+            "initialState": {
+              "tasks": [],
+              "rules": [
+                {
+                  "id": "r-1",
+                  "weekday": 5
+                }
+              ]
+            }
+          },
+          "capabilities": ["clock"],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "data",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Fridays are allowed now: the rule against them is gone.",
+          "patch": {
+            "operations": [
+              {
+                "op": "remove",
+                "collection": "rules",
+                "id": "r-1",
+                "revisionCount": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "new_tool",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [],
+          "profile": "cards"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Flashcards",
+          "summary": "Flashcards from your notes, one card a line.",
+          "code": {
+            "html": "<h1>Flashcards</h1>\n<label for=\"notes\">Notes, one card a line, as term: meaning</label>\n<textarea id=\"notes\" data-hook=\"notes\"></textarea>\n<button data-hook=\"cards-make\">Make cards</button>\n<ul id=\"cards\" aria-label=\"Cards\"></ul>",
+            "css": "",
+            "js": "let state;\nconst render = () => {\n  document.getElementById(\"cards\").replaceChildren(...state.data.cards.map((card) => {\n    const item = document.createElement(\"li\");\n    item.dataset.hook = \"card\";\n    const front = document.createElement(\"strong\");\n    front.dataset.hook = \"card-front\";\n    front.textContent = card.front;\n    const back = document.createElement(\"span\");\n    back.dataset.hook = \"card-back\";\n    back.textContent = card.back;\n    item.append(front, \" \", back);\n    return item;\n  }));\n};\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; render(); });\nload();\n// One card a line: its front before the first colon, its back after it.\nconst cardsOf = (notes) => notes.split(String.fromCharCode(10)).flatMap((line) => {\n  const at = line.indexOf(\":\");\n  if (at < 0) return [];\n  const front = line.slice(0, at).trim();\n  const back = line.slice(at + 1).trim();\n  return front && back ? [{ front, back }] : [];\n});\ndocument.querySelector(\"[data-hook=cards-make]\").addEventListener(\"click\", () => {\n  const field = document.querySelector(\"[data-hook=notes]\");\n  const made = cardsOf(field.value);\n  if (made.length === 0) return;\n  tessera.call(\"data.patch\", { operations: made.map((record) => ({ op: \"add\", collection: \"cards\", record })) }).then(() => {\n    field.value = \"\";\n    return load();\n  });\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "cards": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "front", "back"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "front": {
+                        "type": "string"
+                      },
+                      "back": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "cards": []
+            },
+            "initialState": {
+              "cards": [
+                {
+                  "id": "c-1",
+                  "front": "Mean",
+                  "back": "the average of the values."
+                },
+                {
+                  "id": "c-2",
+                  "front": "Median",
+                  "back": "the middle value."
+                }
+              ]
+            }
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    }
+  ]
+}
