@@ -153,6 +153,9 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
       "J6-limits",
       "T1-shopping-list",
       "T13-drawing-board",
+      "T2-reading-list",
+      "T3-spending-chart",
+      "T5-rsvp-form",
       "T6-tip-calculator",
     ]);
     for (const id of ids) {

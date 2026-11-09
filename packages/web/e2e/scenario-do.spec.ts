@@ -33,7 +33,9 @@ const list: Creation = {
   name: "Shopping list",
   summary: "A list of what to buy.",
   code: {
-    html: '<h1>Shopping list</h1><label for="name">Item</label> <input id="name" data-hook="item-name"> <button data-hook="item-add">Add</button><ul id="items" aria-label="Items"></ul>',
+    // Two fields share the item-name hook, so a step finds one by its label; the item-list check
+    // fills the first, the item's name.
+    html: '<h1>Shopping list</h1><label for="name">Item</label> <input id="name" data-hook="item-name"> <label for="note">Note</label> <input id="note" data-hook="item-name"> <button data-hook="item-add">Add</button><ul id="items" aria-label="Items"></ul>',
     css: "",
     js: `let state;
 const list = document.getElementById("items");
@@ -95,8 +97,9 @@ const scenario = scenarioSchema.parse({
   profiles: ["item-list"],
   steps: [
     { say: "A shopping list with milk", expect: { created: true } },
+    // The field found by its label, as a person finds one field of a form.
     {
-      do: { fill: "item-name", value: "Eggs" },
+      do: { fill: "item-name", label: "Item", value: "Eggs" },
       expect: { version: "unchanged", data: "unchanged" },
     },
     { do: { click: "item-add" }, expect: { version: "unchanged", data: "changed" } },
@@ -104,6 +107,8 @@ const scenario = scenarioSchema.parse({
       do: { click: "item-remove", in: { hook: "item", text: "Milk" } },
       expect: { version: "unchanged", data: "changed" },
     },
+    // Without a label, two fields share the hook: the step fails, saying how many.
+    { do: { fill: "item-name", value: "Ham" } },
     // Nothing shows Bread, so there is nothing to press: the step fails, saying so.
     { do: { click: "item-remove", in: { hook: "item", text: "Bread" } } },
   ],
@@ -143,8 +148,12 @@ test("EVAL-01, VER-03: a scenario's do steps type into and click the tool's hook
     [3, "do", "passed"],
     [4, "do", "passed"],
     [5, "do", "failed"],
+    [6, "do", "failed"],
   ]);
   expect(report.steps[4]!.problems.join(" ")).toContain(
+    "The tool shows 2 elements marked item-name; the step needs one.",
+  );
+  expect(report.steps[5]!.problems.join(" ")).toContain(
     'The tool shows 0 elements marked item with "Bread"; the step needs one.',
   );
   // The controls changed the person's own data: Eggs added, Milk removed.

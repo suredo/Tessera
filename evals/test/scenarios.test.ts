@@ -39,6 +39,9 @@ describe("scenario files (EVAL-01)", () => {
       "J6-limits",
       "T1-shopping-list",
       "T13-drawing-board",
+      "T2-reading-list",
+      "T3-spending-chart",
+      "T5-rsvp-form",
       "T6-tip-calculator",
     ]);
     for (const scenario of all) {
@@ -54,6 +57,9 @@ describe("scenario files (EVAL-01)", () => {
       "J6-limits": 5,
       "T1-shopping-list": 10,
       "T13-drawing-board": 7,
+      "T2-reading-list": 8,
+      "T3-spending-chart": 10,
+      "T5-rsvp-form": 8,
       "T6-tip-calculator": 7,
     });
   });
@@ -78,13 +84,15 @@ describe("scenario files (EVAL-01)", () => {
         "profiles: [item-list]\nsteps:\n  - say: hi\n" +
           "  - do: { fill: item-name, value: Eggs }\n" +
           "  - do: { click: item-add }\n    expect: { data: changed }\n" +
-          "  - do: { click: item-remove, in: { hook: item, text: Milk } }\n",
+          "  - do: { click: item-remove, in: { hook: item, text: Milk } }\n" +
+          "  - do: { fill: item-name, label: Item, value: Bread }\n",
       ),
     );
     expect(scenario.steps.slice(1).map((s) => [stepKind(s), "do" in s && s.do])).toEqual([
       ["do", { fill: "item-name", value: "Eggs" }],
       ["do", { click: "item-add" }],
       ["do", { click: "item-remove", in: { hook: "item", text: "Milk" } }],
+      ["do", { fill: "item-name", label: "Item", value: "Bread" }],
     ]);
     const refused = (id: string, rest: string, problem: RegExp) =>
       expect(() => loadScenario(scenarioFile(id, rest))).toThrow(problem);

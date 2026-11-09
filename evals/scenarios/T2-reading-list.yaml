@@ -1,0 +1,34 @@
+# T2, reading list in Portuguese (docs/testing/app-catalogue.md), in its M3 form: an item list with
+# a category each, narrowed by a filter, checked by the filtering profile (VER-03) before it opens.
+# The person adds a book in a genre with the tool's own controls (EVAL-01), narrows the list to
+# that genre, which saves nothing, and finds the book still there the next day. Whether the tool
+# speaks Portuguese, and how it shows ratings, is the AI review's.
+id: T2-reading-list
+tier: intermediate
+language: pt-BR
+person: "Uma leitora que anota os livros que quer ler"
+goal: "Uma lista de livros para ler, com nota e filtro por gênero"
+clock: { start: "2026-11-04T21:00:00", zone: "America/Sao_Paulo" }
+budget: { calls: 8 }
+profiles: [filtering]
+steps:
+  - say: "Quero uma lista dos livros que quero ler, com nota de 1 a 5 e filtro por gênero."
+    expect: { created: true, workspace: new }
+  - do: { fill: item-name, value: "Dom Casmurro" }
+  - do: { fill: item-category, value: Romance }
+  - do: { click: item-add }
+    expect: { version: unchanged, data: changed }
+  # Narrowing the list is a view, not a change: nothing is saved.
+  - do: { fill: filter, value: Romance }
+    expect: { version: unchanged, data: unchanged }
+  - next-day: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence

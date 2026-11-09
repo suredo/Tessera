@@ -395,16 +395,18 @@ async function useControl(page: Page, action: DoAction): Promise<void> {
     }
     scope = holders;
   }
-  const control = scope.locator(marked(hook));
+  // Of several, the one whose label shows the step's text, as a person finds a form's field.
+  const candidates = scope.locator(marked(hook));
+  const control = action.label ? candidates.and(tool.getByLabel(action.label)) : candidates;
   const count = await control.count();
   if (count !== 1) {
     throw new Error(
-      `The tool shows ${count} elements marked ${hook}${action.in ? ` there` : ""}; the step needs one.`,
+      `The tool shows ${count} elements marked ${hook}${action.label ? ` labelled "${action.label}"` : ""}${action.in ? ` there` : ""}; the step needs one.`,
     );
   }
   if ("click" in action) {
     await control.click();
-  } else if ((await scope.locator(`select${marked(hook)}`).count()) === 1) {
+  } else if ((await control.and(tool.locator("select")).count()) === 1) {
     // Playwright picks the choice whose value or text is the value, or fails saying it has none.
     await control.selectOption(action.value);
   } else {
