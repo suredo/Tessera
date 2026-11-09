@@ -11,7 +11,15 @@ import { ready } from "./support/ready.ts";
 // was observed and whose rule it is (VER-07).
 
 type Flaw =
-  "none" | "portuguese" | "staleTotal" | "staleChart" | "rounded" | "notSaved" | "twoSeries";
+  | "none"
+  | "portuguese"
+  | "staleTotal"
+  | "staleChart"
+  | "rounded"
+  | "notSaved"
+  | "twoSeries"
+  | "renumbers"
+  | "savesRenumbered";
 
 /** A spending chart that fits the chart profile, with `flaw` built in. */
 const spending = (flaw: Flaw): Artifact["code"] => ({
@@ -54,6 +62,17 @@ document.querySelector("[data-hook=entry-add]").addEventListener("click", () => 
     if (flaw === "notSaved") return render();
   }
   if (flaw === "staleTotal") return render();
+  // Two flaws number the other entries' names anew as they add one: one shows that, the other
+  // shows the names as they were until the tool is opened again.
+  if (flaw === "renumbers" || flaw === "savesRenumbered") {
+    const kept = [...state.data.entries, { id: "added", name, amount }];
+    const renames = state.data.entries.map((e, i) => ({ op: "replace", collection: "entries", id: e.id, revisionCount: state.revisions.entries[e.id], fields: { name: (i + 2) + ". " + e.name.replace(/^[0-9]+[.] /, "") } }));
+    return tessera.call("data.patch", { operations: [...renames, { op: "add", collection: "entries", record: { name, amount } }] }).then(() => {
+      if (flaw === "renumbers") return load();
+      state.data.entries = kept;
+      render();
+    });
+  }
   tessera.call("data.patch", { operations: [{ op: "add", collection: "entries", record: { name, amount } }] }).then(load);
 });`,
 });
@@ -66,6 +85,8 @@ const flaws: Flaw[] = [
   "rounded",
   "notSaved",
   "twoSeries",
+  "renumbers",
+  "savesRenumbered",
 ];
 let host: SandboxHost;
 
@@ -183,4 +204,24 @@ test("VER-03, VER-04: a chart with more than the one series the prompt asked for
   const result = await check(page, "twoSeries");
   expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
   expect(result.reason).toContain("expected a chart with one series; observed 2 series.");
+});
+
+const NUMBERED = SPENT.map((entry, i) => ({ ...entry, name: `${i + 1}. ${entry.name}` }));
+
+test("VER-03: a chart's names are compared exactly, so one that renumbers the other entries as it adds fails", async ({
+  page,
+}) => {
+  const result = await check(page, "renumbers", NUMBERED);
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toContain("expected the other 4 entries as they were after adding");
+  expect(result.reason).toContain('observed gone: "1. Rent: 1200", "2. Food: 450"');
+});
+
+test("VER-03: and one whose saved names come back renumbered fails once opened again", async ({
+  page,
+}) => {
+  const result = await check(page, "savesRenumbered", NUMBERED);
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toContain("(Opened again, the tool shows the entries as they were saved.)");
+  expect(result.reason).toContain('gone: "1. Rent: 1200"');
 });

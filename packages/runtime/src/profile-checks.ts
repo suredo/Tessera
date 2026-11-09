@@ -104,12 +104,19 @@ async function findAll(
 // item stands, which adding one before it may change, not what it is.
 const comparable = (text: string) => text.replace(/^\d+[.)]\s*/, "");
 
-/** What `now` holds that `was` doesn't, and the reverse, each text counted as often as it shows. */
-function difference(was: readonly string[], now: readonly string[]) {
+/**
+ * What `now` holds that `was` doesn't, and the reverse, each text counted as often as it shows, as
+ * `key` reads it: by default as a list item, a leading number aside.
+ */
+function difference(
+  was: readonly string[],
+  now: readonly string[],
+  key: (text: string) => string = comparable,
+) {
   const counts = new Map<string, number>();
-  for (const text of was.map(comparable)) counts.set(text, (counts.get(text) ?? 0) + 1);
+  for (const text of was.map(key)) counts.set(text, (counts.get(text) ?? 0) + 1);
   const added: string[] = [];
-  for (const text of now.map(comparable)) {
+  for (const text of now.map(key)) {
     const left = counts.get(text) ?? 0;
     if (left > 0) counts.set(text, left - 1);
     else added.push(text);
@@ -119,8 +126,12 @@ function difference(was: readonly string[], now: readonly string[]) {
 }
 
 /** The other items' change, in words, or undefined when they are as they were. */
-function changed(was: readonly string[], now: readonly string[]): string | undefined {
-  const { gone, added } = difference(was, now);
+function changed(
+  was: readonly string[],
+  now: readonly string[],
+  key: (text: string) => string = comparable,
+): string | undefined {
+  const { gone, added } = difference(was, now, key);
   if (gone.length === 0 && added.length === 0) return undefined;
   return `${gone.length > 0 ? `gone: ${clip(gone)}` : "none gone"}; ${added.length > 0 ? `new: ${clip(added)}` : "none new"}`;
 }
@@ -725,6 +736,8 @@ async function chart(context: CheckContext): Promise<CheckOutcome> {
 
   const said = (pairs: [string, number][]) =>
     pairs.map(([label, each]) => `${label}: ${number(each)}`);
+  // A label is the entry's name, exactly: a leading number in it is part of the name, not a place.
+  const exact = (text: string) => text;
 
   const tool = await context.rehearse();
   const before = await shown(tool, draws, false);
@@ -758,7 +771,11 @@ async function chart(context: CheckContext): Promise<CheckOutcome> {
       `${number(mine[0]![1])}`,
     );
   }
-  const others = changed(said(before.pairs), said(after.pairs.filter(([label]) => label !== name)));
+  const others = changed(
+    said(before.pairs),
+    said(after.pairs.filter(([label]) => label !== name)),
+    exact,
+  );
   if (others) {
     return broke(
       "chart",
@@ -774,7 +791,7 @@ async function chart(context: CheckContext): Promise<CheckOutcome> {
   const reopened = await context.rehearse();
   const again = await shown(reopened, reopens, true);
   if (!("pairs" in again)) return again;
-  const kept = changed(said(after.pairs), said(again.pairs));
+  const kept = changed(said(after.pairs), said(again.pairs), exact);
   if (kept) {
     return broke(
       "chart",
