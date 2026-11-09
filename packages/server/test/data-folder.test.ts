@@ -16,7 +16,7 @@ import {
 import { RequestLedger } from "../src/ledger/index.ts";
 import { listTrash, restoreSavedTool } from "../src/trash/index.ts";
 import { loadVersion } from "../src/versions/index.ts";
-import { getWorkspace, listSavedTools } from "../src/workspaces/index.ts";
+import { getWorkspace, listSavedTools, workspaceVersions } from "../src/workspaces/index.ts";
 
 // Every data folder is a new temporary one, never the real one (ENG-19).
 const temps: string[] = [];
@@ -165,6 +165,26 @@ describe("migrating real data (ENG-18)", () => {
       ["create", "ok", null],
     ]);
     folder.close();
+  });
+
+  it("ENG-18, VER-08: a schema-13 database migrates with its versions' notes kept, and none has a profile", async () => {
+    const root = folderFromFixture("schema-13.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated[0]).toBe(14);
+    expect(backups(root)).toHaveLength(1);
+    const notes = [
+      { index: 1, summary: "Made a garden plan.", checks: ["code", "start"], profile: null },
+      { index: 2, summary: null, checks: ["code"], profile: null },
+    ];
+    expect(workspaceVersions(folder, "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4")).toMatchObject(notes);
+    folder.close();
+    // Opened again, nothing more to migrate, and the history is as it was.
+    const reopened = await openDataFolder(root);
+    expect(reopened.migrated).toEqual([]);
+    expect(workspaceVersions(reopened, "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4")).toMatchObject(
+      notes,
+    );
+    reopened.close();
   });
 
   it("ENG-18: keeps the backup until the next successful start", async () => {

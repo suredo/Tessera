@@ -237,6 +237,32 @@ describe("a version's note (APP-05)", () => {
     expect(addWorkspaceVersion(store, hand.id, other)).toMatchObject({ summary: null, checks: [] });
   });
 
+  it("VER-08: a restore puts back the same code, so it keeps the behavior check and profile that code passed", async () => {
+    const store = await folder();
+    const built = candidateFrom(editFixture);
+    if (built.kind !== "candidate") throw new Error("Bad fixture");
+    const checked = saveVersion(store.db, built.artifact);
+    const next = saveVersion(store.db, {
+      ...built.artifact,
+      code: { ...built.artifact.code, css: "body{color:#333}" },
+    });
+    const w = createWorkspace(store, "W");
+    activateVersion(store, w.id, checked, w.dataRevision, {
+      note: { summary: "A list.", checks: ["code", "start", "behavior"], profile: "item-list" },
+    });
+    activateVersion(store, w.id, next, getWorkspace(store, w.id)!.dataRevision, {
+      note: { summary: "Darker text.", checks: ["code", "start"], profile: null },
+    });
+    expect(
+      restoreVersion(store, w.id, checked, getWorkspace(store, w.id)!.dataRevision),
+    ).toMatchObject({ ok: true });
+    expect(workspaceVersions(store, w.id).map((v) => [v.index, v.checks, v.profile])).toEqual([
+      [1, ["code", "start", "behavior"], "item-list"],
+      [2, ["code", "start"], null],
+      [3, ["code", "start", "behavior"], "item-list"],
+    ]);
+  });
+
   it("APP-05: a restore keeps this workspace's own note for that code, never another workspace's", async () => {
     const store = await folder();
     const built = candidateFrom(editFixture);
