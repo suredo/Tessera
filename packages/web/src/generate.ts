@@ -106,7 +106,7 @@ export function withInterfaceOutcome(
   if (!interfaceMessage) return outcome;
   return {
     ...outcome,
-    message: `${interfaceMessage} ${failure ? t("request.mixedEntryFailed", { reason: failure }) : outcome.message}`,
+    message: `${interfaceMessage}\n${failure ? t("request.mixedEntryFailed", { reason: failure }) : outcome.message}`,
     ...(outcome.dataOffer ? { dataOffer: { ...outcome.dataOffer, interfaceMessage } } : {}),
   };
 }
@@ -332,7 +332,7 @@ export async function carryOut(
         feature: feature!,
         message: outcome.message,
       });
-  return { ...outcome, message: [...said, last].join(" "), openWorkspaceId: made };
+  return { ...outcome, message: [...said, last].join("\n"), openWorkspaceId: made };
 
   async function loop(): Promise<RequestOutcome> {
     for (;;) {

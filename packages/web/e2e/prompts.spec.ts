@@ -133,6 +133,11 @@ test("TEST-03, GEN-15: a request in Portuguese makes a tool in Portuguese, and i
       timeout: 30_000,
     },
   );
+  // The app's sentence stays English and the tool's summary, in the person's language, follows on
+  // a line of its own: no sentence mixes the two (A55, GEN-12).
+  expect(await newestReply(page).innerText()).toContain(
+    "Lista de compras is ready.\nUma lista do que comprar.",
+  );
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Leite", "Ovos"]);
   await page.screenshot({ path: test.info().outputPath("portuguese-tool.png") });
 

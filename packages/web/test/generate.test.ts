@@ -202,7 +202,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
         dataOutcome({ kind: "answer", answer: "data_cancelled" }),
       ).message,
     ).toContain(
-      "was updated. A list to tick off at the store. The proposed changes were cancelled.",
+      "was updated.\nA list to tick off at the store.\nThe proposed changes were cancelled.",
     );
     mixed.fake.finishData = () => Promise.reject(new Error("Lost response"));
     const uncertain = await carryOut("mixed", candidate.workspaceId, mixed.fake);
@@ -217,7 +217,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       { outcome: "activated", workspace: {} as never, migrationCount: 1 },
     );
     expect(await carryOut("Add quantities", candidate.workspaceId, updated.fake)).toMatchObject({
-      message: "Shopping list was updated. A list to tick off at the store.",
+      message: "Shopping list was updated.\nA list to tick off at the store.",
       openWorkspaceId: candidate.workspaceId,
     });
     for (const answer of ["unchanged", "stale"] as const) {
@@ -232,7 +232,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
     const reason = "This drawing board already has an eraser. I changed nothing.";
     const untouched = deps({ kind: "answer", answer: "unchanged", reason });
     expect((await carryOut("Add an eraser.", null, untouched.fake)).message).toBe(
-      `The tool wasn't changed. ${reason}`,
+      `The tool wasn't changed.\n${reason}`,
     );
     expect(untouched.seen.stagings).toHaveLength(0);
   });
@@ -245,7 +245,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       leftOut,
     });
     expect((await carryOut("Find videos", null, untouched.fake)).message).toBe(
-      "The tool wasn't changed. You can already keep video titles here. Not included, because tools here can't do it: Finding videos on the internet.",
+      "The tool wasn't changed.\nYou can already keep video titles here.\nNot included, because tools here can't do it:\nFinding videos on the internet",
     );
     expect(untouched.seen.stagings).toHaveLength(0);
     expect(
@@ -256,7 +256,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
         interface: { outcome: "unchanged", leftOut },
         data: { kind: "answer", answer: "data_unchanged" },
       }).message,
-    ).toContain("Not included, because tools here can't do it: Finding videos on the internet.");
+    ).toContain("Not included, because tools here can't do it:\nFinding videos on the internet");
   });
   it("GEN-09: stages a smoke repair once, reports its own outcome, and never repairs a cancellation or refusal", async () => {
     const { fake, seen } = deps(candidate);
@@ -274,7 +274,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       );
     };
     expect(await carryOut("A list", null, fake)).toMatchObject({
-      message: "Fixed list is ready. A list to tick off at the store.",
+      message: "Fixed list is ready.\nA list to tick off at the store.",
     });
     expect(repair).toHaveBeenCalledWith({
       workspaceId: candidate.workspaceId,
@@ -318,7 +318,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
     );
     expect(await carryOut("A video playlist", null, fake)).toEqual({
       message:
-        "Shopping list is ready. A list to tick off at the store. Not included, because tools here can't do it: Finding videos on the internet; Playing videos.",
+        "Shopping list is ready.\nA list to tick off at the store.\nNot included, because tools here can't do it:\nFinding videos on the internet; Playing videos",
       openWorkspaceId: candidate.workspaceId,
     });
   });
@@ -329,7 +329,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       migrationCount: 0,
     });
     expect(await carryOut("A shopping list", null, fake)).toEqual({
-      message: "Shopping list is ready. A list to tick off at the store.",
+      message: "Shopping list is ready.\nA list to tick off at the store.",
       openWorkspaceId: candidate.kind === "candidate" ? candidate.workspaceId : "",
     });
     expect(seen.requests).toEqual([{ request: "A shopping list" }]);
@@ -404,7 +404,7 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
       [{ kind: "answer", answer: "unsupported" }, en["request.unsupported"]],
       [
         { kind: "answer", answer: "cannot", reason: "Booking needs the internet." },
-        "Tessera can't make that. Booking needs the internet.",
+        "Tessera can't make that.\nBooking needs the internet.",
       ],
       [{ kind: "answer", answer: "ask_to_split" }, en["request.split"]],
       [{ kind: "answer", answer: "not_yet" }, en["request.notYet"]],
@@ -462,7 +462,7 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
     });
     expect(outcome).toEqual({
       message:
-        "Shopping list is ready. A list to tick off at the store. Aisles was added. Added aisles. Prices was added. Added prices.",
+        "Shopping list is ready.\nA list to tick off at the store.\nAisles was added.\nAdded aisles.\nPrices was added.\nAdded prices.",
       openWorkspaceId: candidate.workspaceId,
     });
     // Each follow-up names the version just activated, by its own token.
@@ -490,7 +490,7 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
     fake.stage = () => Promise.resolve(++stagings === 3 ? failedCheck : activated);
     const outcome = await carryOut("A big list", null, fake);
     expect(outcome.message).toBe(
-      `Shopping list is ready. A list to tick off at the store. Aisles was added. Added aisles. Prices wasn't added: ${en["request.editCheckFailed"]}`,
+      `Shopping list is ready.\nA list to tick off at the store.\nAisles was added.\nAdded aisles.\nPrices wasn't added: ${en["request.editCheckFailed"]}`,
     );
     expect(outcome.openWorkspaceId).toBe(candidate.workspaceId);
   });
@@ -505,7 +505,7 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
     const outcome = await carryOut("A big list", null, fake);
     expect(outcome).toEqual({
       message:
-        "Shopping list is ready. A list to tick off at the store. Aisles wasn't added: The rest of the tool wasn't added. Please ask for it again.",
+        "Shopping list is ready.\nA list to tick off at the store.\nAisles wasn't added: The rest of the tool wasn't added. Please ask for it again.",
       openWorkspaceId: candidate.workspaceId,
     });
   });
@@ -532,7 +532,7 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
         : Promise.resolve(activated);
     const outcome = await carryOut("A big list", null, fake);
     expect(outcome.message).toBe(
-      `Shopping list is ready. A list to tick off at the store. Aisles may have been added: ${en["request.activationUnknown"]}`,
+      `Shopping list is ready.\nA list to tick off at the store.\nAisles may have been added: ${en["request.activationUnknown"]}`,
     );
     expect(outcome.reloadData).toBe(true);
     expect(outcome.message).not.toContain("wasn't added");
@@ -541,7 +541,7 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
   it("GEN-17, GEN-08: Cancel while a version is shown names the feature that wasn't asked for, after the core and after a feature", async () => {
     for (const [stopAt, missing, before] of [
       [1, "Aisles", ""],
-      [2, "Prices", " Aisles was added. Added aisles."],
+      [2, "Prices", "\nAisles was added.\nAdded aisles."],
     ] as const) {
       const core = { ...candidate, followUps: ["Aisles", "Prices"] } as GenerateReply;
       const { fake } = deps(core, activated);
@@ -563,7 +563,7 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
         owner as never,
       );
       expect(outcome.message).toBe(
-        `Shopping list is ready. A list to tick off at the store.${before} ${missing} wasn't added: ${en["request.stopped"]}`,
+        `Shopping list is ready.\nA list to tick off at the store.${before}\n${missing} wasn't added: ${en["request.stopped"]}`,
       );
     }
   });
@@ -577,7 +577,7 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
       Promise.reject(new HostError("Tessera didn't answer.", 503)),
     );
     expect(outcome).toEqual({
-      message: `Shopping list is ready. A list to tick off at the store. Aisles wasn't added: Tessera didn't answer.`,
+      message: `Shopping list is ready.\nA list to tick off at the store.\nAisles wasn't added: Tessera didn't answer.`,
       openWorkspaceId: candidate.workspaceId,
       reloadData: true,
     });
@@ -600,7 +600,7 @@ describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
     const outcome = await carryOut("A big list", null, fake);
     expect(outcome).toEqual({
       message:
-        "Shopping list is ready. A list to tick off at the store. Aisles wasn't added: The request was stopped or expired. Please ask again.",
+        "Shopping list is ready.\nA list to tick off at the store.\nAisles wasn't added: The request was stopped or expired. Please ask again.",
       openWorkspaceId: candidate.workspaceId,
     });
   });

@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A54), with its choice and reasons."
+description: "Every decision made so far (A1–A55), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T21:18:14Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T21:30:00Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -69,6 +69,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A52 | Changing sessions | **Task checkpoint and resume, with one short handoff per task** | From the context-checkpoint specification, approved by the owner, amending `ENG-05`. A checkpoint sends lasting findings to their existing docs, keeps rejected alternatives in non-authoritative history notes, and writes a handoff in `context/handoffs/`; a new session resumes from it. Handoffs live outside the OKF bundle and are removed when the task's pull request merges, so they don't pile up (L-14). Skills are named `task-checkpoint` and `task-resume` because a project skill named `resume` would replace Claude Code's built-in `/resume` (`ENG-25`, `ENG-26`). The alternatives considered are in a [history note](../../context/history/practices/checkpoint/2026-10-11-task-checkpoint-workflow.md). |
 | A53 | Assistant memory outside the repository | **Personal and machine facts only; project knowledge stays in the repository** | Claude Code and Codex each keep notes the other can't see, on one machine. Project rules kept there drift from `AGENTS.md` and the docs, the failure behind lesson L-14, and undermine the single rules file (`ENG-05`). Found while reviewing the checkpoint workflow: two of Claude Code's own notes already restated `AGENTS.md` (`ENG-27`). |
 | A54 | Tracking work | **The roadmap owns scope; each task's brief lives in its issue or pull request** | One owner and two assistants. The roadmap keeps the only copy of what a milestone delivers; GitHub issues and pull requests track the work and link to it without restating it, and the coverage report (`ENG-17`) measures progress. Work done in one session keeps its brief in the pull request; anything that waits, spans sessions or goes to the other assistant starts as an issue, so both assistants read the same brief. Closing a milestone reconciles its open issues, so they don't pile up like old handoffs. No project board while one or two tasks are in flight. A draft until reviewed at the end of M0 (`ENG-28` to `ENG-30`). |
+| A55 | The app's words beside the model's | **The model's words go on a line of their own, never inside the app's sentence** | Chosen by the owner on 2026-11-09, after the [M3 live run](../../evals/reports/2026-11-09-m3-live-run.md)'s T2 replied "Livros para ler is ready. Lista dos livros…". The app stays English (A10, A23); a tool's summary, a reason the model gave, or what was left out follows the app's sentence on its own line, so no sentence mixes two languages. A tool's name may still appear in the app's sentences, as a file's name would. Showing the app in the person's language is separate, later work (`UX-05`). |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2
