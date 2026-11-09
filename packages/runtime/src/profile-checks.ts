@@ -57,7 +57,8 @@ async function drive(
 /** How many texts a read reports: a longer list is read a page at a time. */
 const PAGE = 100;
 
-type List = { count: number; texts: string[] };
+/** The items' texts as a read gives them, and a fingerprint of each whole text. */
+type List = { count: number; texts: string[]; digests: string[] };
 
 /**
  * Every item `hook` marks, with its text: read a page at a time, each read bounded, so a list of
@@ -74,13 +75,15 @@ async function readList(
   const step = first.steps[0];
   const count = step?.ok ? (step.count ?? 0) : 0;
   const texts = step?.ok ? [...(step.texts ?? [])] : [];
+  const digests = step?.ok ? [...(step.digests ?? [])] : [];
   for (let start = PAGE; start < count; start += PAGE) {
     const page = await drive(profile, rule, tool, [{ do: "read", hook, start }]);
     if (!("steps" in page)) return page;
     const read = page.steps[0];
     texts.push(...(read?.ok ? (read.texts ?? []) : []));
+    digests.push(...(read?.ok ? (read.digests ?? []) : []));
   }
-  return { count, texts };
+  return { count, texts, digests };
 }
 
 /** Where items `hook` marks show `text`: the positions of the first 20, from `start`. */
@@ -819,8 +822,12 @@ async function cards(context: CheckContext): Promise<CheckOutcome> {
   const hex = unique("").trim();
   const count = (n: number) => `${n} ${n === 1 ? "card" : "cards"}`;
   // A read's text never holds a line break, so one joins a front and back without mixing them up.
-  const pair = (one: string, other: string) => `${one}\n${other}`;
-  const said = (pairs: readonly string[]) => pairs.map((each) => each.replace("\n", ": "));
+  // A card shown is its front and back as read, then a fingerprint of each whole, so a change past
+  // the part a read gives counts too; the cards the notes give are short, so their text is whole.
+  const pair = (...parts: string[]) => parts.join("\n");
+  const text = (card: string) => card.split("\n").slice(0, 2).join("\n");
+  const said = (cards: readonly string[]) =>
+    cards.map((card) => card.split("\n").slice(0, 2).join(": "));
   const exact = (text: string) => text;
 
   const wanted = [
@@ -852,7 +859,9 @@ async function cards(context: CheckContext): Promise<CheckOutcome> {
         `${fronts.count} card-front and ${backs.count} card-back shown`,
       );
     }
-    return fronts.texts.map((each, i) => pair(each, backs.texts[i] ?? ""));
+    return fronts.texts.map((each, i) =>
+      pair(each, backs.texts[i] ?? "", fronts.digests[i] ?? "", backs.digests[i] ?? ""),
+    );
   }
 
   // Making: exactly the two cards the notes give, and the others as they were.
@@ -875,7 +884,7 @@ async function cards(context: CheckContext): Promise<CheckOutcome> {
       `gone: ${clip(said(gone))}`,
     );
   }
-  const off = difference(wanted, added, exact);
+  const off = difference(wanted, added.map(text), exact);
   if (off.gone.length > 0 || off.added.length > 0) {
     return broke(
       "cards",

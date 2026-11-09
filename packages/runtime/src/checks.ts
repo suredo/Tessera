@@ -129,6 +129,7 @@ function readStep(value: unknown): DriveResult | undefined {
   }
   if (step["ok"] !== true) return undefined;
   const texts = step["texts"];
+  const digests = step["digests"];
   const matches = step["matches"];
   const fields = step["fields"];
   const charts = step["charts"];
@@ -136,6 +137,7 @@ function readStep(value: unknown): DriveResult | undefined {
     ok: true,
     ...(typeof step["count"] === "number" ? { count: step["count"] } : {}),
     ...(Array.isArray(texts) ? { texts: texts.map(String) } : {}),
+    ...(Array.isArray(digests) ? { digests: digests.map(String) } : {}),
     ...(Array.isArray(matches) ? { matches: matches.map(Number) } : {}),
     ...(Array.isArray(fields) ? { fields: fields.map(readField) } : {}),
     // A chart as the contract reads it, or null for one that isn't (CAP-04).

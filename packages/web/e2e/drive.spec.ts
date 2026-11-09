@@ -145,6 +145,14 @@ async function rehearse(page: Page) {
   return { ...result, bridgeRequests };
 }
 
+/** A read's answer: how many, their texts, and a fingerprint of each whole text. */
+const read = (count: number, texts: string[]) => ({
+  ok: true,
+  count,
+  texts,
+  digests: texts.map(() => expect.stringMatching(/^[0-9a-z]+$/)),
+});
+
 /** Stages `mountId` with one check that drives it with `steps`; returns what its page answered. */
 async function drive(page: Page, mountId: string, steps: DriveStep[]): Promise<DriveReport> {
   await page.goto(host.url);
@@ -200,16 +208,35 @@ test("VER-03: a check fills in, clicks and reads hooked elements, each step once
   expect(report).toEqual({
     problems: [],
     steps: [
-      { ok: true, count: 1, texts: ["Milk Remove"] },
+      read(1, ["Milk Remove"]),
       { ok: true },
       { ok: true },
-      { ok: true, count: 2, texts: ["Milk Remove", "Eggs Remove"] },
+      read(2, ["Milk Remove", "Eggs Remove"]),
       { ok: true, count: 2, matches: [1] },
-      { ok: true, count: 2, texts: ["Eggs Remove"] },
+      read(2, ["Eggs Remove"]),
       { ok: true },
-      { ok: true, count: 1, texts: ["Eggs Remove"] },
+      read(1, ["Eggs Remove"]),
     ],
   });
+});
+
+test("VER-03: a read gives the first 200 characters of each text and a fingerprint of the whole, so texts that differ only past them are told apart", async ({
+  page,
+}) => {
+  const long = "word ".repeat(45);
+  const report = await drive(page, "list", [
+    { do: "fill", hook: "item-name", value: `${long}one` },
+    { do: "click", hook: "item-add" },
+    { do: "fill", hook: "item-name", value: `${long}two` },
+    { do: "click", hook: "item-add" },
+    { do: "read", hook: "item" },
+    { do: "read", hook: "item", start: 1 },
+  ]);
+  const [all, from] = report.steps.slice(4) as { texts: string[]; digests: string[] }[];
+  expect(all!.texts.map((text) => text.length)).toEqual([11, 200, 200]);
+  expect(all!.texts[1]).toBe(all!.texts[2]);
+  expect(new Set(all!.digests).size).toBe(3);
+  expect(from!.digests).toEqual(all!.digests.slice(1));
 });
 
 test("VER-03: a check chooses a select's choice by its value or by what it says, and reads only what is shown", async ({
@@ -230,13 +257,13 @@ test("VER-03: a check chooses a select's choice by its value or by what it says,
   ).toEqual({
     problems: [],
     steps: [
-      { ok: true, count: 2, texts: ["Dune", "SPQR"] },
+      read(2, ["Dune", "SPQR"]),
       { ok: true },
-      { ok: true, count: 1, texts: ["SPQR"] },
+      read(1, ["SPQR"]),
       { ok: true },
       { ok: true, count: 1, matches: [0] },
       { ok: true },
-      { ok: true, count: 2, texts: ["Dune", "SPQR"] },
+      read(2, ["Dune", "SPQR"]),
       { ok: false, problem: 'The select with the hook "pick" has no choice "Poetry".' },
     ],
   });
@@ -312,26 +339,26 @@ test("BRG-06, VER-03: in the smoke check's panel a save is refused; in a rehears
   expect(steps(answers[0])).toEqual([
     { ok: true },
     { ok: true },
-    { ok: true, count: 1, texts: ["not-active"] },
-    { ok: true, count: 1, texts: ["Milk"] },
+    read(1, ["not-active"]),
+    read(1, ["Milk"]),
   ]);
   // Rehearsing, its save goes to the throwaway copy, and it shows it.
   expect(steps(answers[1])).toEqual([
     { ok: true },
     { ok: true },
-    { ok: true, count: 1, texts: [""] },
-    { ok: true, count: 2, texts: ["Milk", "Eggs"] },
+    read(1, [""]),
+    read(2, ["Milk", "Eggs"]),
   ]);
   // Reopened, it shows what it saved.
-  expect(steps(answers[2])).toEqual([{ ok: true, count: 2, texts: ["Milk", "Eggs"] }]);
+  expect(steps(answers[2])).toEqual([read(2, ["Milk", "Eggs"])]);
   // The next check's candidate is live and can't save, and its rehearsal starts afresh.
   expect(steps(answers[3])).toEqual([
     { ok: true },
     { ok: true },
-    { ok: true, count: 1, texts: ["not-active"] },
-    { ok: true, count: 1, texts: ["Milk"] },
+    read(1, ["not-active"]),
+    read(1, ["Milk"]),
   ]);
-  expect(steps(answers[4])).toEqual([{ ok: true, count: 1, texts: ["Milk"] }]);
+  expect(steps(answers[4])).toEqual([read(1, ["Milk"])]);
   // Every check passed, so staging went on to activation.
   expect(staged).toMatchObject({ outcome: "refused", message: "Not stored." });
   // The starting data it was given is unchanged, and nothing reached the server's bridge.

@@ -9,7 +9,8 @@ import { ready } from "./support/ready.ts";
 // tool again, its saves going to a throwaway copy (BRG-06). A good tool passes; each deliberately
 // broken one fails, saying what was expected, what was observed and whose rule it is (VER-07).
 
-type Flaw = "none" | "lastColon" | "keepsHeadings" | "replaces" | "notSaved" | "hiddenBack";
+type Flaw =
+  "none" | "lastColon" | "keepsHeadings" | "replaces" | "notSaved" | "hiddenBack" | "changesLong";
 
 /** A flashcard tool that fits the cards profile, with `flaw` built in. */
 const flashcards = (flaw: Flaw): Artifact["code"] => ({
@@ -60,12 +61,25 @@ document.querySelector("[data-hook=cards-make]").addEventListener("click", () =>
   const removes = flaw === "replaces"
     ? state.data.cards.map((card) => ({ op: "remove", collection: "cards", id: card.id, revisionCount: state.revisions.cards[card.id] }))
     : [];
+  // One flaw changes the end of a long card's back, past what a read shows of it.
+  if (flaw === "changesLong") {
+    const long = state.data.cards.find((card) => card.back.length > 200);
+    if (long) removes.push({ op: "replace", collection: "cards", id: long.id, revisionCount: state.revisions.cards[long.id], fields: { back: long.back.replace("original", "WRONG") } });
+  }
   const adds = made.map((record) => ({ op: "add", collection: "cards", record }));
   tessera.call("data.patch", { operations: [...removes, ...adds] }).then(load);
 });`,
 });
 
-const flaws: Flaw[] = ["none", "lastColon", "keepsHeadings", "replaces", "notSaved", "hiddenBack"];
+const flaws: Flaw[] = [
+  "none",
+  "lastColon",
+  "keepsHeadings",
+  "replaces",
+  "notSaved",
+  "hiddenBack",
+  "changesLong",
+];
 let host: SandboxHost;
 
 test.beforeAll(async () => {
@@ -171,5 +185,23 @@ test("VER-03, VER-04: a tool that hides each card's back, where the prompt asked
   expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
   expect(result.reason).toContain(
     "expected a card-front and a card-back shown in each of the 2 cards; observed 2 card-front and 0 card-back shown.",
+  );
+});
+
+const LONG = [...MADE, { front: "Long", back: `${"word ".repeat(45)}original meaning` }];
+
+test("VER-03: a card longer than a read shows is compared whole, so a good tool holding one passes", async ({
+  page,
+}) => {
+  expect(await check(page, "none", LONG)).toEqual(PASSED);
+});
+
+test("VER-03: and a tool that changes such a card past what a read shows of it fails", async ({
+  page,
+}) => {
+  const result = await check(page, "changesLong", LONG);
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toContain(
+    'expected the 3 cards already made as they were after making cards; observed gone: "Long: word word',
   );
 });

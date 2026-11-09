@@ -48,7 +48,7 @@ export const ITEM_LIST_PROFILE = {
  */
 export const FILTERING_PROFILE = {
   id: "filtering",
-  fits: "a list of items in categories that the person adds to, removes from and narrows to one category, as books by genre",
+  fits: "an item list in categories, narrowed to one at a time, as books by genre",
   hooks: [
     ...ITEM_LIST_PROFILE.hooks,
     {
@@ -76,7 +76,7 @@ export const FILTERING_PROFILE = {
 /** A form people fill in and send, whose answers it keeps and shows: T5 (the M3 scenario sets). */
 export const FORM_PROFILE = {
   id: "form",
-  fits: "a form people fill in and send, whose answers it keeps and shows, as an RSVP or a survey",
+  fits: "a form people send, whose answers it keeps and shows, as an RSVP",
   hooks: [
     {
       name: "form-field",
@@ -129,7 +129,7 @@ export const CHART_PROFILE = {
  */
 export const CARDS_PROFILE = {
   id: "cards",
-  fits: "flashcards made from notes the person pastes, for studying",
+  fits: "flashcards made from pasted notes",
   hooks: [
     { name: "notes", says: "the textarea where notes are pasted" },
     { name: "cards-make", says: "the button that makes cards from them" },

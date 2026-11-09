@@ -2,7 +2,7 @@
 
 ## 2026-11-09
 
-* **New**: The cards profile, fifth of M3's verification profiles (`VER-03`, `VER-04`, `VER-07`), for T10's notes to flashcards, as the owner chose: one card a line of notes, its front before the first colon and its back after it. The [contracts](code/contracts/package.md) define it, and the [runtime](code/runtime/package.md)'s check pastes notes of its own, expects exactly the cards they give more, each front with its back, and the others as they were, and opens the tool again. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T07:09:58Z.
+* **New**: The cards profile, fifth of M3's verification profiles (`VER-03`, `VER-04`, `VER-07`), for T10's notes to flashcards, as the owner chose: one card a line of notes, its front before the first colon and its back after it. The [contracts](code/contracts/package.md) define it, and the [runtime](code/runtime/package.md)'s check pastes notes of its own, expects exactly the cards they give more, each front with its back, and the others as they were, and opens the tool again. A driver read now gives a fingerprint of each whole text too, so the check tells long cards apart past the 200 characters a read shows. The other profiles' descriptions for the intent stage were shortened again to keep its prompt within budget. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T07:09:58Z.
 
 ## 2026-11-08
 
