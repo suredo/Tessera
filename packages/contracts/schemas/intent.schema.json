@@ -87,7 +87,8 @@
               "enum": [
                 "item-list",
                 "filtering",
-                "form"
+                "form",
+                "chart"
               ],
               "description": "A verification profile: a behavior pattern the host checks (VER-03)."
             },
@@ -206,7 +207,8 @@
               "enum": [
                 "item-list",
                 "filtering",
-                "form"
+                "form",
+                "chart"
               ],
               "description": "A verification profile: a behavior pattern the host checks (VER-03)."
             },
