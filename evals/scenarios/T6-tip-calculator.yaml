@@ -1,6 +1,6 @@
 # T6, tip and split calculator (docs/testing/app-catalogue.md), in its M2 form. The exact numbers
-# (total 100.63, 25.16 each, and how the extra cent is handled) are read by the AI review until the
-# calculation profile can check them (M3).
+# (total 100.63, 25.16 each, and how the extra cent is handled) are read by the AI review: no
+# verification profile fits a calculator yet, as M3's first six don't include one.
 id: T6-tip-calculator
 tier: intermediate
 language: en
@@ -8,7 +8,7 @@ person: "Someone paying for dinner with three friends"
 goal: "Split a bill fairly, with the tip, and say what happens to the extra cent"
 clock: { start: "2026-10-14T20:30:00", zone: "Europe/Lisbon" }
 budget: { calls: 7 }
-profiles: [calculation]
+profiles: []
 steps:
   - say: "Split a bill of 87.50 between 4 friends with a 15% tip."
     expect: { created: true, workspace: new }
