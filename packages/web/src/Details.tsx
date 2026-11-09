@@ -1,4 +1,10 @@
-import type { HostResult, LedgerCall, LedgerRequest, Workspace } from "@tessera/contracts";
+import {
+  PROFILES,
+  type HostResult,
+  type LedgerCall,
+  type LedgerRequest,
+  type Workspace,
+} from "@tessera/contracts";
 import { useEffect, useState } from "react";
 import { ask, problemText } from "./host-api.ts";
 import type { MessageKey } from "./i18n/en.ts";
@@ -121,6 +127,7 @@ function Body({ details, hasWorkspace }: { details: Details; hasWorkspace: boole
       )}
       <h3>{t("details.unattachedHeading")}</h3>
       <Requests requests={details.unattached} empty={t("details.noUnattached")} />
+      {hasWorkspace && details.source !== null && <Checks details={details} />}
       {hasWorkspace && (
         <>
           <h3>{t("details.sourceHeading")}</h3>
@@ -145,6 +152,38 @@ function Body({ details, hasWorkspace }: { details: Details; hasWorkspace: boole
           )}
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * The current version's checks (APP-05, VER-08): each the host's own words, and for a behavior
+ * check the rules of its profile, from their one definition (P3), so the detail is the check's own;
+ * a version whose behavior wasn't checked says it isn't verified (UX-03).
+ */
+function Checks({ details }: { details: Details }) {
+  const { checks, profile } = details;
+  const behavior = checks.includes("behavior") && profile ? profile : null;
+  return (
+    <>
+      <h3>{t("details.checksHeading")}</h3>
+      {checks.length === 0 && <p>{t("details.check.none")}</p>}
+      <ul className="details-checks">
+        {checks.includes("code") && <li>{t("details.check.code")}</li>}
+        {checks.includes("start") && <li>{t("details.check.start")}</li>}
+        {behavior ? (
+          <li>
+            {t("details.check.behavior", { profile: behavior })}
+            <ul>
+              {PROFILES[behavior].rules.map((rule) => (
+                <li key={rule}>{rule}</li>
+              ))}
+            </ul>
+          </li>
+        ) : (
+          <li>{t("details.check.noBehavior")}</li>
+        )}
+      </ul>
     </>
   );
 }

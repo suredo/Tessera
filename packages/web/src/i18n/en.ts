@@ -239,6 +239,13 @@ export const en = {
   "details.askedToFix": "Asked to fix: {line}",
   "details.unknown": "unknown",
   "details.seconds": "{seconds} s",
+  "details.checksHeading": "How this version was checked",
+  "details.check.code": "Tessera's check of its code passed.",
+  "details.check.start": "Tessera's check of how it opens passed.",
+  "details.check.behavior":
+    "Tessera's {profile} check of its behavior passed. It held the tool to these rules:",
+  "details.check.noBehavior": "Its behavior wasn't checked, so it isn't verified.",
+  "details.check.none": "It passed none of Tessera's checks: it was made or changed without them.",
   "details.sourceHeading": "The tool's code",
   "details.noSource": "This workspace has no tool yet.",
   "details.capabilities": "What it may use: {list}",
@@ -262,6 +269,18 @@ export const en = {
   "history.checkedBoth": "Passed Tessera's checks of its code and of how it opens.",
   "history.checkedCode": "Passed Tessera's check of its code.",
   "history.checkedStart": "Passed Tessera's check of how it opens.",
+  "history.triedOut": "Tessera tried it out: {what}.",
+  "history.notTriedOut": "Its behavior wasn't tried out, so it isn't verified.",
+  "history.tried.item-list": "adding an item, removing it, and opening it again",
+  "history.tried.filtering":
+    "adding an item in a category, showing one category at a time, and opening it again",
+  "history.tried.form":
+    "sending the form with a required field empty, then filled in, and opening it again",
+  "history.tried.chart":
+    "adding an entry, seeing it in the chart and the total, and opening it again",
+  "history.tried.cards": "making cards from pasted notes, and opening it again",
+  "history.tried.scheduling":
+    "adding a task, keeping a weekday free with a rule, removing the rule, and opening it again",
   "history.restore": "Restore",
   "history.restoreLabel": "Restore version {index}",
   "history.confirmHeading": "Restore version {index}?",

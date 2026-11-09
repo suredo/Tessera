@@ -220,6 +220,12 @@ export function History({ workspace, changes, onChanged }: Props) {
                 )}
               </p>
             )}
+            {/* Whether its behavior was tried out, and how, or said plainly that it wasn't (VER-08, UX-03). */}
+            <p className="detail">
+              {version.checks.includes("behavior") && version.profile
+                ? t("history.triedOut", { what: t(`history.tried.${version.profile}`) })
+                : t("history.notTriedOut")}
+            </p>
           </li>
         ))}
       </ul>

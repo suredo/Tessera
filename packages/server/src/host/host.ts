@@ -80,13 +80,26 @@ const run: {
   "details.get": (store, { workspaceId }) => {
     const ledger = new RequestLedger(store);
     const unattached = ledger.unattached(DETAILS_REQUESTS);
-    if (workspaceId === null) return { source: null, capabilities: [], requests: [], unattached };
+    if (workspaceId === null) {
+      return {
+        source: null,
+        capabilities: [],
+        checks: [],
+        profile: null,
+        requests: [],
+        unattached,
+      };
+    }
     const workspace = existingWorkspace(store, workspaceId);
     const version = workspace.currentVersion && loadVersion(store.db, workspace.currentVersion);
     const artifact = version && version.kind === "ok" ? version.artifact : undefined;
+    // The current version is the last entry of the history; its note says what it passed.
+    const current = artifact ? workspaceVersions(store, workspaceId).at(-1) : undefined;
     return {
       source: artifact ? artifact.code : null,
       capabilities: artifact ? artifact.capabilities : [],
+      checks: current?.checks ?? [],
+      profile: current?.profile ?? null,
       requests: ledger.forWorkspace(workspaceId, DETAILS_REQUESTS),
       unattached,
     };

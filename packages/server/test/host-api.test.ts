@@ -14,7 +14,7 @@ import { RequestLedger } from "../src/ledger/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { saveVersion } from "../src/versions/index.ts";
-import { activateVersion, patchWorkspaceData } from "../src/workspaces/index.ts";
+import { activateVersion, getWorkspace, patchWorkspaceData } from "../src/workspaces/index.ts";
 import { post } from "./support/http.ts";
 
 // The host app's API (APP-03 to APP-08): every action the contracts list, answered from the
@@ -122,6 +122,8 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     expect(ask(folder, "details.get", { workspaceId: workspace.id })).toEqual({
       source: null,
       capabilities: [],
+      checks: [],
+      profile: null,
       requests: [],
       unattached: [],
     });
@@ -152,11 +154,15 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     expect(ask(folder, "details.get", { workspaceId: null })).toEqual({
       source: null,
       capabilities: [],
+      checks: [],
+      profile: null,
       requests: [],
       unattached: details.unattached,
     });
     expect(details.source).toEqual(tool.code);
     expect(details.capabilities).toEqual(["clock"]);
+    // Activated by hand, with no note: it passed none of the host's checks.
+    expect([details.checks, details.profile]).toEqual([[], null]);
     expect(details.requests.map((r) => [r.id, r.kind, r.outcome, r.findings])).toEqual([
       [newer, "repair", "failed", ["A button has no name."]],
       [older, "generate", "answer", []],
@@ -165,6 +171,32 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     expect(refusal(folder, "details.get", { workspaceId: workspace.id })).toEqual({
       ok: false,
       error: { code: "refused", message: "The workspace is in the trash; restore it first." },
+    });
+    folder.close();
+  });
+
+  it("VER-08: the details give the checks the current version passed, and its profile", async () => {
+    const folder = await newFolder();
+    const { workspace } = ask(folder, "workspaces.create", { title: "List" });
+    const checked = saveVersion(folder.db, tool);
+    expect(
+      activateVersion(folder, workspace.id, checked, 0, {
+        note: { summary: "A list.", checks: ["code", "start", "behavior"], profile: "item-list" },
+      }).ok,
+    ).toBe(true);
+    expect(ask(folder, "details.get", { workspaceId: workspace.id })).toMatchObject({
+      checks: ["code", "start", "behavior"],
+      profile: "item-list",
+    });
+    // The next version is the current one, and its note is what the details give.
+    const next = saveVersion(folder.db, { ...tool, code: { ...tool.code, css: "p{color:#333}" } });
+    const revision = getWorkspace(folder, workspace.id)!.dataRevision;
+    activateVersion(folder, workspace.id, next, revision, {
+      note: { summary: "Darker.", checks: ["code", "start"], profile: null },
+    });
+    expect(ask(folder, "details.get", { workspaceId: workspace.id })).toMatchObject({
+      checks: ["code", "start"],
+      profile: null,
     });
     folder.close();
   });
