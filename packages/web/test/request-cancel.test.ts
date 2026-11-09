@@ -371,7 +371,7 @@ describe("GEN-08: the choice on reviewed entries", () => {
       owner,
       replying(refused, () => owner.cancel()),
     );
-    expect(result).toEqual({ message: `${made} ${en["request.stopped"]}` });
+    expect(result).toEqual({ message: `${made}\n${en["request.stopped"]}` });
   });
   it("a server error stays uncertain, and the entries are reloaded", async () => {
     const result = await confirmDataChoice(

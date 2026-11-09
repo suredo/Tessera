@@ -49,7 +49,7 @@ it("GEN-01 GEN-08: confirmation displays complete target facts, never claims a p
       summary: "Renamed Milk.",
     }),
   ).toEqual({
-    message: "Changed one entry in Shopping list. Renamed Milk.",
+    message: "Changed one entry in Shopping list.\nRenamed Milk.",
     openWorkspaceId: offer.workspaceId,
     dataChanged: true,
   });
