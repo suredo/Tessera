@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-09
+
+* **New**: The cards profile, fifth of M3's verification profiles (`VER-03`, `VER-04`, `VER-07`), for T10's notes to flashcards, as the owner chose: one card a line of notes, its front before the first colon and its back after it. The [contracts](code/contracts/package.md) define it, and the [runtime](code/runtime/package.md)'s check pastes notes of its own, expects exactly the cards they give more, each front with its back, and the others as they were, and opens the tool again. A driver read now gives a fingerprint of each whole text too, so the check tells long cards apart past the 200 characters a read shows. The other profiles' descriptions for the intent stage were shortened again to keep its prompt within budget. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T07:09:58Z.
+
 ## 2026-11-08
 
 * **New**: The chart profile, last part of [issue 283](https://github.com/suredo/Tessera/issues/283) and fourth of M3's verification profiles (`VER-03`, `VER-04`, `VER-07`), for T3: numbers the person enters, charted with their total. The [contracts](code/contracts/package.md) define it, and the [runtime](code/runtime/package.md)'s check reads the chart helper's record of the chart and the total's text, adds an entry, and opens the tool again. The other profiles' descriptions for the intent stage were shortened to keep its prompt within budget. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T00:12:58Z.

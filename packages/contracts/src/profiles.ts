@@ -48,7 +48,7 @@ export const ITEM_LIST_PROFILE = {
  */
 export const FILTERING_PROFILE = {
   id: "filtering",
-  fits: "a list of items in categories that the person adds to, removes from and narrows to one category, as books by genre",
+  fits: "an item list in categories, narrowed to one at a time, as books by genre",
   hooks: [
     ...ITEM_LIST_PROFILE.hooks,
     {
@@ -76,7 +76,7 @@ export const FILTERING_PROFILE = {
 /** A form people fill in and send, whose answers it keeps and shows: T5 (the M3 scenario sets). */
 export const FORM_PROFILE = {
   id: "form",
-  fits: "a form people fill in and send, whose answers it keeps and shows, as an RSVP or a survey",
+  fits: "a form people send, whose answers it keeps and shows, as an RSVP",
   hooks: [
     {
       name: "form-field",
@@ -123,12 +123,38 @@ export const CHART_PROFILE = {
   fixture: { entryName: "Tessera check entry", entryValue: "37.5" },
 } as const satisfies VerificationProfile;
 
+/**
+ * Flashcards made from notes the person pastes: T10 (the M3 scenario sets). A tool can't ask a
+ * model, so its notes follow one plain format, a card a line, which its check knows.
+ */
+export const CARDS_PROFILE = {
+  id: "cards",
+  fits: "flashcards made from pasted notes",
+  hooks: [
+    { name: "notes", says: "the textarea where notes are pasted" },
+    { name: "cards-make", says: "the button that makes cards from them" },
+    { name: "card", says: "each card, one element per card" },
+    { name: "card-front", says: "inside each card, the element whose text is its front" },
+    { name: "card-back", says: "inside each card, the element whose text is its back, shown too" },
+  ],
+  rules: [
+    "Pressing cards-make makes one card for each line of notes with text on both sides of a colon: its front the text before the first colon, its back the text after it, spaces at either end aside; other lines make none. It adds them to the cards already made, and saves them.",
+    "Opened again, the tool shows the cards as they were saved.",
+  ],
+  fixture: {
+    front: "Tessera check term",
+    back: "Tessera check meaning",
+    heading: "Tessera check heading",
+  },
+} as const satisfies VerificationProfile;
+
 /** Every profile, by ID. */
 export const PROFILES = {
   "item-list": ITEM_LIST_PROFILE,
   filtering: FILTERING_PROFILE,
   form: FORM_PROFILE,
   chart: CHART_PROFILE,
+  cards: CARDS_PROFILE,
 } as const satisfies Record<string, VerificationProfile>;
 
 export const PROFILE_IDS = [
@@ -136,6 +162,7 @@ export const PROFILE_IDS = [
   "filtering",
   "form",
   "chart",
+  "cards",
 ] as const satisfies readonly (keyof typeof PROFILES)[];
 export type ProfileId = (typeof PROFILE_IDS)[number];
 

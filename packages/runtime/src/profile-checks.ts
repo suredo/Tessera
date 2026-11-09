@@ -57,7 +57,8 @@ async function drive(
 /** How many texts a read reports: a longer list is read a page at a time. */
 const PAGE = 100;
 
-type List = { count: number; texts: string[] };
+/** The items' texts as a read gives them, and a fingerprint of each whole text. */
+type List = { count: number; texts: string[]; digests: string[] };
 
 /**
  * Every item `hook` marks, with its text: read a page at a time, each read bounded, so a list of
@@ -74,13 +75,15 @@ async function readList(
   const step = first.steps[0];
   const count = step?.ok ? (step.count ?? 0) : 0;
   const texts = step?.ok ? [...(step.texts ?? [])] : [];
+  const digests = step?.ok ? [...(step.digests ?? [])] : [];
   for (let start = PAGE; start < count; start += PAGE) {
     const page = await drive(profile, rule, tool, [{ do: "read", hook, start }]);
     if (!("steps" in page)) return page;
     const read = page.steps[0];
     texts.push(...(read?.ok ? (read.texts ?? []) : []));
+    digests.push(...(read?.ok ? (read.digests ?? []) : []));
   }
-  return { count, texts };
+  return { count, texts, digests };
 }
 
 /** Where items `hook` marks show `text`: the positions of the first 20, from `start`. */
@@ -805,11 +808,118 @@ async function chart(context: CheckContext): Promise<CheckOutcome> {
   return { ok: true };
 }
 
+/**
+ * The cards profile's check (VER-03): it pastes notes of its own, two of whose lines make cards,
+ * one with a colon in its back too, and four that don't: a heading ending in a colon, a line with
+ * none, an empty one and one with nothing before its colon. It expects exactly those two cards
+ * more, each front with its back, and the others as they were; then opens the tool again and
+ * expects the cards as they were shown. A card is its front and back, exactly as shown.
+ */
+async function cards(context: CheckContext): Promise<CheckOutcome> {
+  const profile = PROFILES.cards;
+  const [makes, reopens] = profile.rules;
+  const { front, back, heading } = profile.fixture;
+  const hex = unique("").trim();
+  const count = (n: number) => `${n} ${n === 1 ? "card" : "cards"}`;
+  // A read's text never holds a line break, so one joins a front and back without mixing them up.
+  // A card shown is its front and back as read, then a fingerprint of each whole, so a change past
+  // the part a read gives counts too; the cards the notes give are short, so their text is whole.
+  const pair = (...parts: string[]) => parts.join("\n");
+  const text = (card: string) => card.split("\n").slice(0, 2).join("\n");
+  const said = (cards: readonly string[]) =>
+    cards.map((card) => card.split("\n").slice(0, 2).join(": "));
+  const exact = (text: string) => text;
+
+  const wanted = [
+    pair(`${front} ${hex} 1`, `${back} ${hex} 1`),
+    pair(`${front} ${hex} 2`, `at 10:30, ${back} ${hex} 2`),
+  ];
+  const notes = [
+    `${heading} ${hex}:`,
+    `  ${front} ${hex} 1 :  ${back} ${hex} 1  `,
+    "",
+    `${heading} ${hex} without a colon`,
+    `${front} ${hex} 2: at 10:30, ${back} ${hex} 2`,
+    `: ${back} ${hex} 3`,
+  ].join("\n");
+
+  /** Each card shown, as its front and back, or a failure when they don't pair up. */
+  async function read(tool: MountedTool, rule: string): Promise<string[] | CheckOutcome> {
+    const all = await readList("cards", rule, tool, "card");
+    if (!("texts" in all)) return all;
+    const fronts = await readList("cards", rule, tool, "card-front");
+    if (!("texts" in fronts)) return fronts;
+    const backs = await readList("cards", rule, tool, "card-back");
+    if (!("texts" in backs)) return backs;
+    if (fronts.count !== all.count || backs.count !== all.count) {
+      return broke(
+        "cards",
+        rule,
+        `a card-front and a card-back shown in each of the ${count(all.count)}`,
+        `${fronts.count} card-front and ${backs.count} card-back shown`,
+      );
+    }
+    return fronts.texts.map((each, i) =>
+      pair(each, backs.texts[i] ?? "", fronts.digests[i] ?? "", backs.digests[i] ?? ""),
+    );
+  }
+
+  // Making: exactly the two cards the notes give, and the others as they were.
+  const tool = await context.rehearse();
+  const before = await read(tool, makes);
+  if (!Array.isArray(before)) return before;
+  const made = await drive("cards", makes, tool, [
+    { do: "fill", hook: "notes", value: notes },
+    { do: "click", hook: "cards-make" },
+  ]);
+  if (!("steps" in made)) return made;
+  const after = await read(tool, makes);
+  if (!Array.isArray(after)) return after;
+  const { gone, added } = difference(before, after, exact);
+  if (gone.length > 0) {
+    return broke(
+      "cards",
+      makes,
+      `the ${count(before.length)} already made as they were after making cards`,
+      `gone: ${clip(said(gone))}`,
+    );
+  }
+  const off = difference(wanted, added.map(text), exact);
+  if (off.gone.length > 0 || off.added.length > 0) {
+    return broke(
+      "cards",
+      makes,
+      `2 cards more from the notes the check pasted, ${clip(said(wanted))}`,
+      `${count(added.length)} more; ${off.gone.length > 0 ? `missing: ${clip(said(off.gone))}` : "none missing"}; ${off.added.length > 0 ? `others: ${clip(said(off.added))}` : "no others"}`,
+    );
+  }
+
+  // Opened again: the cards as they were shown.
+  const reopened = await context.rehearse();
+  const again = await read(reopened, reopens);
+  if (!Array.isArray(again)) return again;
+  const { gone: lost, added: gained } = difference(after, again, exact);
+  const kept =
+    lost.length > 0 || gained.length > 0
+      ? `${lost.length > 0 ? `gone: ${clip(said(lost))}` : "none gone"}; ${gained.length > 0 ? `new: ${clip(said(gained))}` : "none new"}`
+      : undefined;
+  if (kept) {
+    return broke(
+      "cards",
+      reopens,
+      `the ${count(after.length)} it showed, after opening the tool again`,
+      `${count(again.length)}; ${kept}`,
+    );
+  }
+  return { ok: true };
+}
+
 const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<CheckOutcome>>> = {
   "item-list": itemList,
   filtering,
   form,
   chart,
+  cards,
 };
 
 /**

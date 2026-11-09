@@ -154,13 +154,25 @@ import type { BridgeMethodName } from "@tessera/contracts";
         (element instanceof HTMLElement ? element.innerText : (element.textContent ?? ""))
           .trim()
           .replace(/\s+/g, " ");
+      // A fingerprint of a whole text, so a check can tell texts apart past the part a read gives.
+      const digest = (text: string) => {
+        let h1 = 0xdeadbeef;
+        let h2 = 0x41c6ce57;
+        for (let i = 0; i < text.length; i++) {
+          const code = text.charCodeAt(i);
+          h1 = Math.imul(h1 ^ code, 2654435761);
+          h2 = Math.imul(h2 ^ code, 1597334677);
+        }
+        h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+        h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+        return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+      };
       if (step.do === "read") {
         // At most 100 texts a read, from `start`, so a long list is read a page at a time.
         const start = typeof step.start === "number" && step.start > 0 ? Math.floor(step.start) : 0;
-        const texts = found
-          .slice(start, start + 100)
-          .map((element) => textOf(element).slice(0, 200));
-        results.push({ ok: true, count: found.length, texts });
+        const whole = found.slice(start, start + 100).map(textOf);
+        const texts = whole.map((text) => text.slice(0, 200));
+        results.push({ ok: true, count: found.length, texts, digests: whole.map(digest) });
         continue;
       }
       // Which of them, by position, show `text`: however many there are, the first 20 from

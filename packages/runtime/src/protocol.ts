@@ -81,6 +81,7 @@ export type DriveResult =
       ok: true;
       count?: number;
       texts?: string[];
+      digests?: string[];
       matches?: number[];
       fields?: DriveField[];
       charts?: (ChartSpec | null)[];
