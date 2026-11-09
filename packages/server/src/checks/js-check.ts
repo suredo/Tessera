@@ -1027,7 +1027,15 @@ export function checkJs(
           }
         }
         break;
-      case "ObjectPattern":
+      case "ObjectPattern": {
+        // What the pattern takes properties out of, when it says: a declaration's value or an
+        // assignment's right side.
+        const source =
+          parent?.type === "VariableDeclarator" && parent["id"] === node
+            ? (parent["init"] as AnyNode | null)
+            : parent?.type === "AssignmentExpression" && parent["left"] === node
+              ? (parent["right"] as AnyNode)
+              : null;
         for (const property of node["properties"] as AnyNode[]) {
           const key = property["key"] as AnyNode | undefined;
           const name =
@@ -1040,6 +1048,9 @@ export function checkJs(
             );
           } else if (name !== undefined && FORBIDDEN_NAMES.has(name)) {
             found(property, `The JavaScript takes out ${name}, which a tool can't use.`);
+          } else if (name === "Chart" && source && page.isPage(source)) {
+            // const { Chart: C } = window names Chart.js as window.Chart does (CAP-04).
+            found(property, CHART_DIRECT);
           } else if (
             target?.type === "MemberExpression" &&
             ADDRESS_NAMES.has(propertyName(target) ?? "")
@@ -1052,6 +1063,7 @@ export function checkJs(
           }
         }
         break;
+      }
       case "ClassDeclaration":
       case "ClassExpression": {
         const superClass = node["superClass"] as AnyNode | null;

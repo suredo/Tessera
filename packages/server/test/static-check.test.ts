@@ -418,6 +418,8 @@ tessera.chart(document.querySelector("#chart"), spec);`;
       "const C = globalThis.Chart;",
       'const C = self["Chart"];',
       "const Chart = 1; console.log(Chart);",
+      "const { Chart: C } = window.valueOf(); new C(null, {});",
+      "let C; ({ Chart: C } = globalThis);",
     ]) {
       const result = staticCheck({ html: "<canvas></canvas>", css: "", js }, ["chart"]);
       if (result.ok) throw new Error(`${js} must fail`);
@@ -426,7 +428,11 @@ tessera.chart(document.querySelector("#chart"), spec);`;
       );
     }
     // A property of the tool's own that happens to be called Chart is just a name.
-    const own = { html: "", css: "", js: 'const labels = { Chart: "Spending" }; labels.Chart;' };
+    const own = {
+      html: "",
+      css: "",
+      js: 'const labels = { Chart: "Spending" }; labels.Chart; const { Chart: title } = labels;',
+    };
     expect(staticCheck(own, [])).toEqual({ ok: true });
   });
 });
