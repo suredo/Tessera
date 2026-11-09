@@ -2,9 +2,9 @@
   "about": "A live run of T1-shopping-list, recorded for replay.",
   "scenario": "T1-shopping-list",
   "recorded": {
-    "head": "19d7056fe3a0b175b4df668085ba2b98ed0e4a7f",
-    "at": "2026-11-05T21:12:47.949Z",
-    "cliVersion": "2.1.318"
+    "head": "954c5f2ce50579c4fa6d707ecbae074616275fbd",
+    "at": "2026-11-09T19:26:18.414Z",
+    "cliVersion": "2.1.321"
   },
   "answers": [
     {
@@ -13,8 +13,8 @@
         "stage": "intent",
         "value": {
           "kind": "create",
-          "interfacePart": "I need a shopping list I can tick off at the store.",
-          "dataPart": "We need milk, eggs, bread and apples.",
+          "interfacePart": "a shopping list I can tick off at the store",
+          "dataPart": "milk, eggs, bread and apples",
           "behaviorChange": false,
           "lookOnly": false,
           "targetsCurrentTool": false,
@@ -22,21 +22,19 @@
           "features": [
             {
               "name": "Shopping list",
-              "request": "I need a shopping list"
+              "request": "I need a shopping list I can tick off at the store"
             },
             {
-              "name": "Tick off items",
-              "request": "I can tick off at the store"
-            },
-            {
-              "name": "Starting items",
+              "name": "Initial items",
               "request": "We need milk, eggs, bread and apples."
             }
-          ]
+          ],
+          "profile": "item-list",
+          "drawsCharts": false
         }
       },
       "parts": [
-        "intent@3222248e8a6e",
+        "intent@831eceda0fdd",
         "intent-none@a47602c1d680",
         "intent-no-saved@62b6b33152f8",
         "intent-request@29adbd896fc4"
@@ -49,14 +47,12 @@
         "value": {
           "outcome": "tool",
           "name": "Shopping list",
-          "summary": "A shopping list you can tick off at the store. It starts with milk, eggs, bread and apples; you can add or remove items.",
-          "code": {
-            "html": "<h1>Shopping list</h1>\n<p id=\"count\" class=\"muted\" aria-live=\"polite\"></p>\n<div class=\"add\">\n<label for=\"newItem\">New item</label>\n<div class=\"row\"><input id=\"newItem\" type=\"text\" autocomplete=\"off\" placeholder=\"e.g. butter\"><button id=\"addBtn\" type=\"button\">Add</button></div>\n</div>\n<p id=\"msg\" role=\"status\" class=\"muted\"></p>\n<ul id=\"list\"></ul>\n<p id=\"empty\" class=\"muted\" hidden>The list is empty. Add your first item above.</p>\n<button id=\"clearDone\" type=\"button\" class=\"secondary\">Remove ticked items</button>",
-            "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0}\nlabel{display:block;margin-bottom:var(--ui-space-1)}\n.row{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}\ninput[type=text]{flex:1 1 160px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;border-radius:var(--ui-radius-control);font:inherit;cursor:pointer}\nbutton.secondary,button.del{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;padding:0;margin:var(--ui-space-3) 0}\nli{display:flex;align-items:center;gap:var(--ui-space-2);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-1) var(--ui-space-3);margin-bottom:var(--ui-space-2);min-height:var(--ui-target)}\nli label{flex:1;margin:0;display:flex;align-items:center;gap:var(--ui-space-3);min-height:var(--ui-target);cursor:pointer;overflow-wrap:anywhere}\nli input[type=checkbox]{width:22px;height:22px;accent-color:var(--ui-accent);flex:none}\nli.done span{text-decoration:line-through;color:var(--ui-text-secondary)}\n.err{color:var(--ui-error)}",
-            "js": "const listEl=document.getElementById('list');\nconst emptyEl=document.getElementById('empty');\nconst countEl=document.getElementById('count');\nconst msg=document.getElementById('msg');\nconst input=document.getElementById('newItem');\nlet items=[],revs={};\nfunction say(t,bad){msg.textContent=t;msg.className=bad?'err':'muted';}\nasync function load(){\n try{\n const r=await tessera.call('data.read',{});\n items=r.data.items||[];revs=(r.revisions&&r.revisions.items)||{};\n render();\n }catch(e){say('Could not load the list.',true);}\n}\nfunction render(){\n listEl.textContent='';\n for(const it of items){\n const li=document.createElement('li');\n if(it.done)li.className='done';\n const lab=document.createElement('label');\n const cb=document.createElement('input');\n cb.type='checkbox';cb.checked=!!it.done;\n const sp=document.createElement('span');sp.textContent=it.name;\n lab.append(cb,sp);\n cb.addEventListener('change',()=>toggle(it.id,cb.checked));\n const del=document.createElement('button');\n del.type='button';del.className='del';del.textContent='Remove';\n del.setAttribute('aria-label','Remove '+it.name);\n del.addEventListener('click',()=>remove(it.id));\n li.append(lab,del);listEl.append(li);\n }\n const left=items.filter(i=>!i.done).length;\n emptyEl.hidden=items.length>0;\n countEl.textContent=items.length?left+' of '+items.length+' still to get':'';\n}\nasync function act(ops,okMsg){\n try{await tessera.call('data.patch',{operations:ops});say(okMsg,false);}\n catch(e){say('That change did not go through. Please try again.',true);}\n await load();\n}\nfunction toggle(id,v){act([{op:'replace',collection:'items',id,revisionCount:revs[id]||1,fields:{done:v}}],'');}\nfunction remove(id){act([{op:'remove',collection:'items',id,revisionCount:revs[id]||1}],'Item removed.');}\ndocument.getElementById('clearDone').addEventListener('click',()=>{\n const d=items.filter(i=>i.done);\n if(!d.length){say('No ticked items to remove.',false);return;}\n act(d.map(i=>({op:'remove',collection:'items',id:i.id,revisionCount:revs[i.id]||1})),d.length+' ticked item(s) removed.');\n});\nfunction add(){\n const n=input.value.trim();\n if(!n){say('Type an item name first.',true);input.focus();return;}\n input.value='';\n act([{op:'add',collection:'items',record:{name:n,done:false}}],n+' added.');\n input.focus();\n}\ndocument.getElementById('addBtn').addEventListener('click',add);\ninput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add();}});\nload();"
-          },
+          "summary": "A shopping list you can tick off as you shop. It starts with milk, eggs, bread and apples; you can add or remove items and clear the ones you've ticked.",
+          "uiMode": "standard",
+          "capabilities": [],
           "data": {
             "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
               "type": "object",
               "properties": {
                 "items": {
@@ -68,7 +64,9 @@
                         "type": "string"
                       },
                       "name": {
-                        "type": "string"
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
                       },
                       "done": {
                         "type": "boolean"
@@ -86,38 +84,42 @@
             "initialState": {
               "items": [
                 {
-                  "id": "i-milk",
+                  "id": "milk",
                   "name": "Milk",
                   "done": false
                 },
                 {
-                  "id": "i-eggs",
+                  "id": "eggs",
                   "name": "Eggs",
                   "done": false
                 },
                 {
-                  "id": "i-bread",
+                  "id": "bread",
                   "name": "Bread",
                   "done": false
                 },
                 {
-                  "id": "i-apples",
+                  "id": "apples",
                   "name": "Apples",
                   "done": false
                 }
               ]
             }
           },
-          "capabilities": [],
-          "uiMode": "standard"
+          "code": {
+            "html": "<main class=\"wrap\">\n<h1>Shopping list</h1>\n<p class=\"sub\" data-ref=\"count\" id=\"count\" aria-live=\"polite\"></p>\n<div class=\"add\">\n<label for=\"newname\">New item</label>\n<div class=\"row\">\n<input id=\"newname\" type=\"text\" data-hook=\"item-name\" placeholder=\"e.g. Butter\" autocomplete=\"off\">\n<button id=\"addbtn\" type=\"button\" data-hook=\"item-add\">Add</button>\n</div>\n</div>\n<p id=\"msg\" class=\"msg\" role=\"status\"></p>\n<p id=\"empty\" class=\"sub\" hidden>The list is empty. Add what you need above.</p>\n<ul id=\"list\" class=\"list\"></ul>\n<button id=\"clear\" type=\"button\" class=\"secondary\" hidden>Remove ticked items</button>\n</main>",
+            "css": ".wrap{max-width:560px;margin:0 auto;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\n.sub{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-3)}\nlabel{display:block;font-size:var(--ui-size-secondary);margin-bottom:var(--ui-space-1)}\n.row{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}\ninput[type=text]{flex:1 1 180px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary,button.rm{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\n.list{list-style:none;margin:var(--ui-space-3) 0;padding:0}\n.list li{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);background:var(--ui-surface);margin-bottom:var(--ui-space-2)}\n.list li label{flex:1;display:flex;align-items:center;gap:var(--ui-space-3);margin:0;font-size:var(--ui-size-body);min-height:var(--ui-target);cursor:pointer;overflow-wrap:anywhere}\n.list input[type=checkbox]{width:24px;height:24px;flex:none;accent-color:var(--ui-accent)}\n.list li.done .nm{text-decoration:line-through;color:var(--ui-text-secondary)}\n.msg{min-height:1.2em;color:var(--ui-error);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0 0}",
+            "js": "let items = [];\nlet revs = {};\nconst listEl = document.getElementById('list');\nconst msgEl = document.getElementById('msg');\nconst nameEl = document.getElementById('newname');\n\nfunction say(t) { msgEl.textContent = t; }\n\nasync function load() {\n  const res = await tessera.call('data.read', {});\n  items = Array.isArray(res.data.items) ? res.data.items : [];\n  revs = (res.revisions && res.revisions.items) || {};\n  render();\n}\n\nfunction render() {\n  listEl.textContent = '';\n  for (const it of items) {\n    const li = document.createElement('li');\n    li.setAttribute('data-hook', 'item');\n    if (it.done) li.classList.add('done');\n    const lab = document.createElement('label');\n    const cb = document.createElement('input');\n    cb.type = 'checkbox';\n    cb.checked = !!it.done;\n    const nm = document.createElement('span');\n    nm.className = 'nm';\n    nm.textContent = it.name;\n    lab.appendChild(cb);\n    lab.appendChild(nm);\n    const rm = document.createElement('button');\n    rm.type = 'button';\n    rm.className = 'rm';\n    rm.setAttribute('data-hook', 'item-remove');\n    rm.textContent = 'Remove';\n    rm.setAttribute('aria-label', 'Remove ' + it.name);\n    cb.addEventListener('change', () => toggle(it.id, cb.checked));\n    rm.addEventListener('click', () => removeOne(it.id));\n    li.appendChild(lab);\n    li.appendChild(rm);\n    listEl.appendChild(li);\n  }\n  const total = items.length;\n  const got = items.filter((i) => i.done).length;\n  document.getElementById('count').textContent = total ? got + ' of ' + total + ' ticked' : '';\n  document.getElementById('empty').hidden = total !== 0;\n  document.getElementById('clear').hidden = got === 0;\n}\n\nasync function run(ops, fail) {\n  try {\n    await tessera.call('data.patch', { operations: ops });\n    say('');\n    await load();\n    return true;\n  } catch (e) {\n    say(fail);\n    await load().catch(() => {});\n    return false;\n  }\n}\n\nasync function toggle(id, done) {\n  const rc = revs[id];\n  await run([{ op: 'replace', collection: 'items', id: id, revisionCount: rc, fields: { done: done } }], 'Could not update that item. Please try again.');\n}\n\nasync function removeOne(id) {\n  const rc = revs[id];\n  await run([{ op: 'remove', collection: 'items', id: id, revisionCount: rc }], 'Could not remove that item. Please try again.');\n}\n\nasync function addItem() {\n  const name = nameEl.value.trim();\n  if (!name) {\n    say('Type the name of an item first.');\n    nameEl.focus();\n    return;\n  }\n  const ok = await run([{ op: 'add', collection: 'items', record: { name: name, done: false } }], 'Could not add that item. Your text is still there; please try again.');\n  if (ok) nameEl.value = '';\n  nameEl.focus();\n}\n\ndocument.getElementById('addbtn').addEventListener('click', addItem);\nnameEl.addEventListener('keydown', (e) => {\n  if (e.key === 'Enter') { e.preventDefault(); addItem(); }\n});\ndocument.getElementById('clear').addEventListener('click', async () => {\n  const ops = [];\n  for (const it of items) {\n    if (it.done) ops.push({ op: 'remove', collection: 'items', id: it.id, revisionCount: revs[it.id] });\n  }\n  if (ops.length) await run(ops, 'Could not remove the ticked items. Please try again.');\n});\n\nload().catch(() => say('Could not load the list.'));"
+          }
         }
       },
       "parts": [
-        "base@425d17c8b071",
-        "bridge@63eefdc4fb28",
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
         "ui-standard@5953c402b1d6",
         "accessibility@bd63b2577331",
-        "create@9705683faa8f",
+        "profile@a230baa738e0",
+        "create@4eb0fe4a04c9",
         "request@47a51319da7d",
         "language@2a8e10d77d23"
       ]
@@ -130,7 +132,7 @@
           "kind": "edit",
           "interfacePart": "Group them by aisle.",
           "dataPart": null,
-          "behaviorChange": true,
+          "behaviorChange": false,
           "lookOnly": false,
           "targetsCurrentTool": true,
           "language": "en",
@@ -139,11 +141,13 @@
               "name": "Group items by aisle",
               "request": "Group them by aisle."
             }
-          ]
+          ],
+          "profile": "item-list",
+          "drawsCharts": false
         }
       },
       "parts": [
-        "intent@3222248e8a6e",
+        "intent@831eceda0fdd",
         "intent-open@ad363d62acd6",
         "intent-no-saved@62b6b33152f8",
         "intent-request@29adbd896fc4"
@@ -155,23 +159,25 @@
         "stage": "edit",
         "value": {
           "outcome": "edit",
-          "summary": "Items now have an optional aisle, and the list is grouped under a heading for each aisle. Existing items go under \"No aisle\".",
+          "summary": "Your shopping list now groups items by aisle. Give each new item an aisle (optional) and items appear under aisle headings; items without one go under \"No aisle\".",
           "files": {
             "mode": "replace",
             "code": {
-              "html": "<h1>Shopping list</h1>\n<p id=\"count\" class=\"muted\" aria-live=\"polite\"></p>\n<div class=\"add\">\n<label for=\"newItem\">New item</label>\n<div class=\"row\"><input id=\"newItem\" type=\"text\" autocomplete=\"off\" placeholder=\"e.g. butter\"></div>\n<label for=\"newAisle\" class=\"gap\">Aisle (optional)</label>\n<div class=\"row\"><input id=\"newAisle\" type=\"text\" autocomplete=\"off\" list=\"aisles\" placeholder=\"e.g. Dairy\"><datalist id=\"aisles\"></datalist><button id=\"addBtn\" type=\"button\">Add</button></div>\n</div>\n<p id=\"msg\" role=\"status\" class=\"muted\"></p>\n<div id=\"list\"></div>\n<p id=\"empty\" class=\"muted\" hidden>The list is empty. Add your first item above.</p>\n<button id=\"clearDone\" type=\"button\" class=\"secondary\">Remove ticked items</button>",
-              "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 0}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0}\nlabel{display:block;margin-bottom:var(--ui-space-1)}\nlabel.gap{margin-top:var(--ui-space-3)}\n.row{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}\ninput[type=text]{flex:1 1 160px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;border-radius:var(--ui-radius-control);font:inherit;cursor:pointer}\nbutton.secondary,button.del{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;padding:0;margin:var(--ui-space-3) 0}\nli{display:flex;align-items:center;gap:var(--ui-space-2);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-1) var(--ui-space-3);margin-bottom:var(--ui-space-2);min-height:var(--ui-target)}\nli label{flex:1;margin:0;display:flex;align-items:center;gap:var(--ui-space-3);min-height:var(--ui-target);cursor:pointer;overflow-wrap:anywhere}\nli input[type=checkbox]{width:22px;height:22px;accent-color:var(--ui-accent);flex:none}\nli.done span{text-decoration:line-through;color:var(--ui-text-secondary)}\n.err{color:var(--ui-error)}",
-              "js": "const listEl=document.getElementById('list');\nconst emptyEl=document.getElementById('empty');\nconst countEl=document.getElementById('count');\nconst msg=document.getElementById('msg');\nconst input=document.getElementById('newItem');\nconst aisleIn=document.getElementById('newAisle');\nconst dl=document.getElementById('aisles');\nlet items=[],revs={};\nfunction say(t,bad){msg.textContent=t;msg.className=bad?'err':'muted';}\nasync function load(){\n try{\n const r=await tessera.call('data.read',{});\n items=r.data.items||[];revs=(r.revisions&&r.revisions.items)||{};\n render();\n }catch(e){say('Could not load the list.',true);}\n}\nfunction renderItem(it,ul){\n const li=document.createElement('li');\n if(it.done)li.className='done';\n const lab=document.createElement('label');\n const cb=document.createElement('input');\n cb.type='checkbox';cb.checked=!!it.done;\n const sp=document.createElement('span');sp.textContent=it.name;\n lab.append(cb,sp);\n cb.addEventListener('change',()=>toggle(it.id,cb.checked));\n const del=document.createElement('button');\n del.type='button';del.className='del';del.textContent='Remove';\n del.setAttribute('aria-label','Remove '+it.name);\n del.addEventListener('click',()=>remove(it.id));\n li.append(lab,del);ul.append(li);\n}\nfunction render(){\n listEl.textContent='';\n const groups=new Map();\n for(const it of items){\n const a=(it.aisle||'').trim();\n if(!groups.has(a))groups.set(a,[]);\n groups.get(a).push(it);\n }\n const names=[...groups.keys()].sort((x,y)=>{\n if(x===''&&y!=='')return 1;\n if(y===''&&x!=='')return -1;\n return x.localeCompare(y);\n });\n dl.textContent='';\n for(const n of names){\n if(n===''){continue;}\n const o=document.createElement('option');o.value=n;dl.append(o);\n }\n for(const n of names){\n const sec=document.createElement('section');\n const h=document.createElement('h2');h.textContent=n===''?'No aisle':n;\n const ul=document.createElement('ul');\n for(const it of groups.get(n))renderItem(it,ul);\n sec.append(h,ul);listEl.append(sec);\n }\n const left=items.filter(i=>!i.done).length;\n emptyEl.hidden=items.length>0;\n countEl.textContent=items.length?left+' of '+items.length+' still to get':'';\n}\nasync function act(ops,okMsg){\n try{await tessera.call('data.patch',{operations:ops});say(okMsg,false);}\n catch(e){say('That change did not go through. Please try again.',true);}\n await load();\n}\nfunction toggle(id,v){act([{op:'replace',collection:'items',id,revisionCount:revs[id]||1,fields:{done:v}}],'');}\nfunction remove(id){act([{op:'remove',collection:'items',id,revisionCount:revs[id]||1}],'Item removed.');}\ndocument.getElementById('clearDone').addEventListener('click',()=>{\n const d=items.filter(i=>i.done);\n if(!d.length){say('No ticked items to remove.',false);return;}\n act(d.map(i=>({op:'remove',collection:'items',id:i.id,revisionCount:revs[i.id]||1})),d.length+' ticked item(s) removed.');\n});\nfunction add(){\n const n=input.value.trim();\n const a=aisleIn.value.trim();\n if(!n){say('Type an item name first.',true);input.focus();return;}\n input.value='';\n act([{op:'add',collection:'items',record:{name:n,done:false,aisle:a}}],n+' added.');\n input.focus();\n}\ndocument.getElementById('addBtn').addEventListener('click',add);\nfor(const f of [input,aisleIn]){\n f.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add();}});\n}\nload();"
+              "html": "<main class=\"wrap\">\n<h1>Shopping list</h1>\n<p class=\"sub\" data-ref=\"count\" id=\"count\" aria-live=\"polite\"></p>\n<div class=\"add\">\n<label for=\"newname\">New item</label>\n<div class=\"row\">\n<input id=\"newname\" type=\"text\" data-hook=\"item-name\" placeholder=\"e.g. Butter\" autocomplete=\"off\">\n</div>\n<label for=\"newaisle\" class=\"gap\">Aisle (optional)</label>\n<div class=\"row\">\n<input id=\"newaisle\" type=\"text\" list=\"aisles\" placeholder=\"e.g. Dairy\" autocomplete=\"off\" maxlength=\"100\">\n<datalist id=\"aisles\"></datalist>\n<button id=\"addbtn\" type=\"button\" data-hook=\"item-add\">Add</button>\n</div>\n</div>\n<p id=\"msg\" class=\"msg\" role=\"status\"></p>\n<p id=\"empty\" class=\"sub\" hidden>The list is empty. Add what you need above.</p>\n<div id=\"list\"></div>\n<button id=\"clear\" type=\"button\" class=\"secondary\" hidden>Remove ticked items</button>\n</main>",
+              "css": ".wrap{max-width:560px;margin:0 auto;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 0}\n.sub{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-3)}\nlabel{display:block;font-size:var(--ui-size-secondary);margin-bottom:var(--ui-space-1)}\nlabel.gap{margin-top:var(--ui-space-3)}\n.row{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}\ninput[type=text]{flex:1 1 180px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary,button.rm{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\n.list{list-style:none;margin:var(--ui-space-2) 0;padding:0}\n.list li{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);background:var(--ui-surface);margin-bottom:var(--ui-space-2)}\n.list li label{flex:1;display:flex;align-items:center;gap:var(--ui-space-3);margin:0;font-size:var(--ui-size-body);min-height:var(--ui-target);cursor:pointer;overflow-wrap:anywhere}\n.list input[type=checkbox]{width:24px;height:24px;flex:none;accent-color:var(--ui-accent)}\n.list li.done .nm{text-decoration:line-through;color:var(--ui-text-secondary)}\n.msg{min-height:1.2em;color:var(--ui-error);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0 0}",
+              "js": "let items = [];\nlet revs = {};\nconst listEl = document.getElementById('list');\nconst msgEl = document.getElementById('msg');\nconst nameEl = document.getElementById('newname');\nconst aisleEl = document.getElementById('newaisle');\nconst NONE = 'No aisle';\n\nfunction say(t) { msgEl.textContent = t; }\n\nasync function load() {\n  const res = await tessera.call('data.read', {});\n  items = Array.isArray(res.data.items) ? res.data.items : [];\n  revs = (res.revisions && res.revisions.items) || {};\n  render();\n}\n\nfunction buildItem(it) {\n  const li = document.createElement('li');\n  li.setAttribute('data-hook', 'item');\n  if (it.done) li.classList.add('done');\n  const lab = document.createElement('label');\n  const cb = document.createElement('input');\n  cb.type = 'checkbox';\n  cb.checked = !!it.done;\n  const nm = document.createElement('span');\n  nm.className = 'nm';\n  nm.textContent = it.name;\n  lab.appendChild(cb);\n  lab.appendChild(nm);\n  const rm = document.createElement('button');\n  rm.type = 'button';\n  rm.className = 'rm';\n  rm.setAttribute('data-hook', 'item-remove');\n  rm.textContent = 'Remove';\n  rm.setAttribute('aria-label', 'Remove ' + it.name);\n  cb.addEventListener('change', () => toggle(it.id, cb.checked));\n  rm.addEventListener('click', () => removeOne(it.id));\n  li.appendChild(lab);\n  li.appendChild(rm);\n  return li;\n}\n\nfunction render() {\n  listEl.textContent = '';\n  const groups = new Map();\n  for (const it of items) {\n    const a = typeof it.aisle === 'string' ? it.aisle.trim() : '';\n    const key = a || NONE;\n    if (!groups.has(key)) groups.set(key, []);\n    groups.get(key).push(it);\n  }\n  const names = Array.from(groups.keys()).filter((k) => k !== NONE).sort((a, b) => a.localeCompare(b));\n  if (groups.has(NONE)) names.push(NONE);\n  for (const g of names) {\n    const sec = document.createElement('section');\n    const h = document.createElement('h2');\n    h.textContent = g;\n    const ul = document.createElement('ul');\n    ul.className = 'list';\n    for (const it of groups.get(g)) ul.appendChild(buildItem(it));\n    sec.appendChild(h);\n    sec.appendChild(ul);\n    listEl.appendChild(sec);\n  }\n  const dl = document.getElementById('aisles');\n  dl.textContent = '';\n  for (const g of names) {\n    if (g === NONE) continue;\n    const o = document.createElement('option');\n    o.value = g;\n    dl.appendChild(o);\n  }\n  const total = items.length;\n  const got = items.filter((i) => i.done).length;\n  document.getElementById('count').textContent = total ? got + ' of ' + total + ' ticked' : '';\n  document.getElementById('empty').hidden = total !== 0;\n  document.getElementById('clear').hidden = got === 0;\n}\n\nasync function run(ops, fail) {\n  try {\n    await tessera.call('data.patch', { operations: ops });\n    say('');\n    await load();\n    return true;\n  } catch (e) {\n    say(fail);\n    await load().catch(() => {});\n    return false;\n  }\n}\n\nasync function toggle(id, done) {\n  const rc = revs[id];\n  await run([{ op: 'replace', collection: 'items', id: id, revisionCount: rc, fields: { done: done } }], 'Could not update that item. Please try again.');\n}\n\nasync function removeOne(id) {\n  const rc = revs[id];\n  await run([{ op: 'remove', collection: 'items', id: id, revisionCount: rc }], 'Could not remove that item. Please try again.');\n}\n\nasync function addItem() {\n  const name = nameEl.value.trim();\n  const aisle = aisleEl.value.trim();\n  if (!name) {\n    say('Type the name of an item first.');\n    nameEl.focus();\n    return;\n  }\n  const ok = await run([{ op: 'add', collection: 'items', record: { name: name, done: false, aisle: aisle } }], 'Could not add that item. Your text is still there; please try again.');\n  if (ok) nameEl.value = '';\n  nameEl.focus();\n}\n\ndocument.getElementById('addbtn').addEventListener('click', addItem);\nfor (const el of [nameEl, aisleEl]) {\n  el.addEventListener('keydown', (e) => {\n    if (e.key === 'Enter') { e.preventDefault(); addItem(); }\n  });\n}\ndocument.getElementById('clear').addEventListener('click', async () => {\n  const ops = [];\n  for (const it of items) {\n    if (it.done) ops.push({ op: 'remove', collection: 'items', id: it.id, revisionCount: revs[it.id] });\n  }\n  if (ops.length) await run(ops, 'Could not remove the ticked items. Please try again.');\n});\n\nload().catch(() => say('Could not load the list.'));"
             }
           },
           "data": {
             "mode": "migrate",
             "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
               "properties": {
                 "items": {
                   "items": {
                     "properties": {
                       "aisle": {
+                        "maxLength": 100,
                         "type": "string"
                       },
                       "done": {
@@ -181,10 +187,12 @@
                         "type": "string"
                       },
                       "name": {
+                        "maxLength": 200,
+                        "minLength": 1,
                         "type": "string"
                       }
                     },
-                    "required": ["id", "name", "done", "aisle"],
+                    "required": ["id", "name", "done"],
                     "type": "object"
                   },
                   "type": "array"
@@ -213,15 +221,52 @@
         }
       },
       "parts": [
-        "base@425d17c8b071",
-        "bridge@63eefdc4fb28",
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
         "ui-edit@722f0daf16a5",
         "accessibility@bd63b2577331",
-        "edit@2e80b2067d6d",
+        "profile@a230baa738e0",
+        "edit@f0e0e0e98dda",
         "request@47a51319da7d",
         "language@2a8e10d77d23",
-        "source@cd07cc0c84ce",
+        "source@0eae49d84708",
         "edit-declarations@7eb300505e9f"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "edit",
+          "summary": "Your shopping list now groups items by aisle. Give each new item an aisle (optional) and items appear under aisle headings; items without one go under \"No aisle\".",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<main class=\"wrap\">\n<h1>Shopping list</h1>\n<p class=\"sub\" data-ref=\"count\" id=\"count\" aria-live=\"polite\"></p>\n<div class=\"add\">\n<label for=\"newname\">New item</label>\n<div class=\"row\">\n<input id=\"newname\" type=\"text\" data-hook=\"item-name\" placeholder=\"e.g. Butter\" autocomplete=\"off\">\n</div>\n<label for=\"newaisle\" class=\"gap\">Aisle (optional)</label>\n<div class=\"row\">\n<input id=\"newaisle\" type=\"text\" list=\"aisles\" placeholder=\"e.g. Dairy\" autocomplete=\"off\" maxlength=\"100\">\n<datalist id=\"aisles\"></datalist>\n<button id=\"addbtn\" type=\"button\" data-hook=\"item-add\">Add</button>\n</div>\n</div>\n<p id=\"msg\" class=\"msg\" role=\"status\"></p>\n<p id=\"empty\" class=\"sub\" hidden>The list is empty. Add what you need above.</p>\n<div id=\"list\"></div>\n<button id=\"clear\" type=\"button\" class=\"secondary\" hidden>Remove ticked items</button>\n</main>",
+              "css": ".wrap{max-width:560px;margin:0 auto;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 0}\n.sub{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-3)}\nlabel{display:block;font-size:var(--ui-size-secondary);margin-bottom:var(--ui-space-1)}\nlabel.gap{margin-top:var(--ui-space-3)}\n.row{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}\ninput[type=text]{flex:1 1 180px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary,button.rm{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\n.list{list-style:none;margin:var(--ui-space-2) 0;padding:0}\n.list li{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);background:var(--ui-surface);margin-bottom:var(--ui-space-2)}\n.list li label{flex:1;display:flex;align-items:center;gap:var(--ui-space-3);margin:0;font-size:var(--ui-size-body);min-height:var(--ui-target);cursor:pointer;overflow-wrap:anywhere}\n.list input[type=checkbox]{width:24px;height:24px;flex:none;accent-color:var(--ui-accent)}\n.list li.done .nm{text-decoration:line-through;color:var(--ui-text-secondary)}\n.msg{min-height:1.2em;color:var(--ui-error);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0 0}",
+              "js": "let items = [];\nlet revs = {};\nconst listEl = document.getElementById('list');\nconst msgEl = document.getElementById('msg');\nconst nameEl = document.getElementById('newname');\nconst aisleEl = document.getElementById('newaisle');\nconst NONE = 'No aisle';\n\nfunction say(t) { msgEl.textContent = t; }\n\nasync function load() {\n  const res = await tessera.call('data.read', {});\n  items = Array.isArray(res.data.items) ? res.data.items : [];\n  revs = (res.revisions && res.revisions.items) || {};\n  render();\n}\n\nfunction buildItem(it) {\n  const li = document.createElement('li');\n  li.setAttribute('data-hook', 'item');\n  if (it.done) li.classList.add('done');\n  const lab = document.createElement('label');\n  const cb = document.createElement('input');\n  cb.type = 'checkbox';\n  cb.checked = !!it.done;\n  const nm = document.createElement('span');\n  nm.className = 'nm';\n  nm.textContent = it.name;\n  lab.appendChild(cb);\n  lab.appendChild(nm);\n  const rm = document.createElement('button');\n  rm.type = 'button';\n  rm.className = 'rm';\n  rm.setAttribute('data-hook', 'item-remove');\n  rm.textContent = 'Remove';\n  rm.setAttribute('aria-label', 'Remove ' + it.name);\n  cb.addEventListener('change', () => toggle(it.id, cb.checked));\n  rm.addEventListener('click', () => removeOne(it.id));\n  li.appendChild(lab);\n  li.appendChild(rm);\n  return li;\n}\n\nfunction render() {\n  listEl.textContent = '';\n  const groups = new Map();\n  for (const it of items) {\n    const a = typeof it.aisle === 'string' ? it.aisle.trim() : '';\n    const key = a || NONE;\n    if (!groups.has(key)) groups.set(key, []);\n    groups.get(key).push(it);\n  }\n  const names = Array.from(groups.keys()).filter((k) => k !== NONE).sort((a, b) => a.localeCompare(b));\n  if (groups.has(NONE)) names.push(NONE);\n  for (const g of names) {\n    const sec = document.createElement('section');\n    const h = document.createElement('h2');\n    h.textContent = g;\n    const ul = document.createElement('ul');\n    ul.className = 'list';\n    for (const it of groups.get(g)) ul.appendChild(buildItem(it));\n    sec.appendChild(h);\n    sec.appendChild(ul);\n    listEl.appendChild(sec);\n  }\n  const dl = document.getElementById('aisles');\n  dl.textContent = '';\n  for (const g of names) {\n    if (g === NONE) continue;\n    const o = document.createElement('option');\n    o.value = g;\n    dl.appendChild(o);\n  }\n  const total = items.length;\n  const got = items.filter((i) => i.done).length;\n  document.getElementById('count').textContent = total ? got + ' of ' + total + ' ticked' : '';\n  document.getElementById('empty').hidden = total !== 0;\n  document.getElementById('clear').hidden = got === 0;\n}\n\nasync function run(ops, fail) {\n  try {\n    await tessera.call('data.patch', { operations: ops });\n    say('');\n    await load();\n    return true;\n  } catch (e) {\n    say(fail);\n    await load().catch(() => {});\n    return false;\n  }\n}\n\nasync function toggle(id, done) {\n  const rc = revs[id];\n  await run([{ op: 'replace', collection: 'items', id: id, revisionCount: rc, fields: { done: done } }], 'Could not update that item. Please try again.');\n}\n\nasync function removeOne(id) {\n  const rc = revs[id];\n  await run([{ op: 'remove', collection: 'items', id: id, revisionCount: rc }], 'Could not remove that item. Please try again.');\n}\n\nasync function addItem() {\n  const name = nameEl.value.trim();\n  const aisle = aisleEl.value.trim();\n  if (!name) {\n    say('Type the name of an item first.');\n    nameEl.focus();\n    return;\n  }\n  const ok = await run([{ op: 'add', collection: 'items', record: { name: name, done: false, aisle: aisle } }], 'Could not add that item. Your text is still there; please try again.');\n  if (ok) nameEl.value = '';\n  nameEl.focus();\n}\n\ndocument.getElementById('addbtn').addEventListener('click', addItem);\nfor (const el of [nameEl, aisleEl]) {\n  el.addEventListener('keydown', (e) => {\n    if (e.key === 'Enter') { e.preventDefault(); addItem(); }\n  });\n}\ndocument.getElementById('clear').addEventListener('click', async () => {\n  const ops = [];\n  for (const it of items) {\n    if (it.done) ops.push({ op: 'remove', collection: 'items', id: it.id, revisionCount: revs[it.id] });\n  }\n  if (ops.length) await run(ops, 'Could not remove the ticked items. Please try again.');\n});\n\nload().catch(() => say('Could not load the list.'));"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "profile@a230baa738e0",
+        "edit@f0e0e0e98dda",
+        "repair-schema-shape@1fdc6c120869",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "source@0eae49d84708",
+        "edit-declarations@7eb300505e9f",
+        "edit-attempt@7572eebc3639",
+        "diagnostics@0b26a00a48fd"
       ]
     },
     {
@@ -231,7 +276,7 @@
         "value": {
           "kind": "data",
           "interfacePart": null,
-          "dataPart": "Add cheese and take the apples off.",
+          "dataPart": "Add cheese and take the apples off",
           "behaviorChange": false,
           "lookOnly": false,
           "targetsCurrentTool": true,
@@ -245,11 +290,13 @@
               "name": "Remove apples",
               "request": "take the apples off"
             }
-          ]
+          ],
+          "profile": null,
+          "drawsCharts": false
         }
       },
       "parts": [
-        "intent@3222248e8a6e",
+        "intent@831eceda0fdd",
         "intent-open@ad363d62acd6",
         "intent-no-saved@62b6b33152f8",
         "intent-request@29adbd896fc4"
@@ -261,7 +308,7 @@
         "stage": "data",
         "value": {
           "outcome": "patch",
-          "summary": "Adds a new item named Cheese to the shopping list, not yet done and with no aisle, and removes the Apples item.",
+          "summary": "Adds a new item named Cheese (not done) to the shopping list and removes the Apples item.",
           "patch": {
             "operations": [
               {
@@ -269,14 +316,13 @@
                 "collection": "items",
                 "record": {
                   "name": "Cheese",
-                  "done": false,
-                  "aisle": ""
+                  "done": false
                 }
               },
               {
                 "op": "remove",
                 "collection": "items",
-                "id": "i-apples",
+                "id": "apples",
                 "revisionCount": 3
               }
             ]
@@ -308,11 +354,13 @@
               "name": "Open weekly shopping list",
               "request": "Open my weekly shopping list"
             }
-          ]
+          ],
+          "profile": null,
+          "drawsCharts": false
         }
       },
       "parts": [
-        "intent@3222248e8a6e",
+        "intent@831eceda0fdd",
         "intent-none@a47602c1d680",
         "intent-saved@fce66cce20d3",
         "intent-request@29adbd896fc4"

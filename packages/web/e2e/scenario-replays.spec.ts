@@ -20,12 +20,22 @@ const replays = path.join(scenarios, "replays");
 // M2 run's two failures were the scenario's expectation, not the model, and the files were
 // corrected after it (T1 step 2 expects its data kept, T13 step 3 no new version), so they pass
 // now. The run's score stays as its report froze it (evals/reports/2026-11-05-m2-live-run.md).
+// T1 and T6 are the M3 live run's recordings, and so are T2, T3, T5 and T10
+// (evals/reports/2026-11-09-m3-live-run.md). T10's creation failed the static check after its one
+// repair, so its first step fails and the steps after it are blocked: it is listed in
+// stoppedLive, and its blocked steps follow from that.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "J6-limits": [],
   "T1-shopping-list": [],
+  "T2-reading-list": [],
+  "T3-spending-chart": [],
+  "T5-rsvp-form": [],
   "T6-tip-calculator": [],
+  "T10-study-planner": [[1, ["No tool was created.", "No new workspace is open."]]],
   "T13-drawing-board": [],
 };
+// The recorded runs whose first step failed, so the runner stopped there (the stop rule).
+const stoppedLive = new Set(["T10-study-planner"]);
 
 test("EVAL-07: every recorded live run has its expected steps listed here", () => {
   const recorded = fs.readdirSync(replays).map((f) => path.basename(f, ".json"));
@@ -43,13 +53,20 @@ for (const [id, failed] of Object.entries(failedLive)) {
       folder: info.outputPath("scenario"),
       webRoot: path.resolve(here, "../dist"),
     });
-    expect(report.stopped).toBeFalsy();
+    const stopped = stoppedLive.has(id);
+    expect(Boolean(report.stopped)).toBe(stopped);
     expect(
-      report.steps.filter((s) => s.outcome !== "passed").map((s) => [s.index, s.problems]),
+      report.steps.filter((s) => s.outcome === "failed").map((s) => [s.index, s.problems]),
     ).toEqual(failed);
+    // Only a stopped run has blocked steps: every step after its first.
+    expect(report.steps.filter((s) => s.outcome === "blocked").map((s) => s.index)).toEqual(
+      stopped ? report.steps.slice(1).map((s) => s.index) : [],
+    );
     // Every screenshot shows the tool whenever one is open, never an empty panel (L-81).
-    expect(report.steps.map((s) => [s.index, s.screenshot])).toEqual(
-      report.steps.map((s) => [s.index, s.screenshot === "no tool" ? "no tool" : "tool"]),
+    // A blocked step wasn't played, so it has no screenshot.
+    const played = report.steps.filter((s) => s.outcome !== "blocked");
+    expect(played.map((s) => [s.index, s.screenshot])).toEqual(
+      played.map((s) => [s.index, s.screenshot === "no tool" ? "no tool" : "tool"]),
     );
   });
 }
