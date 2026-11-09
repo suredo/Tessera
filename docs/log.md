@@ -2,6 +2,8 @@
 
 ## 2026-11-09
 
+* **Fix**: L-89, from the [M3 live run](../evals/reports/2026-11-09-m3-live-run.md)'s T10: the [static check](code/server/checks.md)'s findings about an element or the page now say, when the reason is a name the tool also gives an element elsewhere, which line did and to rename one of them (`VER-07`). What it refuses is unchanged. The [lessons](lessons/tessera-issues.md) and the run's report record the cause. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T21:00:00Z.
+
 * **New**: The [M3 live run's results](../evals/reports/2026-11-09-m3-live-run.md) (`ENG-07`), under the approved 46-call cap: 26 calls, 11 of 14 requests at the first attempt, every profiled version passing its behavior check (one after its repair), six of seven profile matches right and one not reached, and T10 stopped at its first step because its static repair traded one refused form for another. The six recordings are now [replays](code/evals/runner.md), T1 and T6 replacing M2's, and the replay spec allows a run that stopped. The [budgets](roadmap/budgets.md) record M3's 30 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T19:41:20Z.
 
 * **New**: The [M3 live run's plan](../evals/reports/2026-11-09-m3-live-plan.md) (`ENG-07`): T1, T2 in Portuguese, T3, T5, T10 and T6 as the tool no profile fits, their frozen measures (first-attempt pass rate, behavior checks and their diagnostics, profile matching, verified status, cost), a hard cap of 46 calls in M3's envelope of about 65, expected tokens and time, and stop rules. It asks the owner to approve the cap; no call is made before. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T13:00:29Z.

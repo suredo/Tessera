@@ -7,7 +7,7 @@ implements: [SBX-06, SBX-07, RUN-07, VER-01]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T00:01:20Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T21:00:00Z }
 ---
 
 # Purpose
@@ -48,6 +48,8 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
   - `this` in a class that stores them;
   - if the tracking is still finding more after many rounds, everything, so it fails closed;
   - names the script never declares, since an element with an `id` is a global of that name.
+
+  Since it follows names, one name that holds an element in one place and the tool's own data in another counts as the page everywhere. The finding then says which line gave the name an element and to rename one of them (`VER-07`, L-89); that explanation (`borrowedName`) never changes what is refused.
 
   What crosses the bridge is plain data: the bridge's own calls (`tessera.call`, `send` and `assetUrl`, with the name written out) copy their arguments and results, and the page's objects can't be copied, so nothing given to or returned by them counts as the page. Nothing else reached through `tessera` is trusted. A tool may not declare a name `tessera` of its own, nor write anything onto `tessera`, which could pass the page off as the bridge.
 
