@@ -271,6 +271,8 @@ export const en = {
   "details.rule.scheduling.4":
     "Opened again, the tool shows the sessions and rules as they were saved.",
   "details.check.noBehavior": "Its behavior wasn't checked, so it isn't verified.",
+  "details.check.acceptance":
+    "Checked against your request: Tessera tried what you asked with the tool's own controls, which checks less than a full behavior check.",
   "details.check.none": "It passed none of Tessera's checks: it was made or changed without them.",
   "details.sourceHeading": "The tool's code",
   "details.noSource": "This workspace has no tool yet.",
@@ -297,6 +299,8 @@ export const en = {
   "history.checkedStart": "Passed Tessera's check of how it opens.",
   "history.triedOut": "Tessera tried it out: {what}.",
   "history.notTriedOut": "Its behavior wasn't tried out, so it isn't verified.",
+  "history.checkedAgainstRequest":
+    "Checked against your request: Tessera tried what you asked with the tool's own controls.",
   "history.tried.item-list": "adding an item, removing it, and opening it again",
   "history.tried.filtering":
     "adding an item in a category, showing one category at a time, and opening it again",

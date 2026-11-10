@@ -38,10 +38,11 @@
         "enum": [
           "code",
           "start",
-          "behavior"
+          "behavior",
+          "acceptance"
         ]
       },
-      "description": "The code check (static), the start check (smoke) and the behavior check its candidate passed."
+      "description": "The code check (static), the start check (smoke), the behavior check and the checks from the request its candidate passed."
     },
     "profile": {
       "anyOf": [

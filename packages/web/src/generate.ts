@@ -14,7 +14,13 @@ import {
   type FollowUpRequest,
   type DataReply,
 } from "@tessera/contracts";
-import { profileCheck, smokeCheck, stageCandidate, type StagingResult } from "@tessera/runtime";
+import {
+  acceptanceChecks,
+  profileCheck,
+  smokeCheck,
+  stageCandidate,
+  type StagingResult,
+} from "@tessera/runtime";
 import { HostError, isRefusal, problemText, type Send } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 import type { RequestControl } from "./request-control.ts";
@@ -257,8 +263,13 @@ async function stageRequest(
       workspaceId: reply.workspaceId,
       expectedDataRevision: reply.expectedDataRevision,
       activationToken: reply.activation.token,
-      // The profile's behavior check after the smoke check, when the tool fits one (VER-03).
-      checks: [smokeCheck(), ...(reply.profile ? [profileCheck(reply.profile)] : [])],
+      // The profile's behavior check after the smoke check, when the tool fits one (VER-03); or,
+      // in the experiment, the checks the server wrote from the request, one each (VER-09).
+      checks: [
+        smokeCheck(),
+        ...(reply.profile ? [profileCheck(reply.profile)] : []),
+        ...(reply.acceptance ? acceptanceChecks(reply.acceptance) : []),
+      ],
       signal: controller.signal,
     });
   } finally {
@@ -443,10 +454,13 @@ export async function carryOut(
           if (control?.stopped) return stopped();
           if (Date.now() >= reply.activation.expiresAt) return { message: t("request.timedOut") };
           if (staged.outcome === "check-failed") {
-            const failure = staged.check === "behavior" ? "behavior" : "smoke";
+            // A check from the request is repaired as a behavior check is: the tool doesn't do what
+            // a check it was told about expects (VER-09, GEN-09).
+            const behaves = staged.check === "behavior" || staged.check === "acceptance";
+            const failure = behaves ? "behavior" : "smoke";
             if (
               !repaired.has(failure) &&
-              (staged.check === "smoke" || staged.check === "start" || staged.check === "behavior")
+              (staged.check === "smoke" || staged.check === "start" || behaves)
             ) {
               repaired.add(failure);
               try {

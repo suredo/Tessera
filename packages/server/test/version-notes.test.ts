@@ -179,6 +179,87 @@ describe("a version's note (APP-05)", () => {
     });
   });
 
+  it("VER-09: a version keeps the checks from the request only when the server gave them and staging reports them and the start check passed", async () => {
+    const acceptance = {
+      outcome: "checks",
+      hooks: [
+        { name: "item-name", says: "the field for a new item" },
+        { name: "item-add", says: "the button that adds it" },
+        { name: "item", says: "each item" },
+      ],
+      checks: [
+        {
+          says: "Adding milk shows it",
+          steps: [
+            { do: "fill", hook: "item-name", value: "Milk" },
+            { do: "click", hook: "item-add" },
+          ],
+          expect: { see: "shows", hook: "item", text: "Milk" },
+        },
+      ],
+    };
+    const serve = async (acceptanceChecks: boolean, requests: number) => {
+      const store = await folder();
+      const provider = createScriptedProvider({
+        name: "acceptance",
+        replies: Array.from({ length: requests }).flatMap(() => [
+          { kind: "value" as const, stage: "intent" as const, value: intent },
+          ...(acceptanceChecks
+            ? [{ kind: "value" as const, stage: "acceptance" as const, value: acceptance as never }]
+            : []),
+          { kind: "value" as const, stage: "create" as const, value: editFixture as never },
+        ]),
+      });
+      const server = await startLocalServer({
+        port: 0,
+        routes: generationRoutes({
+          store,
+          jobs: new JobQueue(),
+          provider: () => Promise.resolve(provider),
+          routes: () => DEFAULT_ROUTES,
+          acceptanceChecks,
+        }),
+      });
+      clean.push(() => server.close());
+      const post = async (route: string, value: unknown) => {
+        const response = await fetch(new URL(route, server.url), {
+          method: "POST",
+          headers: { origin: server.url.replace(/\/$/, ""), "content-type": "application/json" },
+          body: JSON.stringify(value),
+        });
+        return await response.json();
+      };
+      return async (reported: { startChecked?: true; acceptanceChecked?: true }) => {
+        const reply = generateReplySchema.parse(await post(GENERATE_ROUTE, { request: "A list" }));
+        if (reply.kind !== "candidate") throw new Error("Expected a candidate");
+        const activated = activationReplySchema.parse(
+          await post(ACTIVATION_ROUTE, {
+            token: reply.activation.token,
+            workspaceId: reply.workspaceId,
+            hash: reply.hash,
+            expectedDataRevision: reply.expectedDataRevision,
+            ...reported,
+          }),
+        );
+        expect(activated.ok).toBe(true);
+        return workspaceVersions(store, reply.workspaceId)[0];
+      };
+    };
+    const on = await serve(true, 2);
+    // The server gave checks, and staging reports them and the start check: both recorded.
+    expect(await on({ startChecked: true, acceptanceChecked: true })).toMatchObject({
+      checks: ["code", "start", "acceptance"],
+      profile: null,
+    });
+    // Reported without the start check they follow: neither is recorded.
+    expect(await on({ acceptanceChecked: true })).toMatchObject({ checks: ["code"] });
+    // With the experiment off the server gave none: the browser's word alone records none.
+    const off = await serve(false, 1);
+    expect(await off({ startChecked: true, acceptanceChecked: true })).toMatchObject({
+      checks: ["code", "start"],
+    });
+  });
+
   it("VER-08: a note's profile is kept only with the behavior check it names, and Use again keeps both", async () => {
     const store = await folder();
     const built = candidateFrom(editFixture);

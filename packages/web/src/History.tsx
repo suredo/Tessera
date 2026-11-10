@@ -224,7 +224,9 @@ export function History({ workspace, changes, onChanged }: Props) {
             <p className="detail">
               {version.checks.includes("behavior") && version.profile
                 ? t("history.triedOut", { what: t(`history.tried.${version.profile}`) })
-                : t("history.notTriedOut")}
+                : version.checks.includes("acceptance")
+                  ? t("history.checkedAgainstRequest")
+                  : t("history.notTriedOut")}
             </p>
           </li>
         ))}
