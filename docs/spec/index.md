@@ -3,7 +3,7 @@
 * [Platform and setup](platform.md) - Windows-first platform, launcher, setup check and data folder (PLAT-01 to PLAT-04).
 * [Host app](app.md) - What the person sees and can do: main screen, workspaces, library, versions, trash, details (APP-01 to APP-11).
 * [Contracts](contracts.md) - One schema source, explicit output unions, the bridge manifest, versioned contracts and units (CON-01 to CON-05).
-* [Generation pipeline](generation.md) - Structured intent, routing, generation, repair, honest messages and time limits (GEN-01 to GEN-18).
+* [Generation pipeline](generation.md) - Structured intent, routing, generation, repair, honest messages and time limits (GEN-01 to GEN-19).
 * [Runtime and sandbox](runtime.md) - The sandbox, one active runtime, staging before activation, bridge enforcement and the host clock (RUN-01 to RUN-07).
 * [Host capabilities](capabilities.md) - What tools can ask the host for: data providers, files in and out, vetted libraries (CAP-01 to CAP-05).
 * [Data and persistence](data.md) - How Tessera stores, versions, exports and protects a person's data, including binary assets (DATA-01 to DATA-11).
