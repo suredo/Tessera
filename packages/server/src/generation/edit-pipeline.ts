@@ -80,6 +80,8 @@ export async function generateEdit(
     capabilities: result.artifact.capabilities,
     syntheticData: result.artifact.data.defaults,
     profile: intent?.profile ?? null,
+    // Checks from the request are for a new tool only, in the experiment (VER-09).
+    acceptance: null,
     expectedDataRevision: baseline.dataRevision,
     name: baseline.title,
     summary: result.summary,

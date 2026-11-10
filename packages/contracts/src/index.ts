@@ -3,12 +3,14 @@
 export {
   ACCEPTANCE_LIMITS,
   acceptanceCheckSchema,
+  acceptanceChecksSchema,
   acceptanceExpectSchema,
   acceptanceSchema,
   acceptanceStepSchema,
   hookNameSchema,
   type Acceptance,
   type AcceptanceCheck,
+  type AcceptanceChecks,
   type AcceptanceExpect,
   type AcceptanceStep,
 } from "./acceptance.ts";

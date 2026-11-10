@@ -1,4 +1,5 @@
 import {
+  type AcceptanceChecks,
   artifactSchema,
   ARTIFACT_CONTRACT_VERSION,
   collectionName,
@@ -237,6 +238,8 @@ export type CreateInput = {
   core?: TwoPassPlan;
   /** The configured stage limits; the constants above unless given (GEN-11). */
   timeLimits?: Pick<StageTimeLimits, "create" | "repair">;
+  /** The checks written from the request, which creation and its repairs must pass (VER-09). */
+  acceptance?: AcceptanceChecks;
 };
 
 const repairable = (failure: FailureClass): failure is RepairClass =>
@@ -337,6 +340,7 @@ async function ask(
     intent: input.intent,
     uiMode: repair.attempt?.uiMode ?? "standard",
     ...(input.core ? { core: input.core } : {}),
+    ...(input.acceptance ? { acceptance: input.acceptance } : {}),
     ...repair,
   });
   let creation: Creation;

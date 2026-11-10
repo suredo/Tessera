@@ -49,6 +49,41 @@ export const acceptanceCheckSchema = z.strictObject({
 });
 export type AcceptanceCheck = z.infer<typeof acceptanceCheckSchema>;
 
+const checksObject = z.strictObject({
+  outcome: z.literal("checks"),
+  hooks: z
+    .array(z.strictObject({ name: hookNameSchema, says: plain(160) }))
+    .min(1)
+    .max(ACCEPTANCE_LIMITS.hooks),
+  checks: z.array(acceptanceCheckSchema).min(1).max(ACCEPTANCE_LIMITS.checks),
+});
+
+/** No hook twice, and every hook a check uses declared, so the prompt asks for every one. */
+function declaredHooks(answer: z.infer<typeof checksObject>, context: z.RefinementCtx): void {
+  const named = new Set<string>();
+  answer.hooks.forEach(({ name }, index) => {
+    if (named.has(name)) {
+      context.addIssue({
+        code: "custom",
+        path: ["hooks", index, "name"],
+        message: `${name} twice`,
+      });
+    }
+    named.add(name);
+  });
+  answer.checks.forEach((check, index) => {
+    for (const hook of [...check.steps.map((s) => s.hook), check.expect.hook]) {
+      if (!named.has(hook)) {
+        context.addIssue({
+          code: "custom",
+          path: ["checks", index],
+          message: `uses the hook ${hook}, which isn't declared`,
+        });
+      }
+    }
+  });
+}
+
 /**
  * The acceptance stage's answer (VER-09): the hooks the tool must expose, each with what it marks,
  * and up to three checks that use only those hooks. Or none, when the request asks for nothing a
@@ -56,44 +91,18 @@ export type AcceptanceCheck = z.infer<typeof acceptanceCheckSchema>;
  */
 export const acceptanceSchema = z
   .discriminatedUnion("outcome", [
-    z.strictObject({
-      outcome: z.literal("checks"),
-      hooks: z
-        .array(z.strictObject({ name: hookNameSchema, says: plain(160) }))
-        .min(1)
-        .max(ACCEPTANCE_LIMITS.hooks),
-      checks: z.array(acceptanceCheckSchema).min(1).max(ACCEPTANCE_LIMITS.checks),
-    }),
+    checksObject,
     z.strictObject({
       outcome: z.literal("none"),
       reason: plain(200).describe("Why no check fits the request, in plain words."),
     }),
   ])
   .superRefine((answer, context) => {
-    if (answer.outcome !== "checks") return;
-    const named = new Set<string>();
-    answer.hooks.forEach(({ name }, index) => {
-      if (named.has(name)) {
-        context.addIssue({
-          code: "custom",
-          path: ["hooks", index, "name"],
-          message: `${name} twice`,
-        });
-      }
-      named.add(name);
-    });
-    // A check may use only the hooks the answer declares, so the prompt asks for every one.
-    answer.checks.forEach((check, index) => {
-      for (const hook of [...check.steps.map((s) => s.hook), check.expect.hook]) {
-        if (!named.has(hook)) {
-          context.addIssue({
-            code: "custom",
-            path: ["checks", index],
-            message: `uses the hook ${hook}, which isn't declared`,
-          });
-        }
-      }
-    });
+    if (answer.outcome === "checks") declaredHooks(answer, context);
   })
   .describe("Acceptance checks for a tool that fits no profile (VER-09).");
 export type Acceptance = z.infer<typeof acceptanceSchema>;
+
+/** A request's checks, as a candidate carries them to staging and its repairs keep them. */
+export const acceptanceChecksSchema = checksObject.superRefine(declaredHooks);
+export type AcceptanceChecks = z.infer<typeof acceptanceChecksSchema>;

@@ -97,6 +97,8 @@ export async function repairSmoke(
           repairUsage: context.repairUsage,
           timeLimits: limits,
           ...(context.plan ? { core: context.plan } : {}),
+          // The repair must still pass the checks from the request the candidate was told (VER-09).
+          ...(context.reply.acceptance ? { acceptance: context.reply.acceptance } : {}),
           repair: {
             failure: input.failure ?? "smoke",
             diagnostics: input.findings,

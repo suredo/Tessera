@@ -61,6 +61,8 @@ export type GenerationOptions = {
   ledger?: RequestLedger;
   /** Makes a big new tool in two passes, its core first (GEN-17); one pass when left out. */
   twoPass?: TwoPassOptions;
+  /** Turns on the acceptance-check experiment (VER-09, A49); off when left out. */
+  acceptanceChecks?: boolean;
 };
 
 export function generationRoutes(options: GenerationOptions): Record<string, Handler> {
@@ -315,6 +317,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   (offer) => offerData(offer, expires, control),
                   twoPass,
                   stageLimits,
+                  options.acceptanceChecks === true,
                 ),
               signal,
             );
@@ -481,7 +484,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
               const other = smokeInput.failure === "behavior" ? "smoke" : "behavior";
               if (
                 repaired.kind === "candidate" &&
-                repaired.profile !== null &&
+                (repaired.profile !== null || repaired.acceptance !== null) &&
                 (entry.context.repairUsage[other] ?? 0) < REPAIR_BUDGETS[other]
               ) {
                 retain(pending, nextToken, { ...entry.context, reply: repaired }, entry.expires);

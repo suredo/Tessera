@@ -17,6 +17,7 @@ const candidate: GenerateReply = {
   capabilities: [],
   syntheticData: { items: [] },
   profile: null,
+  acceptance: null,
   expectedDataRevision: 1,
   activation: { token: "00000000-0000-4000-8000-000000000002", expiresAt: Date.now() + 420_000 },
   name: "Shopping list",

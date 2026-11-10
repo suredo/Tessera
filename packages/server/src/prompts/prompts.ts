@@ -13,6 +13,7 @@ import {
   type Edit,
   type FailureClass,
   type Intent,
+  type AcceptanceChecks,
   type ReviewItem,
   type Stage,
 } from "@tessera/contracts";
@@ -70,6 +71,9 @@ export const PROMPT_PARTS = [
   "data-attempt",
   "review",
   "review-run",
+  "acceptance",
+  "acceptance-checks",
+  "acceptance-quoted",
 ] as const;
 export type PromptPart = (typeof PROMPT_PARTS)[number];
 
@@ -237,6 +241,11 @@ export type PromptInput = {
   failure?: RepairClass;
   /** What the checks found, in plain words: repair fixes it (GEN-09). */
   diagnostics?: readonly string[];
+  /**
+   * The checks written from the request (VER-09, an M3 experiment), for a new tool that fits no
+   * profile: their hooks and what each checks are stated as requirements, as a profile's are.
+   */
+  acceptance?: AcceptanceChecks;
 };
 
 export type AssembledPrompt = {
@@ -258,6 +267,12 @@ function profileValues(id: keyof typeof PROFILES): Record<string, string> {
     rules: profile.rules.map((rule) => `- ${rule}`).join("\n"),
   };
 }
+
+/** A request's checks as the generation prompt quotes them: their hooks and checks, as data. */
+const acceptanceQuoted = (acceptance: AcceptanceChecks) => ({
+  hooks: acceptance.hooks,
+  checks: acceptance.checks,
+});
 
 /** The intent part's list of profiles, from their one definitions (VER-03). */
 export const profilesForIntent = (): string =>
@@ -324,6 +339,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
   // every rule its check enforces is stated here (VER-03, VER-04).
   if (input.intent?.profile) addSystem("profile", profileValues(input.intent.profile));
+  // The checks written from the request, for a tool that fits no profile (VER-09): the system says
+  // to pass them, in fixed words; the checks themselves, another model's answer, are quoted as data
+  // in the request, so nothing in them is read as instructions (SEC-02).
+  const acceptance = input.acceptance && !input.intent?.profile ? input.acceptance : undefined;
+  if (acceptance) addSystem("acceptance-checks");
   // What creation answers, with the data schema keywords the host accepts (DATA-03, GEN-05).
   if (creating) {
     addSystem("create", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
@@ -348,6 +368,7 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
         ]
       : []),
     ...(input.diagnostics ?? []),
+    ...(acceptance ? [JSON.stringify(acceptanceQuoted(acceptance), null, 2)] : []),
   ]);
   const request: [PromptPart, string, string][] = [];
   const addRequest = (part: PromptPart, values: Record<string, string>) =>
@@ -401,6 +422,12 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       ...code,
       data: JSON.stringify(data, null, 2),
       settings: JSON.stringify({ capabilities, uiMode }),
+      tag,
+    });
+  }
+  if (acceptance) {
+    addRequest("acceptance-quoted", {
+      checks: JSON.stringify(acceptanceQuoted(acceptance), null, 2),
       tag,
     });
   }
@@ -619,5 +646,30 @@ export function assembleReviewPrompt(input: {
     tag: quoteTag([run]),
     images,
   });
+  return { system, prompt, parts, size: system.length + prompt.length };
+}
+
+/** The acceptance stage's budget (GEN-03): its instructions and the request, measured about 2,300. */
+export const ACCEPTANCE_PROMPT_BUDGET = 4_000;
+
+/**
+ * Builds the acceptance stage's prompt (VER-09): its instructions, then the person's request and
+ * language. It sees nothing of the tool; another stage writes that.
+ */
+export function assembleAcceptancePrompt(input: {
+  request: string;
+  language: string;
+}): AssembledPrompt {
+  const parts: string[] = [];
+  const use = (part: PromptPart, values?: Record<string, string>) => {
+    const filled = fillPart(part, values);
+    parts.push(`${part}@${partVersion(partText(part))}`);
+    return filled;
+  };
+  const system = use("acceptance");
+  const prompt = [
+    use("request", { request: input.request }),
+    use("language", { language: input.language }),
+  ].join("\n\n");
   return { system, prompt, parts, size: system.length + prompt.length };
 }
