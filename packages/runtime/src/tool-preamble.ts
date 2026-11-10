@@ -114,12 +114,10 @@ import type { BridgeMethodName } from "@tessera/contracts";
   // Until this frame has its width, or 5 seconds have passed. The staging panel lies off-screen,
   // and on a cold browser Chrome can leave a nested frame there without its size for seconds; a
   // check that measured it then saw a page as wide as its widest control and no element shown
-  // (#302). The checks measure the tool only once its frame is laid out at its width.
-  let sizedAfter = 0;
+  // (#302). The wrapper lays the frames out while a check waits (wrapper.ts); the checks measure
+  // the tool only once its frame has its width.
   const sized = async () => {
-    const started = performance.now();
     for (let waited = 0; window.innerWidth === 0 && waited < 5000; waited += 50) await wait(50);
-    sizedAfter = Math.round(performance.now() - started);
   };
   // Settled, then 50 quiet ms to show the result: a call made or settled in that time starts the
   // wait again, a bounded number of times.
@@ -292,7 +290,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
           ok: false,
           problem:
             found.length === 0
-              ? `Nothing shown has the hook "${hook}". DIAG innerWidth ${window.innerWidth}, sized after ${sizedAfter} ms.`
+              ? `Nothing shown has the hook "${hook}".`
               : `Only ${found.length} ${found.length === 1 ? "element shown has" : "elements shown have"} the hook "${hook}", so there is no number ${index + 1}.`,
         });
         break;
@@ -419,27 +417,10 @@ import type { BridgeMethodName } from "@tessera/contracts";
       "button, [role=button], input[type=button], input[type=submit], input[type=reset]",
     );
     const root = document.documentElement;
-    // TEMPORARY DIAGNOSTIC (#302): what the page measures when it is wider than the frame.
-    const diagnostic: string[] = [];
-    if (Math.max(root.scrollWidth, body?.scrollWidth ?? 0) - root.clientWidth > 1) {
-      let widest = "";
-      let right = 0;
-      for (const element of all("*")) {
-        const box = element.getBoundingClientRect();
-        if (box.right > right) {
-          right = box.right;
-          widest = `${element.tagName.toLowerCase()}${element.id ? "#" + element.id : ""} (left ${Math.round(box.left)}, width ${Math.round(box.width)})`;
-        }
-      }
-      const filter = document.querySelector("select");
-      diagnostic.push(
-        `DIAG innerWidth ${window.innerWidth}, root client ${root.clientWidth} scroll ${root.scrollWidth}, body client ${body?.clientWidth} scroll ${body?.scrollWidth}, widest ${widest} right ${Math.round(right)}, select ${filter ? `${Math.round(filter.getBoundingClientRect().width)} options ${filter.options.length} [${[...filter.options].map((o) => o.text.length).join(",")}]` : "none"}, fonts ${document.fonts.status}, readyState ${document.readyState}, sized after ${sizedAfter} ms`,
-      );
-    }
     post({
       report: {
         id,
-        problems: [...problems, ...diagnostic],
+        problems: [...problems],
         elements: all("*").length,
         text: body ? body.innerText.trim().length : 0,
         media: all("canvas, svg, img, video").filter(shown).length,

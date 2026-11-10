@@ -26,6 +26,25 @@
   // Watches for the person's first real input in the tool's page (GEN-06).
   let watchingInput: ReturnType<typeof setInterval> | undefined;
   let checkInput: (() => void) | undefined;
+  // Lays out this wrapper and the page frame while a check waits for its answer (VER-02, VER-03).
+  // The staging panel lies off-screen, where Chrome may not lay out a frame until something asks:
+  // on a cold browser the tool's frame then had no width, and a check measured a page as wide as
+  // its widest control with nothing shown (#302). Reading the frames' boxes lays both documents
+  // out, which gives the tool's frame its width; nothing is changed.
+  let layingOut: ReturnType<typeof setInterval> | undefined;
+  const layOut = () => {
+    pageFrame?.getBoundingClientRect();
+    toolFrame?.getBoundingClientRect();
+  };
+  const layOutWhileAsked = () => {
+    layOut();
+    clearInterval(layingOut);
+    let rounds = 0;
+    layingOut = setInterval(() => {
+      layOut();
+      if (++rounds >= 120) clearInterval(layingOut);
+    }, 50);
+  };
 
   const unmountTool = () => {
     toolPort?.close();
@@ -36,6 +55,7 @@
     onHello = undefined;
     calls = new Set();
     clearInterval(watchingInput);
+    clearInterval(layingOut);
     checkInput = undefined;
   };
   const unmount = () => {
@@ -75,6 +95,7 @@
       // for the page if there is none yet.
       if ("inspect" in data || "drive" in data) {
         const question = "inspect" in data ? { inspect: data.inspect } : { drive: data.drive };
+        layOutWhileAsked();
         if (toolPort) toolPort.postMessage(question);
         else questions.push(question);
         return;

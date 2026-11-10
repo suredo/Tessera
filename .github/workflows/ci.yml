@@ -124,11 +124,6 @@ jobs:
       - name: pnpm from packageManager, through Corepack
         run: corepack enable
       - run: pnpm install --frozen-lockfile
-      # TEMPORARY DIAGNOSTIC (#302): catch the 320 px overflow in the filtering check.
-      - name: TEMPORARY repeat of the filtering check
-        if: matrix.shard == 2
-        continue-on-error: true
-        run: pnpm exec playwright test --project=chrome-1280 --repeat-each=15 packages/web/e2e/filtering-check.spec.ts packages/web/e2e/form-check.spec.ts
       - name: Browser tests in Chrome (TEST-06)
         run: pnpm e2e --shard=${{ matrix.shard }}/3
       # No videos on CI (A56): a failed test's light trace is kept, and the owner records a video
