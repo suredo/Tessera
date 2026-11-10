@@ -4,7 +4,7 @@ title: "Judging"
 description: "How scenarios are judged: host facts, AI technical review and your final verdict."
 tags: [testing, judging]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T08:00:00Z }
 ---
 # Judging
 
@@ -21,7 +21,7 @@ These are checked by the runner with no model:
 
 ## AI technical review (each scenario, `EVAL-03`)
 
-After a live run, a separate reviewer model receives the requests, the final source of each tool version, the screenshots, the messages and the host facts. It returns a structured review with these items, named as in the scenario's `review` field:
+After a live run, a separate reviewer model receives the requests, the final source of each tool version, the screenshots, the messages and the host facts. It returns a structured review with these items, named as in the scenario's `review` field. The questions below are worded once, in `packages/contracts/src/review.ts` (`REVIEW_RUBRIC`), which the review's prompt reads; each item gets a mark (pass, partly, fail, unverified or not-applicable) with its evidence, and the review advises a verdict:
 
 | Item | Question |
 | --- | --- |

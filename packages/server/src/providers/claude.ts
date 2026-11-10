@@ -9,7 +9,13 @@ import {
 } from "@tessera/contracts";
 import { z } from "zod";
 import { findExecutable, runProcess } from "../platform/index.ts";
-import { ProviderError, type Provider, type StageResult, type StageSpec } from "./provider.ts";
+import {
+  checkImages,
+  ProviderError,
+  type Provider,
+  type StageResult,
+  type StageSpec,
+} from "./provider.ts";
 
 // The Claude Code adapter (CLI-01): every model call goes through the claude program with the
 // locked flags of ADR 0002 (CLI-03), from a clean environment and an empty folder (CLI-08), and its
@@ -44,6 +50,32 @@ export function wrapSchema(schema: Record<string, unknown>): Record<string, unkn
 
 const wrappedAnswer = z.object({ [ANSWER_KEY]: z.unknown() });
 
+/**
+ * The one message a call with images sends on standard input (stream-json): the request as text,
+ * then each screenshot as a base64 image block, in order.
+ */
+export function imageMessage(spec: StageSpec<unknown>): string {
+  const content = [
+    { type: "text", text: spec.prompt },
+    ...(spec.images ?? []).map((image) => ({
+      type: "image",
+      source: { type: "base64", media_type: image.mediaType, data: image.base64 },
+    })),
+  ];
+  return `${JSON.stringify({ type: "user", message: { role: "user", content } })}\n`;
+}
+
+/** The result event of the CLI's output: the whole output in json, the last result in stream-json. */
+export function resultOf(stdout: string, stream: boolean): unknown {
+  if (!stream) return JSON.parse(stdout);
+  const lines = stdout.split("\n").filter((line) => line.trim() !== "");
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const event = JSON.parse(lines[i]!) as { type?: unknown };
+    if (event?.type === "result") return event;
+  }
+  throw new Error("no result event");
+}
+
 /** Where the stage's system prompt is written, in the call's own empty working folder. */
 export const SYSTEM_PROMPT_FILE = "system-prompt.md";
 
@@ -53,10 +85,15 @@ export const SYSTEM_PROMPT_FILE = "system-prompt.md";
  * line's limit, about 32,000 characters on Windows (ADR 0002). No stage gets file tools.
  */
 export function buildArgs(spec: StageSpec<unknown>): string[] {
+  // A review's screenshots go as image blocks in one stream-json message on standard input, never
+  // as files (A27, CLI-08); stream-json input answers in stream-json, whose last event is the
+  // same result as the json format's.
+  const images = (spec.images?.length ?? 0) > 0;
   return [
     "--print",
+    ...(images ? ["--input-format", "stream-json", "--verbose"] : []),
     "--output-format",
-    "json",
+    images ? "stream-json" : "json",
     "--json-schema",
     JSON.stringify(wrapSchema(jsonSchemaOf(spec.schema))),
     "--model",
@@ -234,6 +271,8 @@ export type ClaudeOptions = {
 /** The Claude Code adapter for the program given; see `findClaude` for the real one. */
 export function createClaudeProvider(options: ClaudeOptions): Provider {
   const run = async <T>(spec: StageSpec<T>): Promise<StageResult<T>> => {
+    const images = checkImages(spec, true);
+    const stream = images.length > 0;
     if (spec.signal?.aborted) throw new ProviderError("cancelled", FAILURE_MESSAGES.cancelled);
     // A new, empty working folder outside the repository for every call (CLI-08).
     const cwd = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-cli-"));
@@ -247,14 +286,14 @@ export function createClaudeProvider(options: ClaudeOptions): Provider {
           env: cleanEnvironment(options.env ?? process.env),
           timeoutMs: spec.timeLimitMs,
           signal: spec.signal,
-          input: spec.prompt,
+          input: stream ? imageMessage(spec) : spec.prompt,
         },
       );
       if (result.cancelled) throw new ProviderError("cancelled", FAILURE_MESSAGES.cancelled);
       if (result.timedOut) throw new ProviderError("time_limit", FAILURE_MESSAGES.time_limit);
       let envelope: ResultEnvelope;
       try {
-        envelope = resultEnvelopeSchema.parse(JSON.parse(result.stdout));
+        envelope = resultEnvelopeSchema.parse(resultOf(result.stdout, stream));
       } catch {
         throw new Error(
           `The CLI gave no JSON result (exit ${result.exitCode}): ${result.stderr || result.stdout}`.slice(
@@ -276,7 +315,12 @@ export function createClaudeProvider(options: ClaudeOptions): Provider {
       removeFolder(cwd);
     }
   };
-  return { name: options.live ? "claude" : "claude-fake", live: options.live, run };
+  return {
+    name: options.live ? "claude" : "claude-fake",
+    live: options.live,
+    acceptsImages: true,
+    run,
+  };
 }
 
 /** The version in `claude --version`'s answer, such as "2.1.310 (Claude Code)", or undefined. */

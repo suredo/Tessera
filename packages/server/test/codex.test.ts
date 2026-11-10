@@ -783,3 +783,15 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
     }
   });
 });
+
+describe("a review through Codex goes without screenshots (A27, CLI-08)", () => {
+  it("A27: says it can't pass images, and refuses a call that carries them before running", async () => {
+    const { provider, made } = withReplies([]);
+    expect(provider.acceptsImages).toBe(false);
+    const png = { name: "step-1.png", mediaType: "image/png" as const, base64: "iVBORw0KGgo=" };
+    await expect(provider.run(spec({ stage: "review", images: [png] }))).rejects.toThrow(
+      "This provider can't pass images; review without them.",
+    );
+    expect(made()).toEqual([]);
+  });
+});

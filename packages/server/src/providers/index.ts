@@ -1,6 +1,7 @@
 // Docs: docs/code/server/providers.md
 // Model connections behind one interface (CLI-01): Claude Code, Codex, and the scripted provider (ENG-11).
 export {
+  checkImages,
   ProviderError,
   UNKNOWN_USAGE,
   type Provider,
@@ -22,8 +23,10 @@ export {
   FAILURE_MESSAGES,
   failureKind,
   findClaude,
+  imageMessage,
   MAX_TURNS,
   resultEnvelopeSchema,
+  resultOf,
   TESTED_CLI_VERSION,
   toUsage,
   versionOf,

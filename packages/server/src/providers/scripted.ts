@@ -1,6 +1,12 @@
 import fs from "node:fs";
 import { providerScriptSchema, type ProviderScript, type Usage } from "@tessera/contracts";
-import { ProviderError, type Provider, type StageResult, type StageSpec } from "./provider.ts";
+import {
+  checkImages,
+  ProviderError,
+  type Provider,
+  type StageResult,
+  type StageSpec,
+} from "./provider.ts";
 
 // A provider that answers from a script instead of a model, for tests and dry runs (ENG-11,
 // OBS-02). The script is chosen by test configuration; the request text never changes the reply.
@@ -29,6 +35,7 @@ export function createScriptedProvider(script: ProviderScript): ScriptedProvider
     if (spec.signal?.aborted) {
       throw new ProviderError("cancelled", "The request was cancelled before it started.");
     }
+    checkImages(spec, true);
     const reply = replies[next];
     if (!reply) {
       throw new ScriptError(
@@ -66,6 +73,8 @@ export function createScriptedProvider(script: ProviderScript): ScriptedProvider
   return {
     name: `scripted:${script.name}`,
     live: false,
+    // Canned replies need no images, but a review's call is checked as a real one would be.
+    acceptsImages: true,
     // A failure comes back as a rejected promise, as a model call's would.
     run: <T>(spec: StageSpec<T>) => new Promise<StageResult<T>>((resolve) => resolve(answer(spec))),
     remaining: () => replies.length - next,

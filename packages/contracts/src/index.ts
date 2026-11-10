@@ -209,6 +209,24 @@ export {
   type Usage,
 } from "./provider.ts";
 export {
+  REVIEW_IMAGE_LIMITS,
+  REVIEW_IMAGE_TYPES,
+  REVIEW_ITEMS,
+  REVIEW_MARKS,
+  REVIEW_RUBRIC,
+  reviewImageSchema,
+  reviewItemSchema,
+  reviewMarkSchema,
+  reviewSchema,
+  VERDICTS,
+  verdictSchema,
+  type Review,
+  type ReviewImage,
+  type ReviewItem,
+  type ReviewMark,
+  type Verdict,
+} from "./review.ts";
+export {
   CLAUDE_MODELS,
   CODEX_DEFAULT_ROUTES,
   CODEX_MODELS,
