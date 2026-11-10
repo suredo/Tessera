@@ -604,6 +604,24 @@ describe("assembling a stage's prompt (GEN-03)", () => {
   });
 });
 
+describe("motion that answers the person is not a look (L-96)", () => {
+  it("L-96, GEN-01: the intent says motion following the mouse needs the tool's code, with the case as an example", () => {
+    const intentPart = partText("intent");
+    expect(intentPart).toContain(
+      "Motion that follows the mouse, dragging or scrolling isn't look-only.",
+    );
+    expect(intentPart).toContain(
+      '"Make the cards dangle as they follow the mouse." is edit, lookOnly false',
+    );
+  });
+
+  it("L-96, GEN-08: a look-only edit is told to say when CSS can't do it, never to imitate it", () => {
+    expect(partText("source-style")).toContain(
+      "answer cannot and say that it needs the tool's code; never imitate it",
+    );
+  });
+});
+
 describe("the base rules steer what Tessera can verify (L-84, A60)", () => {
   it("GEN-06, A60: tells the model not to write as the tool starts, which the bridge refuses, and not to use Object.assign", () => {
     const base = partText("base");
