@@ -7,8 +7,12 @@ import { chartSpecSchema } from "@tessera/contracts";
 // candidate reaches staging; behavior checks drive the candidate
 // through its hooks with `driveTool` (VER-03).
 
-/** A check's verdict: passed, or failed with a plain reason the person could read. */
-export type CheckOutcome = { ok: true } | { ok: false; reason: string };
+/**
+ * A check's verdict: passed, or failed with a plain reason the person could read. A check that
+ * passes without proving anything, such as a check from the request whose text was already shown
+ * before its steps (L-93), says so: it fails nothing, and it isn't counted as passed.
+ */
+export type CheckOutcome = { ok: true; provedNothing?: true } | { ok: false; reason: string };
 
 /** What a check gets: the candidate running in the hidden panel, against synthetic data. */
 export type CheckContext = {

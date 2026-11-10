@@ -13,7 +13,8 @@ import type { DriveResult, DriveStep } from "./protocol.ts";
 // (BRG-06), through the hooks the stage named and the generation prompt asked for. A check enforces
 // only what it states. A failure says what was expected, what was observed, and that the rule is
 // the request's (VER-07). A tool that passes is "checked against your request", which is weaker
-// than a profile's behavior check.
+// than a profile's behavior check. A check that expects a text the tool already showed before its
+// steps proves nothing, so it neither fails the tool nor counts as passed (L-93).
 
 const quoted = (texts: readonly string[]) =>
   texts.length === 0
@@ -41,18 +42,21 @@ function expectation(check: AcceptanceCheck): string {
 /**
  * Runs one check on a start of the candidate. A text is looked for in every element the hook
  * marks that the page shows, in its whole text, capitals and repeated spaces aside (a loose find);
- * the read beside it only says what was shown when the check fails.
+ * the read beside it only says what was shown when the check fails. A text it expects shown is
+ * also looked for before the steps: if it was shown already, the check proves nothing (L-93).
  */
 async function runCheck(context: CheckContext, check: AcceptanceCheck): Promise<CheckOutcome> {
   const tool = await context.rehearse();
   const { expect } = check;
   const read: DriveStep = { do: "read", hook: expect.hook };
-  const look: DriveStep[] =
+  const find: DriveStep[] =
     expect.see === "count-change"
-      ? [read]
-      : [{ do: "find", hook: expect.hook, value: expect.text, loose: true }, read];
-  // A count change compares with the count before the steps; the others look only after.
-  const before = expect.see === "count-change" ? [read] : [];
+      ? []
+      : [{ do: "find", hook: expect.hook, value: expect.text, loose: true }];
+  const look: DriveStep[] = [...find, read];
+  // A count change compares with the count before the steps; a text expected shown is looked for
+  // before them too (L-93); one expected hidden is looked for only after.
+  const before = expect.see === "count-change" ? [read] : expect.see === "shows" ? find : [];
   const steps: DriveStep[] = [...before, ...(check.steps as DriveStep[]), ...look];
   const report = await driveTool(tool, steps);
   if (!report) return { ok: false, reason: "The tool's answer to the check couldn't be read." };
@@ -88,7 +92,10 @@ async function runCheck(context: CheckContext, check: AcceptanceCheck): Promise<
       ? `it shown in the element at position ${found.matches![0]! + 1} of ${found.count ?? 0}`
       : quoted(texts);
   if (expect.see === "shows") {
-    return shown ? { ok: true } : broke(check, expectation(check), observed);
+    if (!shown) return broke(check, expectation(check), observed);
+    // Shown before the steps too, so the steps didn't show it: the check proves nothing (L-93).
+    const already = report.steps[0] as Extract<DriveResult, { ok: true }>;
+    return (already.matches ?? []).length > 0 ? { ok: true, provedNothing: true } : { ok: true };
   }
   return shown ? broke(check, expectation(check), observed) : { ok: true };
 }

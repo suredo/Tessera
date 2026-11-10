@@ -248,7 +248,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
             verdict = { check: outcome === CANCELLED ? "cancelled" : check.name, outcome };
             break;
           }
-          passed.push(check.name);
+          // A check that proved nothing isn't counted as passed (L-93).
+          if (!outcome.provedNothing) passed.push(check.name);
         }
       } finally {
         mounted.bridge.stop();
@@ -277,7 +278,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
     ...(!verdict && passed.includes("smoke") ? { startChecked: true as const } : {}),
     // And only when the behavior check (VER-03) ran here and passed, so it can say that too.
     ...(!verdict && passed.includes("behavior") ? { behaviorChecked: true as const } : {}),
-    // And only when the checks written from the request (VER-09) ran here and all passed.
+    // And only when the checks written from the request (VER-09) ran here, none failed, and at
+    // least one proved something (L-93).
     ...(!verdict && passed.includes("acceptance") ? { acceptanceChecked: true as const } : {}),
   });
   return reply.ok

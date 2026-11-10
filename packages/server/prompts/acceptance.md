@@ -4,6 +4,7 @@ Answer with the acceptance contract. Declare the hooks the tool must expose: eac
 
 - Check what the request asks the tool to do through its own controls, the most important first. Never check a look, a colour, a layout or wording the person didn't ask for.
 - Never depend on the tool's starting entries: you don't know them. Use values of your own in the steps, and look for those values, or count a change.
+- Look for what only your steps make the tool show, such as a result your values produce, never a label, a heading or a placeholder it may show before them, like "Total". A text the tool already shows before your steps proves nothing.
 - Keep each check to what one person's action shows at once. Don't check that something is saved, or what happens after a reload.
 - Write each check's says in plain words, as the person would say it.
 - When the request asks for nothing a check could show through the tool's controls, such as only a look or text to read, answer none with a plain reason.
