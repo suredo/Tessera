@@ -493,10 +493,11 @@ tessera.chart(document.querySelector("#chart"), spec);`;
 });
 
 describe("startup data writes are the bridge's to refuse, not the static check's (A60)", () => {
-  // The bridge refuses a write until the person has interacted with the tool (GEN-06), and the
-  // checks work on a throwaway copy (BRG-06). Guessing startup writes from the code refused working
-  // tools (L-84, L-95), so the static check no longer does.
-  const writes = (js: string) => checkJs(js).filter((f) => f.message.includes("startup"));
+  // The bridge refuses a write until the person has interacted with the tool and throughout
+  // staging (GEN-06); a behavior check's writes go to a throwaway copy (BRG-06). Guessing startup
+  // writes from the code refused working tools (L-84, L-95), so the static check no longer does:
+  // these tools pass it whole, whatever a finding would have said.
+  const writes = (js: string) => staticCheck({ html: "", css: "", js }, []);
 
   it("A60, L-95: the kanban's drag and drop, whose classList.add looked like its own add(), passes", () => {
     const kanban = [
@@ -508,12 +509,14 @@ describe("startup data writes are the bridge's to refuse, not the static check's
       "document.addEventListener('pointercancel', () => { if (drag) drag.classList.remove('dragging'); });",
       "document.getElementById('add').addEventListener('click', add);",
     ].join("\n");
-    expect(writes(kanban)).toEqual([]);
+    expect(writes(kanban)).toEqual({ ok: true });
   });
 
   it("A60: a write the code makes as it starts gets no static finding; the bridge refuses it at run time", () => {
-    expect(writes("tessera.call('data.patch', {operations: []});")).toEqual([]);
-    expect(writes("function seed(){ tessera.call('data.patch', {}); } seed();")).toEqual([]);
+    expect(writes("tessera.call('data.patch', {operations: []});")).toEqual({ ok: true });
+    expect(writes("function seed(){ tessera.call('data.patch', {}); } seed();")).toEqual({
+      ok: true,
+    });
   });
 
   it("VER-01: the other bridge rules still hold", () => {
