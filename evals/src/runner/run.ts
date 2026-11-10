@@ -199,6 +199,8 @@ export async function runScenario(
     now,
     openBrowser: () => Promise.resolve(),
     ...(options.twoPass ? { twoPass: options.twoPass } : {}),
+    // The scenario's own switch for the acceptance-check experiment (VER-09).
+    ...(scenario.acceptanceChecks ? { acceptanceChecks: true } : {}),
     ...(options.mode === "live"
       ? {}
       : {

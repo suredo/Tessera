@@ -44,6 +44,7 @@ describe("scenario files (EVAL-01)", () => {
       "T3-spending-chart",
       "T5-rsvp-form",
       "T6-tip-calculator",
+      "V9-acceptance-checks",
     ]);
     for (const scenario of all) {
       // Every scenario starts from an empty Tessera, so its first step is a request.
@@ -63,7 +64,13 @@ describe("scenario files (EVAL-01)", () => {
       "T3-spending-chart": 10,
       "T5-rsvp-form": 8,
       "T6-tip-calculator": 7,
+      // Four creations, each intent, acceptance and create, with one repair in reserve (VER-09).
+      "V9-acceptance-checks": 16,
     });
+    // Only the acceptance-check experiment's scenario turns it on.
+    expect(all.filter((s) => s.acceptanceChecks).map((s) => s.id)).toEqual([
+      "V9-acceptance-checks",
+    ]);
   });
 
   it("EVAL-01: refuses a file that isn't a scenario, saying why", () => {

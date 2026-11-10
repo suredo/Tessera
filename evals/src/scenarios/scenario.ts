@@ -159,6 +159,12 @@ export const scenarioSchema = z
       .describe(
         "The verification profiles the person's tools should match; a do step uses their hooks.",
       ),
+    acceptanceChecks: z
+      .boolean()
+      .default(false)
+      .describe(
+        "Runs Tessera with the acceptance-check experiment on (VER-09, A49): a new tool that fits no profile gets checks written from the request.",
+      ),
     steps: z.array(stepSchema).min(1),
     review: z
       .array(reviewItemSchema)
