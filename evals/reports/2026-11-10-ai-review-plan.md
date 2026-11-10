@@ -4,10 +4,12 @@ title: "AI technical review: live plan"
 description: "The plan for the AI technical review's first live use: reviewing M3's six recorded scenario runs (T1, T2 in Portuguese, T3, T5, T6, and T10's rerun) with screenshots as image inputs, with what it checks, a hard cap of 8 calls, expected tokens and time, and stop rules. No call is made before the owner approves the cap."
 tags: [reports, live-evaluation, review]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T10:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T12:00:00Z }
 ---
 
 # AI technical review: live plan, 2026-11-10
+
+**The owner approved the 8-call cap on 2026-11-10, and the reviews ran the same day: [the results](2026-11-10-ai-review-run.md).**
 
 This is the plan the live evaluation protocol asks for before any call (`ENG-07`, [live evaluation](../../docs/practices/live-evaluation.md)). It covers the AI technical review (`EVAL-03`, A22, A27) of M3's recorded scenario runs, through [the review command](../../docs/code/evals/review.md). **Nothing runs until the owner approves the hard cap below.** The command's rehearsal, which goes through the same path with a canned answer, reviewed T10's rerun at no cost.
 

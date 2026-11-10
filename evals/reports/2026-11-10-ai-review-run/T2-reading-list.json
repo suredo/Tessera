@@ -1,0 +1,93 @@
+{
+  "scenario": "T2-reading-list",
+  "mode": "live",
+  "provider": "claude",
+  "reviewedAt": "2026-11-10T11:04:57.926Z",
+  "images": ["step-1.png", "step-2.png", "step-3.png", "step-4.png", "step-5.png", "step-6.png"],
+  "imagesLeftOut": [],
+  "review": {
+    "items": [
+      {
+        "item": "fulfilment",
+        "mark": "partly",
+        "evidence": [
+          "Step 1: the tool \"Livros para ler\" was made with title, genre, rating 1–5 and a genre filter, and it passed the code, start and behavior checks.",
+          "Step 4: after clicking Adicionar, the title field cleared and the History panel shows \"One record changed Nov 4, 2026, 9:01 PM\", so a book was saved.",
+          "Step 5: the filter was set to Romance and passed, but the preview in step-4 to step-6 is cut off above the list, so no screenshot shows the saved book or the filtered list.",
+          "Step 6 (next-day) passed, but no screenshot shows the book still in the list."
+        ]
+      },
+      {
+        "item": "useful-at-first-sight",
+        "mark": "partly",
+        "evidence": [
+          "step-1.png shows only the empty add form. The list and filter are below the visible area.",
+          "Source: with no books the status line reads \"Sua lista está vazia. Adicione o primeiro livro acima.\" That helps, but there is no sample content."
+        ]
+      },
+      {
+        "item": "standard-style",
+        "mark": "pass",
+        "evidence": [
+          "The CSS uses the shared --ui-* variables for font, spacing, surface, accent and radius.",
+          "The screenshots show the same panels, buttons and green accent as the Tessera host. The person asked for no custom look, and there is only one version, so there are no unrelated parts to change."
+        ]
+      },
+      {
+        "item": "controls-work",
+        "mark": "partly",
+        "evidence": [
+          "Steps 2 and 3: the fill actions on the title and genre fields show the typed text in step-2.png and step-3.png.",
+          "Step 4: Adicionar saved a record (\"One record changed\" in step-4.png).",
+          "Step 5: the filter was used, but no screenshot shows its effect, so the filter result is unverified.",
+          "The Mudar nota and Remover controls, and the rating selector in the add form, were never used, so they are unverified."
+        ]
+      },
+      {
+        "item": "accessibility",
+        "mark": "partly",
+        "evidence": [
+          "Source: every field has a label tied to it with for/id. The per-row rating select has a \"Mudar nota\" label, and the remove button has an aria-label naming the book.",
+          "Focus is visible: a thick outline appears on the title and genre fields in step-2.png and step-3.png.",
+          "Source: the layout uses flex-wrap and min-width:0, which suggests it fits a narrow screen, but no narrow screenshot was taken.",
+          "Contrast was not measured, so it is unverified."
+        ]
+      },
+      {
+        "item": "messages",
+        "mark": "pass",
+        "evidence": [
+          "The tool's messages are plain Portuguese: \"Digite o título do livro.\", \"Não foi possível salvar o livro. O que você digitou foi mantido; tente de novo.\"",
+          "The host message in step 1 is plain, with no internal terms.",
+          "The status text \"Livro adicionado e salvo.\" is shown only after the save call and a reload succeed."
+        ]
+      },
+      {
+        "item": "code-red-flags",
+        "mark": "pass",
+        "evidence": [
+          "Source: the only call at startup is load(), which reads data. Nothing is written until the person clicks.",
+          "The source never reads the system clock.",
+          "Every tessera.call sits in a try/catch that shows a message to the person.",
+          "There are no endless loops. The loops are bounded: over the book list and over 1 to 5."
+        ]
+      },
+      {
+        "item": "coherence",
+        "mark": "not-applicable",
+        "evidence": [
+          "Only version 1 exists and there was no change request, so there is no earlier version to build on."
+        ]
+      }
+    ],
+    "verdict": "accept-with-notes",
+    "notes": [
+      "The run never shows the book list. The preview is cut off above it, so the saved book, the filter result and persistence after next-day are not seen. Look at these first.",
+      "The rating change and Remover controls were never exercised, so they are unverified.",
+      "A new tool opens with an empty list and no sample content, and the list is out of view in the preview. Check that the first view is meaningful.",
+      "Narrow-screen fit and colour contrast were not tested.",
+      "The host message mixes English (\"is ready\") with Portuguese."
+    ]
+  },
+  "ownerVerdict": "accept-with-notes"
+}

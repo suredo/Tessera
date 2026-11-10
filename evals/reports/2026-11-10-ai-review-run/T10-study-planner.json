@@ -1,0 +1,102 @@
+{
+  "scenario": "T10-study-planner",
+  "mode": "live",
+  "provider": "claude",
+  "reviewedAt": "2026-11-10T11:06:24.015Z",
+  "images": [
+    "step-1.png",
+    "step-2.png",
+    "step-3.png",
+    "step-4.png",
+    "step-5.png",
+    "step-6.png",
+    "step-7.png",
+    "step-8.png"
+  ],
+  "imagesLeftOut": [],
+  "review": {
+    "items": [
+      {
+        "item": "fulfilment",
+        "mark": "partly",
+        "evidence": [
+          "Step 1: planner made; message says flashcards are not part of it, which is honest. Step 3 status 'Added \"Statistics\" with 3 sessions.' (step-3.png).",
+          "Step 4: 'Fridays are fine now.' The host said it removed the Friday rule, but the Friday rule was never added: no step clicked rule-add, and the tool starts with no rules. The 'changed one entry' claim is not shown by any rule in the screenshots.",
+          "Step 6: flashcards request produced a separate tool, 'Flashcards from notes', which fits the request. Step 8 click on cards-make: step-8.png shows the notes box cleared and Undo 'One record changed', so one card was saved. The card list is below the visible area, so it was not seen.",
+          "The first request's 'never Fridays' was not applied automatically as a rule in the planner; the user must add it."
+        ]
+      },
+      {
+        "item": "useful-at-first-sight",
+        "mark": "partly",
+        "evidence": [
+          "step-1.png: planner opens with a title, an intro line, and a topic field with a placeholder, but no sample content; the rest is empty states.",
+          "step-6.png: the flashcards tool opens with an empty notes box and a placeholder, and no example cards. The cards list is out of view."
+        ]
+      },
+      {
+        "item": "standard-style",
+        "mark": "pass",
+        "evidence": [
+          "Both tools use the --ui-* variables for font, colour, spacing, focus and controls. The user asked for no particular look.",
+          "Screenshots show the same green accent buttons and rounded controls in both tools and in the host."
+        ]
+      },
+      {
+        "item": "controls-work",
+        "mark": "partly",
+        "evidence": [
+          "Step 2 filled task-name; step 3 task-add click gave 'Added \"Statistics\" with 3 sessions.' (step-3.png) and the field cleared.",
+          "Step 7 fill of notes and step 8 click of cards-make: notes cleared and Undo shows one record changed (step-8.png).",
+          "Not used: rule-add, rule-remove, topic Remove, card Delete, and the Enter key. These are unverified.",
+          "Step 4 changed a Friday rule through chat rather than the tool's own controls."
+        ]
+      },
+      {
+        "item": "accessibility",
+        "mark": "partly",
+        "evidence": [
+          "Labels are tied to inputs (Topic name, Weekday, Notes). Buttons have names and aria-labels. :focus-visible outline is set, and a focus ring shows in step-2.png and step-7.png. The status uses role=status with aria-live.",
+          "The preview pane clips the 'Days I don't study' section: the select and Add rule button are cut off (step-1.png). The Make cards button is also cut off at first (step-6.png).",
+          "A narrow screen was not tested. The CSS uses flex-wrap, which suggests it would fit."
+        ]
+      },
+      {
+        "item": "messages",
+        "mark": "partly",
+        "evidence": [
+          "Most messages are plain: 'Added \"Statistics\" with 3 sessions.', the 'Not included' note in step 1, and the flashcards ready message.",
+          "Step 4: 'Removes the Friday rule so Fridays are no longer restricted' claims a rule was removed when none existed.",
+          "Step 5 screenshot shows 'Review the proposed entry changes before applying them.' The terms 'entry changes' and 'records' leak internal wording; the 'One record changed' undo line is the same."
+        ]
+      },
+      {
+        "item": "code-red-flags",
+        "mark": "pass",
+        "evidence": [
+          "The planner reads the date from tessera.call('clock.now'), not the system clock.",
+          "Nothing writes at startup: both tools only read on load. Writes occur only in click or keydown handlers.",
+          "Errors are caught with a message shown and a reload. No unbounded loops: the loops run over fixed windows and lists."
+        ]
+      },
+      {
+        "item": "coherence",
+        "mark": "partly",
+        "evidence": [
+          "The flashcards request was built as a separate tool rather than added to the planner, which is sensible since the planner said it could not do it.",
+          "The planner stayed at version 1 after the step 4 change, so there is no new version in the evidence. The planner also lost no parts.",
+          "Step 4: the change to the data was proposed in chat, and step-5.png shows a review prompt, so it is unclear whether it was applied."
+        ]
+      }
+    ],
+    "verdict": "accept-with-notes",
+    "notes": [
+      "Step 4: the host said it removed a Friday rule that was never created. Check that this message claims only what was done, and whether the change was applied.",
+      "The planner never applies 'never Fridays' from the first request automatically. The user must add the rule by hand.",
+      "The preview clips the rule controls and the Make cards button. Check the layout and the narrow-screen fit.",
+      "Unused controls remain unverified: rule add and remove, topic remove, card delete. The new card was never seen in the list.",
+      "Internal wording like 'entry changes' and 'records' appears in host messages."
+    ]
+  },
+  "ownerVerdict": "accept-with-notes"
+}

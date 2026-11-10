@@ -1,0 +1,94 @@
+{
+  "scenario": "T1-shopping-list",
+  "mode": "live",
+  "provider": "claude",
+  "reviewedAt": "2026-11-10T11:06:08.696Z",
+  "images": [
+    "step-1.png",
+    "step-2.png",
+    "step-3.png",
+    "step-4.png",
+    "step-5.png",
+    "step-6.png",
+    "step-7.png",
+    "step-8.png",
+    "step-9.png",
+    "step-10.png"
+  ],
+  "imagesLeftOut": [],
+  "review": {
+    "items": [
+      {
+        "item": "fulfilment",
+        "mark": "partly",
+        "evidence": [
+          "Step 1: list with milk, eggs, bread and apples, tick boxes, add and remove (step-1.png shows '0 of 4 ticked', Milk and Eggs with Remove).",
+          "Step 2: aisle grouping was added, but the four existing items have no aisle. step-2.png shows only a 'No aisle' heading, so nothing was actually grouped by aisle.",
+          "Steps 3 and 4: the host reports adding Cheese and removing Apples, then undo. step-10.png shows '0 of 4 ticked', which fits the undo. The list rows are cropped in the screenshots, so the items were not seen.",
+          "Step 9: 'use again' gave an empty list (step-9.png), although the tool started with four items."
+        ]
+      },
+      {
+        "item": "useful-at-first-sight",
+        "mark": "partly",
+        "evidence": [
+          "Step 1: the new tool opens with four items and a count (step-1.png).",
+          "Step 9: the fresh copy opens empty: 'The list is empty. Add what you need above.' (step-9.png)."
+        ]
+      },
+      {
+        "item": "standard-style",
+        "mark": "pass",
+        "evidence": [
+          "The CSS uses the shared --ui-* variables throughout; the only fixed colour is white button text.",
+          "Version 2 keeps the version 1 look and adds only an h2 style and a gap label; step-1.png and step-2.png look the same."
+        ]
+      },
+      {
+        "item": "accessibility",
+        "mark": "partly",
+        "evidence": [
+          "Source labels both inputs ('New item', 'Aisle (optional)') and wraps each checkbox in a label. Remove buttons have aria-label 'Remove <name>'. The count has aria-live and the message has role=status.",
+          "CSS has a 3px :focus-visible outline and flex-wrap for narrow widths, but no step used the keyboard or a narrow screen.",
+          "Contrast and narrow layout are unverified; screenshots are at desktop width only."
+        ]
+      },
+      {
+        "item": "messages",
+        "mark": "partly",
+        "evidence": [
+          "Step 9 says it opened 'with its starting data', but step-9.png shows an empty list.",
+          "Step 3 says 'Changed 2 entries' and 'Review the proposed entry changes before applying them'. 'Entries' is internal wording, and no review step was visible before the change applied.",
+          "Step 4: step-4.png still shows the 'Changed 2 entries' message after the undo.",
+          "The tool's own messages ('Type the name of an item first.', 'Could not add that item...') are plain, but no step triggered them."
+        ]
+      },
+      {
+        "item": "code-red-flags",
+        "mark": "pass",
+        "evidence": [
+          "JS only reads at startup (load calls data.read); writes happen only on user actions.",
+          "No clock use and no unbounded loops in either version.",
+          "Failures from data.patch and load show a message. One load().catch(() => {}) after a failed patch is silent, but the failure message was already shown."
+        ]
+      },
+      {
+        "item": "coherence",
+        "mark": "pass",
+        "evidence": [
+          "Version 2 keeps everything in version 1 (add, remove, tick, clear ticked, count) and adds the aisle field and grouping.",
+          "step-10.png shows the continued tool at Version 2 with the Cheese/Apples chat history intact."
+        ]
+      }
+    ],
+    "verdict": "accept-with-notes",
+    "notes": [
+      "Step 9 says 'use again' opened 'with its starting data', but the list was empty (step-9.png). Check what starting data a reused tool should carry, and fix the wording or the data.",
+      "Step 2: 'group by aisle' left all four items under 'No aisle', so the request has no visible effect until the user types aisles. Consider asking for or suggesting aisles for the existing items.",
+      "Wording: 'entries' and 'records' are internal terms. 'Review the proposed entry changes before applying them' appears although the change was applied with no visible review.",
+      "After the undo in step 4, the chat still shows the 'Changed 2 entries' message, which no longer matches the list.",
+      "Screenshots crop the list, so the items after steps 3 and 4 were never seen. Narrow-screen layout, focus and contrast were not exercised."
+    ]
+  },
+  "ownerVerdict": "accept-with-notes"
+}

@@ -1,0 +1,92 @@
+{
+  "scenario": "T3-spending-chart",
+  "mode": "live",
+  "provider": "claude",
+  "reviewedAt": "2026-11-10T11:05:11.425Z",
+  "images": ["step-1.png", "step-2.png", "step-3.png", "step-4.png", "step-5.png", "step-6.png"],
+  "imagesLeftOut": [],
+  "review": {
+    "items": [
+      {
+        "item": "fulfilment",
+        "mark": "partly",
+        "evidence": [
+          "Step 1: the chart tool opened with a total of 1970 (1200+450+120+200) and a bar chart in step-1.png.",
+          "Steps 2-4: Books 35 was added; step-4.png shows 'Added Books.' and the Books row; step-5 total is 2005 after reload, so the data was kept.",
+          "Step 6: the 'What if?' section was added with Food and 20%. The step-6.png screenshot shows the chart area only and not the what-if text or its result, so the what-if result is not shown in the evidence.",
+          "The host facts say the steps passed, but no step checked the what-if number (expected 90 less, new total 1915)."
+        ]
+      },
+      {
+        "item": "useful-at-first-sight",
+        "mark": "pass",
+        "evidence": [
+          "step-1.png: the new tool opened with the four expenses already in, a total of 1970 and a bar chart, not an empty form.",
+          "Source version 1 loads saved data and draws the chart at once."
+        ]
+      },
+      {
+        "item": "standard-style",
+        "mark": "pass",
+        "evidence": [
+          "The CSS uses the standard --ui-* variables throughout; the person asked for no particular look.",
+          "Version 2 keeps all version 1 CSS and adds only a .what rule using --ui-accent-soft; the screenshots show unrelated parts looking the same."
+        ]
+      },
+      {
+        "item": "controls-work",
+        "mark": "partly",
+        "evidence": [
+          "Steps 2-4: the name field, the amount field and the Add button worked; step-4.png shows Books 35 added and the fields cleared, and step-5.png shows total 2005 after a reload.",
+          "Not used: the Remove buttons, the Chart type selector, the what-if word and percent fields, and the Undo button. These are unverified.",
+          "step-6.png does not show the what-if section."
+        ]
+      },
+      {
+        "item": "accessibility",
+        "mark": "partly",
+        "evidence": [
+          "Source: every field has a label with a for attribute; the Remove buttons have aria-labels such as 'Remove Books'; the status messages use role=status.",
+          "Source: :focus-visible has a 3px outline, and step-2.png and step-3.png show a visible focus ring on the fields.",
+          "Layout uses flex-wrap and a 640px max width, which suggests it fits a narrow screen, but no narrow screenshot was taken.",
+          "Contrast was not measured; the white-on-accent buttons and the muted Remove buttons are not confirmed."
+        ]
+      },
+      {
+        "item": "messages",
+        "mark": "pass",
+        "evidence": [
+          "Step 1 and step 6 host messages are in plain words and describe what changed.",
+          "The step 6 message says saved expenses and the real total stay as they are; source version 2 does not write data in renderWhat, which is consistent with this.",
+          "Tool messages: 'Added Books.', 'Type a name for the expense.', 'Could not add the expense. Your entry is still here; try again.'"
+        ]
+      },
+      {
+        "item": "code-red-flags",
+        "mark": "pass",
+        "evidence": [
+          "Source: the only write is data.patch, called from addItem and removeItem on a click or Enter key. Nothing is written at startup; load() only reads.",
+          "The source never reads the system clock.",
+          "Errors are caught and shown to the person through say(); the load failure also shows a message.",
+          "No unbounded loops; all loops run over the items list."
+        ]
+      },
+      {
+        "item": "coherence",
+        "mark": "pass",
+        "evidence": [
+          "Version 2 keeps the total, the chart, the type selector, the list, Remove and Add from version 1, and adds only the What-if section and its handlers.",
+          "Step-6.png shows the same title, total 2005 and chart as before; the saved Books entry is still counted."
+        ]
+      }
+    ],
+    "verdict": "accept-with-notes",
+    "notes": [
+      "The what-if section was never shown working. step-6.png is cropped to the chart, and no step typed in or read the what-if result. Check it shows 90 less and a new total of 1915.",
+      "The Remove buttons, Chart type selector and Undo were not used in this run, so they are unverified.",
+      "No narrow-screen screenshot and no contrast measurement, so accessibility is only partly shown.",
+      "The chart panel is small, so the list and Add form sit below the fold and the person must scroll inside it."
+    ]
+  },
+  "ownerVerdict": "accept-with-notes"
+}
