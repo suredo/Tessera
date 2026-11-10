@@ -7,7 +7,7 @@ implements: [EVAL-03, EVAL-04]
 tests: [../../../evals/test/review.test.ts]
 tags: [code, evals, review, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T11:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T13:30:00Z }
 ---
 
 # Purpose
@@ -18,7 +18,7 @@ The AI technical review of a recorded run (`EVAL-03`, A22, A27). After the [scen
 
 - `src/review/cli.ts`: `node evals/src/review/cli.ts <run folder> [--live --cap <n>]`. Without a flag it rehearses: a canned review, every item unverified, at no cost, through the same path. `--live` is LIVE: it needs the owner's approved cap (`ENG-07`) and runs Claude Code's free checks first. Either way it writes `review.json` into the run's folder and adds the review to its `report.md`.
 - `src/review/review.ts`:
-  - `gatherRun` reads a run's folder (`RunEvidence`): its `report.json`, the scenario's review items (all of the rubric's when it names none), each tool version's summary, checks, profile and source from the run's own Tessera, once per version, in the order made, those of a tool moved to the trash during the run included and marked so, and the step screenshots.
+  - `gatherRun` reads a run's folder (`RunEvidence`): its `report.json`, the scenario's review items (all of the rubric's when it names none), each tool version's summary, checks, profile and source from the run's own Tessera, once per version, in the order made, those of a tool moved to the trash during the run included and marked so; each tool's data at the end of the run, cut short past `DATA_QUOTE_LIMIT` characters, with every data change it recorded, oldest first, as added, changed or removed with what the record held before (L-92), since a tool's starting entries are its data, not its source; and the step screenshots.
   - `reviewRun` asks the review stage through the [harness](harness.md), in the run's `review-harness` folder (`REVIEW_HARNESS`), and writes `REVIEW_FILE` (`ReviewRecord`). `REVIEW_TIME_LIMIT_MS` is its time limit.
   - `chooseScreenshots` picks what fits the image limit: all of them, or the first, the last and the rest spread between. `rehearsalReview` is a rehearsal's canned answer. `reviewMarkdown` is the review as the report shows it.
 
@@ -45,4 +45,4 @@ Depends on the [harness](harness.md), the [scenario files](scenarios.md), the ru
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `review.ts`: `REVIEW_HARNESS`, `REVIEW_FILE`, `REVIEW_TIME_LIMIT_MS`, `RunEvidence` (type), `chooseScreenshots`, `gatherRun`, `ReviewRecord` (type), `rehearsalReview`, `reviewRun`, `reviewMarkdown`
+- `review.ts`: `REVIEW_HARNESS`, `REVIEW_FILE`, `REVIEW_TIME_LIMIT_MS`, `RunEvidence` (type), `DATA_QUOTE_LIMIT`, `chooseScreenshots`, `gatherRun`, `ReviewRecord` (type), `rehearsalReview`, `reviewRun`, `reviewMarkdown`

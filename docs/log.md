@@ -2,6 +2,8 @@
 
 ## 2026-11-10
 
+* **Fix**: L-92, from the [AI review run](../evals/reports/2026-11-10-ai-review-run.md): [the review's evidence](code/evals/review.md) now has each tool's data at the end of the run and every data change it recorded, as added, changed or removed with what the record held before, quoted by the [review prompt](code/server/prompts.md), so a starting entry that a step removed is seen. Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T13:30:00Z.
+
 * **New**: The [AI technical review's results](../evals/reports/2026-11-10-ai-review-run.md) (`EVAL-03`, `EVAL-04`), under the approved 8-call cap: six reviews of M3's runs in 6 calls, screenshots received as images, every answer complete and unverified controls kept unverified, all six advised accept with notes. The owner adopted those verdicts, so the 6-of-6 agreement is recorded with that caveat. The reviews found the tool's preview too short to show lists and results, and one note was wrong for lack of the tool's starting data (L-92, [lessons](lessons/tessera-issues.md)). The [budgets](roadmap/budgets.md) record M3's 44 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T12:00:00Z.
 
 * **New**: The [AI technical review's live plan](../evals/reports/2026-11-10-ai-review-plan.md) (`ENG-07`, `EVAL-03`, `EVAL-04`): reviewing M3's six recorded runs that made a tool, T5 first as the check that screenshots reach the model as images, with a hard cap of 8 calls (6 reviews and 2 in reserve) in M3's envelope of about 65, expected tokens and time, how agreement with the owner's verdicts is counted, and stop rules. It asks the owner to approve the cap; no call is made before. Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T10:00:00Z.

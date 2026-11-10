@@ -19,6 +19,7 @@ import {
   openDataFolder,
   REVIEW_PROMPT_BUDGET,
   type Provider,
+  type ReviewData,
   type ReviewStep,
   type ReviewVersion,
 } from "@tessera/server";
@@ -45,6 +46,8 @@ export type RunEvidence = {
   items: ReviewItem[];
   steps: ReviewStep[];
   versions: ReviewVersion[];
+  /** Each tool's data at the end of the run and its recorded data changes (L-92). */
+  data: ReviewData[];
   /** Each step screenshot the run kept, by name and file, in step order. */
   screenshots: { name: string; file: string }[];
 };
@@ -59,6 +62,49 @@ const versionRow = z.object({
   checks: z.string(),
   profile: z.string().nullable(),
 });
+
+/** A workspace's title and data, and its recorded data changes, as the run's database holds them. */
+const workspaceRow = z.object({
+  id: z.string(),
+  title: z.string(),
+  deleted_at: z.string().nullable(),
+  data: z.string().nullable(),
+});
+const undoRow = z.object({ change: z.string() });
+/** A recorded data change, read only as far as the review needs (the server's undo log). */
+const changeShape = z.union([
+  z.object({
+    kind: z.literal("records"),
+    records: z.array(
+      z.object({
+        collection: z.string(),
+        id: z.string(),
+        before: z.unknown(),
+        revisionAfter: z.number().nullable(),
+      }),
+    ),
+  }),
+  z.object({ kind: z.literal("whole") }),
+]);
+/** How much of a tool's final entries the review quotes, so one large tool can't fill the prompt. */
+export const DATA_QUOTE_LIMIT = 6_000;
+
+/** What a recorded change did, in a word the reviewer reads: added, changed or removed. */
+function describeChange(raw: string): ReviewData["changes"][number] {
+  const parsed = changeShape.safeParse(JSON.parse(raw));
+  if (!parsed.success) return { records: [] };
+  if (parsed.data.kind === "whole") {
+    return { records: [{ collection: "", id: "", change: "replaced whole", before: null }] };
+  }
+  return {
+    records: parsed.data.records.map((r) => ({
+      collection: r.collection,
+      id: r.id,
+      change: r.before == null ? "added" : r.revisionAfter == null ? "removed" : "changed",
+      before: r.before ?? null,
+    })),
+  };
+}
 
 /** The steps' screenshots to send: every one when they fit the limit, else spread over the run. */
 export function chooseScreenshots<T>(all: readonly T[], count = REVIEW_IMAGE_LIMITS.count): T[] {
@@ -94,6 +140,7 @@ export async function gatherRun(folder: string): Promise<RunEvidence> {
   // version into another workspace. A workspace moved to the trash during the run keeps its
   // versions, which the review reads too, marked so, without restoring or changing anything.
   const versions: ReviewVersion[] = [];
+  const data: ReviewData[] = [];
   const tessera = path.join(folder, "tessera");
   // The run's own Tessera, never the person's (ENG-19): refused before anything opens it.
   refuseRealDataFolder(tessera);
@@ -123,10 +170,32 @@ export async function gatherRun(folder: string): Promise<RunEvidence> {
         js,
       });
     }
+    // Each tool's data: its entries at the end, and the changes the run recorded, oldest first.
+    // Undoing a change uses its entry up, so an undone change isn't listed (L-92).
+    for (const workspace of store.db.all(
+      workspaceRow,
+      "SELECT id, title, deleted_at, data FROM workspaces ORDER BY created_at, id",
+    )) {
+      const atEnd = workspace.data ?? "{}";
+      data.push({
+        tool: workspace.deleted_at ? `${workspace.title} (moved to the trash)` : workspace.title,
+        atEnd:
+          atEnd.length > DATA_QUOTE_LIMIT
+            ? `${atEnd.slice(0, DATA_QUOTE_LIMIT)}… (cut short)`
+            : atEnd,
+        changes: store.db
+          .all(
+            undoRow,
+            "SELECT change FROM data_undo WHERE workspace_id = ? ORDER BY number",
+            workspace.id,
+          )
+          .map((row) => describeChange(row.change)),
+      });
+    }
   } finally {
     store.close();
   }
-  return { scenario: report.scenario, items, steps, versions, screenshots };
+  return { scenario: report.scenario, items, steps, versions, data, screenshots };
 }
 
 /** Each screenshot as an image input, or why it can't be one (too large, or not a PNG). */
@@ -212,6 +281,7 @@ export async function reviewRun(
         : s,
     ),
     versions: evidence.versions,
+    data: evidence.data,
     images: images.map((i) => i.name),
     ...(images.length === 0 ? { noImages: imagesLeftOut.join("; ") || "the run kept none" } : {}),
   });

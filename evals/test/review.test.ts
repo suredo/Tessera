@@ -7,7 +7,9 @@ import {
   createScriptedProvider,
   createWorkspace,
   deleteWorkspace,
+  listWorkspaces,
   openDataFolder,
+  patchWorkspaceData,
   saveVersion,
 } from "@tessera/server";
 import { afterAll, describe, expect, it } from "vitest";
@@ -37,14 +39,36 @@ const PNG = Buffer.from(
 const tool: Artifact = {
   contractVersion: 2,
   code: { html: '<form data-hook="form">Party RSVP</form>', css: "", js: "// the form" },
-  data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
+  // A list of rules, as T10's planner keeps, for a data change to act on.
+  data: {
+    schemaVersion: 1,
+    schema: {
+      type: "object",
+      properties: {
+        rules: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { id: { type: "string" }, weekday: { type: "integer" } },
+            required: ["id", "weekday"],
+          },
+        },
+      },
+      required: ["rules"],
+    },
+    defaults: { rules: [] },
+    migrations: [],
+  },
   capabilities: [],
   pins: [],
   ui: { standardVersion: 1, mode: "standard" },
 };
 
+/** The ID the host gave the rule a run with `ruleRemoved` added and then removed. */
+let ruleId = "";
+
 /** A finished T5 run: two steps, the second blocked; one screenshot; one tool version. */
-async function run(options: { trashed?: boolean } = {}): Promise<string> {
+async function run(options: { trashed?: boolean; ruleRemoved?: boolean } = {}): Promise<string> {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-review-test-"));
   temps.push(folder);
   const report = {
@@ -80,6 +104,22 @@ async function run(options: { trashed?: boolean } = {}): Promise<string> {
     const { id } = createWorkspace(store, "Party guest form");
     const done = activateVersion(store, id, saveVersion(store.db, tool), 0);
     if (!done.ok) throw new Error(done.message);
+    if (options.ruleRemoved) {
+      // As T10's planner: a rule among its starting entries, then removed by a data change.
+      const added = patchWorkspaceData(store, id, {
+        operations: [{ op: "add", collection: "rules", record: { weekday: 5 } }],
+      });
+      if (!added.ok) throw new Error(added.message);
+      // The host gives the rule its ID; read it back, as a later plan would.
+      const rules = (
+        listWorkspaces(store).find((w) => w.id === id)!.data as { rules: { id: string }[] }
+      ).rules;
+      ruleId = rules[0]!.id;
+      const removed = patchWorkspaceData(store, id, {
+        operations: [{ op: "remove", collection: "rules", id: ruleId, revisionCount: 1 }],
+      });
+      if (!removed.ok) throw new Error(removed.message);
+    }
     if (options.trashed) deleteWorkspace(store, id);
   } finally {
     store.close();
@@ -163,6 +203,35 @@ describe("what the review reads (EVAL-03, ENG-19)", () => {
     expect(versions.map((v) => [v.tool, v.version, v.html])).toEqual([
       ["Party guest form (moved to the trash)", 1, '<form data-hook="form">Party RSVP</form>'],
     ]);
+  });
+
+  it("L-92, EVAL-03: shows each tool's data at the end and its recorded changes, with what a removed entry held", async () => {
+    const folder = await run({ ruleRemoved: true });
+    const { data } = await gatherRun(folder);
+    expect(data).toEqual([
+      {
+        tool: "Party guest form",
+        atEnd: JSON.stringify({ rules: [] }),
+        changes: [
+          { records: [{ collection: "rules", id: ruleId, change: "added", before: null }] },
+          {
+            records: [
+              {
+                collection: "rules",
+                id: ruleId,
+                change: "removed",
+                before: { id: ruleId, weekday: 5 },
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+    // The reviewer reads them, quoted with the rest of the run.
+    await reviewRun(folder, { mode: "rehearsal" });
+    const [request] = readRequestLog(path.join(folder, REVIEW_HARNESS));
+    expect(request!.prompt).toContain('"change": "removed"');
+    expect(request!.prompt).toContain('"weekday": 5');
   });
 
   it("ENG-19: refuses the real user data folder before opening anything in it", async () => {

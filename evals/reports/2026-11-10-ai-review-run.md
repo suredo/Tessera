@@ -4,7 +4,7 @@ title: "AI technical review: results"
 description: "Results of the AI technical review's first live use under the approved 8-call cap: six reviews of M3's runs in 6 calls, screenshots received as images, every answer complete, all six advised accept with notes, the owner's verdicts and why their agreement isn't yet evidence, and what the reviews found, including one note that was wrong for lack of the tool's starting data."
 tags: [reports, live-evaluation, review]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T12:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T13:30:00Z }
 ---
 
 # AI technical review: results, 2026-11-10
@@ -48,7 +48,7 @@ Read against the runs' data before any is counted as a defect:
 
 # Defects and follow-ups
 
-1. **L-92: the review's evidence leaves out each version's starting data,** so the reviewer can judge a data change wrong. Fix: include each version's starting data in the evidence, with a test, in its own pull request.
+1. **L-92: the review's evidence left out each tool's starting data,** so the reviewer could judge a data change wrong. Fixed after this report: the evidence now has each tool's data at the end and every data change it recorded, with what each record held before. For T10's rerun it shows `rule-friday` (weekday 5) removed by step 4.
 2. **The short preview, the "Use again" wording, and "entries" and "records":** recorded for M4's changes to the host's screens.
 
 # Evidence

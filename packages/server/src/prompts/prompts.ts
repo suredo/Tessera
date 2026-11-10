@@ -566,6 +566,21 @@ export type ReviewVersion = {
 };
 
 /**
+ * One tool's data as the reviewer reads it (L-92): its entries at the end of the run, and each
+ * data change the run recorded, oldest first, with what each record held before it. A tool's
+ * starting entries are its data, not its source, so without this a reviewer can't see them.
+ */
+export type ReviewData = {
+  tool: string;
+  /** The tool's entries when the run ended, as JSON; cut short past a few thousand characters. */
+  atEnd: string;
+  changes: readonly {
+    /** What the change did to each record it touched, or "replaced whole" for a whole replace. */
+    records: readonly { collection: string; id: string; change: string; before: unknown }[];
+  }[];
+};
+
+/**
  * Builds the review stage's prompt (EVAL-03): the rubric as its one definition words it, then the
  * run's steps and the source of each version, quoted as data, and the names of the screenshots
  * attached as images, or why none are (A27).
@@ -575,6 +590,8 @@ export function assembleReviewPrompt(input: {
   items: readonly ReviewItem[];
   steps: readonly ReviewStep[];
   versions: readonly ReviewVersion[];
+  /** Each tool's data at the end of the run and its recorded changes (L-92). */
+  data?: readonly ReviewData[];
   images: readonly string[];
   /** Why no screenshot is attached, when none is: the adapter can't pass images, or none were kept. */
   noImages?: string;
@@ -587,7 +604,11 @@ export function assembleReviewPrompt(input: {
   };
   const rubric = input.items.map((item) => `- ${item}: ${REVIEW_RUBRIC[item]}`).join("\n");
   const system = use("review", { rubric });
-  const run = JSON.stringify({ steps: input.steps, versions: input.versions }, null, 1);
+  const run = JSON.stringify(
+    { steps: input.steps, versions: input.versions, data: input.data ?? [] },
+    null,
+    1,
+  );
   const images = input.images.length
     ? `The screenshots are attached as images, in this order: ${input.images.join(", ")}.`
     : `No screenshots are attached: ${input.noImages ?? "none were kept"}. Judge from the rest, and mark what only a screenshot could show as unverified.`;
