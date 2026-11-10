@@ -286,7 +286,7 @@ if (fs.existsSync(logFile)) {
 const codeDocs = [...concepts].filter(([, c]) => CODE_TYPES.has(c.fm.type));
 const backLinked = new Set();
 // Tests are skipped: a module's main file names its doc, and a test may hold sample Docs: text.
-// CI workflows are code too, and name their doc in a YAML comment.
+// CI workflows are code too, and name their doc in a YAML comment; PowerShell scripts in theirs.
 for (const codeRoot of ["packages", "evals", "scripts", ".github/workflows"].map((d) =>
   path.join(ROOT, d),
 )) {
@@ -300,7 +300,7 @@ for (const codeRoot of ["packages", "evals", "scripts", ".github/workflows"].map
         if (!["node_modules", "dist", "test", "e2e"].includes(e.name)) stack.push(p);
         continue;
       }
-      if (!/\.(ts|tsx|js|mjs|css|ya?ml)$/.test(e.name) || /\.(test|spec)\.\w+$/.test(e.name))
+      if (!/\.(ts|tsx|js|mjs|css|ya?ml|ps1)$/.test(e.name) || /\.(test|spec)\.\w+$/.test(e.name))
         continue;
       for (const m of read(p).matchAll(/Docs: (docs\/[\w./-]+\.md)/g)) {
         const doc = path.join(ROOT, m[1]);

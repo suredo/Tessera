@@ -10,14 +10,19 @@ import { openDataFolder, tryLockFile, type Clock, type DataFolder } from "../sto
 import { collectAssets, sweepAssets } from "../assets/index.ts";
 import { hostRoutes, workspaceTools } from "../host/index.ts";
 import { runtimeRoutes } from "../runtime/index.ts";
-import { chosenProvider, setupRoutes, type SetupOptions } from "../setup/index.ts";
+import { chosenProvider, liveProvider, setupRoutes, type SetupOptions } from "../setup/index.ts";
 import {
   generationRoutes,
   type StageTimeLimits,
   type TwoPassOptions,
 } from "../generation/index.ts";
 import { JobQueue } from "../jobs/index.ts";
-import { loadProviderRoutes, readProviderChoice, type Provider } from "../providers/index.ts";
+import {
+  callCounter,
+  loadProviderRoutes,
+  readProviderChoice,
+  type Provider,
+} from "../providers/index.ts";
 import { removeExpired } from "../trash/index.ts";
 
 // Starting Tessera (PLAT-02): one copy per data folder, on a free port, opened in the browser,
@@ -58,6 +63,12 @@ export type LaunchOptions = {
    * their scripted answers.
    */
   acceptanceChecks?: boolean;
+  /**
+   * A hard cap on model calls for an evaluation run outside the harness (ENG-07), such as P1 in
+   * Windows Sandbox: every call, the probe's and both programs' included, counts, and one past it
+   * is refused before it reaches the program. No cap when left out.
+   */
+  callCap?: number;
   /** Each generation stage's own time limit; the defaults for any left out (GEN-11). */
   stageTimeLimitsMs?: Partial<StageTimeLimits>;
 };
@@ -153,6 +164,15 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
     }
     return { status: "already-running", url, browserOpened: await opened(url) };
   }
+  // One count for the whole run, whichever program makes the call (ENG-07).
+  const counted = options.callCap === undefined ? undefined : callCounter(options.callCap);
+  const setup: Omit<SetupOptions, "dataDir"> | undefined = counted
+    ? {
+        ...options.setup,
+        probeProvider: (executable, name) =>
+          counted.wrap((options.setup?.probeProvider ?? liveProvider)(executable, name)),
+      }
+    : options.setup;
   const instanceId = randomUUID();
   // What /api/instance answers: nothing until this copy has published its address.
   let published = "";
@@ -176,15 +196,17 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
         ...bridgeRoutes(dataFolder),
         ...hostRoutes(dataFolder),
         ...archiveRoutes(dataFolder),
-        ...setupRoutes({ ...options.setup, dataDir: options.dataDir }),
+        ...setupRoutes({ ...setup, dataDir: options.dataDir }),
         ...generationRoutes({
           store: dataFolder,
           jobs: new JobQueue(),
           provider: async () => {
-            if (options.provider) return options.provider;
+            if (options.provider) {
+              return counted ? counted.wrap(options.provider) : options.provider;
+            }
             // The chosen program, found when a request comes, so a fix or a new choice made on
             // the status screen counts at once (CLI-01).
-            const chosen = await chosenProvider({ ...options.setup, dataDir: options.dataDir });
+            const chosen = await chosenProvider({ ...setup, dataDir: options.dataDir });
             return "problem" in chosen ? chosen : chosen.provider;
           },
           // The chosen program's routes (CLI-09).

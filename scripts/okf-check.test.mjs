@@ -293,6 +293,18 @@ test("a CI workflow's # Docs: comment back-links its doc (ENG-24)", () => {
   assert.match(r.out, /ci\.yml: Docs comment points to a missing doc: docs\/code\/ci\/nope\.md/);
 });
 
+test("a PowerShell script's # Docs: comment back-links its doc (ENG-24)", () => {
+  const root = makeRepo();
+  write(root, "packages/server/src/assets/index.ts", "export const putAsset = () => 1;\n");
+  write(root, "scripts/sandbox/p1.ps1", "# Docs: docs/code/server/nope.md\nparam()\n");
+  const r = check(root);
+  assert.equal(r.code, 1);
+  assert.match(
+    r.out,
+    /p1\.ps1: Docs comment points to a missing doc: docs\/code\/server\/nope\.md/,
+  );
+});
+
 test("reports in evals/reports need the Evaluation Report frontmatter, and nothing else of the bundle (ENG-08)", () => {
   const root = makeRepo();
   const report = (extra) =>

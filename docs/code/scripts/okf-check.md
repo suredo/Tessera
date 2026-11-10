@@ -7,7 +7,7 @@ implements: [ENG-05, ENG-08, ENG-24, ENG-25]
 tests: [../../../scripts/okf-check.test.mjs]
 tags: [code, scripts, docs]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-17T18:27:54Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T18:30:00Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ Keeps the documentation true by refusing what breaks its rules. It checks that `
 - **Errors fail, warnings don't.** A past `stale_after`, a handoff older than five days and a handoff over 500 words are warnings; everything else is an error and exits 1.
 - **`--fix` writes only what it can derive:** index entries from frontmatter, and code docs' `# Symbols (generated)` sections from the code. It never invents a title or description.
 - **Requirement IDs come from tables only:** rows starting `| <ID> |` in `docs/spec/` and `docs/practices/`.
-- **`Docs:` comments are read from code under `packages/`, `evals/` and `scripts/`, and from the CI workflows in `.github/workflows/`,** skipping tests, `test/` and `e2e/` folders, `node_modules` and `dist`, since a test may hold sample `Docs:` text. A workflow names its doc in a YAML comment, `# Docs: docs/code/...`.
+- **`Docs:` comments are read from code under `packages/`, `evals/` and `scripts/`, and from the CI workflows in `.github/workflows/`,** skipping tests, `test/` and `e2e/` folders, `node_modules` and `dist`, since a test may hold sample `Docs:` text. A workflow names its doc in a YAML comment, `# Docs: docs/code/...`, and a PowerShell script (`.ps1`) in its own `#` comment.
 - **Reports get no bundle rules:** no index entry, and their links aren't checked. Only `.md` files directly in `evals/reports/` are read.
 - **Symbols come only from TypeScript files** (`.ts`, `.tsx`, not tests or declarations). A doc whose resource is JavaScript has no generated symbol section and names no bare symbols in backticks under Entry points.
 - **The drift check is excused only by a line** `No doc change needed: docs/code/<path>.md: <reason>` in the pull request description.
