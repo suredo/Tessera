@@ -259,6 +259,49 @@ test("VER-02: the check waits for the tool's frame to have its width before meas
   expect(result).toEqual({ outcome: "refused", reason: "stale", message: "Passed the checks." });
 });
 
+test("VER-02, L-91: a frame that never gets its width fails as Tessera's problem, not as the tool scrolling sideways", async ({
+  page,
+}) => {
+  await page.goto(host.url);
+  await ready(page, "stageCandidate");
+  const result = await page.evaluate(async () => {
+    const w = window as unknown as {
+      stageCandidate(options: unknown): Promise<Result>;
+      smokeCheck(): unknown;
+    };
+    new MutationObserver((changes, observer) => {
+      for (const change of changes) {
+        for (const node of change.addedNodes) {
+          if (!(node instanceof HTMLIFrameElement)) continue;
+          if (!node.closest("[data-tessera=staging]")) continue;
+          observer.disconnect();
+          setTimeout(() => (node.style.width = "0px"), 500);
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+    return w.stageCandidate({
+      candidate: {
+        mountId: "good",
+        hash: "a".repeat(64),
+        capabilities: [],
+        syntheticData: { tasks: [{ id: "d-1", title: "A starting task" }] },
+      },
+      workspaceId: "00000000-0000-4000-8000-000000000000",
+      expectedDataRevision: 0,
+      activationToken: "00000000-0000-4000-8000-000000000001",
+      checks: [w.smokeCheck()],
+      activate: () =>
+        Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
+    });
+  });
+  expect(result).toEqual({
+    outcome: "check-failed",
+    check: "smoke",
+    reason:
+      "Tessera couldn't see the tool: its frame still had no size after 5 seconds. This is Tessera's problem, not the tool's.",
+  });
+});
+
 test("VER-02: a tool that scrolls sideways at 320 px fails, saying by how much", async ({
   page,
 }) => {

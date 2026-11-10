@@ -178,15 +178,34 @@ const read = (count: number, texts: string[]) => ({
 });
 
 /** Stages `mountId` with one check that drives it with `steps`; returns what its page answered. */
-async function drive(page: Page, mountId: string, steps: DriveStep[]): Promise<DriveReport> {
+async function drive(
+  page: Page,
+  mountId: string,
+  steps: DriveStep[],
+  // The frame loses its width as soon as it is inserted, and never gets it back.
+  collapse = false,
+): Promise<DriveReport> {
   await page.goto(host.url);
   await ready(page, "stageCandidate");
   return page.evaluate(
-    async ({ mountId, steps }) => {
+    async ({ mountId, steps, collapse }) => {
       const w = window as unknown as {
         stageCandidate(options: unknown): Promise<unknown>;
         driveTool(tool: unknown, steps: unknown): Promise<unknown>;
       };
+      if (collapse) {
+        new MutationObserver((changes, observer) => {
+          for (const change of changes) {
+            for (const node of change.addedNodes) {
+              if (!(node instanceof HTMLIFrameElement)) continue;
+              if (!node.closest("[data-tessera=staging]")) continue;
+              observer.disconnect();
+              // After the staging panel's own observer gives it the panel's width.
+              setTimeout(() => (node.style.width = "0px"), 0);
+            }
+          }
+        }).observe(document.body, { childList: true, subtree: true });
+      }
       let report: unknown;
       await w.stageCandidate({
         candidate: {
@@ -212,9 +231,22 @@ async function drive(page: Page, mountId: string, steps: DriveStep[]): Promise<D
       });
       return report as DriveReport;
     },
-    { mountId, steps },
+    { mountId, steps, collapse },
   );
 }
+
+test("VER-03, L-91: a check that can't see the tool, its frame still without a size, says it is Tessera's problem, not that the tool lacks a hook", async ({
+  page,
+}) => {
+  const report = await drive(page, "list", [{ do: "read", hook: "item" }], true);
+  expect(report.steps).toEqual([
+    {
+      ok: false,
+      problem:
+        "Tessera couldn't see the tool: its frame still had no size after 5 seconds. This is Tessera's problem, not the tool's.",
+    },
+  ]);
+});
 
 test("VER-03: a check fills in, clicks and reads hooked elements, each step once the tool has settled and shown the result", async ({
   page,
