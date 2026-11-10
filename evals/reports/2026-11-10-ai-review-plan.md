@@ -32,10 +32,11 @@ The six M3 runs that made a tool, from the [M3 live run](2026-11-09-m3-live-run.
 | T5, RSVP form | 7 | 1 (1) | 7 | 8 |
 | T2, reading list (pt-BR) | 6 | 1 (1) | 6 | 8 |
 | T3, spending chart | 6 | 1 (2) | 6 | 8 |
-| T6, tip calculator | 5 | 1 (3) | 5 | 8 |
-| T1, shopping list | 10 | 1 (2) | 10 | 8 |
+| T6, tip calculator | 5 | 1 (3) | 5 | 7 |
+| T1, shopping list | 10 | 1 (2) | 10 | 7 |
 | T10's rerun, study planner | 8 | 2 (2) | 8 | 8 |
 
+- **Item counts corrected after approval:** T6 and T1 ask for 7 items, not 8, since their scenarios leave out `controls-work`. The plan first said 8 for both. Nothing else changes: the items come from the scenario files.
 - **Route:** the review stage's default, Claude Sonnet 5.5 at medium effort, on Claude Code (2.1.321).
 - **Order:** T5 first, the smallest, as the image check. Then the others from smallest to largest.
 - **Each review** goes through its own capped harness, with the scenario's rubric items. The answer must hold exactly those items, each once, in order (`reviewSchemaFor`).
