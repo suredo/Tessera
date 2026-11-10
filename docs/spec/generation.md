@@ -4,7 +4,7 @@ title: "Generation pipeline"
 description: "Structured intent, routing, generation, repair, honest messages and time limits (GEN-01 to GEN-19)."
 tags: [spec, generation, pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:50:00Z }
 ---
 # Generation pipeline (`GEN`)
 
@@ -31,7 +31,7 @@ request ─► intent (structured) ─► route
 | GEN-03 | **Modular prompt assembly.** Prompts are built from parts: base rules, the bridge manifest (`CON-03`), the UI standard (`VER-06`), the matching verification profile (`VER-03`), if any, current source, and diagnostics. Only relevant parts are included. Each stage records its prompt size, and CI fails if a fixture prompt grows past its budget. (The POC's single prompt reached about 18,000 characters, carrying heart, study and flow contracts into every request.) |
 | GEN-04 | **Mixed requests are split.** The interface part goes to generation. The data part is applied by the host after the new version is installed, as a validated patch batch. Neither step sees the other's instruction. |
 | GEN-05 | **Starting data.** Creation output separates `reusableDefaults` from `initialState` (session data supplied in this request, such as 120 guests or shopping entries). Both conform to the declared data schema (`DATA-03`). The host constructs and validates a new workspace once from defaults plus initial state. Request-supplied entries never become reusable defaults unless the person explicitly asks to reuse them. Labelled example data is kept distinguishable from real entries and is not silently copied by Use again. |
-| GEN-06 | **Code never writes user data on startup.** The bridge rejects writes before the tool is active, with an explanatory error. Prompts state this rule. |
+| GEN-06 | **Code never writes user data on startup.** The bridge rejects writes before the tool is active, with an explanatory error. Prompts state this rule. The bridge is what enforces it: the static check doesn't guess at startup writes from the code (A60). |
 | GEN-07 | **Real changes only.** An edit whose result is identical to the current version is not activated. Changes outside the screens (data schema, later engines) count as real changes and are declared explicitly (`CON-02`). |
 | GEN-08 | **Honest outcome messages.** The message shown to the person is composed by the host. It combines the model's plain summary with verified facts: what was applied, what was not, and whether behavior was verified. It never claims success for a step that failed. |
 | GEN-09 | **Repair by failure class.** Failures are classified as schema shape, static check, smoke check, behavior check or provider error. Each class has its own repair budget and prompt part. Schema-shape errors are repairable too. Provider errors (auth, limits, timeouts) are never sent to repair. |

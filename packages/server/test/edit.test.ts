@@ -397,8 +397,8 @@ describe("editing and repair (GEN-09)", () => {
     expect(calls[1]!.prompt).toContain("Don't borrow or compute bridge methods.");
   });
 
-  it.each(["new Date();", "tessera.call('data.patch', {});"])(
-    "VER-01, GEN-09: editing repairs a clock/startup failure before staging: %s",
+  it.each(["new Date();"])(
+    "VER-01, GEN-09: editing repairs a clock failure before staging: %s",
     async (js) => {
       const unsafe: Answer = {
         ...unchanged,
@@ -414,9 +414,7 @@ describe("editing and repair (GEN-09)", () => {
         repairs: 1,
       });
       expect(calls.map((c) => c.stage)).toEqual(["edit", "repair"]);
-      expect(calls[1]!.prompt).toContain(
-        js.includes("Date") ? 'tessera.call("clock.now")' : "writes data during startup",
-      );
+      expect(calls[1]!.prompt).toContain('tessera.call("clock.now")');
     },
   );
 

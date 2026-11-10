@@ -4,13 +4,13 @@ title: "Verification"
 description: "How the host knows a tool works: static and smoke checks, verification profiles, acceptance checks (VER-01 to VER-09)."
 tags: [spec, verification, checks]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T22:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:50:00Z }
 ---
 # Verification (`VER`)
 
 | ID | Requirement |
 | --- | --- |
-| VER-01 | **Static checks with a real parser.** Generated JavaScript is parsed (acorn or the TypeScript compiler). Checks cover forbidden APIs, undeclared bridge actions and capabilities, calls to methods that don't exist in the manifest, data writes at startup, and direct reads of the system clock. The POC's token scanner could not follow aliases or scopes. |
+| VER-01 | **Static checks with a real parser.** Generated JavaScript is parsed (acorn or the TypeScript compiler). Checks cover forbidden APIs, undeclared bridge actions and capabilities, calls to methods that don't exist in the manifest, and direct reads of the system clock. Data writes at startup are the bridge's to refuse when they happen, not this check's (`GEN-06`, A60). The POC's token scanner could not follow aliases or scopes. |
 | VER-02 | **Smoke check for every candidate.** In the verification panel the tool must: mount; render something; throw no errors for a few seconds; pass the accessibility floor (labelled inputs, named buttons); and show no horizontal page scroll at 320 px wide, the narrow width set by the UI standard (WCAG reflow). |
 | VER-03 | **Verification profiles (internal, not tools).** The host keeps a registry of verification profiles: behavior patterns it knows how to test, for example "something with a list of items", "something that schedules with rules" or, later, "a simulation with a run control". **They are not tools and never appear to the person.** When a person's request for a new tool matches a profile, its prompt part asks the generated tool to expose stable hooks (element IDs, a data shape), and its synthetic fixture and behavior check run before activation. An edit keeps the profile its tool was checked by, or none, so a profile is never added or swapped by an edit (L-94). Every profile is one definition (`P3`). Hidden test hooks in matching tools are accepted (A19). Which profiles to build first follows from the real-life test scenarios ([the milestone scenario sets](../testing/milestone-sets.md)). Tools that match no profile get only the smoke check (`VER-02`) and are labelled "behavior not verified", unless acceptance checks derived from the request, the default for them after M3's experiment (A57), pass (`VER-09`). |
 | VER-04 | **No hidden requirements.** Every observable requirement a behavior check enforces is generated into the prompt from the same definition (`P3`). (The POC's study check enforced an 18:00 rule and a visible helper that the prompt never mentioned, and live runs failed on both.) |
