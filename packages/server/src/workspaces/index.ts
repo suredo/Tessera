@@ -43,6 +43,7 @@ export {
   listSavedTools,
   recentSavedTools,
   listWorkspaces,
+  noteOf,
   patchWorkspaceData,
   readWorkspaceData,
   describeSavedTool,
