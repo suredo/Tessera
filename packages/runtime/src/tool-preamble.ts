@@ -407,10 +407,27 @@ import type { BridgeMethodName } from "@tessera/contracts";
       "button, [role=button], input[type=button], input[type=submit], input[type=reset]",
     );
     const root = document.documentElement;
+    // TEMPORARY DIAGNOSTIC (#302): what the page measures when it is wider than the frame.
+    const diagnostic: string[] = [];
+    if (Math.max(root.scrollWidth, body?.scrollWidth ?? 0) - root.clientWidth > 1) {
+      let widest = "";
+      let right = 0;
+      for (const element of all("*")) {
+        const box = element.getBoundingClientRect();
+        if (box.right > right) {
+          right = box.right;
+          widest = `${element.tagName.toLowerCase()}${element.id ? "#" + element.id : ""} (left ${Math.round(box.left)}, width ${Math.round(box.width)})`;
+        }
+      }
+      const filter = document.querySelector("select");
+      diagnostic.push(
+        `DIAG innerWidth ${window.innerWidth}, root client ${root.clientWidth} scroll ${root.scrollWidth}, body client ${body?.clientWidth} scroll ${body?.scrollWidth}, widest ${widest} right ${Math.round(right)}, select ${filter ? `${Math.round(filter.getBoundingClientRect().width)} options ${filter.options.length} [${[...filter.options].map((o) => o.text.length).join(",")}]` : "none"}, fonts ${document.fonts.status}, readyState ${document.readyState}`,
+      );
+    }
     post({
       report: {
         id,
-        problems: [...problems],
+        problems: [...problems, ...diagnostic],
         elements: all("*").length,
         text: body ? body.innerText.trim().length : 0,
         media: all("canvas, svg, img, video").filter(shown).length,
