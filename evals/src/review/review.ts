@@ -1,6 +1,7 @@
 // Docs: docs/code/evals/review.md
 import fs from "node:fs";
 import path from "node:path";
+import { z } from "zod";
 import {
   DEFAULT_ROUTES,
   REVIEW_IMAGE_LIMITS,
@@ -14,16 +15,14 @@ import {
 import {
   assembleReviewPrompt,
   createScriptedProvider,
-  listWorkspaces,
   loadVersion,
   openDataFolder,
   REVIEW_PROMPT_BUDGET,
-  workspaceVersions,
   type Provider,
   type ReviewStep,
   type ReviewVersion,
 } from "@tessera/server";
-import { startHarness } from "../harness/index.ts";
+import { refuseRealDataFolder, startHarness } from "../harness/index.ts";
 import type { RunReport } from "../runner/run.ts";
 import { loadScenario } from "../scenarios/index.ts";
 
@@ -49,6 +48,17 @@ export type RunEvidence = {
   /** Each step screenshot the run kept, by name and file, in step order. */
   screenshots: { name: string; file: string }[];
 };
+
+/** A recorded version as the run's database holds it, with its workspace's title. */
+const versionRow = z.object({
+  title: z.string(),
+  deleted_at: z.string().nullable(),
+  number: z.number(),
+  hash: z.string(),
+  summary: z.string().nullable(),
+  checks: z.string(),
+  profile: z.string().nullable(),
+});
 
 /** The steps' screenshots to send: every one when they fit the limit, else spread over the run. */
 export function chooseScreenshots<T>(all: readonly T[], count = REVIEW_IMAGE_LIMITS.count): T[] {
@@ -80,29 +90,38 @@ export async function gatherRun(folder: string): Promise<RunEvidence> {
     problems: s.problems,
     ...(sent.has(`step-${s.index}.png`) ? { screenshot: `step-${s.index}.png` } : {}),
   }));
-  // Each version once, by its hash: Use again and saving copy a version into another workspace.
+  // Each version once, by its hash, in the order they were made: Use again and saving copy a
+  // version into another workspace. A workspace moved to the trash during the run keeps its
+  // versions, which the review reads too, marked so, without restoring or changing anything.
   const versions: ReviewVersion[] = [];
-  const store = await openDataFolder(path.join(folder, "tessera"));
+  const tessera = path.join(folder, "tessera");
+  // The run's own Tessera, never the person's (ENG-19): refused before anything opens it.
+  refuseRealDataFolder(tessera);
+  const store = await openDataFolder(tessera);
   try {
     const seen = new Set<string>();
-    for (const workspace of listWorkspaces(store).reverse()) {
-      for (const version of workspaceVersions(store, workspace.id)) {
-        if (seen.has(version.hash)) continue;
-        seen.add(version.hash);
-        const read = loadVersion(store.db, version.hash);
-        if (read?.kind !== "ok") continue;
-        const { html, css, js } = read.artifact.code;
-        versions.push({
-          tool: workspace.title,
-          version: version.index,
-          summary: version.summary ?? "",
-          checks: version.checks,
-          profile: version.profile ?? null,
-          html,
-          css,
-          js,
-        });
-      }
+    const rows = store.db.all(
+      versionRow,
+      `SELECT w.title, w.deleted_at, v.number, v.hash, v.summary, v.checks, v.profile
+        FROM workspace_versions v JOIN workspaces w ON w.id = v.workspace_id
+        ORDER BY v.created_at, w.id, v.number`,
+    );
+    for (const row of rows) {
+      if (seen.has(row.hash)) continue;
+      seen.add(row.hash);
+      const read = loadVersion(store.db, row.hash);
+      if (read?.kind !== "ok") continue;
+      const { html, css, js } = read.artifact.code;
+      versions.push({
+        tool: row.deleted_at ? `${row.title} (moved to the trash)` : row.title,
+        version: row.number,
+        summary: row.summary ?? "",
+        checks: JSON.parse(row.checks) as string[],
+        profile: row.profile,
+        html,
+        css,
+        js,
+      });
     }
   } finally {
     store.close();

@@ -6,6 +6,7 @@ import {
   activateVersion,
   createScriptedProvider,
   createWorkspace,
+  deleteWorkspace,
   openDataFolder,
   saveVersion,
 } from "@tessera/server";
@@ -13,6 +14,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { readLedger, readRequestLog } from "../src/harness/index.ts";
 import {
   chooseScreenshots,
+  gatherRun,
   rehearsalReview,
   REVIEW_FILE,
   REVIEW_HARNESS,
@@ -42,7 +44,7 @@ const tool: Artifact = {
 };
 
 /** A finished T5 run: two steps, the second blocked; one screenshot; one tool version. */
-async function run(): Promise<string> {
+async function run(options: { trashed?: boolean } = {}): Promise<string> {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-review-test-"));
   temps.push(folder);
   const report = {
@@ -78,6 +80,7 @@ async function run(): Promise<string> {
     const { id } = createWorkspace(store, "Party guest form");
     const done = activateVersion(store, id, saveVersion(store.db, tool), 0);
     if (!done.ok) throw new Error(done.message);
+    if (options.trashed) deleteWorkspace(store, id);
   } finally {
     store.close();
   }
@@ -150,6 +153,35 @@ describe("reviewing a recorded run (EVAL-03, A27)", () => {
     const folder = await run();
     const provider = createScriptedProvider({ name: "canned", replies: [] });
     await expect(reviewRun(folder, { mode: "live", provider, callCap: 1 })).rejects.toThrow();
+  });
+});
+
+describe("what the review reads (EVAL-03, ENG-19)", () => {
+  it("EVAL-03: reads a tool moved to the trash during the run, marked so, without restoring it", async () => {
+    const folder = await run({ trashed: true });
+    const { versions } = await gatherRun(folder);
+    expect(versions.map((v) => [v.tool, v.version, v.html])).toEqual([
+      ["Party guest form (moved to the trash)", 1, '<form data-hook="form">Party RSVP</form>'],
+    ]);
+  });
+
+  it("ENG-19: refuses the real user data folder before opening anything in it", async () => {
+    const folder = await run();
+    const tessera = path.join(folder, "tessera");
+    const before = fs.readdirSync(tessera).sort();
+    const real = process.env["TESSERA_DATA_DIR"];
+    process.env["TESSERA_DATA_DIR"] = tessera;
+    try {
+      await expect(gatherRun(folder)).rejects.toThrow("can't be or hold the real user data folder");
+      await expect(reviewRun(folder, { mode: "rehearsal" })).rejects.toThrow(
+        "can't be or hold the real user data folder",
+      );
+    } finally {
+      if (real === undefined) delete process.env["TESSERA_DATA_DIR"];
+      else process.env["TESSERA_DATA_DIR"] = real;
+    }
+    expect(fs.readdirSync(tessera).sort()).toEqual(before);
+    expect(fs.existsSync(path.join(folder, REVIEW_FILE))).toBe(false);
   });
 });
 
