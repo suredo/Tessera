@@ -116,6 +116,8 @@ import type { BridgeMethodName } from "@tessera/contracts";
   // check that measured it then saw a page as wide as its widest control and no element shown
   // (#302). The wrapper lays the frames out while a check waits (wrapper.ts); the checks measure
   // the tool only once its frame has its width.
+  const NO_SIZE =
+    "Tessera couldn't see the tool: its frame still had no size after 5 seconds. This is Tessera's problem, not the tool's.";
   const sized = async () => {
     for (let waited = 0; window.innerWidth === 0 && waited < 5000; waited += 50) await wait(50);
   };
@@ -150,6 +152,12 @@ import type { BridgeMethodName } from "@tessera/contracts";
         start?: unknown;
       };
       const hook = typeof step?.hook === "string" ? step.hook : "";
+      // A frame still without its size can't show anything, so nothing found then is Tessera's
+      // problem, not the tool's: said so, rather than that the tool lacks the hook (#308, L-91).
+      if (window.innerWidth === 0) {
+        results.push({ ok: false, problem: NO_SIZE });
+        break;
+      }
       if (!/^[a-z][a-z0-9-]{0,40}$/.test(hook)) {
         results.push({ ok: false, problem: `"${hook.slice(0, 50)}" isn't a hook name.` });
         break;
@@ -421,14 +429,19 @@ import type { BridgeMethodName } from "@tessera/contracts";
       "button, [role=button], input[type=button], input[type=submit], input[type=reset]",
     );
     const root = document.documentElement;
+    // A frame still without its size can't be measured: said so, as Tessera's problem, and its
+    // width isn't read as the tool scrolling sideways (#308, L-91).
+    const unsized = window.innerWidth === 0;
     post({
       report: {
         id,
-        problems: [...problems],
+        problems: unsized ? [...problems, NO_SIZE] : [...problems],
         elements: all("*").length,
         text: body ? body.innerText.trim().length : 0,
         media: all("canvas, svg, img, video").filter(shown).length,
-        overflow: Math.max(root.scrollWidth, body?.scrollWidth ?? 0) - root.clientWidth,
+        overflow: unsized
+          ? 0
+          : Math.max(root.scrollWidth, body?.scrollWidth ?? 0) - root.clientWidth,
         unlabeled: fields.filter((field) => !fieldName(field)).length,
         unnamed: buttons.filter((button) => !buttonName(button)).length,
         noAlt: all("img:not([alt])").length,
