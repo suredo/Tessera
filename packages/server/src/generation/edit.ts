@@ -54,8 +54,10 @@ export function editedCandidate(input: EditInput, answer: Answer): EditResult {
   if (answer.data.mode === "migrate") {
     if (input.intent?.lookOnly)
       return shapeFailure(["A style edit must keep the data declaration."]);
-    if (!input.intent?.behaviorChange)
-      return shapeFailure(["A data declaration change needs a requested behavior change."]);
+    // A change the edit finds needs a new data shape is taken, whatever the intent guessed about
+    // behavior: refusing it sent the repair to drop the data change and keep the code that relies
+    // on it, so a kanban showed an "In review" column its data didn't allow (L-97). The migration
+    // checks below still refuse any that would lose or change a value.
     const { migration, schema, defaults } = answer.data;
     const problems = dataProblems(schema, defaults, defaults);
     if (problems.length) return shapeFailure(problems);

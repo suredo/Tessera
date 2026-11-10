@@ -57,6 +57,37 @@ const reply = (value: unknown, stage: "intent" | "edit" | "repair") => ({
 const provider = (...replies: unknown[]) =>
   createScriptedProvider({ name: "edit-pipeline", replies: replies as never });
 
+describe("a data change an edit needs is kept, not repaired away (L-97)", () => {
+  it("L-97, GEN-13: an edit that migrates the data while the intent expected no behavior change is the candidate, with no repair", async () => {
+    const { store, workspace } = await setup();
+    const stages: string[] = [];
+    const scripted = provider(
+      reply(intent({ behaviorChange: false }), "intent"),
+      reply(quantityEdit, "edit"),
+    );
+    const result = await generate(
+      store,
+      {
+        ...scripted,
+        run: (spec) => {
+          stages.push(spec.stage);
+          return scripted.run(spec);
+        },
+      },
+      DEFAULT_ROUTES,
+      { request: "Create a new category, in review", workspaceId: workspace.id },
+    );
+    expect(result).toMatchObject({ kind: "candidate", operation: "edit" });
+    expect(stages).toEqual(["intent", "edit"]);
+    if (result.kind !== "candidate") throw new Error("Expected edit candidate");
+    // The migration is in the candidate, so its code and its data agree.
+    expect(loadVersion(store.db, result.hash)).toMatchObject({
+      kind: "ok",
+      artifact: { data: { schemaVersion: 2 } },
+    });
+  });
+});
+
 describe("a look CSS alone can't make is tried as a code edit (L-96)", () => {
   /** A look-only edit whose replies are `replies`, with the prompt parts each edit call got. */
   async function lookEdit(...replies: unknown[]) {

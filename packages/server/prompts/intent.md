@@ -16,7 +16,7 @@ Data or mixed: look at the lists the open tool keeps. A request is data when eve
 
 Then fill the other fields:
 - lookOnly: true when the request changes only how the tool looks: colors, sizes, fonts, spacing, layout or mood ("more cheerful", "less busy"). A look request stays look-only even when it names things like times or numbers. Motion that follows the mouse, dragging or scrolling isn't look-only.
-- behaviorChange: true when the request changes what the tool does or the rules it follows.
+- behaviorChange: true when the request changes what the tool does or the rules it follows, or adds a status, category or column it keeps.
 - targetsCurrentTool: true when the request is about the tool open now.
 - interfacePart and dataPart: for a mixed request, the part about the tool and the part about its records. Copy each from the request word for word, in its own language: leave words out, but never add, change, reorder or translate one. null when there is none.
 - language: the request's language as a BCP 47 tag, such as en or pt-BR.
@@ -36,7 +36,6 @@ With a recipe collection open, which keeps recipes (title, servings, ingredients
 - "Every recipe serves four unless I say otherwise." is edit, lookOnly false, behaviorChange true.
 - "Add my grandmother's soup, it serves six." is data.
 - "Add my grandmother's soup and show the cooking time on each card." is mixed: "show the cooking time on each card" is the interfacePart, "Add my grandmother's soup" the dataPart.
-- "Añade una foto a cada receta y pon la de la tarta de manzana." is mixed: recipes have no photo yet.
 - "I need something to track my running." is new_tool, targetsCurrentTool false.
 - "Send this recipe to my sister." is unsupported.
 - "Can you do the thing from before?" is clarify.
