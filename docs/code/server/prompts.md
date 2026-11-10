@@ -3,11 +3,11 @@ type: Code Module
 title: "Prompt assembly"
 description: "Prompts built from versioned part files, chosen by the stage and the intent's structured fields: base rules, the bridge manifest and the UI standard generated from their one definitions, the tool's code and diagnostics; each part's version recorded, and each stage's fixture prompt within its budget."
 resource: ../../../packages/server/src/prompts/
-implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03, GEN-14, SEC-02, VER-03, VER-04]
+implements: [GEN-03, ENG-16, GEN-02, CON-03, GEN-14, SEC-02, VER-03, VER-04]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T15:40:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T22:00:00Z }
 ---
 
 # Purpose

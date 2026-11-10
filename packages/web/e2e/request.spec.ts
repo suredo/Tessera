@@ -145,7 +145,7 @@ async function ask(page: Page, request: string) {
   await page.getByRole("button", { name: en["request.send"] }).click();
 }
 
-test("TEST-03, GEN-05, APP-05: a request becomes a running tool, staged and activated, holding the request's entries, and its version keeps its summary and checks", async ({
+test("TEST-03, GEN-05, APP-05, UX-03: a request becomes a running tool, staged and activated, holding the request's entries, and its version keeps its summary and checks, saying its behavior isn't verified", async ({
   page,
 }) => {
   await page.goto(app.url);

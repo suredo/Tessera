@@ -3,11 +3,11 @@ type: Code Package
 title: "Web package"
 description: "@tessera/web: the host app in the browser, built with Vite and React 19 with the React Compiler, with all host text going through the translation layer."
 resource: ../../../packages/web/
-implements: [VER-03, UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06, APP-11, UX-07, APP-07, GEN-16, CLI-07, UX-02, APP-10, APP-09, UX-06, GEN-08, APP-01, TEST-03]
+implements: [VER-03, VER-08, UX-03, UX-05, ENG-04, TEST-06, RUN-06, APP-02, APP-03, APP-04, DATA-07, APP-05, APP-08, APP-06, APP-11, UX-07, APP-07, GEN-16, CLI-07, UX-02, APP-10, APP-09, UX-06, GEN-08, APP-01, TEST-03]
 tests: [../../../packages/web/test/translate.test.ts, ../../../packages/web/test/app.test.tsx, ../../../packages/web/test/lint.test.ts, ../../../packages/web/test/host-api.test.ts, ../../../packages/web/test/tool-start.test.ts, ../../../packages/web/e2e/shell.spec.ts, ../../../packages/web/e2e/app.spec.ts, ../../../packages/web/e2e/library.spec.ts, ../../../packages/web/e2e/history.spec.ts, ../../../packages/web/e2e/trash.spec.ts, ../../../packages/web/e2e/archives.spec.ts, ../../../packages/web/e2e/a11y.spec.ts, ../../../packages/web/test/archives.test.ts, ../../../packages/web/e2e/status.spec.ts, ../../../packages/web/test/generate.test.ts, ../../../packages/web/e2e/request.spec.ts, ../../../packages/web/e2e/prompts.spec.ts, ../../../packages/web/e2e/startup-writes.spec.ts, ../../../packages/web/e2e/plain-language.spec.ts, ../../../packages/web/test/data-offer.test.tsx, ../../../packages/web/e2e/chat-data.spec.ts, ../../../packages/web/e2e/request-deadline.spec.ts, ../../../packages/web/test/request-cancel.test.ts, ../../../packages/web/e2e/request-cancel.spec.ts, ../../../packages/web/test/progress.test.tsx, ../../../packages/web/test/details.test.ts, ../../../packages/web/test/chat.test.ts, ../../../packages/web/e2e/chat.spec.ts, ../../../packages/web/test/split.test.ts, ../../../packages/web/e2e/chat-layout.spec.ts, ../../../packages/web/e2e/behavior-check.spec.ts]
 tags: [code, web, translation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T19:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T21:30:00Z }
 ---
 
 # Purpose
