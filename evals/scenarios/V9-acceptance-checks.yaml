@@ -1,0 +1,32 @@
+# V9, acceptance checks from the request (VER-09, A49): the M3 experiment's live set. Four requests
+# for tools no verification profile fits, each a new tool, with Tessera's acceptance-check
+# experiment on: before each is made, a separate stage writes checks from the request, the tool is
+# told their hooks, and staging runs them before it opens. Creation only, since only a new tool
+# gets checks. What the checks were, whether they were meaningful, and whether they failed a good
+# tool or passed a broken one is judged against the owner's verdicts, from the run's ledger,
+# screenshots and video.
+id: V9-acceptance-checks
+tier: intermediate
+language: en
+person: "Someone trying small everyday tools"
+goal: "Get four small tools, each checked against what was asked before it opens"
+clock: { start: "2026-11-09T18:00:00", zone: "Europe/Lisbon" }
+# Each request: intent, acceptance and create, and one repair in reserve.
+budget: { calls: 16 }
+profiles: []
+acceptanceChecks: true
+steps:
+  - say: "A unit converter from kilometres to miles and back."
+    expect: { created: true, workspace: new }
+  - say: "Now a word counter: I paste text and it tells me the number of words and characters."
+    expect: { created: true, workspace: new }
+  - say: "Now a dice roller for two six-sided dice that shows each die and the total."
+    expect: { created: true, workspace: new }
+  - say: "Now a tip calculator: the bill, the tip percent and the number of people, showing what each person pays."
+    expect: { created: true, workspace: new }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - controls-work
+  - messages
+  - code-red-flags

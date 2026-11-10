@@ -158,6 +158,7 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
       "T3-spending-chart",
       "T5-rsvp-form",
       "T6-tip-calculator",
+      "V9-acceptance-checks",
     ]);
     for (const id of ids) {
       const rehearsal = loadAnswers(path.join(scenarios, "rehearsals", `${id}.json`));

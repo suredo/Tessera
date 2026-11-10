@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/scenarios.test.ts]
 tags: [code, evals, scenarios]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T08:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T21:00:00Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01
 
 # Entry points
 
-- `evals/scenarios/*.yaml`: the M2 live set ([milestone sets](../../testing/milestone-sets.md)): `T1-shopping-list`, `T6-tip-calculator`, `T13-drawing-board` and `J6-limits`, each in its M2 form, without steps that drive a tool's own controls. Their budgets are the M2 roadmap's: 10, 7, 7 and 5 calls. `B2-reading-list`, `B4-habit-tracker` and `B10-study-planner` are big single requests from the catalogue (T2, T4, T10), for the [two-pass comparison](../../../evals/reports/2026-11-07-two-pass-plan.md) (`GEN-17`); each has a rehearsal for one pass and one for two (`<id>.two-pass.json`). The first of the M3 live set ([milestone sets](../../testing/milestone-sets.md)): `T2-reading-list` (in Portuguese, filtering), `T3-spending-chart` (chart) and `T5-rsvp-form` (form, without export), each using the tool's own controls with do steps; their budgets are 8, 10 and 8 calls; and `T10-study-planner` (scheduling, then cards in a second tool), whose rule changes in words, with a budget of 14. `T6-tip-calculator`, which no profile fits, is the set's unmatched tool.
+- `evals/scenarios/*.yaml`: the M2 live set ([milestone sets](../../testing/milestone-sets.md)): `T1-shopping-list`, `T6-tip-calculator`, `T13-drawing-board` and `J6-limits`, each in its M2 form, without steps that drive a tool's own controls. Their budgets are the M2 roadmap's: 10, 7, 7 and 5 calls. `B2-reading-list`, `B4-habit-tracker` and `B10-study-planner` are big single requests from the catalogue (T2, T4, T10), for the [two-pass comparison](../../../evals/reports/2026-11-07-two-pass-plan.md) (`GEN-17`); each has a rehearsal for one pass and one for two (`<id>.two-pass.json`). The first of the M3 live set ([milestone sets](../../testing/milestone-sets.md)): `T2-reading-list` (in Portuguese, filtering), `T3-spending-chart` (chart) and `T5-rsvp-form` (form, without export), each using the tool's own controls with do steps; their budgets are 8, 10 and 8 calls; and `T10-study-planner` (scheduling, then cards in a second tool), whose rule changes in words, with a budget of 14. `T6-tip-calculator`, which no profile fits, is the set's unmatched tool. `V9-acceptance-checks` is the acceptance-check experiment's set (`VER-09`): four new tools no profile fits, with the scenario's acceptance-check switch on.
 - `src/scenarios/scenario.ts`:
   - `scenarioSchema`, `stepSchema` and `expectationSchema`, the format's one definition (P3), and their types `Scenario`, `Step` and `Expectation`.
   - `loadScenario` reads and checks one file, whose name must be its ID, and `loadScenarios` every file in a folder; a file that isn't a scenario raises `ScenarioError` with each problem in plain words.
