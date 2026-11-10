@@ -27,7 +27,7 @@ const LAYOUT_SPECS = ["shell.spec.ts", "app.spec.ts", "a11y.spec.ts"];
 export default defineConfig({
   testDir: "packages/web/e2e",
   outputDir: runFolder,
-  globalSetup: ["./packages/web/e2e/prune-runs.ts"],
+  globalSetup: ["./packages/web/e2e/prune-runs.ts", "./packages/web/e2e/warm-chrome.ts"],
   reporter: [["list"]],
   use: {
     baseURL: "http://127.0.0.1:4173",
