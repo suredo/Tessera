@@ -537,8 +537,8 @@ export function fixedPart(part: PromptPart): { text: string; part: string } {
 
 /**
  * The review stage's budget (GEN-03): a run's steps and the final source of every version of its
- * tools, quoted whole, are most of it. T10's two tools, with their versions, measured about
- * 75,000 characters when set; the screenshots go as images, outside it.
+ * tools, quoted whole, are most of it. T10's rerun, two tools with their versions, measured about
+ * 26,500 characters in its rehearsal; the screenshots go as images, outside it.
  */
 export const REVIEW_PROMPT_BUDGET = 120_000;
 
