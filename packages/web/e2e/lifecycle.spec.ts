@@ -3,7 +3,7 @@ import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
 // One active runtime and its watchdog (RUN-02), and the tool's place across a reload (UX-07), in
-// Chrome and Edge (TEST-06), through the runtime's own createRuntime on the shared test page.
+// Chrome (TEST-06), through the runtime's own createRuntime on the shared test page.
 
 // Each says which run of its page it is, then ticks every 100 ms: its timer shows it still runs.
 const ticker = (name: string) => ({

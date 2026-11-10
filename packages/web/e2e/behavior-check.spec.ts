@@ -12,7 +12,7 @@ import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 // the smoke check, staging runs the item-list check. The first list adds an item without saving
 // it, so the check fails once the list is opened again; the repair is told that rule, what was
 // expected and what was observed (VER-07, GEN-09), and the repaired list opens. Nothing the check
-// typed reaches the person's data (BRG-06). In Chrome and Edge at 320 and 1280 px (TEST-06), on
+// typed reaches the person's data (BRG-06). In Chrome at 1280 px (TEST-06), on
 // a temporary data folder (ENG-19).
 
 const intent: Intent = {

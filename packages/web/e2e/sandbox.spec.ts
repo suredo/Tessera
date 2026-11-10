@@ -11,9 +11,9 @@ import { ready } from "./support/ready.ts";
 
 // The sandboxed runtime in a real browser (RUN-01, TEST-06): the local server with its guard, the
 // wrapper on the opposite loopback name and the tool in its sandboxed frame, through the shared
-// sandbox host and its probe server. Frame navigations to a blocked address still make Chrome and
-// Edge connect to it without sending a request (issue 72), so these checks count requests.
-// What a nested document tries (SBX-06): each attempt should fail, as it does in the tool itself.
+// sandbox host and its probe server. Frame navigations to a blocked address still make Chrome
+// connect to it without sending a request (issue 72), so these checks count requests. What a nested
+// document tries (SBX-06): each attempt should fail, as it does in the tool itself.
 const NESTED_CHECKS = `(async () => {
   const probe = PROBE;
   const result = { origin: self.origin, tessera: typeof tessera, violations: [] };

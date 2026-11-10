@@ -62,7 +62,7 @@ export type SandboxHost = {
   probeRequests: string[];
   /**
    * Connections the probe server accepted since the last reset, whether or not a request came on
-   * them: Chrome and Edge connect before a blocked frame navigation is refused (issue 72).
+   * them: Chrome connect before a blocked frame navigation is refused (issue 72).
    */
   probeConnections: () => number;
   /** Forgets what both servers received so far. */

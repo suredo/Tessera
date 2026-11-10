@@ -4,7 +4,7 @@ import type { DriveReport } from "../../runtime/src/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The chart helper (CAP-04, ADR 0014), in Chrome and Edge (TEST-06): a tool that declares chart
+// The chart helper (CAP-04, ADR 0014), in Chrome (TEST-06): a tool that declares chart
 // draws through tessera.chart, with the pinned Chart.js the host puts in its page and takes back
 // from it; the chart is styled by the tool's mode, has a table of its numbers for screen readers,
 // and is recorded, so a behavior check can read what was drawn. A tool that doesn't declare chart

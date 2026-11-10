@@ -12,7 +12,7 @@ import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 // request's words (ENG-11), and keeps every call it was asked to make. The person's language and
 // words reach the model as written (GEN-15); what a request says never switches a prompt part on
 // or off (GEN-02); every call is built from versioned parts, recorded in the data folder's
-// ledger and kept within its budget (GEN-03). In Chrome and Edge at 320 and 1280 px (TEST-06), on
+// ledger and kept within its budget (GEN-03). In Chrome at 1280 px (TEST-06), on
 // a temporary data folder (ENG-19). The tests run in order, each taking the next answers.
 
 const intent = (kind: Intent["kind"], language = "en"): Intent =>

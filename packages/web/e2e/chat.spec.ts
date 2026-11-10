@@ -20,7 +20,7 @@ import {
 // once; they are kept with the workspace the request made or acted on, so they are there after a
 // reload, and each workspace shows its own. A turn with no workspace to keep it, on the empty
 // screen, shows for as long as the page is open. Through the real pipeline with scripted answers
-// (TEST-03, ENG-11), in Chrome and Edge at 320 and 1280 px (TEST-06), on a temporary data folder
+// (TEST-03, ENG-11), in Chrome at 1280 px (TEST-06), on a temporary data folder
 // (ENG-19). The tests run in order, each taking the next answers from the script.
 
 const intent = (kind: Intent["kind"]): Intent =>

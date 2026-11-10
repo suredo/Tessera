@@ -66,6 +66,8 @@ if (mode === "live") {
     folder,
     ...(cap !== undefined ? { callCap: cap } : {}),
     ...(twoPass ? { twoPass: TWO_PASS_STARTING_POINT } : {}),
+    // An evaluation keeps its video, live or not (ENG-07).
+    recordVideo: true,
     onFinished: (finished) => {
       savedTools = listSavedTools(finished).map((t) => ({ id: t.id, name: t.name }));
     },
@@ -76,6 +78,7 @@ if (mode === "live") {
     file: file ?? path.join(scenarios, "rehearsals", `${id}${twoPass ? ".two-pass" : ""}.json`),
     folder,
     ...(twoPass ? { twoPass: TWO_PASS_STARTING_POINT } : {}),
+    recordVideo: true,
   });
 }
 fs.writeFileSync(path.join(folder, "report.md"), reportMarkdown(report));

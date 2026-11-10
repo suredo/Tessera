@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The cards profile's behavior check (VER-03), in Chrome and Edge (TEST-06): in staging, after the
+// The cards profile's behavior check (VER-03), in Chrome (TEST-06): in staging, after the
 // smoke check, it reads the cards, pastes notes of its own, one card a line, and expects exactly
 // the cards they give more, each front with its back, and the others as they were, then opens the
 // tool again, its saves going to a throwaway copy (BRG-06). A good tool passes; each deliberately

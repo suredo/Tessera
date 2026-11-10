@@ -1,6 +1,12 @@
 # Documentation log
 
+## 2026-11-10
+
+* **Fix**: L-91, found by #302's CI once videos were off: on a cold browser the staging panel's off-screen frame could still be 0 px wide when a check measured it, so a good tool failed the smoke check ("scrolls sideways by 185 px") or a behavior check ("Nothing shown"). The wrapper now lays its frames out while a check waits, and the checks measure only once the frame has its width ([runtime](code/runtime/package.md)); Chrome is warmed up before the browser tests ([web package](code/web/package.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T06:00:00Z.
+
 ## 2026-11-09
+
+* **Update**: A56, chosen by the owner: CI's browser tests run in Chrome only (Edge later), every test at 1280 px and only the layout specs (`shell`, `app`, `a11y`) at 320 px, in three Windows jobs at once under one summary check, `Windows (platform and Chrome)`, with no videos; a failed test keeps its trace. `TEST-06`, `RUN-06`, `ENG-14` and `ENG-02` say so, with the [workflow](code/ci/workflow.md), the [web package](code/web/package.md), the [runtime](code/runtime/package.md), the [threat model](spec/threat-model.md), the [testing practice](practices/testing.md) and `AGENTS.md`. Edge's warm-up before the tests (#208) is gone with it. The scenario runner, which opens its own browser context, records a video only when asked: always from the command line, for an evaluation's evidence, and in the browser specs only with `TESSERA_E2E_RECORD=1` ([runner](code/evals/runner.md)); `TEST-03` and `ENG-02` say so too. Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T23:30:00Z.
 
 * **Fix**: L-90, from T10's rerun in the [M3 live run](../evals/reports/2026-11-09-m3-live-run.md): the creation prompt and the `leftOut` field's description in the [contracts](code/contracts/package.md) now say the list is only for what no tool here can do, never a part another tool could do or one the person says comes later ([generation](code/server/generation.md), [lessons](lessons/tessera-issues.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-09T22:30:00Z.
 

@@ -5,7 +5,7 @@ import { startApp, TOOL_START, type AppHost } from "./support/app-host.ts";
 
 // The sample workspaces `pnpm seed` makes (ENG-19) work as the owner will try them: a tool that
 // saves its data, a history with a lossy restore to preview, a saved tool, the trash and a
-// workspace without a tool. In Chrome and Edge at 320 and 1280 px (TEST-06), seeded into a test
+// workspace without a tool. In Chrome at 1280 px (TEST-06), seeded into a test
 // Tessera's own temporary data folder, never the development or real one.
 
 let app: AppHost;

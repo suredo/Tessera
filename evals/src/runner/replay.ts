@@ -18,6 +18,7 @@ export async function replayScenario(
     webRoot?: string;
     launchBrowser?: () => Promise<Browser>;
     twoPass?: TwoPassOptions;
+    recordVideo?: boolean;
   },
 ): Promise<RunReport> {
   const loaded = loadAnswers(options.file);
@@ -40,5 +41,6 @@ export async function replayScenario(
     ...(options.webRoot ? { webRoot: options.webRoot } : {}),
     ...(options.launchBrowser ? { launchBrowser: options.launchBrowser } : {}),
     ...(options.twoPass ? { twoPass: options.twoPass } : {}),
+    ...(options.recordVideo ? { recordVideo: true } : {}),
   });
 }

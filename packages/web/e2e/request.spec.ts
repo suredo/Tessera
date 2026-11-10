@@ -8,9 +8,9 @@ import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 // A request through the real pipeline, end to end (TEST-03, GEN-01): the person types what they
 // need, the server runs the intent and create stages, the app stages the candidate behind the
 // smoke check and the server activates it, and the tool opens with the request's entries. The
-// model's answers come from a script chosen by test configuration (ENG-11). In Chrome and Edge at
-// 320 and 1280 px (TEST-06), on a temporary data folder (ENG-19). The tests run in order, each
-// taking the next answers from the script.
+// model's answers come from a script chosen by test configuration (ENG-11). In Chrome at 1280 px
+// (TEST-06), on a temporary data folder (ENG-19). The tests run in order, each taking the next
+// answers from the script.
 
 const intent = (kind: Intent["kind"]): Intent =>
   ({

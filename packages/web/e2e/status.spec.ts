@@ -17,9 +17,9 @@ import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-h
 // The setup check and the status screen (PLAT-03, APP-07, CLI-02): each state of Claude Code, found
 // by the real check against a faked CLI, is explained in plain words with its fix, on the first
 // screen, the main screen and the status screen; the probe is offered only once the check passes,
-// says it costs a call, and calls the fake claude program, never a model (ENG-11). In Chrome and
-// Edge at 320 and 1280 px (TEST-06), against a real Tessera of its own on a temporary data folder
-// (ENG-19). The tests run in order and change the faked state as they go.
+// says it costs a call, and calls the fake claude program, never a model (ENG-11). In Chrome at
+// 1280 px (TEST-06), against a real Tessera of its own on a temporary data folder (ENG-19). The
+// tests run in order and change the faked state as they go.
 
 const fake = path.join(
   path.dirname(fileURLToPath(import.meta.url)),

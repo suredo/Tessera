@@ -12,7 +12,7 @@ import { startApp, type AppHost } from "./support/app-host.ts";
 
 // The open workspace's history (APP-05): restoring a version, with its plan confirmed first
 // (DATA-10), undoing the last data change (DATA-04), and bringing back the copy kept before a
-// restore that lost data. In Chrome and Edge at 320 and 1280 px (TEST-06), against a real
+// restore that lost data. In Chrome at 1280 px (TEST-06), against a real
 // Tessera on a temporary data folder (ENG-19).
 
 let app: AppHost;

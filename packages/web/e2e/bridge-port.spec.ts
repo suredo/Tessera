@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The bridge's two ends of the port (CON-03, RUN-04, GEN-06), in Chrome and Edge (TEST-06): a
+// The bridge's two ends of the port (CON-03, RUN-04, GEN-06), in Chrome (TEST-06): a
 // tool's calls reach the host in their own envelope, each reply settles only the call it names, on
 // the page that made it, and the host hears the person's first real interaction, which the wrapper
 // sees and the tool's code can't fake. What the host answers is checked by whoever serves the

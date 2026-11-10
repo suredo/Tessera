@@ -4,7 +4,7 @@ import type { DriveReport, DriveStep } from "../../runtime/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// Driving a candidate for a behavior check (VER-03), in Chrome and Edge (TEST-06): in the hidden
+// Driving a candidate for a behavior check (VER-03), in Chrome (TEST-06): in the hidden
 // staging panel, a check fills in, clicks and reads the elements a tool marks with hooks in its
 // `data-hook` attribute, each step once the tool has settled, and hears what was missing when a
 // step can't be done.

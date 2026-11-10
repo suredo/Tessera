@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The scheduling profile's behavior check (VER-03), in Chrome and Edge (TEST-06): in staging,
+// The scheduling profile's behavior check (VER-03), in Chrome (TEST-06): in staging,
 // after the smoke check, it adds a task, then a rule against the weekday of one of its sessions,
 // opens the tool again, removes the rule and opens it again, its saves going to a throwaway copy
 // (BRG-06). It reads each session's date from a time element, and today from the host's clock

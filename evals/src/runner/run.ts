@@ -153,6 +153,11 @@ export async function runScenario(
     launchBrowser?: () => Promise<Browser>;
     /** Makes big tools in two passes (GEN-17), for comparing them with one pass. */
     twoPass?: TwoPassOptions;
+    /**
+     * Records the run's video into its folder. The command line always does, as an evaluation's
+     * evidence (ENG-07); a browser test only when asked with TESSERA_E2E_RECORD=1 (A56).
+     */
+    recordVideo?: boolean;
   },
 ): Promise<RunReport> {
   // The cap first: it is what the owner approved, so it is checked before anything else.
@@ -228,7 +233,7 @@ export async function runScenario(
       viewport: { width: 1280, height: 800 },
       timezoneId: scenario.clock.zone,
       locale: scenario.language,
-      recordVideo: { dir: folder },
+      ...(options.recordVideo ? { recordVideo: { dir: folder } } : {}),
     });
     await context.clock.install({ time: start });
     const page = await context.newPage();

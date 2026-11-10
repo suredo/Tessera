@@ -9,7 +9,7 @@ import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 // provider (ENG-11) whose first tool is named in Tessera's own words, as the POC's "Capability
 // declaration fix" was (L-36). The host refuses that name, the repair names it in plain words, and
 // nothing the person reads along the way, progress included, uses a word for Tessera's own
-// parts. In Chrome and Edge at 320 and 1280 px (TEST-06), on a temporary data folder (ENG-19).
+// parts. In Chrome at 1280 px (TEST-06), on a temporary data folder (ENG-19).
 
 const intent = {
   kind: "create",

@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T21:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T01:30:00Z }
 ---
 
 # Purpose
@@ -16,7 +16,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 
 # Entry points
 
-- `src/runner/cli.ts`: `node evals/src/runner/cli.ts <scenario-id> [--replay <answers file> | --live --cap <n>] [--two-pass]`, after `pnpm build`. Without a flag it plays the scenario's rehearsal, `evals/scenarios/rehearsals/<id>.json`. `--two-pass` starts Tessera with big tools made in two passes at their starting point (`GEN-17`), plays `<id>.two-pass.json` as the rehearsal, names the run's folder and report so, and records it in the report. `--live` is LIVE: it needs the owner's approved cap (`ENG-07`), runs Claude Code's free checks first (found, recent enough, signed in) and writes the run's answers as `answers.json`. The evidence (report, screenshots, video, ledger, answers) goes to `test-output/evals/scenarios/`.
+- `src/runner/cli.ts`: `node evals/src/runner/cli.ts <scenario-id> [--replay <answers file> | --live --cap <n>] [--two-pass]`, after `pnpm build`. Without a flag it plays the scenario's rehearsal, `evals/scenarios/rehearsals/<id>.json`. `--two-pass` starts Tessera with big tools made in two passes at their starting point (`GEN-17`), plays `<id>.two-pass.json` as the rehearsal, names the run's folder and report so, and records it in the report. `--live` is LIVE: it needs the owner's approved cap (`ENG-07`), runs Claude Code's free checks first (found, recent enough, signed in) and writes the run's answers as `answers.json`. The evidence (report, screenshots, video, ledger, answers) goes to `test-output/evals/scenarios/`: the command always records the run's video, as an evaluation's evidence. The browser specs that play scenarios record one only with `TESSERA_E2E_RECORD=1`, like every browser test (A56).
 - `src/runner/run.ts`: `runScenario` plays one scenario (`RunReport`, `StepResult`, `RunMode`); `zonedInstant` is a wall time's instant in a zone. `STEP_LIMIT_MS` is how long a request may take; `NEW_WORKSPACE` is the title of the empty workspace a `switch: new` step opens.
 - `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit and each stale one (`AnswersProvider`). `mapStrings` changes an answer's strings, never its JSON text, so a saved tool's name with quotes or backslashes stays whole.
 - `src/runner/speed.ts`: how fast a run was against the speed targets (`OBS-04`). `speedOf` takes runs as `readRun` reads them from a run folder (its report and harness ledger) and gives `Speed`: each stage's model time and each kind of request's time as the person waited (`RequestKind`), as `figures` (count, p50, p95 and slowest, by nearest rank), and each of `SPEED_TARGETS` met, missed or not measured. `speedMarkdown` writes them as tables. `node evals/src/runner/speed.ts <run folder>...` prints them; the [M2 speed report](../../../evals/reports/2026-11-07-m2-speed.md) is its first use.

@@ -111,9 +111,18 @@ import type { BridgeMethodName } from "@tessera/contracts";
   const settled = async () => {
     for (let waited = 0; pending.size > 0 && waited < 3000; waited += 50) await wait(50);
   };
+  // Until this frame has its width, or 5 seconds have passed. The staging panel lies off-screen,
+  // and on a cold browser Chrome can leave a nested frame there without its size for seconds; a
+  // check that measured it then saw a page as wide as its widest control and no element shown
+  // (#302). The wrapper lays the frames out while a check waits (wrapper.ts); the checks measure
+  // the tool only once its frame has its width.
+  const sized = async () => {
+    for (let waited = 0; window.innerWidth === 0 && waited < 5000; waited += 50) await wait(50);
+  };
   // Settled, then 50 quiet ms to show the result: a call made or settled in that time starts the
   // wait again, a bounded number of times.
   const shown = async () => {
+    await sized();
     for (let rounds = 0; rounds < 20; rounds += 1) {
       await settled();
       const seen = activity;
@@ -335,6 +344,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
     // moment after starting is seen too, however long the page took to load (#214).
     const ran = await codeRan;
     await wait(Math.max(100, ran + 2000 - performance.now()));
+    await sized();
     const body = document.body;
     const all = (selector: string) => (body ? [...body.querySelectorAll(selector)] : []);
     // Visible: rendered, not hidden by CSS visibility, and not fully transparent.

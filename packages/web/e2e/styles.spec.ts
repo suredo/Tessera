@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The host stylesheets in the sandbox (RUN-05, VER-06), in Chrome and Edge (TEST-06): the
+// The host stylesheets in the sandbox (RUN-05, VER-06), in Chrome (TEST-06): the
 // accessibility floor holds against a tool's own styles in every mode, and the UI standard's look
 // loads in standard mode only. They arrive inline under the tool's strict CSP (RUN-01).
 
