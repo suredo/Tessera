@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
-import { PROFILES, profileIdSchema } from "@tessera/contracts";
+import { PROFILES, profileIdSchema, reviewItemSchema } from "@tessera/contracts";
 
 // Scenario files (EVAL-01): one person, one goal, a language, a budget and steps, each with the
 // host facts it expects (EVAL-02). Every scenario starts from an empty Tessera. The format is in
@@ -160,7 +160,10 @@ export const scenarioSchema = z
         "The verification profiles the person's tools should match; a do step uses their hooks.",
       ),
     steps: z.array(stepSchema).min(1),
-    review: z.array(z.string().min(1)).default([]),
+    review: z
+      .array(reviewItemSchema)
+      .default([])
+      .describe("The AI review's items for this scenario (EVAL-03), from the one rubric."),
   })
   .superRefine((scenario, context) => {
     // A cancel stops the request the step before started, so that step is a request whose own

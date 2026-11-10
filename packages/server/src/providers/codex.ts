@@ -13,7 +13,13 @@ import {
   wrapSchema,
   type ClaudeStatus,
 } from "./claude.ts";
-import { ProviderError, type Provider, type StageResult, type StageSpec } from "./provider.ts";
+import {
+  checkImages,
+  ProviderError,
+  type Provider,
+  type StageResult,
+  type StageSpec,
+} from "./provider.ts";
 import { restoreAnswer, toStrictSchema } from "./strict-schema.ts";
 
 // The Codex CLI adapter (CLI-01): the second implementation of the provider interface, mirroring
@@ -334,6 +340,7 @@ const codexEnvironment = (env: NodeJS.ProcessEnv, home: string): NodeJS.ProcessE
 /** The Codex adapter for the program given; see `findCodex` for the real one. */
 export function createCodexProvider(options: CodexOptions): Provider {
   const run = async <T>(spec: StageSpec<T>): Promise<StageResult<T>> => {
+    checkImages(spec, false);
     if (spec.signal?.aborted) {
       throw new ProviderError("cancelled", CODEX_FAILURE_MESSAGES.cancelled);
     }
@@ -427,7 +434,14 @@ export function createCodexProvider(options: CodexOptions): Provider {
       removeFolder(cwd);
     }
   };
-  return { name: options.live ? "codex" : "codex-fake", live: options.live, run };
+  // Codex's image flag takes files, and no stage gets file access (CLI-08), so a review through
+  // Codex goes without screenshots, and its report says so (A27).
+  return {
+    name: options.live ? "codex" : "codex-fake",
+    live: options.live,
+    acceptsImages: false,
+    run,
+  };
 }
 
 /** The script npm's codex.cmd runs, beside it, if it is there. */

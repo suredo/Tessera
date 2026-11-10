@@ -73,7 +73,14 @@ if (reply === undefined) {
   process.exit(1);
 }
 const { _delayMs = 0, _stdout, _exitCode = 0, ...envelope } = reply;
+// With stream-json output, like the real one: one event a line, an init event first and the
+// result last.
+const formatAt = args.indexOf("--output-format") + 1;
+const stream = args[formatAt] === "stream-json";
+const output = stream
+  ? [{ type: "system", subtype: "init" }, envelope].map((e) => `${JSON.stringify(e)}\n`).join("")
+  : JSON.stringify(envelope);
 setTimeout(() => {
-  process.stdout.write(_stdout ?? JSON.stringify(envelope));
+  process.stdout.write(_stdout ?? output);
   process.exitCode = _exitCode;
 }, _delayMs);

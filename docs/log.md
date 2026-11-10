@@ -2,6 +2,8 @@
 
 ## 2026-11-10
 
+* **New**: The AI technical review's first part (`EVAL-03`, A27): its one rubric, marks, verdicts and answer in the [contracts](code/contracts/package.md), which the scenarios' `review` items now come from ([scenarios](code/evals/scenarios.md), [judging](testing/judging.md)); its prompt parts, `review` and `review-run`, with the run quoted as data ([prompts](code/server/prompts.md)); and screenshots as image inputs in the [Claude Code adapter](code/server/providers.md), sent in one stream-json message, never as files, while Codex reviews without them. The answer must mark each item asked exactly once, in order, and an image's bytes must be valid base64 of the PNG or JPEG it is named. No model was called; whether Claude Code takes the images is checked in the review's live plan. Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T08:00:00Z.
+
 * **Fix**: L-91, found by #302's CI once videos were off: on a cold browser the staging panel's off-screen frame could still be 0 px wide when a check measured it, so a good tool failed the smoke check ("scrolls sideways by 185 px") or a behavior check ("Nothing shown"). The wrapper now lays its frames out while a check waits, and the checks measure only once the frame has its width ([runtime](code/runtime/package.md)); Chrome is warmed up before the browser tests ([web package](code/web/package.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T06:00:00Z.
 
 ## 2026-11-09

@@ -1,0 +1,83 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "items": {
+      "minItems": 1,
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item": {
+            "type": "string",
+            "enum": [
+              "fulfilment",
+              "useful-at-first-sight",
+              "standard-style",
+              "controls-work",
+              "accessibility",
+              "messages",
+              "code-red-flags",
+              "coherence"
+            ]
+          },
+          "mark": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "partly",
+              "fail",
+              "unverified",
+              "not-applicable"
+            ]
+          },
+          "evidence": {
+            "minItems": 1,
+            "maxItems": 6,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 400
+            },
+            "description": "What shows the mark: a step, a screenshot, a host fact, a message or a line of source, each named as the run names it."
+          }
+        },
+        "required": [
+          "item",
+          "mark",
+          "evidence"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Each item asked for, once, in the order asked."
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "accept",
+        "accept-with-notes",
+        "reject"
+      ],
+      "description": "The verdict the reviewer would advise. The owner decides (EVAL-04)."
+    },
+    "notes": {
+      "maxItems": 8,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 400
+      },
+      "description": "What the owner should look at, most important first; empty when nothing stands out."
+    }
+  },
+  "required": [
+    "items",
+    "verdict",
+    "notes"
+  ],
+  "additionalProperties": false,
+  "description": "The AI technical review of one scenario's live run (EVAL-03)."
+}

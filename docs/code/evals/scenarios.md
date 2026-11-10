@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/scenarios.test.ts]
 tags: [code, evals, scenarios]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T12:52:09Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T08:00:00Z }
 ---
 
 # Purpose
@@ -45,7 +45,7 @@ Depends on `yaml` (2.9.1, already in the lockfile through other packages) to rea
 # Pitfalls
 
 - **Played by the [runner](runner.md),** in rehearsal and replay so far; the live mode comes with the M2 live evaluation.
-- **Expectations are host facts, not quality.** Whether a tool does what was asked is the AI review's (`EVAL-03`), from the scenario's `review` items.
+- **Expectations are host facts, not quality.** Whether a tool does what was asked is the AI review's (`EVAL-03`), from the scenario's `review` items, which must be items of the contracts' one rubric (`REVIEW_ITEMS`).
 
 # Symbols (generated)
 

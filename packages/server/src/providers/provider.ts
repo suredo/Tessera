@@ -1,4 +1,12 @@
-import type { Effort, ProviderErrorKind, Stage, Usage } from "@tessera/contracts";
+import {
+  REVIEW_IMAGE_LIMITS,
+  reviewImageSchema,
+  type Effort,
+  type ProviderErrorKind,
+  type ReviewImage,
+  type Stage,
+  type Usage,
+} from "@tessera/contracts";
 import type { z } from "zod";
 
 // The one interface every model connection implements (CLI-01): the scripted provider now, the
@@ -26,6 +34,11 @@ export type StageSpec<T> = {
    * repair that succeeds. The prompt already quotes them; a provider doesn't use this.
    */
   diagnostics?: readonly string[];
+  /**
+   * Screenshots for the review stage alone, as image inputs, never as files the model can open
+   * (A27, CLI-08). A provider that can't pass images (`acceptsImages`) is never sent any.
+   */
+  images?: readonly ReviewImage[];
 };
 
 export type StageResult<T> = { value: T; usage: Usage; raw: string };
@@ -34,7 +47,26 @@ export interface Provider {
   readonly name: string;
   /** True when a call can reach a real model and cost something. */
   readonly live: boolean;
+  /** True when it can pass a review's screenshots to the model as image inputs (A27). */
+  readonly acceptsImages?: boolean;
   run<T>(spec: StageSpec<T>): Promise<StageResult<T>>;
+}
+
+/**
+ * The images a call may carry (A27): only the review stage's, only to a provider that accepts
+ * them, at most the contract's count, each a PNG or JPEG within its size. Anything else is a
+ * mistake in the caller, refused before a call is made.
+ */
+export function checkImages(spec: StageSpec<unknown>, accepts: boolean): readonly ReviewImage[] {
+  const images = spec.images ?? [];
+  if (images.length === 0) return images;
+  if (spec.stage !== "review") throw new Error(`The ${spec.stage} stage takes no images.`);
+  if (!accepts) throw new Error("This provider can't pass images; review without them.");
+  if (images.length > REVIEW_IMAGE_LIMITS.count) {
+    throw new Error(`A review takes at most ${REVIEW_IMAGE_LIMITS.count} images.`);
+  }
+  for (const image of images) reviewImageSchema.parse(image);
+  return images;
 }
 
 export const UNKNOWN_USAGE: Usage = {

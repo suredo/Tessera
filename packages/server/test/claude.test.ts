@@ -488,3 +488,75 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
     }
   });
 });
+
+describe("a review's screenshots as image inputs (EVAL-03, A27, CLI-08)", () => {
+  // A 1×1 PNG: the smallest real image, as base64.
+  const PNG =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const image = (name: string) => ({ name, mediaType: "image/png" as const, base64: PNG });
+  const review = (images = [image("step-1.png"), image("step-2.png")]) =>
+    spec({ stage: "review", images });
+
+  it("EVAL-03, A27: sends the request and each screenshot in one stream-json message on standard input, and reads the last result", async () => {
+    const { provider, made } = withReplies([success({ answer: { title: "Reviewed" } })]);
+    expect(provider.acceptsImages).toBe(true);
+    const result = await provider.run(review());
+    expect(result.value).toEqual({ title: "Reviewed" });
+    const [call] = made();
+    // The same locked flags, with stream-json in and out; still no tools (CLI-03).
+    expect(call!.args.slice(0, 6)).toEqual([
+      "--print",
+      "--input-format",
+      "stream-json",
+      "--verbose",
+      "--output-format",
+      "stream-json",
+    ]);
+    expect(call!.args[call!.args.indexOf("--tools") + 1]).toBe("");
+    const message = JSON.parse(call!.stdin) as {
+      type: string;
+      message: { role: string; content: { type: string; text?: string; source?: unknown }[] };
+    };
+    expect(message.type).toBe("user");
+    expect(message.message.content).toEqual([
+      { type: "text", text: "I need a shopping list" },
+      { type: "image", source: { type: "base64", media_type: "image/png", data: PNG } },
+      { type: "image", source: { type: "base64", media_type: "image/png", data: PNG } },
+    ]);
+    // Nothing is written to the working folder but the system prompt: no image as a file.
+    expect(fs.existsSync(call!.cwd)).toBe(false);
+  });
+
+  it("CLI-03: a call without images keeps the plain text request and the json result", async () => {
+    const { provider, made } = withReplies([success({ answer: { title: "Made" } })]);
+    await provider.run(spec());
+    const [call] = made();
+    expect(call!.args).not.toContain("stream-json");
+    expect(call!.stdin).toBe("I need a shopping list");
+  });
+
+  it("A27: refuses images on any stage but the review, past the count, or not a PNG or JPEG, before any call", async () => {
+    const { provider, made } = withReplies([]);
+    await expect(provider.run(spec({ images: [image("a.png")] }))).rejects.toThrow(
+      "The create stage takes no images.",
+    );
+    const many = Array.from({ length: 13 }, (_, i) => image(`step-${i}.png`));
+    await expect(provider.run(review(many))).rejects.toThrow("at most 12 images");
+    await expect(
+      provider.run(review([{ name: "x.gif", mediaType: "image/gif" as never, base64: PNG }])),
+    ).rejects.toThrow();
+    // Bytes that aren't base64, or aren't the image their type names, never reach the CLI.
+    await expect(
+      provider.run(review([{ ...image("a.png"), base64: btoa("this is not a PNG") }])),
+    ).rejects.toThrow("not a image/png image");
+    await expect(provider.run(review([{ ...image("a.png"), base64: "!!!!" }]))).rejects.toThrow(
+      "not base64",
+    );
+    expect(made()).toEqual([]);
+  });
+
+  it("CLI-05: a stream with no result event is an error, not a guess", async () => {
+    const { provider } = withReplies([{ _stdout: '{"type":"system","subtype":"init"}\n' }]);
+    await expect(provider.run(review())).rejects.toThrow("The CLI gave no JSON result");
+  });
+});

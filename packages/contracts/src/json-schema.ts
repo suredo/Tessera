@@ -19,6 +19,7 @@ import { creationSchema, editSchema, dataPlanSchema } from "./generation.ts";
 import { intentSchema } from "./intent.ts";
 import { ledgerEntrySchema, requestLogEntrySchema } from "./ledger.ts";
 import { patchBatchSchema } from "./patch.ts";
+import { reviewSchema } from "./review.ts";
 import { trashEntrySchema, trashSchema } from "./trash.ts";
 import { savedToolSchema, workspaceSchema, workspaceVersionSchema } from "./workspace.ts";
 
@@ -44,6 +45,7 @@ export const contracts = {
   ledgerEntry: ledgerEntrySchema,
   patchBatch: patchBatchSchema,
   requestLogEntry: requestLogEntrySchema,
+  review: reviewSchema,
   savedTool: savedToolSchema,
   trash: trashSchema,
   trashEntry: trashEntrySchema,

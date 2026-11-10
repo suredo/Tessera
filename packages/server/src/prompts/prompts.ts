@@ -7,11 +7,13 @@ import {
   CHART_TYPES,
   PROFILE_IDS,
   PROFILES,
+  REVIEW_RUBRIC,
   type Artifact,
   type Creation,
   type Edit,
   type FailureClass,
   type Intent,
+  type ReviewItem,
   type Stage,
 } from "@tessera/contracts";
 import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
@@ -66,6 +68,8 @@ export const PROMPT_PARTS = [
   "data-context",
   "repair-data-plan",
   "data-attempt",
+  "review",
+  "review-run",
 ] as const;
 export type PromptPart = (typeof PROMPT_PARTS)[number];
 
@@ -529,4 +533,70 @@ export function assembleIntentPrompt(input: {
 export function fixedPart(part: PromptPart): { text: string; part: string } {
   const text = fillPart(part);
   return { text, part: `${part}@${partVersion(text)}` };
+}
+
+/**
+ * The review stage's budget (GEN-03): a run's steps and the final source of every version of its
+ * tools, quoted whole, are most of it. T10's two tools, with their versions, measured about
+ * 75,000 characters when set; the screenshots go as images, outside it.
+ */
+export const REVIEW_PROMPT_BUDGET = 120_000;
+
+/** One step of a run, as the reviewer reads it: what was done, what the host said and found. */
+export type ReviewStep = {
+  step: number;
+  action: string;
+  outcome: string;
+  message: string;
+  problems: readonly string[];
+  /** The step's screenshot, by the name it has among the images, when one is attached. */
+  screenshot?: string;
+};
+
+/** One version of one tool, as the reviewer reads it: what it was made for, its checks, its code. */
+export type ReviewVersion = {
+  tool: string;
+  version: number;
+  summary: string;
+  checks: readonly string[];
+  profile: string | null;
+  html: string;
+  css: string;
+  js: string;
+};
+
+/**
+ * Builds the review stage's prompt (EVAL-03): the rubric as its one definition words it, then the
+ * run's steps and the source of each version, quoted as data, and the names of the screenshots
+ * attached as images, or why none are (A27).
+ */
+export function assembleReviewPrompt(input: {
+  scenario: string;
+  items: readonly ReviewItem[];
+  steps: readonly ReviewStep[];
+  versions: readonly ReviewVersion[];
+  images: readonly string[];
+  /** Why no screenshot is attached, when none is: the adapter can't pass images, or none were kept. */
+  noImages?: string;
+}): AssembledPrompt {
+  const parts: string[] = [];
+  const use = (part: PromptPart, values?: Record<string, string>) => {
+    const filled = fillPart(part, values);
+    parts.push(`${part}@${partVersion(partText(part))}`);
+    return filled;
+  };
+  const rubric = input.items.map((item) => `- ${item}: ${REVIEW_RUBRIC[item]}`).join("\n");
+  const system = use("review", { rubric });
+  const run = JSON.stringify({ steps: input.steps, versions: input.versions }, null, 1);
+  const images = input.images.length
+    ? `The screenshots are attached as images, in this order: ${input.images.join(", ")}.`
+    : `No screenshots are attached: ${input.noImages ?? "none were kept"}. Judge from the rest, and mark what only a screenshot could show as unverified.`;
+  const prompt = use("review-run", {
+    scenario: input.scenario,
+    items: input.items.join(", "),
+    run,
+    tag: quoteTag([run]),
+    images,
+  });
+  return { system, prompt, parts, size: system.length + prompt.length };
 }
