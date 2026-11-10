@@ -13,6 +13,9 @@ import {
   type Edit,
   type FailureClass,
   type Intent,
+  type AcceptanceChecks,
+  type AcceptanceExpect,
+  type AcceptanceStep,
   type ReviewItem,
   type Stage,
 } from "@tessera/contracts";
@@ -70,6 +73,8 @@ export const PROMPT_PARTS = [
   "data-attempt",
   "review",
   "review-run",
+  "acceptance",
+  "acceptance-checks",
 ] as const;
 export type PromptPart = (typeof PROMPT_PARTS)[number];
 
@@ -237,6 +242,11 @@ export type PromptInput = {
   failure?: RepairClass;
   /** What the checks found, in plain words: repair fixes it (GEN-09). */
   diagnostics?: readonly string[];
+  /**
+   * The checks written from the request (VER-09, an M3 experiment), for a new tool that fits no
+   * profile: their hooks and what each checks are stated as requirements, as a profile's are.
+   */
+  acceptance?: AcceptanceChecks;
 };
 
 export type AssembledPrompt = {
@@ -256,6 +266,34 @@ function profileValues(id: keyof typeof PROFILES): Record<string, string> {
   return {
     hooks: profile.hooks.map((hook) => `- data-hook="${hook.name}": ${hook.says}.`).join("\n"),
     rules: profile.rules.map((rule) => `- ${rule}`).join("\n"),
+  };
+}
+
+/** One step of a check from the request, as the generation prompt states it. */
+const stepWords = (step: AcceptanceStep) =>
+  step.do === "fill" ? `type "${step.value}" into ${step.hook}` : `press ${step.hook}`;
+
+/** What a check from the request expects to see, as the generation prompt states it. */
+function expectWords(expect: AcceptanceExpect): string {
+  if (expect.see === "shows") return `an element marked ${expect.hook} shows "${expect.text}"`;
+  if (expect.see === "hides") return `no element marked ${expect.hook} shows "${expect.text}"`;
+  const count = Math.abs(expect.changeCount);
+  const more = expect.changeCount >= 0 ? "more" : "fewer";
+  return count === 1
+    ? `there is one ${more === "more" ? "more element" : "element fewer"} marked ${expect.hook} than before`
+    : `there are ${count} ${more} elements marked ${expect.hook} than before`;
+}
+
+/** The acceptance-checks part's values: each hook with what it marks, and each check (VER-09). */
+function acceptanceValues(acceptance: AcceptanceChecks): Record<string, string> {
+  return {
+    hooks: acceptance.hooks.map((hook) => `- data-hook="${hook.name}": ${hook.says}.`).join("\n"),
+    checks: acceptance.checks
+      .map(
+        (check) =>
+          `- ${check.says}: ${check.steps.map(stepWords).join(", then ")}; then ${expectWords(check.expect)}.`,
+      )
+      .join("\n"),
   };
 }
 
@@ -324,6 +362,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
   // every rule its check enforces is stated here (VER-03, VER-04).
   if (input.intent?.profile) addSystem("profile", profileValues(input.intent.profile));
+  // The checks written from the request, for a tool that fits no profile (VER-09): every hook
+  // they use, and every check, so nothing the checks enforce is hidden from the generator.
+  if (input.acceptance && !input.intent?.profile) {
+    addSystem("acceptance-checks", acceptanceValues(input.acceptance));
+  }
   // What creation answers, with the data schema keywords the host accepts (DATA-03, GEN-05).
   if (creating) {
     addSystem("create", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
@@ -619,5 +662,30 @@ export function assembleReviewPrompt(input: {
     tag: quoteTag([run]),
     images,
   });
+  return { system, prompt, parts, size: system.length + prompt.length };
+}
+
+/** The acceptance stage's budget (GEN-03): its instructions and the request, measured about 2,300. */
+export const ACCEPTANCE_PROMPT_BUDGET = 4_000;
+
+/**
+ * Builds the acceptance stage's prompt (VER-09): its instructions, then the person's request and
+ * language. It sees nothing of the tool; another stage writes that.
+ */
+export function assembleAcceptancePrompt(input: {
+  request: string;
+  language: string;
+}): AssembledPrompt {
+  const parts: string[] = [];
+  const use = (part: PromptPart, values?: Record<string, string>) => {
+    const filled = fillPart(part, values);
+    parts.push(`${part}@${partVersion(partText(part))}`);
+    return filled;
+  };
+  const system = use("acceptance");
+  const prompt = [
+    use("request", { request: input.request }),
+    use("language", { language: input.language }),
+  ].join("\n\n");
   return { system, prompt, parts, size: system.length + prompt.length };
 }

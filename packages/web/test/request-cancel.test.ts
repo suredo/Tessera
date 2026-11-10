@@ -15,6 +15,7 @@ const candidate: Extract<GenerateReply, { kind: "candidate" }> = {
   capabilities: [],
   syntheticData: {},
   profile: null,
+  acceptance: null,
   expectedDataRevision: 0,
   activation: { token, expiresAt: Date.now() + 420_000 },
   name: "List",

@@ -1,4 +1,4 @@
-import type { GenerateRequest } from "@tessera/contracts";
+import type { AcceptanceChecks, GenerateRequest } from "@tessera/contracts";
 import type { GenerationResult } from "./result.ts";
 import { candidateMount } from "../host/index.ts";
 import { decideIntent, recordLists } from "../intent/index.ts";
@@ -15,6 +15,7 @@ import {
   type Store,
 } from "../workspaces/index.ts";
 import { createTool } from "./create.ts";
+import { writeAcceptance } from "./acceptance.ts";
 import { generateEdit } from "./edit-pipeline.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
 import { changeData, type OfferData } from "./data-action.ts";
@@ -49,6 +50,8 @@ export async function generate(
   offerData?: OfferData,
   twoPass?: TwoPassOptions,
   limits: StageTimeLimits = DEFAULT_STAGE_TIME_LIMITS,
+  /** The acceptance-check experiment (VER-09, A49): off unless the server is told. */
+  acceptanceChecks = false,
 ): Promise<GenerationResult> {
   const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
@@ -149,12 +152,31 @@ export async function generate(
   const repairUsage: Partial<Record<RepairClass, number>> = {};
   // A big new tool is made in two passes when the server is told to: its core first (GEN-17).
   const plan = twoPassPlan(decision.intent, twoPass);
+  // In the experiment, a new tool that fits no profile, made in one pass, gets checks written from
+  // the request by a separate stage before it is made (VER-09). The stage never blocks the tool:
+  // with none, or an answer it can't use, the tool is made as it would be without them.
+  let acceptance: AcceptanceChecks | undefined;
+  if (acceptanceChecks && !decision.intent.profile && !plan) {
+    try {
+      const written = await writeAcceptance(provider, routes, {
+        request: decision.interfacePart,
+        language: decision.intent.language,
+        timeLimitMs: limits.intent,
+        ...(signal ? { signal } : {}),
+      });
+      if (written.kind === "checks") acceptance = written.acceptance;
+    } catch (error) {
+      if (!(error instanceof ProviderError)) throw error;
+      return { kind: "failed", failure: "provider", message: error.message, findings: [] };
+    }
+  }
   const created = await createTool(provider, routes, {
     request: decision.interfacePart,
     intent: decision.intent,
     signal,
     repairUsage,
     ...(plan ? { core: plan } : {}),
+    ...(acceptance ? { acceptance } : {}),
     timeLimits: limits,
   });
   if (created.kind === "cannot")
@@ -198,6 +220,7 @@ export async function generate(
     capabilities: created.artifact.capabilities,
     syntheticData: created.artifact.data.defaults,
     profile: decision.intent.profile ?? null,
+    acceptance: acceptance ?? null,
     expectedDataRevision: workspace.dataRevision,
     name: created.name,
     summary: created.summary,

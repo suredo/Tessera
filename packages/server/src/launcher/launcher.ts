@@ -52,6 +52,8 @@ export type LaunchOptions = {
   provider?: Provider;
   /** Makes a big new tool in two passes (GEN-17); off unless given, until it is measured. */
   twoPass?: TwoPassOptions;
+  /** Turns on the acceptance-check experiment (VER-09, A49); off when left out. */
+  acceptanceChecks?: boolean;
   /** Each generation stage's own time limit; the defaults for any left out (GEN-11). */
   stageTimeLimitsMs?: Partial<StageTimeLimits>;
 };
@@ -184,6 +186,7 @@ export async function launch(options: LaunchOptions): Promise<Launched> {
           // The chosen program's routes (CLI-09).
           routes: () => loadProviderRoutes(options.dataDir, readProviderChoice(options.dataDir)),
           ...(options.twoPass ? { twoPass: options.twoPass } : {}),
+          ...(options.acceptanceChecks ? { acceptanceChecks: true } : {}),
           ...(options.stageTimeLimitsMs ? { stageTimeLimitsMs: options.stageTimeLimitsMs } : {}),
         }),
         ...runtimeRoutes(workspaceTools(dataFolder)),

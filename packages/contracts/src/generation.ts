@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { acceptanceChecksSchema } from "./acceptance.ts";
 import { STAGES } from "./provider.ts";
 import { UI_MODES } from "./artifact.ts";
 import { BRIDGE_CAPABILITIES } from "./bridge.ts";
@@ -296,6 +297,12 @@ export const generateReplySchema = z
         .default(null)
         .describe(
           "The verification profile whose behavior check staging runs after the smoke check, from the server's intent (VER-03).",
+        ),
+      acceptance: acceptanceChecksSchema
+        .nullable()
+        .default(null)
+        .describe(
+          "The checks written from the request that staging runs after the smoke check, for a new tool that fits no profile, when the experiment is on (VER-09).",
         ),
       expectedDataRevision: z.int().nonnegative(),
       activation: z.strictObject({ token: z.uuid(), expiresAt: z.int().nonnegative() }),

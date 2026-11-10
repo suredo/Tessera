@@ -1,4 +1,4 @@
-import type { Acceptance, AcceptanceCheck } from "@tessera/contracts";
+import type { AcceptanceCheck, AcceptanceChecks } from "@tessera/contracts";
 import {
   driveTool,
   type CheckContext,
@@ -14,9 +14,6 @@ import type { DriveResult, DriveStep } from "./protocol.ts";
 // only what it states. A failure says what was expected, what was observed, and that the rule is
 // the request's (VER-07). A tool that passes is "checked against your request", which is weaker
 // than a profile's behavior check.
-
-/** The checks of one acceptance answer: the ones a request's stage wrote. */
-export type AcceptanceChecks = Extract<Acceptance, { outcome: "checks" }>;
 
 const quoted = (texts: readonly string[]) =>
   texts.length === 0

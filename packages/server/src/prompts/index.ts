@@ -2,6 +2,8 @@
 // Prompts built from versioned parts, chosen by stage and structured intent (GEN-03, ENG-16, GEN-02).
 export {
   assembleIntentPrompt,
+  assembleAcceptancePrompt,
+  ACCEPTANCE_PROMPT_BUDGET,
   assembleDataPrompt,
   assembleReviewPrompt,
   REVIEW_PROMPT_BUDGET,
