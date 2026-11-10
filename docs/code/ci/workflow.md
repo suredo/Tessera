@@ -1,13 +1,13 @@
 ---
 type: Code Module
 title: "CI workflow"
-description: "GitHub Actions CI on every pull request and on main: the fast checks on Linux, the OKF check and merge-ready, and one Windows job for the checker's tests, the platform tests and the browser tests."
+description: "GitHub Actions CI on every pull request and on main: the fast checks on Linux, the OKF check and merge-ready, and on Windows a job for the checker's and platform tests, the browser tests in three parts, and one summary check."
 resource: ../../../.github/workflows/ci.yml
 implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T23:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T01:30:00Z }
 ---
 
 # Purpose

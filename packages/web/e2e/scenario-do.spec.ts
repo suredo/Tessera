@@ -134,6 +134,8 @@ test("EVAL-01, VER-03: a scenario's do steps type into and click the tool's hook
     mode: "rehearsal",
     provider,
     folder: info.outputPath("scenario"),
+    // A video only when asked, as for every browser test (A56).
+    recordVideo: process.env["TESSERA_E2E_RECORD"] === "1",
     webRoot: path.resolve(here, "../dist"),
     misfits: () => provider.misfits(),
     onFinished: (store) => {

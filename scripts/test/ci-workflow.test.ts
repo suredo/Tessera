@@ -116,6 +116,16 @@ describe("the CI workflow", () => {
     );
     // No video encoder to install, and the traces are uploaded only when a part fails.
     expect(text).not.toContain("playwright install ffmpeg");
+    // The scenario runner opens a browser context of its own, outside this configuration: it
+    // records only when its caller asks, and the browser specs ask only with TESSERA_E2E_RECORD=1.
+    expect(read("evals/src/runner/run.ts")).toContain(
+      "...(options.recordVideo ? { recordVideo: { dir: folder } } : {}),",
+    );
+    for (const spec of ["scenario-do.spec.ts", "scenario-replays.spec.ts"]) {
+      expect(read(`packages/web/e2e/${spec}`)).toContain(
+        'recordVideo: process.env["TESSERA_E2E_RECORD"] === "1",',
+      );
+    }
   });
 
   it("gives no job a secret, such as a provider's key, and only read access (ENG-02)", () => {

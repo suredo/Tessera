@@ -50,6 +50,8 @@ for (const [id, failed] of Object.entries(failedLive)) {
       mode: "replay",
       file: path.join(replays, `${id}.json`),
       folder: info.outputPath("scenario"),
+      // A video only when asked, as for every browser test (A56).
+      recordVideo: process.env["TESSERA_E2E_RECORD"] === "1",
       webRoot: path.resolve(here, "../dist"),
     });
     const stopped = stoppedLive.has(id);
