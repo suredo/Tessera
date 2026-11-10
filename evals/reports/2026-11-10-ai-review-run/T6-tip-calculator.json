@@ -1,0 +1,85 @@
+{
+  "scenario": "T6-tip-calculator",
+  "mode": "live",
+  "provider": "claude",
+  "reviewedAt": "2026-11-10T11:05:26.151Z",
+  "images": ["step-1.png", "step-2.png", "step-3.png", "step-4.png", "step-5.png"],
+  "imagesLeftOut": [],
+  "review": {
+    "items": [
+      {
+        "item": "fulfilment",
+        "mark": "partly",
+        "evidence": [
+          "Step 1: the tool starts with 87.50, 4 people and 15% tip and shows tip 13.13, total 100.63, each 25.16 (step-1.png). That is correct.",
+          "Step 2: the 'Each person pays' value is much larger (step-2.png, CSS clamp(2rem,10vw,3.5rem)). But the figure looks clipped at the bottom of the preview.",
+          "Step 3: the checkbox exists (step-3.png) and the source rounds up with Math.ceil. No step ticked it, so the rounding is untested.",
+          "Step 4: the undo message says 'Version 2 is back, as the newest version.' The history shows a new Version 4 whose text is the same as Version 2 (step-4.png). Step 5 after reload shows the big number and no checkbox, so the undo did what was asked.",
+          "The host says behavior wasn't tried out, so it isn't verified."
+        ]
+      },
+      {
+        "item": "useful-at-first-sight",
+        "mark": "pass",
+        "evidence": [
+          "Step 1: the tool opens pre-filled with 87.50, 4 and 15, and shows tip, total and each share at once (step-1.png)."
+        ]
+      },
+      {
+        "item": "standard-style",
+        "mark": "pass",
+        "evidence": [
+          "The CSS uses the standard --ui-* variables throughout. The person asked for no particular look.",
+          "Fields, table and highlight keep the same look across versions 1 to 3. The checkbox styling in version 3 uses the same variables."
+        ]
+      },
+      {
+        "item": "accessibility",
+        "mark": "partly",
+        "evidence": [
+          "Every input has a label with a matching 'for'. The checkbox label is linked. The error line has role=alert. The table has an aria-label. Focus outlines are set with :focus-visible.",
+          "The three fields wrap with flex-basis 130px, which suggests a narrow screen is handled. No narrow screenshot was taken, so this is unverified.",
+          "Step 2 and step 5 screenshots show the large figure cut off at the bottom of the preview pane. Step 3 shows the result block cut off. This may be only the pane height, but it hurts readability.",
+          "Contrast was not measured. The secondary label text looks light."
+        ]
+      },
+      {
+        "item": "messages",
+        "mark": "pass",
+        "evidence": [
+          "The host messages are in plain words, e.g. 'Bill splitter was updated... Everything else works as before.'",
+          "The tool's error texts are plain, e.g. 'Enter at least 1 person.'",
+          "The notice 'Its behavior wasn't tried out, so it isn't verified' is honest.",
+          "Step 2's 'Everything else works as before' matches the unchanged source logic."
+        ]
+      },
+      {
+        "item": "code-red-flags",
+        "mark": "pass",
+        "evidence": [
+          "The JS only sets the starting values and calls update(). It writes no stored data at startup.",
+          "It does not read the system clock.",
+          "Invalid input is handled with a message and '–' placeholders. There are no loops without end, only a fixed event-listener loop over three inputs."
+        ]
+      },
+      {
+        "item": "coherence",
+        "mark": "pass",
+        "evidence": [
+          "Version 2 keeps all the fields and logic of version 1 and only changes the CSS for the result.",
+          "Version 3 adds the checkbox and keeps the large result block and the fields.",
+          "Step 4: undo brings back the version 2 content as a new Version 4 and does not lose history. Step 5 confirms the state after reload."
+        ]
+      }
+    ],
+    "verdict": "accept-with-notes",
+    "notes": [
+      "The round-up checkbox was never ticked in any step, so whether it works is unverified. The source looks right (Math.ceil after rounding to cents), and the label should change to '(rounded up)'.",
+      "In step-2, step-3 and step-5 screenshots the large 'Each person pays' figure is cut off at the bottom of the preview pane. Check whether the user can see it fully, and whether this affects use at that size.",
+      "No narrow-screen screenshot and no contrast measurement were taken, so those parts of accessibility are unverified.",
+      "Undo created Version 4 as a copy of Version 2 instead of removing Version 3. The message says so plainly, but the owner should confirm this is wanted.",
+      "The Round-up step-3 screenshot shows the result block pushed down by the checkbox, so the highlighted 'Each person pays' row is mostly out of view."
+    ]
+  },
+  "ownerVerdict": "accept-with-notes"
+}

@@ -1,0 +1,103 @@
+{
+  "scenario": "T5-rsvp-form",
+  "mode": "live",
+  "provider": "claude",
+  "reviewedAt": "2026-11-10T11:04:30.489Z",
+  "images": [
+    "step-1.png",
+    "step-2.png",
+    "step-3.png",
+    "step-4.png",
+    "step-5.png",
+    "step-6.png",
+    "step-7.png"
+  ],
+  "imagesLeftOut": [],
+  "review": {
+    "items": [
+      {
+        "item": "fulfilment",
+        "mark": "partly",
+        "evidence": [
+          "Step 1: the form has the three requested fields, Name, How many people and Food allergies (step-1.png).",
+          "Step 2: an empty send shows 'Please fill in: Name, How many people.' (step-2.png).",
+          "Step 6: the fields clear and the history shows 'One record changed', so the answer was saved (step-6.png).",
+          "No screenshot shows the answers list. The preview pane is cut off above 'Answers', so 'Show me the answers' is not seen in the run, including after step 7 (next-day)."
+        ]
+      },
+      {
+        "item": "useful-at-first-sight",
+        "mark": "partly",
+        "evidence": [
+          "Step 1: the form opens with labelled fields and a helpful placeholder, 'e.g. peanuts, or none'.",
+          "The 'No answers yet.' summary in the source sits below the visible area, so the first screenshot shows only an empty form.",
+          "The Send answer button is cut off at the bottom of the preview in step-1.png and step-7.png."
+        ]
+      },
+      {
+        "item": "standard-style",
+        "mark": "pass",
+        "evidence": [
+          "The CSS uses the standard design variables (--ui-font, --ui-accent, --ui-space-*) throughout.",
+          "The person asked for no particular look, and the screenshots show the standard look.",
+          "There is only one version, so no unrelated part changed."
+        ]
+      },
+      {
+        "item": "controls-work",
+        "mark": "pass",
+        "evidence": [
+          "Steps 3-5: each field accepted its value, as the typed text in step-3.png, step-4.png and step-5.png shows.",
+          "Step 2: Send answer on empty fields showed the missing-fields message.",
+          "Step 6: Send answer on filled fields cleared the form and the history shows 'One record changed' (step-6.png).",
+          "The 'Undo the last change' button was not used, so it is not judged."
+        ]
+      },
+      {
+        "item": "accessibility",
+        "mark": "partly",
+        "evidence": [
+          "Every input has a label tied to it with for/id, and the button has the text 'Send answer'.",
+          "Focus is visible: a green ring shows in step-3.png, step-4.png and step-5.png.",
+          "The error uses role=alert and the status uses role=status.",
+          "The red 'Please fill in' message stays on screen after the fields are filled (steps 3-5), which could confuse a reader.",
+          "A narrow screen was not tested, and the button is clipped in the preview."
+        ]
+      },
+      {
+        "item": "messages",
+        "mark": "pass",
+        "evidence": [
+          "The host message in step 1 is plain: 'Party guest form is ready…'.",
+          "The tool's messages are plain: 'Please fill in: Name, How many people.', 'Answer saved.' and the load and save failure messages.",
+          "The step 1 claim that every answer is saved matches the 'One record changed' entry in step-6.png. The 'listed below the form' part is not shown in any screenshot."
+        ]
+      },
+      {
+        "item": "code-red-flags",
+        "mark": "pass",
+        "evidence": [
+          "The only startup action is load(), which reads data and writes nothing.",
+          "The source never reads the system clock.",
+          "Both tessera.call paths use try/catch and show a message to the person.",
+          "There is no unbounded loop. The only loops run over the saved items or the three fields."
+        ]
+      },
+      {
+        "item": "coherence",
+        "mark": "not-applicable",
+        "evidence": [
+          "Only version 1 was made, so there is no change to compare against an earlier one."
+        ]
+      }
+    ],
+    "verdict": "accept-with-notes",
+    "notes": [
+      "The run never shows the answers list, which is half of the request ('Show me the answers'). Check that the submitted answer for Ana Souza (2 people, Peanuts) appears, and that it is still there after step 7.",
+      "The preview pane is too short. The Send answer button and the answers are cut off, so the person must scroll inside it to see them.",
+      "The 'Please fill in' error stays visible after the fields are filled, until the next send.",
+      "A narrow-screen layout and the Undo button were not exercised."
+    ]
+  },
+  "ownerVerdict": "accept-with-notes"
+}
