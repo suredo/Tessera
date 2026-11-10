@@ -1,6 +1,18 @@
 // Docs: docs/code/contracts/package.md
 // @tessera/contracts: every shape that crosses a boundary, defined once with zod (CON-01).
 export {
+  ACCEPTANCE_LIMITS,
+  acceptanceCheckSchema,
+  acceptanceExpectSchema,
+  acceptanceSchema,
+  acceptanceStepSchema,
+  hookNameSchema,
+  type Acceptance,
+  type AcceptanceCheck,
+  type AcceptanceExpect,
+  type AcceptanceStep,
+} from "./acceptance.ts";
+export {
   ACTIVATION_REFUSALS,
   ACTIVATION_ROUTE,
   activationReplySchema,

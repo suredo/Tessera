@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "const": "checks"
+        },
+        "hooks": {
+          "minItems": 1,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 40,
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+              },
+              "says": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              }
+            },
+            "required": [
+              "name",
+              "says"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "checks": {
+          "minItems": 1,
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "says": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200,
+                "description": "What the check shows, in plain words, as the person would say it."
+              },
+              "steps": {
+                "minItems": 1,
+                "maxItems": 6,
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "do": {
+                          "type": "string",
+                          "const": "fill"
+                        },
+                        "hook": {
+                          "type": "string",
+                          "maxLength": 40,
+                          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                        },
+                        "value": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        }
+                      },
+                      "required": [
+                        "do",
+                        "hook",
+                        "value"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "do": {
+                          "type": "string",
+                          "const": "click"
+                        },
+                        "hook": {
+                          "type": "string",
+                          "maxLength": 40,
+                          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                        }
+                      },
+                      "required": [
+                        "do",
+                        "hook"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "expect": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "see": {
+                        "type": "string",
+                        "const": "shows"
+                      },
+                      "hook": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      }
+                    },
+                    "required": [
+                      "see",
+                      "hook",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "see": {
+                        "type": "string",
+                        "const": "hides"
+                      },
+                      "hook": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "text": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 100
+                      }
+                    },
+                    "required": [
+                      "see",
+                      "hook",
+                      "text"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "see": {
+                        "type": "string",
+                        "const": "count-change"
+                      },
+                      "hook": {
+                        "type": "string",
+                        "maxLength": 40,
+                        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+                      },
+                      "changeCount": {
+                        "type": "integer",
+                        "minimum": -20,
+                        "maximum": 20
+                      }
+                    },
+                    "required": [
+                      "see",
+                      "hook",
+                      "changeCount"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "says",
+              "steps",
+              "expect"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "outcome",
+        "hooks",
+        "checks"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "const": "none"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Why no check fits the request, in plain words."
+        }
+      },
+      "required": [
+        "outcome",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  ],
+  "description": "Acceptance checks for a tool that fits no profile (VER-09)."
+}

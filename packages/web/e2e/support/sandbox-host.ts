@@ -110,7 +110,7 @@ export async function startSandboxHost(
   // stalled (#83, #98).
   fs.writeFileSync(
     path.join(webRoot, "index.html"),
-    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script>new PerformanceObserver((list) => { for (const task of list.getEntries()) if (task.duration >= 1000) console.warn(\`Host page blocked for \${Math.round(task.duration)} ms\`); }).observe({ type: "longtask", buffered: true });</script><script type="module">import { mountTool, createRuntime, serveBridge, serverData, stageCandidate, stubCheck, smokeCheck, driveTool, profileCheck } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge, serverData, stageCandidate, stubCheck, smokeCheck, driveTool, profileCheck });</script>`,
+    `<!doctype html><title>Sandbox test host</title><link rel="icon" href="data:,"><script>new PerformanceObserver((list) => { for (const task of list.getEntries()) if (task.duration >= 1000) console.warn(\`Host page blocked for \${Math.round(task.duration)} ms\`); }).observe({ type: "longtask", buffered: true });</script><script type="module">import { mountTool, createRuntime, serveBridge, serverData, stageCandidate, stubCheck, smokeCheck, driveTool, profileCheck, acceptanceCheck } from "./runtime.js"; Object.assign(window, { mountTool, createRuntime, serveBridge, serverData, stageCandidate, stubCheck, smokeCheck, driveTool, profileCheck, acceptanceCheck });</script>`,
   );
   const dataDir = options.data
     ? fs.mkdtempSync(path.join(os.tmpdir(), "tessera-sandbox-data-"))
