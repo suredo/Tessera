@@ -1,0 +1,653 @@
+{
+  "about": "A live run of V9-acceptance-checks, recorded for replay.",
+  "scenario": "V9-acceptance-checks",
+  "recorded": {
+    "head": "3a9323d1bed4a8986ca608eb5176df3ac239835d",
+    "at": "2026-11-10T14:31:08.175Z",
+    "cliVersion": "2.1.321"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Kilometres to miles",
+              "request": "A unit converter from kilometres to miles"
+            },
+            {
+              "name": "Miles to kilometres",
+              "request": "and back"
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "acceptance",
+        "value": {
+          "outcome": "checks",
+          "hooks": [
+            {
+              "name": "km-input",
+              "says": "The field where the person types a number of kilometres."
+            },
+            {
+              "name": "miles-input",
+              "says": "The field where the person types a number of miles."
+            },
+            {
+              "name": "to-miles-button",
+              "says": "The control that converts the kilometres typed in the km field into miles."
+            },
+            {
+              "name": "to-km-button",
+              "says": "The control that converts the miles typed in the miles field into kilometres."
+            },
+            {
+              "name": "miles-result",
+              "says": "The element that shows the miles result of a conversion."
+            },
+            {
+              "name": "km-result",
+              "says": "The element that shows the kilometres result of a conversion."
+            }
+          ],
+          "checks": [
+            {
+              "says": "Typing 100 kilometres and converting to miles shows about 62.1 miles.",
+              "steps": [
+                {
+                  "do": "fill",
+                  "hook": "km-input",
+                  "value": "100"
+                },
+                {
+                  "do": "click",
+                  "hook": "to-miles-button"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "miles-result",
+                "text": "62.1"
+              }
+            },
+            {
+              "says": "Typing 10 miles and converting to kilometres shows about 16.09 kilometres.",
+              "steps": [
+                {
+                  "do": "fill",
+                  "hook": "miles-input",
+                  "value": "10"
+                },
+                {
+                  "do": "click",
+                  "hook": "to-km-button"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "km-result",
+                "text": "16.09"
+              }
+            }
+          ]
+        }
+      },
+      "parts": ["acceptance@3ca7eeaedff3", "request@47a51319da7d", "language@2a8e10d77d23"]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Kilometres and miles",
+          "summary": "Convert kilometres to miles and miles to kilometres. Type a number in either field and press its button.",
+          "code": {
+            "html": "<h1>Kilometres ⇄ miles</h1>\n<div class=\"row\">\n<label for=\"km\">Kilometres</label>\n<input id=\"km\" data-hook=\"km-input\" type=\"text\" inputmode=\"decimal\" placeholder=\"e.g. 100\">\n<button id=\"tomi\" data-hook=\"to-miles-button\" type=\"button\">Convert to miles</button>\n<p class=\"res\" id=\"mires\" data-hook=\"miles-result\" aria-live=\"polite\">Result in miles will show here.</p>\n<p class=\"err\" id=\"kerr\" role=\"alert\"></p>\n</div>\n<div class=\"row\">\n<label for=\"mi\">Miles</label>\n<input id=\"mi\" data-hook=\"miles-input\" type=\"text\" inputmode=\"decimal\" placeholder=\"e.g. 10\">\n<button id=\"tokm\" data-hook=\"to-km-button\" type=\"button\">Convert to kilometres</button>\n<p class=\"res\" id=\"kmres\" data-hook=\"km-result\" aria-live=\"polite\">Result in kilometres will show here.</p>\n<p class=\"err\" id=\"merr\" role=\"alert\"></p>\n</div>",
+            "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-4)}\n.row{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-padding);margin-bottom:var(--ui-space-4);display:flex;flex-direction:column;gap:var(--ui-space-2)}\ninput{min-height:var(--ui-target);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-3);font:inherit;width:100%;box-sizing:border-box}\nbutton{min-height:var(--ui-target);border:0;border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;padding:0 var(--ui-space-4);cursor:pointer}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\n.res{margin:0;font-size:var(--ui-size-section)}\n.err{margin:0;color:var(--ui-error);font-size:var(--ui-size-secondary)}",
+            "js": "const KM=1.609344;\nfunction parse(v){const s=v.trim().replace(',', '.');if(s===''||isNaN(Number(s)))return null;return Number(s);}\nfunction fmt(n){return String(Math.round(n*100)/100);}\nfunction run(inId,errId,resId,factor,unit){\n const n=parse(document.getElementById(inId).value);\n const err=document.getElementById(errId);\n const res=document.getElementById(resId);\n if(n===null){err.textContent='Please type a number.';res.textContent='';return;}\n err.textContent='';\n res.textContent=fmt(n*factor)+' '+unit;\n}\nfunction wire(btn,inId,errId,resId,factor,unit){\n const go=()=>run(inId,errId,resId,factor,unit);\n document.getElementById(btn).addEventListener('click',go);\n document.getElementById(inId).addEventListener('keydown',e=>{if(e.key==='Enter')go();});\n}\nwire('tomi','km','kerr','mires',1/KM,'miles');\nwire('tokm','mi','merr','kmres',KM,'kilometres');"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "conversions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id"]
+                  }
+                }
+              },
+              "required": ["conversions"]
+            },
+            "reusableDefaults": {
+              "conversions": []
+            },
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "acceptance-checks@9f072d456e1e",
+        "create@09d42fc3c6b6",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "acceptance-quoted@201a99adec0f"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "new_tool",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Word count",
+              "request": "tells me the number of words"
+            },
+            {
+              "name": "Character count",
+              "request": "tells me the number of ... characters"
+            },
+            {
+              "name": "Paste text input",
+              "request": "I paste text"
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "acceptance",
+        "value": {
+          "outcome": "checks",
+          "hooks": [
+            {
+              "name": "text-input",
+              "says": "The text box where the person pastes or types their text."
+            },
+            {
+              "name": "word-count",
+              "says": "The element that shows the number of words in the text."
+            },
+            {
+              "name": "character-count",
+              "says": "The element that shows the number of characters in the text."
+            }
+          ],
+          "checks": [
+            {
+              "says": "Pasting four words shows four words.",
+              "steps": [
+                {
+                  "do": "fill",
+                  "hook": "text-input",
+                  "value": "alpha beta gamma delta"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "word-count",
+                "text": "4"
+              }
+            },
+            {
+              "says": "Pasting four words shows twenty-two characters.",
+              "steps": [
+                {
+                  "do": "fill",
+                  "hook": "text-input",
+                  "value": "alpha beta gamma delta"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "character-count",
+                "text": "22"
+              }
+            },
+            {
+              "says": "Pasting two different words shows two words.",
+              "steps": [
+                {
+                  "do": "fill",
+                  "hook": "text-input",
+                  "value": "zeta eta"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "word-count",
+                "text": "2"
+              }
+            }
+          ]
+        }
+      },
+      "parts": ["acceptance@3ca7eeaedff3", "request@47a51319da7d", "language@2a8e10d77d23"]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Word counter",
+          "summary": "Paste or type text and see how many words and characters it has. Characters are also shown without spaces.",
+          "code": {
+            "html": "<h1>Word counter</h1>\n<label for=\"text\">Your text</label>\n<textarea id=\"text\" data-hook=\"text-input\" rows=\"10\" placeholder=\"Paste or type text here\"></textarea>\n<dl class=\"stats\" aria-live=\"polite\">\n<div><dt>Words</dt><dd id=\"words\" data-hook=\"word-count\">0</dd></div>\n<div><dt>Characters</dt><dd id=\"chars\" data-hook=\"character-count\">0</dd></div>\n<div><dt>Characters without spaces</dt><dd id=\"nospace\">0</dd></div>\n</dl>",
+            "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}\nlabel{display:block;margin-bottom:var(--ui-space-1)}\ntextarea{width:100%;box-sizing:border-box;font:inherit;padding:var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text)}\ntextarea:focus{outline:2px solid var(--ui-accent);outline-offset:2px}\n.stats{display:flex;flex-wrap:wrap;gap:var(--ui-space-5);margin:var(--ui-space-4) 0 0}\n.stats div{min-width:100px}\ndt{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ndd{margin:0;font-size:var(--ui-size-title)}",
+            "js": "const t=document.getElementById('text');\nfunction update(){\n const v=t.value;\n const m=v.trim()===''?[]:v.trim().split(/\\s+/);\n document.getElementById('words').textContent=String(m.length);\n document.getElementById('chars').textContent=String(v.length);\n document.getElementById('nospace').textContent=String(v.replace(/\\s/g,'').length);\n}\nt.addEventListener('input',update);\nt.addEventListener('change',update);\nupdate();"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {},
+              "additionalProperties": false
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "acceptance-checks@9f072d456e1e",
+        "create@09d42fc3c6b6",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "acceptance-quoted@201a99adec0f"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "new_tool",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Dice roller",
+              "request": "a dice roller for two six-sided dice"
+            },
+            {
+              "name": "Show each die and total",
+              "request": "shows each die and the total"
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-open@ad363d62acd6",
+        "intent-no-records@92719cffa289",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "acceptance",
+        "value": {
+          "outcome": "checks",
+          "hooks": [
+            {
+              "name": "roll-button",
+              "says": "The control that rolls both dice."
+            },
+            {
+              "name": "die-one",
+              "says": "The element showing the result of the first six-sided die."
+            },
+            {
+              "name": "die-two",
+              "says": "The element showing the result of the second six-sided die."
+            },
+            {
+              "name": "dice-total",
+              "says": "The element showing the total of the two dice."
+            }
+          ],
+          "checks": [
+            {
+              "says": "Pressing Roll shows a total of the dice.",
+              "steps": [
+                {
+                  "do": "click",
+                  "hook": "roll-button"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "dice-total",
+                "text": "Total"
+              }
+            }
+          ]
+        }
+      },
+      "parts": ["acceptance@3ca7eeaedff3", "request@47a51319da7d", "language@2a8e10d77d23"]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Dice roller",
+          "summary": "Rolls two six-sided dice and shows each die and the total.",
+          "code": {
+            "html": "<main class=\"wrap\"><h1>Dice roller</h1><div class=\"dice\"><div class=\"die\" data-hook=\"die-one\" id=\"d1\" role=\"img\" aria-label=\"First die: not rolled yet\">–</div><div class=\"die\" data-hook=\"die-two\" id=\"d2\" role=\"img\" aria-label=\"Second die: not rolled yet\">–</div></div><p class=\"total\" data-hook=\"dice-total\" id=\"total\" aria-live=\"polite\">Total: –</p><button type=\"button\" class=\"roll\" data-hook=\"roll-button\" id=\"roll\">Roll</button></main>",
+            "css": ".wrap{max-width:480px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text)}h1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-4)}.dice{display:flex;gap:var(--ui-space-4);flex-wrap:wrap}.die{width:88px;height:88px;display:flex;align-items:center;justify-content:center;font-size:40px;background:var(--ui-surface);border:2px solid var(--ui-control-border);border-radius:var(--ui-radius-panel)}.total{font-size:var(--ui-size-section);margin:var(--ui-space-4) 0}.roll{min-height:var(--ui-target);padding:0 var(--ui-space-5);font-size:var(--ui-size-body);background:var(--ui-accent);color:#fff;border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);cursor:pointer}.roll:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}",
+            "js": "const d1 = document.getElementById('d1');\nconst d2 = document.getElementById('d2');\nconst total = document.getElementById('total');\nfunction rollDie() { return Math.floor(Math.random() * 6) + 1; }\ndocument.getElementById('roll').addEventListener('click', () => {\n  const a = rollDie();\n  const b = rollDie();\n  d1.textContent = String(a);\n  d2.textContent = String(b);\n  d1.setAttribute('aria-label', 'First die: ' + a);\n  d2.setAttribute('aria-label', 'Second die: ' + b);\n  total.textContent = 'Total: ' + (a + b);\n});"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "rolls": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id"]
+                  }
+                }
+              },
+              "required": ["rolls"]
+            },
+            "reusableDefaults": {
+              "rolls": []
+            },
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "acceptance-checks@9f072d456e1e",
+        "create@09d42fc3c6b6",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "acceptance-quoted@201a99adec0f"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "new_tool",
+          "interfacePart": "Now a tip calculator: the bill, the tip percent and the number of people, showing what each person pays.",
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Bill input",
+              "request": "the bill"
+            },
+            {
+              "name": "Tip percent input",
+              "request": "the tip percent"
+            },
+            {
+              "name": "Number of people input",
+              "request": "the number of people"
+            },
+            {
+              "name": "Per-person amount",
+              "request": "showing what each person pays"
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false
+        }
+      },
+      "parts": [
+        "intent@831eceda0fdd",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-request@29adbd896fc4"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "acceptance",
+        "value": {
+          "outcome": "checks",
+          "hooks": [
+            {
+              "name": "bill-input",
+              "says": "The field where the person types the bill total."
+            },
+            {
+              "name": "tip-percent-input",
+              "says": "The field where the person types the tip percentage."
+            },
+            {
+              "name": "people-count-input",
+              "says": "The field where the person types the number of people splitting the bill."
+            },
+            {
+              "name": "amount-per-person",
+              "says": "The element that shows what each person pays."
+            }
+          ],
+          "checks": [
+            {
+              "says": "Splitting a 100 bill with a 20 percent tip between 4 people shows 30.00 each.",
+              "steps": [
+                {
+                  "do": "fill",
+                  "hook": "bill-input",
+                  "value": "100"
+                },
+                {
+                  "do": "fill",
+                  "hook": "tip-percent-input",
+                  "value": "20"
+                },
+                {
+                  "do": "fill",
+                  "hook": "people-count-input",
+                  "value": "4"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "amount-per-person",
+                "text": "30.00"
+              }
+            },
+            {
+              "says": "Splitting a 60 bill with a 15 percent tip between 3 people shows 23.00 each.",
+              "steps": [
+                {
+                  "do": "fill",
+                  "hook": "bill-input",
+                  "value": "60"
+                },
+                {
+                  "do": "fill",
+                  "hook": "tip-percent-input",
+                  "value": "15"
+                },
+                {
+                  "do": "fill",
+                  "hook": "people-count-input",
+                  "value": "3"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "amount-per-person",
+                "text": "23.00"
+              }
+            },
+            {
+              "says": "Changing the number of people to 2 on a 100 bill with a 10 percent tip shows 55.00 each.",
+              "steps": [
+                {
+                  "do": "fill",
+                  "hook": "bill-input",
+                  "value": "100"
+                },
+                {
+                  "do": "fill",
+                  "hook": "tip-percent-input",
+                  "value": "10"
+                },
+                {
+                  "do": "fill",
+                  "hook": "people-count-input",
+                  "value": "2"
+                }
+              ],
+              "expect": {
+                "see": "shows",
+                "hook": "amount-per-person",
+                "text": "55.00"
+              }
+            }
+          ]
+        }
+      },
+      "parts": ["acceptance@3ca7eeaedff3", "request@47a51319da7d", "language@2a8e10d77d23"]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Tip calculator",
+          "summary": "Enter the bill, the tip percent and the number of people to see the tip, the total and what each person pays.",
+          "code": {
+            "html": "<h1>Tip calculator</h1>\n<div class=\"fields\">\n<label for=\"bill\">Bill total</label>\n<input id=\"bill\" data-hook=\"bill-input\" type=\"number\" min=\"0\" step=\"0.01\" inputmode=\"decimal\" value=\"50\">\n<label for=\"tip\">Tip percent (%)</label>\n<input id=\"tip\" data-hook=\"tip-percent-input\" type=\"number\" min=\"0\" step=\"any\" inputmode=\"decimal\" value=\"15\">\n<label for=\"people\">Number of people</label>\n<input id=\"people\" data-hook=\"people-count-input\" type=\"number\" min=\"1\" step=\"1\" inputmode=\"numeric\" value=\"2\">\n</div>\n<p id=\"error\" role=\"alert\"></p>\n<div class=\"result\" aria-live=\"polite\">\n<p>Each person pays: <strong id=\"each\" data-hook=\"amount-per-person\">0.00</strong></p>\n<p class=\"sec\">Tip: <span id=\"tipAmt\">0.00</span> · Total: <span id=\"total\">0.00</span></p>\n</div>",
+            "css": "body{font-family:var(--ui-font)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-3)}\n.fields{display:grid;gap:var(--ui-space-2);max-width:360px}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font-size:var(--ui-size-body);background:var(--ui-surface);color:var(--ui-text)}\n#error{color:var(--ui-error);min-height:1.5em;margin:var(--ui-space-2) 0}\n.result{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-padding);background:var(--ui-surface);max-width:360px}\n.result p{margin:0}\n#each{font-size:var(--ui-size-title);color:var(--ui-accent)}\n.sec{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin-top:var(--ui-space-2)!important}",
+            "js": "const billEl=document.getElementById('bill');\nconst tipEl=document.getElementById('tip');\nconst peopleEl=document.getElementById('people');\nconst err=document.getElementById('error');\nfunction update(){\n  const bill=parseFloat(billEl.value);\n  const tip=parseFloat(tipEl.value);\n  const people=parseInt(peopleEl.value,10);\n  let msg='';\n  if(!(bill>=0)) msg='Enter the bill as a number, 0 or more.';\n  else if(!(tip>=0)) msg='Enter the tip percent as a number, 0 or more.';\n  else if(!(people>=1)) msg='Enter at least 1 person.';\n  err.textContent=msg;\n  if(msg){\n    document.getElementById('each').textContent='0.00';\n    document.getElementById('tipAmt').textContent='0.00';\n    document.getElementById('total').textContent='0.00';\n    return;\n  }\n  const tipAmt=bill*tip/100;\n  const total=bill+tipAmt;\n  document.getElementById('each').textContent=(total/people).toFixed(2);\n  document.getElementById('tipAmt').textContent=tipAmt.toFixed(2);\n  document.getElementById('total').textContent=total.toFixed(2);\n}\nfor(const el of [billEl,tipEl,peopleEl]){el.addEventListener('input',update);}\nupdate();"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "notes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id"]
+                  }
+                }
+              },
+              "required": ["notes"]
+            },
+            "reusableDefaults": {
+              "notes": []
+            },
+            "initialState": {}
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@c504451a84fc",
+        "bridge@2b4e753760e4",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "acceptance-checks@9f072d456e1e",
+        "create@09d42fc3c6b6",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "acceptance-quoted@201a99adec0f"
+      ]
+    }
+  ]
+}

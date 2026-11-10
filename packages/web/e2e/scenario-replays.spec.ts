@@ -7,6 +7,7 @@
 // doesn't check. Chrome at 1280 px only: the runner starts its own Chrome.
 import fs from "node:fs";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { loadScenario } from "../../../evals/src/scenarios/index.ts";
@@ -21,7 +22,8 @@ const replays = path.join(scenarios, "replays");
 // corrected after it (T1 step 2 expects its data kept, T13 step 3 no new version), so they pass
 // now. The run's score stays as its report froze it (evals/reports/2026-11-05-m2-live-run.md).
 // T1 and T6 are the M3 live run's recordings, and so are T2, T3, T5 and T10
-// (evals/reports/2026-11-09-m3-live-run.md); T10's is its rerun after L-89, which passed. A run
+// (evals/reports/2026-11-09-m3-live-run.md); T10's is its rerun after L-89, which passed. V9 is the
+// acceptance-check experiment's (evals/reports/2026-11-10-acceptance-run.md). A run
 // whose first step failed would be listed in stoppedLive, with every later step blocked.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "J6-limits": [],
@@ -32,6 +34,7 @@ const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "T6-tip-calculator": [],
   "T10-study-planner": [],
   "T13-drawing-board": [],
+  "V9-acceptance-checks": [],
 };
 // The recorded runs whose first step failed, so the runner stopped there (the stop rule).
 const stoppedLive = new Set<string>();
@@ -69,5 +72,24 @@ for (const [id, failed] of Object.entries(failedLive)) {
     expect(played.map((s) => [s.index, s.screenshot])).toEqual(
       played.map((s) => [s.index, s.screenshot === "no tool" ? "no tool" : "tool"]),
     );
+    if (id === "V9-acceptance-checks") {
+      // L-93: the dice roller's one check looked for "Total", which its total showed before Roll
+      // was pressed, so it proved nothing and the dice roller isn't checked against the request.
+      // Each other tool's checks proved what they say, so it is.
+      const db = new DatabaseSync(path.join(info.outputPath("scenario"), "tessera", "tessera.db"), {
+        readOnly: true,
+      });
+      const checks = db
+        .prepare("SELECT checks FROM workspace_versions ORDER BY created_at")
+        .all()
+        .map((row) => JSON.parse(String(row["checks"])) as string[]);
+      db.close();
+      expect(checks).toEqual([
+        ["code", "start", "acceptance"],
+        ["code", "start", "acceptance"],
+        ["code", "start"],
+        ["code", "start", "acceptance"],
+      ]);
+    }
   });
 }

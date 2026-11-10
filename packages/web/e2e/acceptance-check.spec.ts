@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import type { Acceptance, Artifact } from "../../contracts/src/index.ts";
+import type { Acceptance, AcceptanceCheck, Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
@@ -231,4 +231,29 @@ test("VER-09: a text is looked for in every element shown and in its whole text,
   expect(kept).toMatchObject({ outcome: "check-failed", check: "acceptance" });
   expect(kept.reason).toContain("observed it shown in the element at position 1 of 1");
   expect(await check(page, "none", hides, long)).toEqual(PASSED);
+});
+
+test("VER-09, L-93: a check whose text was shown before its steps proves nothing, so it neither fails the tool nor counts", async ({
+  page,
+}) => {
+  // "Passport" is in the list before any step, so a list whose add does nothing still shows it.
+  const before: AcceptanceCheck = {
+    says: "Adding a thing shows the passport",
+    steps: [
+      { do: "fill", hook: "thing-name", value: "Hat" },
+      { do: "click", hook: "thing-add" },
+    ],
+    expect: { see: "shows", hook: "thing", text: "Passport" },
+  };
+  const alone: Acceptance = { ...ACCEPTANCE, checks: [before] };
+  expect(await check(page, "ignoresAdd", alone)).toEqual({
+    ...PASSED,
+    message: "Passed the checks: start true, request false.",
+  });
+  // Beside a check that proves something, the tool is checked against the request.
+  const beside: Acceptance = { ...ACCEPTANCE, checks: [before, ACCEPTANCE.checks[0]!] };
+  expect(await check(page, "none", beside)).toEqual(PASSED);
+  // And it never hides a failure of a check that does prove something.
+  const failing = await check(page, "ignoresAdd", beside);
+  expect(failing).toMatchObject({ outcome: "check-failed", check: "acceptance" });
 });
