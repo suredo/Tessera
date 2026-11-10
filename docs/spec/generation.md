@@ -4,7 +4,7 @@ title: "Generation pipeline"
 description: "Structured intent, routing, generation, repair, honest messages and time limits (GEN-01 to GEN-19)."
 tags: [spec, generation, pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:20:00Z }
 ---
 # Generation pipeline (`GEN`)
 
@@ -17,7 +17,8 @@ request ─► intent (structured) ─► route
               │                     ├─ create / edit ─► generate ─► checks ─► (repair) ─► stage ─► activate
               │                     │                     └─ then: pending data part ─► patch batch
               │                     ├─ new tool ─► new workspace ─► create
-              │                     └─ clarify / unsupported ─► plain answer
+              │                     ├─ clarify / unsupported ─► plain answer
+              │                     └─ discuss (M4) ─► plain answer about the tool, nothing built
               └─ every step: ledger entry, diagnostics, time limit, cancellation
 ```
 
@@ -25,7 +26,7 @@ request ─► intent (structured) ─► route
 
 | ID | Requirement |
 | --- | --- |
-| GEN-01 | **Structured intent stage.** A cheap model call returns `{ kind, interfacePart, dataPart, behaviorChange, lookOnly, targetsCurrentTool, savedToolId, language, features }`, where `features` lists the separate things the request asks for (used by `GEN-17`), and where `kind` is create, edit, data, mixed, new_tool, open_saved, clarify or unsupported. The prompt includes examples of the POC's failure cases: style wording, behavior statements ("guests arrive in groups"), unrelated requests, mixed requests, and non-English requests. Host guardrails apply on top: with no tool open, a request either opens a saved tool (`GEN-18`) or creates one (A12); an unrelated request can never overwrite the current tool; and destructive data changes need an explicit target. |
+| GEN-01 | **Structured intent stage.** A cheap model call returns `{ kind, interfacePart, dataPart, behaviorChange, lookOnly, targetsCurrentTool, savedToolId, language, features }`, where `features` lists the separate things the request asks for (used by `GEN-17`), and where `kind` is create, edit, data, mixed, new_tool, open_saved, clarify or unsupported, and, from M4, discuss (`GEN-19`). The prompt includes examples of the POC's failure cases: style wording, behavior statements ("guests arrive in groups"), unrelated requests, mixed requests, and non-English requests. Host guardrails apply on top: with no tool open, a request either opens a saved tool (`GEN-18`) or creates one (A12), unless it only discusses one, which builds nothing (`GEN-19`); an unrelated request can never overwrite the current tool; and destructive data changes need an explicit target. |
 | GEN-02 | **No keyword gating.** Prompt sections, capabilities and rules are never switched on or off by regular expressions over the request. Where a keyword heuristic is kept as a safety net, it has tests for false positives and false negatives in every supported language. (The POC's "engine section only for simulation words" missed "Will my party layout work?") |
 | GEN-03 | **Modular prompt assembly.** Prompts are built from parts: base rules, the bridge manifest (`CON-03`), the UI standard (`VER-06`), the matching verification profile (`VER-03`), if any, current source, and diagnostics. Only relevant parts are included. Each stage records its prompt size, and CI fails if a fixture prompt grows past its budget. (The POC's single prompt reached about 18,000 characters, carrying heart, study and flow contracts into every request.) |
 | GEN-04 | **Mixed requests are split.** The interface part goes to generation. The data part is applied by the host after the new version is installed, as a validated patch batch. Neither step sees the other's instruction. |
