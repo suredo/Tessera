@@ -1087,9 +1087,9 @@ export function checkJs(
     }
     const capability = BRIDGE_ACTIONS[action as BridgeActionName].capability;
     // A write while the tool starts is no longer refused here (A60): guessing it from the code
-    // refused working tools (L-84, L-95), and the data is kept safe elsewhere: checks work
-    // on a throwaway copy (BRG-06), starting entries are stored only when the tool is accepted,
-    // every change fits the tool's shape (DATA-02) and can be undone (DATA-04).
+    // refused working tools (L-84, L-95). The bridge refuses any write before the person's real
+    // interaction and throughout staging (GEN-06), and a behavior check's writes go to a throwaway
+    // copy (BRG-06).
     if (capability && !capabilities.includes(capability)) {
       found(
         node,
