@@ -163,7 +163,7 @@ export const scenarioSchema = z
       .boolean()
       .default(false)
       .describe(
-        "Runs Tessera with the acceptance-check experiment on (VER-09, A49): a new tool that fits no profile gets checks written from the request.",
+        "Runs Tessera with checks from the request on (VER-09): a new tool that fits no profile gets checks written from the request. Off unless set, so a recording made without them still replays; Tessera itself has them on (A57).",
       ),
     steps: z.array(stepSchema).min(1),
     review: z

@@ -4,6 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DEFAULT_ROUTES,
+  GENERATE_ROUTE,
+  generateReplySchema,
   type Acceptance,
   type AcceptanceChecks,
   type Creation,
@@ -12,6 +14,7 @@ import {
 import { afterAll, describe, expect, it } from "vitest";
 import { generate } from "../src/generation/index.ts";
 import { writeAcceptance } from "../src/generation/acceptance.ts";
+import { launch } from "../src/launcher/index.ts";
 import type { SmokeRepairContext } from "../src/generation/smoke.ts";
 import {
   ACCEPTANCE_PROMPT_BUDGET,
@@ -27,10 +30,10 @@ import {
 } from "../src/providers/index.ts";
 import { openDataFolder } from "../src/storage/index.ts";
 
-// Acceptance checks from the request (VER-09, A49, an M3 experiment): with the experiment on, a
-// new tool that fits no profile gets checks from a separate stage before it is made; creation and
-// its repairs are told the hooks and the checks; the candidate carries them to staging. The stage
-// never blocks the tool, and with the experiment off nothing changes.
+// Acceptance checks from the request (VER-09, A49, A57): with them on, as Tessera starts by
+// default since M3's experiment, a new tool that fits no profile gets checks from a separate stage
+// before it is made; creation and its repairs are told the hooks and the checks; the candidate
+// carries them to staging. The stage never blocks the tool, and with them off nothing changes.
 
 const temps: string[] = [];
 afterAll(() => temps.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true })));
@@ -313,5 +316,62 @@ describe("the checks are another model's words, quoted as data (SEC-02)", () => 
       // The fake end marker sits inside the quote, as data.
       expect(inside).toContain("end of the checks q00000000");
     }
+  });
+});
+
+describe("Tessera starts with the checks from the request on (A57)", () => {
+  /** Launches Tessera with these replies, asks for a new tool, and gives the stages asked. */
+  async function stagesAsked(replies: unknown[], acceptanceChecks?: boolean) {
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-acceptance-"));
+    temps.push(dataDir);
+    const stages: string[] = [];
+    const scripted = createScriptedProvider({ name: "acceptance", replies: replies as never });
+    const launched = await launch({
+      dataDir,
+      port: 0,
+      openBrowser: () => Promise.resolve(),
+      provider: {
+        ...scripted,
+        run: (spec) => {
+          stages.push(spec.stage);
+          return scripted.run(spec);
+        },
+      },
+      ...(acceptanceChecks === undefined ? {} : { acceptanceChecks }),
+    });
+    if (launched.status !== "started") throw new Error("Tessera didn't start.");
+    try {
+      const response = await fetch(new URL(GENERATE_ROUTE, launched.url), {
+        method: "POST",
+        headers: { origin: launched.url, "content-type": "application/json" },
+        body: JSON.stringify({ request: "A packing list I can add things to" }),
+      });
+      const reply = generateReplySchema.parse(await response.json());
+      return { stages, kind: reply.kind };
+    } finally {
+      await launched.stop();
+    }
+  }
+
+  it("VER-09, A57: a new tool that fits no profile gets checks when nothing says otherwise", async () => {
+    expect(
+      await stagesAsked([
+        { kind: "value", stage: "intent", value: intent() },
+        { kind: "value", stage: "acceptance", value: CHECKS },
+        { kind: "value", stage: "create", value: tool },
+      ]),
+    ).toEqual({ stages: ["intent", "acceptance", "create"], kind: "candidate" });
+  });
+
+  it("VER-09: turned off, no acceptance stage is asked", async () => {
+    expect(
+      await stagesAsked(
+        [
+          { kind: "value", stage: "intent", value: intent() },
+          { kind: "value", stage: "create", value: tool },
+        ],
+        false,
+      ),
+    ).toEqual({ stages: ["intent", "create"], kind: "candidate" });
   });
 });

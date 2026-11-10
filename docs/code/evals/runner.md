@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T21:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T16:20:00Z }
 ---
 
 # Purpose
@@ -28,7 +28,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 
 # Invariants
 
-- **A scenario's experiment switch reaches Tessera.** A scenario with `acceptanceChecks` launches Tessera with the acceptance-check experiment on (`VER-09`), live, rehearsed or replayed alike.
+- **A scenario's switch for checks from the request reaches Tessera.** A scenario launches Tessera with them on only when it sets `acceptanceChecks` (`VER-09`), live, rehearsed or replayed alike, and off otherwise, though Tessera has them on by default (A57), so a recording made without them still replays.
 - **The person's way in.** Each step uses the host app's own controls: the request box, the review's Apply, Save to my tools, the offer's Continue and Use again or my tools, History's undo and restore, the trash. A change to existing entries waits for review, and the runner applies it, as the person would. One exception: the app has no control for an empty workspace yet (#132), so `switch: new` makes one through the store and then opens it in the app.
 - **A `do` step uses the tool's own control** (`EVAL-01`, from M3). The runner finds, in the open tool's own frame, the one shown element marked with the step's hook (a hook of one of the scenario's verification profiles, `VER-03`), inside the one shown element its `in` names when it names one, such as the item showing Milk, or of several, the one whose label shows the step's `label`, as a person finds a form's field, and clicks it or types the value into it, as the person would; a select takes the choice whose text or value it is. A real click is the person's first interaction, so the tool may save (`GEN-06`). It then waits for the control's save (`dataSettled`, `DO_WAIT`): every step waits for the first change, up to ten seconds, whatever it expects, so a step expecting the data unchanged is watched as long and a late write fails it; once the data has changed, it waits for a second of quiet. Only then are the step's host facts read, so a save within that window is the step's own; one later than ten seconds would be the next step's. A step that changes nothing therefore takes ten seconds. A hook shown no times or several times fails the step in plain words, with how many it found. `packages/web/e2e/scenario-do.spec.ts` plays one from scripted answers: typing an item into the field found by its label among two that share the hook, adding it, removing another inside its item, a step that names no label for those two fields, and one whose item isn't there; the added item is saved a second and a half after its click.
 - **The open workspace is read, never chosen.** It comes from the tool panel's `data-workspace-id` hook (`VER-03`). After a reload the runner doesn't reopen anything: whatever the app opens is what the facts check.

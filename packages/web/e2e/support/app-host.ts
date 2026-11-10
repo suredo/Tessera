@@ -58,6 +58,9 @@ export async function startApp(
     // faked and never the real program (ENG-11).
     setup: { ...READY_SETUP, ...setup },
     provider,
+    // Checks from the request are on in Tessera (A57), but a test's scripted answers have no
+    // acceptance stage unless it asks for one.
+    acceptanceChecks: false,
     ...extra,
   });
   if (launched.status !== "started") throw new Error("Tessera didn't start.");
