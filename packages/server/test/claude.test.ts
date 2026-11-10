@@ -545,6 +545,13 @@ describe("a review's screenshots as image inputs (EVAL-03, A27, CLI-08)", () => 
     await expect(
       provider.run(review([{ name: "x.gif", mediaType: "image/gif" as never, base64: PNG }])),
     ).rejects.toThrow();
+    // Bytes that aren't base64, or aren't the image their type names, never reach the CLI.
+    await expect(
+      provider.run(review([{ ...image("a.png"), base64: btoa("this is not a PNG") }])),
+    ).rejects.toThrow("not a image/png image");
+    await expect(provider.run(review([{ ...image("a.png"), base64: "!!!!" }]))).rejects.toThrow(
+      "not base64",
+    );
     expect(made()).toEqual([]);
   });
 

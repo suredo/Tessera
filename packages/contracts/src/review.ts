@@ -59,6 +59,15 @@ export const reviewSchema = z
       )
       .min(1)
       .max(REVIEW_ITEMS.length)
+      .superRefine((items, context) => {
+        const seen = new Set<string>();
+        items.forEach(({ item }, index) => {
+          if (seen.has(item)) {
+            context.addIssue({ code: "custom", path: [index, "item"], message: `${item} twice` });
+          }
+          seen.add(item);
+        });
+      })
       .describe("Each item asked for, once, in the order asked."),
     verdict: verdictSchema.describe(
       "The verdict the reviewer would advise. The owner decides (EVAL-04).",
@@ -74,6 +83,23 @@ export const reviewSchema = z
 export type Review = z.infer<typeof reviewSchema>;
 
 /**
+ * The answer to a review that asked `asked`, as the host checks it: exactly those items, each
+ * once, in that order. An item left out, one more, or the order changed fails the answer, as any
+ * answer of the wrong shape does, so an incomplete review can't stand.
+ */
+export const reviewSchemaFor = (asked: readonly ReviewItem[]) =>
+  reviewSchema.superRefine((review, context) => {
+    const answered = review.items.map((i) => i.item);
+    if (answered.join() !== asked.join()) {
+      context.addIssue({
+        code: "custom",
+        path: ["items"],
+        message: `answered ${answered.join(", ")}, not ${asked.join(", ")}`,
+      });
+    }
+  });
+
+/**
  * The screenshots a review may take as image inputs (A27, CLI-08): PNG or JPEG, each at most
  * `bytes` before encoding, and at most `count` in one review, so the call stays within what the
  * model takes and what the run's evidence holds.
@@ -81,13 +107,38 @@ export type Review = z.infer<typeof reviewSchema>;
 export const REVIEW_IMAGE_LIMITS = { count: 12, bytes: 1_500_000 } as const;
 export const REVIEW_IMAGE_TYPES = ["image/png", "image/jpeg"] as const;
 
-/** One screenshot sent to the reviewer: its name in the run, its type and its bytes as base64. */
-export const reviewImageSchema = z.strictObject({
-  name: z.string().min(1).max(100),
-  mediaType: z.enum(REVIEW_IMAGE_TYPES),
-  base64: z
-    .string()
-    .min(1)
-    .max(Math.ceil(REVIEW_IMAGE_LIMITS.bytes / 3) * 4),
-});
+/** The first bytes of each image type a review takes: PNG's signature, and JPEG's start of image. */
+const SIGNATURES: Record<(typeof REVIEW_IMAGE_TYPES)[number], readonly number[]> = {
+  "image/png": [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+  "image/jpeg": [0xff, 0xd8, 0xff],
+};
+const BASE64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
+/**
+ * One screenshot sent to the reviewer: its name in the run, its type and its bytes as base64. The
+ * bytes are checked, not only what they claim: valid base64, within the size, and starting as the
+ * type they are named says, so text or another kind of image never reaches the model as one.
+ */
+export const reviewImageSchema = z
+  .strictObject({
+    name: z.string().min(1).max(100),
+    mediaType: z.enum(REVIEW_IMAGE_TYPES),
+    base64: z
+      .string()
+      .min(1)
+      .max(Math.ceil(REVIEW_IMAGE_LIMITS.bytes / 3) * 4)
+      .regex(BASE64, "not base64"),
+  })
+  .superRefine((image, context) => {
+    if (!BASE64.test(image.base64)) return;
+    const signature = SIGNATURES[image.mediaType];
+    const start = atob(image.base64.slice(0, 16));
+    if (signature.some((byte, i) => start.charCodeAt(i) !== byte)) {
+      context.addIssue({
+        code: "custom",
+        path: ["base64"],
+        message: `not a ${image.mediaType} image`,
+      });
+    }
+  });
 export type ReviewImage = z.infer<typeof reviewImageSchema>;

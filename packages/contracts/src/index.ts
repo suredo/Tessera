@@ -218,6 +218,7 @@ export {
   reviewItemSchema,
   reviewMarkSchema,
   reviewSchema,
+  reviewSchemaFor,
   VERDICTS,
   verdictSchema,
   type Review,
