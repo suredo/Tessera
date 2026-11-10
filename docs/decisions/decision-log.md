@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A58), with its choice and reasons."
+description: "Every decision made so far (A1–A59), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T20:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:00:00Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -73,6 +73,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A56 | Browser tests on CI | **Chrome only, every test at 1280 px and the layout tests at 320 px, split into three jobs at once, and no videos** | Chosen by the owner on 2026-11-09: CI's one Windows job took about 27 minutes, 26 of them for 1,000 browser tests in Chrome and Edge at both widths on two workers. Chrome is enough for now and other browsers are tested later (amends `TEST-06`, `RUN-06`, `ENG-14`). 320 px covers only the specs that check layout. Videos weren't useful on CI: a failure is looked into on the owner's machine, recording when needed, and CI keeps only a failed test's light trace (amends `ENG-10`'s CI videos). The browser tests run in three parts at once, and one summary job carries the name the ruleset on `main` requires. |
 | A57 | Checks from the request, after the experiment | **Adopted as the default for new tools that fit no profile, once a check that proves nothing no longer counts** | Chosen by the owner on 2026-11-10, after the [acceptance-check experiment](../../evals/reports/2026-11-10-acceptance-run.md) met the rule frozen before it (A49): all 4 requests got checks, 8 of 9 checks were meaningful, and no tool was wrongly failed or wrongly passed. The one check that wasn't meaningful passed on text the tool showed before its steps, so such a check now proves nothing and isn't counted (L-93). The stage adds about 10 s to each such tool. Four requests are thin evidence, so M4's release run measures the checks again against the owner's verdicts (`VER-09`). |
 | A58 | When the clean-setup test runs | **Not in M3: functionality comes first, and P1 runs later, in M4's release run** | Chosen by the owner on 2026-11-10: a sandboxed clean setup is too much for now, and testing what Tessera does matters more. M3's exit criterion for P1 is dropped, unmet, not passed. P1 stays in M4's release run, with Windows Sandbox (A43) and the [kit](../code/scripts/sandbox.md) ready for it; before then, the setup check's fix for a missing program should give the exact steps (`PLAT-03`). The [plan](../../evals/reports/2026-11-10-p1-plan.md)'s approved cap of 10 calls went unused and authorizes nothing later. |
+| A59 | Talking a design through | **A discuss route: questions and ideas get a plain answer, and nothing is built until the person asks for it (M4)** | Chosen by the owner on 2026-11-10, in hands-on testing: every message was routed to building, changing data, opening a saved tool, clarifying or refusing, so asking whether a modal would work started a build. A cheap call answers instead, knowing the open tool and what tools here can do; asking for the change afterwards builds it with that answer as context (`GEN-19`). It goes in M4, with the chat's other changes. |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2

@@ -4,7 +4,7 @@ title: "M4: First release, v0.1"
 description: "Useful-immediately generation, more profiles, files and data providers, and the v0.1 acceptance run."
 tags: [roadmap, first-release]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T15:34:41Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:00:00Z }
 ---
 # M4: First release, v0.1 (size L, live budget about 140 calls)
 
@@ -18,6 +18,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T15:34:41Z }
 | Files in and out through the asset store (for the image editor, T14); the first data provider for T7, with result images delivered as assets and videos opened on their own site; sources chosen at the start of M4 (D11) | CAP-02, CAP-03, DATA-11 |
 | Details view complete (source, versions, checks, ledger, diagnostics) | UX-06, APP-09, OBS-01 |
 | Metrics report from the ledger | OBS-03 |
+| Discussing without building: a question or an idea gets a plain answer, and nothing is built until asked (A59) | GEN-19, GEN-01 |
 | Fixes for the issues found during the internal alpha | — |
 | Changes to the host app's own screens, found by testing real tools made in M4 (owner's choice, 2026-11-07: UI changes wait until generated tools can be tested in the app) | — |
 

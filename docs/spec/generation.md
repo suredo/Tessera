@@ -1,10 +1,10 @@
 ---
 type: Requirement Area
 title: "Generation pipeline"
-description: "Structured intent, routing, generation, repair, honest messages and time limits (GEN-01 to GEN-18)."
+description: "Structured intent, routing, generation, repair, honest messages and time limits (GEN-01 to GEN-19)."
 tags: [spec, generation, pipeline]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:00:00Z }
 ---
 # Generation pipeline (`GEN`)
 
@@ -43,3 +43,4 @@ request ─► intent (structured) ─► route
 | GEN-16 | **Progress during long stages.** The person sees progress while a stage runs (for example "Building your planner… 40 s"), and can cancel. See `CLI-07`. |
 | GEN-17 | **Two passes for big tools** (starting point, A17). When a request is large, the first pass builds a small working core that is verified and activated. The host decides this from the intent stage's `features` list with a tested threshold, not from a model's own "large" flag (L-37). Further features arrive as edits, each verified. M2 measures this against single-pass generation (time to first useful tool, total time, tokens, pass rate) before it becomes final. |
 | GEN-18 | **Find saved tools first** (A28). The intent stage receives a short catalogue of the person's saved tools (name and one-line description, the most recent first, within a size budget). If the request matches one ("open my budget", "I need my shopping list"), it returns `open_saved` with that tool's ID. The host checks the ID exists and offers **Continue** or **Use again**, never silently opening or overwriting anything. With no match, or if the person asks for a new one, Tessera creates a tool. This is the local form of the later "check the store first". |
+| GEN-19 | **Discussing without building** (A59, M4). The intent stage recognises a question or an idea about the open tool or one to come ("would a modal be better here?", "what if each day showed its events?") and returns `discuss`. The reply is a plain answer, from one cheap call that knows the open tool's summary and what tools here can and can't do (`CAP-01`, the sandbox's limits such as no browser popups); it builds nothing, changes no data and makes no version. When the person then asks for the change ("do that"), the request is built as usual, with the discussion's last answer as context. A request that clearly asks for a change is never answered with a discussion instead, and one that is unclear is still asked to clarify (`GEN-01`). |
