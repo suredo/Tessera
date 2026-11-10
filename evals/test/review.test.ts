@@ -11,6 +11,7 @@ import {
   openDataFolder,
   patchWorkspaceData,
   saveVersion,
+  saveWorkspaceData,
 } from "@tessera/server";
 import { afterAll, describe, expect, it } from "vitest";
 import { readLedger, readRequestLog } from "../src/harness/index.ts";
@@ -68,7 +69,9 @@ const tool: Artifact = {
 let ruleId = "";
 
 /** A finished T5 run: two steps, the second blocked; one screenshot; one tool version. */
-async function run(options: { trashed?: boolean; ruleRemoved?: boolean } = {}): Promise<string> {
+async function run(
+  options: { trashed?: boolean; ruleRemoved?: boolean; replacedWhole?: boolean } = {},
+): Promise<string> {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-review-test-"));
   temps.push(folder);
   const report = {
@@ -119,6 +122,12 @@ async function run(options: { trashed?: boolean; ruleRemoved?: boolean } = {}): 
         operations: [{ op: "remove", collection: "rules", id: ruleId, revisionCount: 1 }],
       });
       if (!removed.ok) throw new Error(removed.message);
+    }
+    if (options.replacedWhole) {
+      // The data replaced whole, twice: a rule saved, then all of it replaced by none.
+      const revision = () => listWorkspaces(store).find((w) => w.id === id)!.dataRevision;
+      saveWorkspaceData(store, id, { rules: [{ id: "rule-friday", weekday: 5 }] }, revision());
+      saveWorkspaceData(store, id, { rules: [] }, revision());
     }
     if (options.trashed) deleteWorkspace(store, id);
   } finally {
@@ -232,6 +241,16 @@ describe("what the review reads (EVAL-03, ENG-19)", () => {
     const [request] = readRequestLog(path.join(folder, REVIEW_HARNESS));
     expect(request!.prompt).toContain('"change": "removed"');
     expect(request!.prompt).toContain('"weekday": 5');
+  });
+
+  it("L-92: a whole replacement shows what it replaced, so an entry it removed is still seen", async () => {
+    const folder = await run({ replacedWhole: true });
+    const { data } = await gatherRun(folder);
+    expect(data[0]!.atEnd).toBe(JSON.stringify({ rules: [] }));
+    expect(data[0]!.changes.map((c) => c.records.map((r) => [r.change, r.before]))).toEqual([
+      [["replaced whole", { rules: [] }]],
+      [["replaced whole", { rules: [{ id: "rule-friday", weekday: 5 }] }]],
+    ]);
   });
 
   it("ENG-19: refuses the real user data folder before opening anything in it", async () => {

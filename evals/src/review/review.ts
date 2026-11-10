@@ -84,7 +84,7 @@ const changeShape = z.union([
       }),
     ),
   }),
-  z.object({ kind: z.literal("whole") }),
+  z.object({ kind: z.literal("whole"), before: z.unknown() }),
 ]);
 /** How much of a tool's final entries the review quotes, so one large tool can't fill the prompt. */
 export const DATA_QUOTE_LIMIT = 6_000;
@@ -93,8 +93,13 @@ export const DATA_QUOTE_LIMIT = 6_000;
 function describeChange(raw: string): ReviewData["changes"][number] {
   const parsed = changeShape.safeParse(JSON.parse(raw));
   if (!parsed.success) return { records: [] };
+  // A whole replacement keeps all the data it replaced, so what it removed is still seen.
   if (parsed.data.kind === "whole") {
-    return { records: [{ collection: "", id: "", change: "replaced whole", before: null }] };
+    return {
+      records: [
+        { collection: "", id: "", change: "replaced whole", before: parsed.data.before ?? null },
+      ],
+    };
   }
   return {
     records: parsed.data.records.map((r) => ({
