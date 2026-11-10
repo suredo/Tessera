@@ -7,7 +7,10 @@
 param(
   # The commit of github.com/suredo/Tessera to install: by default, origin/main as this checkout
   # last fetched it.
-  [string]$Commit = ""
+  [string]$Commit = "",
+  # The hard cap on model calls the owner approved for the run (ENG-07); Tessera in the sandbox
+  # refuses any call past it.
+  [Parameter(Mandatory = $true)][int]$CallCap
 )
 $ErrorActionPreference = "Stop"
 
@@ -22,12 +25,14 @@ if (-not (Test-Path $sandbox)) {
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 if ($Commit -eq "") { $Commit = (git -C $root rev-parse origin/main).Trim() }
 if ($Commit -notmatch '^[0-9a-f]{40}$') { throw "The commit must be a full 40-character hash: $Commit" }
+if ($CallCap -lt 1) { throw "The call cap must be at least 1, not $CallCap." }
 
 # The folder the sandbox sees, read-only: the preparation script and the commit to install.
 $run = Join-Path $root "test-output\p1"
 New-Item -ItemType Directory -Force $run | Out-Null
 Copy-Item (Join-Path $PSScriptRoot "p1-prepare.ps1") $run -Force
 Set-Content -Path (Join-Path $run "commit.txt") -Value $Commit -Encoding ascii
+Set-Content -Path (Join-Path $run "callcap.txt") -Value $CallCap -Encoding ascii
 
 $inside = "C:\Users\WDAGUtilityAccount\Desktop\p1"
 $config = @"
@@ -49,5 +54,5 @@ $config = @"
 "@
 $wsb = Join-Path $run "p1.wsb"
 Set-Content -Path $wsb -Value $config -Encoding utf8
-Write-Host "Starting Windows Sandbox for P1 at $Commit."
+Write-Host "Starting Windows Sandbox for P1 at $Commit, with at most $CallCap model calls."
 Start-Process $wsb

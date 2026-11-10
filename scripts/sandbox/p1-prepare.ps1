@@ -1,8 +1,9 @@
 # Docs: docs/code/scripts/sandbox.md
 # Runs inside Windows Sandbox for the clean-setup scenario P1 (A43, J0): downloads Tessera at the
 # commit p1.ps1 chose, installs the Node version its .nvmrc names, installs and builds Tessera,
-# and puts a Tessera shortcut on the desktop. It never installs Claude Code or Codex: the tester
-# follows Tessera's setup check for those. Windows PowerShell 5.1.
+# and puts a Tessera shortcut on the desktop that starts it with the approved call cap
+# (TESSERA_CALL_CAP, ENG-07). It never installs Claude Code or Codex: the tester follows Tessera's
+# setup check for those. Windows PowerShell 5.1.
 param(
   # Where Tessera goes; the mapped folder is read-only.
   [string]$Target = "C:\Tessera"
@@ -11,6 +12,7 @@ $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 $here = $PSScriptRoot
 $commit = (Get-Content (Join-Path $here "commit.txt") -Raw).Trim()
+$cap = [int]((Get-Content (Join-Path $here "callcap.txt") -Raw).Trim())
 $work = Join-Path $env:TEMP "p1"
 New-Item -ItemType Directory -Force $work | Out-Null
 
@@ -46,10 +48,12 @@ try {
 Write-Host "4/4 Putting Tessera on the desktop..."
 $shell = New-Object -ComObject WScript.Shell
 $link = $shell.CreateShortcut((Join-Path ([Environment]::GetFolderPath("Desktop")) "Tessera.lnk"))
-$link.TargetPath = Join-Path $Target "Tessera.cmd"
+# Through cmd, so the cap is set for Tessera alone; Tessera says the cap as it starts.
+$link.TargetPath = Join-Path $env:WINDIR "System32\cmd.exe"
+$link.Arguments = "/c set TESSERA_CALL_CAP=$cap&& `"$(Join-Path $Target 'Tessera.cmd')`""
 $link.WorkingDirectory = $Target
 $link.Save()
 
 Write-Host ""
-Write-Host "Ready. Claude Code and Codex are not installed, on purpose."
+Write-Host "Ready, with at most $cap model calls. Claude Code and Codex are not installed, on purpose."
 Write-Host "Double-click Tessera on the desktop and follow the steps in docs/testing/clean-setup.md."

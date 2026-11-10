@@ -4,7 +4,7 @@ title: "Clean setup in Windows Sandbox (P1)"
 description: "How to run the clean-setup scenario P1 (A43, J0): start a throwaway Windows with Tessera downloaded and built but no Claude Code or Codex, then follow Tessera's setup check from 'missing' through 'not signed in' to 'ready', and make T1's first tool with each program."
 tags: [testing, platform, setup]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T18:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T19:30:00Z }
 ---
 
 # Clean setup in Windows Sandbox (P1)
@@ -25,8 +25,8 @@ Then restart Windows. The sandbox takes about 4 GB of memory while it runs, so c
 
 # Steps
 
-1. **Start it.** In this checkout, run `powershell -ExecutionPolicy Bypass -File scripts\sandbox\p1.ps1`. It starts the sandbox with `origin/main` as last fetched (`-Commit <hash>` picks another). Inside, a window downloads Tessera, installs Node and builds Tessera. That takes a few minutes, and ends with "Ready".
-2. **Start Tessera:** double-click Tessera on the sandbox's desktop. The browser opens at Tessera.
+1. **Start it.** In this checkout, run `powershell -ExecutionPolicy Bypass -File scripts\sandbox\p1.ps1 -CallCap <approved cap>`. It starts the sandbox with `origin/main` as last fetched (`-Commit <hash>` picks another). Tessera in the sandbox refuses any model call past the cap (`TESSERA_CALL_CAP`, ENG-07). Inside, a window downloads Tessera, installs Node and builds Tessera. That takes a few minutes, and ends with "Ready".
+2. **Start Tessera:** double-click Tessera on the sandbox's desktop. Its window says the cap, and the browser opens at Tessera.
 3. **Claude Code missing.** The setup check should say Claude Code isn't installed, with the exact fix (`PLAT-03`). Follow only what Tessera says, and note anything you had to find elsewhere.
 4. **Not signed in.** Once Claude Code is installed, check again. It should say Claude Code isn't signed in, with the fix. Sign in as it says.
 5. **Ready.** Check again: Claude Code is ready, and the setup check offers making a tool.

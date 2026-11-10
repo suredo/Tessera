@@ -3,6 +3,7 @@
 // stops it cleanly on Ctrl+C or when its window closes.
 import { fileURLToPath } from "node:url";
 import { checkSetup } from "../setup/index.ts";
+import { callCapFrom } from "../providers/index.ts";
 import { chooseDataFolder, syncedFolderOf } from "../storage/index.ts";
 import { launch, openInBrowser } from "./launcher.ts";
 
@@ -26,8 +27,20 @@ for (const signal of ["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"] as const) {
   process.on(signal, () => void (stop?.() ?? Promise.resolve()).finally(() => process.exit(0)));
 }
 
+// TESSERA_CALL_CAP caps the model calls of an evaluation run outside the harness (ENG-07), such
+// as the clean-setup scenario P1; a value that isn't a whole number stops the start.
+let callCap: number | undefined;
+try {
+  callCap = callCapFrom();
+} catch (error) {
+  console.error((error as Error).message);
+  process.exit(1);
+}
+if (callCap !== undefined) console.log(`This Tessera makes at most ${callCap} model calls.`);
+
 const launched = await launch({
   dataDir,
+  ...(callCap === undefined ? {} : { callCap }),
   webRoot: fileURLToPath(new URL("../../../web/dist", import.meta.url)),
   // Tests start the launcher without a browser.
   openBrowser: process.env["TESSERA_OPEN_BROWSER"] === "0" ? async () => {} : openInBrowser,

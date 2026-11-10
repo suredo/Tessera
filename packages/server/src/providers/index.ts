@@ -8,6 +8,7 @@ export {
   type StageResult,
   type StageSpec,
 } from "./provider.ts";
+export { callCapFrom, callCounter, type CallCounter } from "./call-cap.ts";
 export {
   createScriptedProvider,
   loadScript,
