@@ -3,11 +3,11 @@ type: Code Package
 title: "Runtime package"
 description: "@tessera/runtime: the sandbox a tool runs in. The wrapper on the opposite loopback name, the tool's sandboxed frame under a strict CSP, and the one MessageChannel port between them and the host."
 resource: ../../../packages/runtime/
-implements: [RUN-01, RUN-02, RUN-03, RUN-05, RUN-07, GEN-06, SEC-05, VER-02, VER-03, VER-07, VER-09, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX-06, SBX-07, SBX-08, SBX-09, SBX-10, SBX-11, SBX-12, SBX-13]
+implements: [RUN-01, RUN-02, RUN-03, RUN-05, RUN-07, GEN-06, CAP-04, SEC-05, VER-02, VER-03, VER-07, VER-09, SBX-01, SBX-02, SBX-03, SBX-04, SBX-05, SBX-06, SBX-07, SBX-08, SBX-09, SBX-10, SBX-11, SBX-12, SBX-13]
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/runtime/test/checks.test.ts, ../../../packages/runtime/test/bridge.test.ts, ../../../packages/runtime/test/server-data.test.ts, ../../../packages/runtime/test/staging.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/bridge.spec.ts, ../../../packages/web/e2e/bridge-data.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts, ../../../packages/web/e2e/staging.spec.ts, ../../../packages/web/e2e/styles.spec.ts, ../../../packages/web/e2e/assets.spec.ts, ../../../packages/web/e2e/smoke.spec.ts, ../../../packages/web/e2e/drive.spec.ts, ../../../packages/web/e2e/profile-checks.spec.ts, ../../../packages/web/e2e/filtering-check.spec.ts, ../../../packages/web/e2e/form-check.spec.ts, ../../../packages/web/e2e/chart.spec.ts, ../../../packages/web/e2e/chart-profile-check.spec.ts, ../../../packages/web/e2e/cards-profile-check.spec.ts, ../../../packages/web/e2e/scheduling-check.spec.ts, ../../../packages/web/e2e/acceptance-check.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T17:40:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T21:30:00Z }
 ---
 
 # Purpose
