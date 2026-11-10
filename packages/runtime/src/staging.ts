@@ -277,6 +277,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
     ...(!verdict && passed.includes("smoke") ? { startChecked: true as const } : {}),
     // And only when the behavior check (VER-03) ran here and passed, so it can say that too.
     ...(!verdict && passed.includes("behavior") ? { behaviorChecked: true as const } : {}),
+    // And only when the checks written from the request (VER-09) ran here and all passed.
+    ...(!verdict && passed.includes("acceptance") ? { acceptanceChecked: true as const } : {}),
   });
   return reply.ok
     ? { outcome: "activated", workspace: reply.workspace, migrationCount: reply.migrationCount }

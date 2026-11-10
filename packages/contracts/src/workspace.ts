@@ -40,9 +40,10 @@ export type Workspace = z.infer<typeof workspaceSchema>;
 
 /**
  * The host's checks a version can have passed before it was activated (APP-05): the code check
- * (VER-01), the start check (VER-02) and a verification profile's behavior check (VER-03, VER-08).
+ * (VER-01), the start check (VER-02), a verification profile's behavior check (VER-03, VER-08),
+ * and, in the M3 experiment, the checks written from the request (VER-09), which are weaker.
  */
-export const VERSION_CHECKS = ["code", "start", "behavior"] as const;
+export const VERSION_CHECKS = ["code", "start", "behavior", "acceptance"] as const;
 export type VersionCheck = (typeof VERSION_CHECKS)[number];
 
 /** What a version was made for and which checks it passed; none for one written by hand. */
@@ -57,7 +58,7 @@ export const versionNoteSchema = z.strictObject({
   checks: z
     .array(z.enum(VERSION_CHECKS))
     .describe(
-      "The code check (static), the start check (smoke) and the behavior check its candidate passed.",
+      "The code check (static), the start check (smoke), the behavior check and the checks from the request its candidate passed.",
     ),
   profile: profileIdSchema
     .nullable()

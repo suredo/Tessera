@@ -135,15 +135,25 @@ async function check(
         // One staging check for each of the request's checks, each on fresh data.
         checks: [w.smokeCheck(), ...w.acceptanceChecks(acceptance)],
         // Reached only when every check passed; refusing keeps the test off the server.
-        activate: () =>
-          Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
+        // It says which checks staging reported passed (VER-09), so the test can see them.
+        activate: (request: { startChecked?: true; acceptanceChecked?: true }) =>
+          Promise.resolve({
+            ok: false,
+            reason: "stale",
+            message: `Passed the checks: start ${request.startChecked === true}, request ${request.acceptanceChecked === true}.`,
+          }),
       });
     },
     { mountId: flaw, acceptance, things },
   );
 }
 
-const PASSED = { outcome: "refused", reason: "stale", message: "Passed the checks." };
+// Staging reports the start check and the checks from the request as passed (VER-09).
+const PASSED = {
+  outcome: "refused",
+  reason: "stale",
+  message: "Passed the checks: start true, request true.",
+};
 
 test("VER-09: a tool that does what its request's checks say passes them, capitals and spaces aside", async ({
   page,

@@ -85,6 +85,8 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       expires: number;
       summary: string;
       profile: ProfileId | null;
+      /** Whether the server gave this candidate checks written from the request (VER-09). */
+      acceptance: boolean;
     }
   >();
   const controls = new RequestControls(options.jobs, (token) => {
@@ -107,6 +109,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
       summary: reply.summary,
       // The profile the server's own intent named, whose check staging runs (VER-03, VER-08).
       profile: reply.profile ?? null,
+      acceptance: reply.acceptance !== null && reply.acceptance !== undefined,
     });
     return { ...reply, activation: { token, expiresAt: expires } };
   };
@@ -127,12 +130,17 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     // it; the behavior check, with its profile, only when staging reports that too and the
     // server named a profile for this candidate, so the browser can't name one (VER-08).
     const behavior = Boolean(request.startChecked && request.behaviorChecked && entry.profile);
+    // The checks from the request, only when staging reports them and the server gave them (VER-09).
+    const acceptance = Boolean(
+      request.startChecked && request.acceptanceChecked && entry.acceptance,
+    );
     const note: VersionNote = {
       summary: entry.summary,
       checks: [
         "code",
         ...(request.startChecked ? (["start"] as const) : []),
         ...(behavior ? (["behavior"] as const) : []),
+        ...(acceptance ? (["acceptance"] as const) : []),
       ],
       profile: behavior ? entry.profile : null,
     };

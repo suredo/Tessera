@@ -189,6 +189,9 @@ function Checks({ details }: { details: Details }) {
               ))}
             </ul>
           </li>
+        ) : checks.includes("acceptance") ? (
+          // Checks written from the request (VER-09): weaker than a profile's, and said so.
+          <li>{t("details.check.acceptance")}</li>
         ) : (
           <li>{t("details.check.noBehavior")}</li>
         )}

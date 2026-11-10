@@ -382,6 +382,51 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
     expect(seen.stagings).toHaveLength(3);
   });
 
+  it("VER-09: a candidate with checks from the request is staged behind the smoke check, then each of them, and a failure gets the behavior repair", async () => {
+    const checked = {
+      ...candidate,
+      acceptance: {
+        outcome: "checks",
+        hooks: [
+          { name: "thing-add", says: "the add button" },
+          { name: "thing", says: "each thing" },
+        ],
+        checks: [
+          {
+            says: "Adding a thing makes the list longer",
+            steps: [{ do: "click", hook: "thing-add" }],
+            expect: { see: "count-change", hook: "thing", changeCount: 1 },
+          },
+          {
+            says: "It shows the thing",
+            steps: [{ do: "click", hook: "thing-add" }],
+            expect: { see: "shows", hook: "thing", text: "Thing" },
+          },
+        ],
+      },
+    } as GenerateReply;
+    const { fake, seen } = deps(checked);
+    const repair = vi.fn().mockResolvedValue({ ...checked, hash: "b".repeat(64) });
+    fake.repairSmoke = repair;
+    const results: StagingResult[] = [
+      { outcome: "check-failed", check: "acceptance", reason: "A check from your request failed." },
+      { outcome: "activated", workspace: {} as never, migrationCount: 0 },
+    ];
+    fake.stage = (options) => {
+      seen.stagings.push(options);
+      return Promise.resolve(results.shift()!);
+    };
+    await carryOut("A packing list", null, fake);
+    expect(seen.stagings[0]!.checks.map((check) => check.name)).toEqual([
+      "smoke",
+      "acceptance",
+      "acceptance",
+    ]);
+    expect(repair.mock.calls.map(([request]) => (request as { failure: string }).failure)).toEqual([
+      "behavior",
+    ]);
+  });
+
   it("GEN-08: a candidate that fails its check, or is refused, is never called ready, and nothing opens", async () => {
     const failed = deps(candidate, { outcome: "check-failed", check: "smoke", reason: "x" });
     expect(await carryOut("x", null, failed.fake)).toEqual({ message: en["request.checkFailed"] });

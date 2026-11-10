@@ -716,7 +716,7 @@ describe("images in archives (DATA-05, DATA-11)", () => {
 
   it("CON-04, APP-04: an archive from before descriptions, format 2, imports with none", async () => {
     const { files, manifest } = await exportedFiles();
-    expect(manifest["formatVersion"]).toBe(5);
+    expect(manifest["formatVersion"]).toBe(6);
     const strip = (value: Record<string, unknown>) => {
       const rest = { ...value };
       delete rest["description"];
