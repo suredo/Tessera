@@ -9,7 +9,7 @@ import { ready } from "./support/ready.ts";
 // what it expects. A tool that does what the checks say passes; each broken one fails, saying
 // what was expected, what was observed, and that the rule is the request's (VER-07).
 
-type Flaw = "none" | "ignoresAdd" | "addsTwice" | "noAddHook" | "keepsRemoved";
+type Flaw = "none" | "ignoresAdd" | "addsTwice" | "noAddHook" | "keepsRemoved" | "noDuplicates";
 
 /** A packing list, which fits no profile, using the hooks the checks below name. */
 const list = (flaw: Flaw): Artifact["code"] => ({
@@ -43,12 +43,21 @@ load();
 document.querySelector("button").addEventListener("click", () => {
   if (flaw === "ignoresAdd") return;
   const name = document.querySelector("#name").value;
+  // A good list may refuse a name it already has.
+  if (flaw === "noDuplicates" && state.data.things.some((thing) => thing.name === name)) return;
   const add = { op: "add", collection: "things", record: { name } };
   tessera.call("data.patch", { operations: flaw === "addsTwice" ? [add, add] : [add] }).then(load);
 });`,
 });
 
-const flaws: Flaw[] = ["none", "ignoresAdd", "addsTwice", "noAddHook", "keepsRemoved"];
+const flaws: Flaw[] = [
+  "none",
+  "ignoresAdd",
+  "addsTwice",
+  "noAddHook",
+  "keepsRemoved",
+  "noDuplicates",
+];
 let host: SandboxHost;
 
 test.beforeAll(async () => {
@@ -94,39 +103,43 @@ const ACCEPTANCE: Acceptance = {
 };
 
 /** Stages a list behind the smoke check and the request's acceptance checks; activation is refused. */
-async function check(page: Page, flaw: Flaw): Promise<Result> {
+async function check(
+  page: Page,
+  flaw: Flaw,
+  acceptance: Acceptance = ACCEPTANCE,
+  // The passport is first, so the first remove button takes it off.
+  things: { id: string; name: string }[] = [
+    { id: "t-1", name: "Passport" },
+    { id: "t-2", name: "Charger" },
+  ],
+): Promise<Result> {
   await page.goto(host.url);
   await ready(page, "stageCandidate");
   return page.evaluate(
-    async ({ mountId, acceptance }) => {
+    async ({ mountId, acceptance, things }) => {
       const w = window as unknown as {
         stageCandidate(options: unknown): Promise<Result>;
         smokeCheck(): unknown;
-        acceptanceCheck(acceptance: unknown): unknown;
+        acceptanceChecks(acceptance: unknown): unknown[];
       };
       return w.stageCandidate({
         candidate: {
           mountId,
           hash: "a".repeat(64),
           capabilities: [],
-          // The passport is first, so the first remove button takes it off.
-          syntheticData: {
-            things: [
-              { id: "t-1", name: "Passport" },
-              { id: "t-2", name: "Charger" },
-            ],
-          },
+          syntheticData: { things },
         },
         workspaceId: "00000000-0000-4000-8000-000000000000",
         expectedDataRevision: 0,
         activationToken: "00000000-0000-4000-8000-000000000001",
-        checks: [w.smokeCheck(), w.acceptanceCheck(acceptance)],
+        // One staging check for each of the request's checks, each on fresh data.
+        checks: [w.smokeCheck(), ...w.acceptanceChecks(acceptance)],
         // Reached only when every check passed; refusing keeps the test off the server.
         activate: () =>
           Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
       });
     },
-    { mountId: flaw, acceptance: ACCEPTANCE },
+    { mountId: flaw, acceptance, things },
   );
 }
 
@@ -177,4 +190,35 @@ test("VER-09: a thing still shown after it was removed fails", async ({ page }) 
   expect(result.reason).toContain(
     'A check from your request (Removing the passport takes it off the list): expected no element marked thing showing "Passport"',
   );
+});
+
+test("VER-09: each check starts on fresh data, so one check's saves never fail the next", async ({
+  page,
+}) => {
+  // Two checks that add the same name: a list that refuses a name it has passes both, as each
+  // starts on the synthetic data again, not on what the other saved.
+  const twice: Acceptance = {
+    ...ACCEPTANCE,
+    checks: [
+      ACCEPTANCE.checks[0]!,
+      { ...ACCEPTANCE.checks[0]!, expect: { see: "count-change", hook: "thing", changeCount: 1 } },
+    ],
+  };
+  expect(await check(page, "noDuplicates", twice)).toEqual(PASSED);
+});
+
+test("VER-09: a text is looked for in every element shown and in its whole text, past a long list or a long text", async ({
+  page,
+}) => {
+  // An added thing lands after a hundred others, past what one read gives.
+  const hundred = Array.from({ length: 100 }, (_, i) => ({ id: `t-${i}`, name: `Thing ${i}` }));
+  const shows: Acceptance = { ...ACCEPTANCE, checks: [ACCEPTANCE.checks[0]!] };
+  expect(await check(page, "none", shows, hundred)).toEqual(PASSED);
+  // A thing named past the first 200 characters is still seen when it stays after its remove.
+  const long = [{ id: "t-1", name: `${"Very long label ".repeat(15)}Passport` }];
+  const hides: Acceptance = { ...ACCEPTANCE, checks: [ACCEPTANCE.checks[2]!] };
+  const kept = await check(page, "keepsRemoved", hides, long);
+  expect(kept).toMatchObject({ outcome: "check-failed", check: "acceptance" });
+  expect(kept.reason).toContain("observed it shown in the element at position 1 of 1");
+  expect(await check(page, "none", hides, long)).toEqual(PASSED);
 });

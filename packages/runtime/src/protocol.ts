@@ -39,7 +39,8 @@ export const runtimeOriginFor = (appLocation: { protocol: string; port: string }
 /**
  * One step a behavior check takes on a candidate (VER-03), on the elements it marks with `hook` in
  * their `data-hook` attribute: fill in the `index`th one (the first by default) with `value`, click
- * it, read what they show, find which of them show `value`, describe them as fields, read the
+ * it, read what they show, find which of them show `value` (with `loose`, capitals and repeated
+ * spaces aside), describe them as fields, read the
  * charts drawn in them, or read the dates they mark. The tool's page takes the steps
  * (src/tool-preamble.ts, which repeats these names).
  */
@@ -47,7 +48,7 @@ export type DriveStep =
   | { do: "fill"; hook: string; value: string; index?: number }
   | { do: "click"; hook: string; index?: number }
   | { do: "read"; hook: string; start?: number }
-  | { do: "find"; hook: string; value: string; start?: number }
+  | { do: "find"; hook: string; value: string; start?: number; loose?: boolean }
   | { do: "fields"; hook: string }
   | { do: "chart"; hook: string }
   | { do: "dates"; hook: string; start?: number };

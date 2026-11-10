@@ -186,12 +186,16 @@ import type { BridgeMethodName } from "@tessera/contracts";
       }
       // Which of them, by position, show `text`: however many there are, the first 20 from
       // `start`, so a check can ask whether one at a known position does.
+      // A loose find compares as a person reads: capitals and repeated spaces aside (VER-09).
       if (step.do === "find") {
-        const text = String(step.value);
+        const loose = (step as { loose?: unknown }).loose === true;
+        const fold = (text: string) =>
+          loose ? text.replace(/\s+/g, " ").trim().toLowerCase() : text;
+        const text = fold(String(step.value));
         const start = typeof step.start === "number" && step.start > 0 ? Math.floor(step.start) : 0;
         const matches: number[] = [];
         found.forEach((element, at) => {
-          if (at >= start && matches.length < 20 && textOf(element).includes(text)) {
+          if (at >= start && matches.length < 20 && fold(textOf(element)).includes(text)) {
             matches.push(at);
           }
         });

@@ -18,9 +18,6 @@ import type { DriveResult, DriveStep } from "./protocol.ts";
 /** The checks of one acceptance answer: the ones a request's stage wrote. */
 export type AcceptanceChecks = Extract<Acceptance, { outcome: "checks" }>;
 
-/** Text as a person compares it: spaces collapsed, capitals ignored. */
-const loose = (text: string) => text.trim().replace(/\s+/g, " ").toLowerCase();
-
 const quoted = (texts: readonly string[]) =>
   texts.length === 0
     ? "nothing shown with that hook"
@@ -44,14 +41,22 @@ function expectation(check: AcceptanceCheck): string {
   return `the elements marked ${expect.hook} to change in number by ${sign}${expect.changeCount}`;
 }
 
-/** Runs one check on a fresh start of the candidate. */
+/**
+ * Runs one check on a start of the candidate. A text is looked for in every element the hook
+ * marks that the page shows, in its whole text, capitals and repeated spaces aside (a loose find);
+ * the read beside it only says what was shown when the check fails.
+ */
 async function runCheck(context: CheckContext, check: AcceptanceCheck): Promise<CheckOutcome> {
   const tool = await context.rehearse();
   const { expect } = check;
   const read: DriveStep = { do: "read", hook: expect.hook };
+  const look: DriveStep[] =
+    expect.see === "count-change"
+      ? [read]
+      : [{ do: "find", hook: expect.hook, value: expect.text, loose: true }, read];
   // A count change compares with the count before the steps; the others look only after.
   const before = expect.see === "count-change" ? [read] : [];
-  const steps: DriveStep[] = [...before, ...(check.steps as DriveStep[]), read];
+  const steps: DriveStep[] = [...before, ...(check.steps as DriveStep[]), ...look];
   const report = await driveTool(tool, steps);
   if (!report) return { ok: false, reason: "The tool's answer to the check couldn't be read." };
   const failed = report.steps.find((step) => !step.ok);
@@ -79,25 +84,26 @@ async function runCheck(context: CheckContext, check: AcceptanceCheck): Promise<
           `${first.count ?? 0} before and ${last.count ?? 0} after, a change of ${change}`,
         );
   }
-  const shown = texts.some((text) => loose(text).includes(loose(expect.text)));
+  const found = report.steps.at(-2) as Extract<DriveResult, { ok: true }>;
+  const shown = (found.matches ?? []).length > 0;
+  const observed =
+    expect.see === "hides" && shown
+      ? `it shown in the element at position ${found.matches![0]! + 1} of ${found.count ?? 0}`
+      : quoted(texts);
   if (expect.see === "shows") {
-    return shown ? { ok: true } : broke(check, expectation(check), quoted(texts));
+    return shown ? { ok: true } : broke(check, expectation(check), observed);
   }
-  return shown ? broke(check, expectation(check), quoted(texts)) : { ok: true };
+  return shown ? broke(check, expectation(check), observed) : { ok: true };
 }
 
 /**
- * The acceptance checks of one request (VER-09), run in staging after the smoke check, in order;
- * the first that fails ends them. Its name is `acceptance`, so the version's checks record it and
- * the person reads "checked against your request".
+ * The acceptance checks of one request (VER-09), one staging check each, run in order after the
+ * smoke check, so each starts on a fresh throwaway copy of the synthetic data and none depends on
+ * what another saved; the first that fails ends staging. Each is named `acceptance`, so the
+ * version's checks record it and the person reads "checked against your request".
  */
-export const acceptanceCheck = (acceptance: AcceptanceChecks): VerificationCheck => ({
-  name: "acceptance",
-  run: async (context) => {
-    for (const check of acceptance.checks) {
-      const outcome = await runCheck(context, check);
-      if (!outcome.ok) return outcome;
-    }
-    return { ok: true };
-  },
-});
+export const acceptanceChecks = (acceptance: AcceptanceChecks): VerificationCheck[] =>
+  acceptance.checks.map((check) => ({
+    name: "acceptance",
+    run: (context) => runCheck(context, check),
+  }));
