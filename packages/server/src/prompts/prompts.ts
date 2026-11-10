@@ -14,8 +14,6 @@ import {
   type FailureClass,
   type Intent,
   type AcceptanceChecks,
-  type AcceptanceExpect,
-  type AcceptanceStep,
   type ReviewItem,
   type Stage,
 } from "@tessera/contracts";
@@ -75,6 +73,7 @@ export const PROMPT_PARTS = [
   "review-run",
   "acceptance",
   "acceptance-checks",
+  "acceptance-quoted",
 ] as const;
 export type PromptPart = (typeof PROMPT_PARTS)[number];
 
@@ -269,33 +268,11 @@ function profileValues(id: keyof typeof PROFILES): Record<string, string> {
   };
 }
 
-/** One step of a check from the request, as the generation prompt states it. */
-const stepWords = (step: AcceptanceStep) =>
-  step.do === "fill" ? `type "${step.value}" into ${step.hook}` : `press ${step.hook}`;
-
-/** What a check from the request expects to see, as the generation prompt states it. */
-function expectWords(expect: AcceptanceExpect): string {
-  if (expect.see === "shows") return `an element marked ${expect.hook} shows "${expect.text}"`;
-  if (expect.see === "hides") return `no element marked ${expect.hook} shows "${expect.text}"`;
-  const count = Math.abs(expect.changeCount);
-  const more = expect.changeCount >= 0 ? "more" : "fewer";
-  return count === 1
-    ? `there is one ${more === "more" ? "more element" : "element fewer"} marked ${expect.hook} than before`
-    : `there are ${count} ${more} elements marked ${expect.hook} than before`;
-}
-
-/** The acceptance-checks part's values: each hook with what it marks, and each check (VER-09). */
-function acceptanceValues(acceptance: AcceptanceChecks): Record<string, string> {
-  return {
-    hooks: acceptance.hooks.map((hook) => `- data-hook="${hook.name}": ${hook.says}.`).join("\n"),
-    checks: acceptance.checks
-      .map(
-        (check) =>
-          `- ${check.says}: ${check.steps.map(stepWords).join(", then ")}; then ${expectWords(check.expect)}.`,
-      )
-      .join("\n"),
-  };
-}
+/** A request's checks as the generation prompt quotes them: their hooks and checks, as data. */
+const acceptanceQuoted = (acceptance: AcceptanceChecks) => ({
+  hooks: acceptance.hooks,
+  checks: acceptance.checks,
+});
 
 /** The intent part's list of profiles, from their one definitions (VER-03). */
 export const profilesForIntent = (): string =>
@@ -362,11 +339,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
   // every rule its check enforces is stated here (VER-03, VER-04).
   if (input.intent?.profile) addSystem("profile", profileValues(input.intent.profile));
-  // The checks written from the request, for a tool that fits no profile (VER-09): every hook
-  // they use, and every check, so nothing the checks enforce is hidden from the generator.
-  if (input.acceptance && !input.intent?.profile) {
-    addSystem("acceptance-checks", acceptanceValues(input.acceptance));
-  }
+  // The checks written from the request, for a tool that fits no profile (VER-09): the system says
+  // to pass them, in fixed words; the checks themselves, another model's answer, are quoted as data
+  // in the request, so nothing in them is read as instructions (SEC-02).
+  const acceptance = input.acceptance && !input.intent?.profile ? input.acceptance : undefined;
+  if (acceptance) addSystem("acceptance-checks");
   // What creation answers, with the data schema keywords the host accepts (DATA-03, GEN-05).
   if (creating) {
     addSystem("create", { keywords: [...TOOL_SCHEMA_KEYWORDS].sort().join(", ") });
@@ -391,6 +368,7 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
         ]
       : []),
     ...(input.diagnostics ?? []),
+    ...(acceptance ? [JSON.stringify(acceptanceQuoted(acceptance), null, 2)] : []),
   ]);
   const request: [PromptPart, string, string][] = [];
   const addRequest = (part: PromptPart, values: Record<string, string>) =>
@@ -444,6 +422,12 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       ...code,
       data: JSON.stringify(data, null, 2),
       settings: JSON.stringify({ capabilities, uiMode }),
+      tag,
+    });
+  }
+  if (acceptance) {
+    addRequest("acceptance-quoted", {
+      checks: JSON.stringify(acceptanceQuoted(acceptance), null, 2),
       tag,
     });
   }
