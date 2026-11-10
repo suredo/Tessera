@@ -41,15 +41,24 @@ export async function generateEdit(
     noteOf(store, baseline.id, baseline.currentVersion)?.profile ?? null,
   );
   intent = { ...intent, profile: kept.success ? kept.data : null };
-  const result = await editTool(provider, routes, {
-    request,
-    intent,
-    artifact: original.artifact,
-    data: baseline.data,
-    signal,
-    repairUsage,
-    timeLimits: limits,
-  });
+  const data = baseline.data;
+  const edit = () =>
+    editTool(provider, routes, {
+      request,
+      intent,
+      artifact: original.artifact,
+      data,
+      signal,
+      repairUsage,
+      timeLimits: limits,
+    });
+  let result = await edit();
+  // A look CSS alone can't make, such as motion that follows the mouse, is tried once more as an
+  // edit of the tool's code, rather than imitated or refused (L-96).
+  if (result.kind === "cannot" && intent.lookOnly && current()) {
+    intent = { ...intent, lookOnly: false };
+    result = await edit();
+  }
   if (!current()) return stale;
   if (result.kind === "cannot")
     // The model's own words, when the plain reason replaced them, stay for the details (GEN-10).

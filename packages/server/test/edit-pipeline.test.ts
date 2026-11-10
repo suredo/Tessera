@@ -57,6 +57,56 @@ const reply = (value: unknown, stage: "intent" | "edit" | "repair") => ({
 const provider = (...replies: unknown[]) =>
   createScriptedProvider({ name: "edit-pipeline", replies: replies as never });
 
+describe("a look CSS alone can't make is tried as a code edit (L-96)", () => {
+  /** A look-only edit whose replies are `replies`, with the prompt parts each edit call got. */
+  async function lookEdit(...replies: unknown[]) {
+    const { store, workspace } = await setup();
+    const calls: { stage: string; parts: string[] }[] = [];
+    const scripted = provider(
+      reply(intent({ lookOnly: true, behaviorChange: false }), "intent"),
+      ...replies,
+    );
+    const result = await generate(
+      store,
+      {
+        ...scripted,
+        run: (spec) => {
+          calls.push({
+            stage: spec.stage,
+            parts: (spec.promptParts ?? []).map((part) => part.split("@")[0]!),
+          });
+          return scripted.run(spec);
+        },
+      },
+      DEFAULT_ROUTES,
+      { request: "Make the cards dangle as they follow the mouse", workspaceId: workspace.id },
+    );
+    return { result, edits: calls.filter((call) => call.stage === "edit") };
+  }
+  const cannot = reply({ outcome: "cannot", reason: "This needs the tool's code." }, "edit");
+
+  it("L-96, GEN-14: a look-only edit that says CSS can't do it is asked once more with the tool's code, and its edit is the candidate", async () => {
+    const { result, edits } = await lookEdit(cannot, reply(styleEdit, "edit"));
+    expect(result).toMatchObject({ kind: "candidate", operation: "edit" });
+    expect(edits).toHaveLength(2);
+    expect(edits[0]!.parts).toContain("source-style");
+    expect(edits[1]!.parts).toContain("source");
+    expect(edits[1]!.parts).not.toContain("source-style");
+  });
+
+  it("L-96, GEN-08: when the code edit can't do it either, the person is told so, after one retry only", async () => {
+    const { result, edits } = await lookEdit(cannot, cannot);
+    expect(result).toMatchObject({ kind: "answer", answer: "cannot" });
+    expect(edits).toHaveLength(2);
+  });
+
+  it("GEN-14: a look-only edit that works is made with CSS alone, in one call", async () => {
+    const { result, edits } = await lookEdit(reply(styleEdit, "edit"));
+    expect(result).toMatchObject({ kind: "candidate", operation: "edit" });
+    expect(edits).toHaveLength(1);
+  });
+});
+
 describe("an edit keeps the tool's own profile (VER-03, L-94)", () => {
   /** Edits the fixture, made with `made` as its checked profile, while the intent names `named`. */
   async function editWith(made: "item-list" | null, named: Intent["profile"]) {
