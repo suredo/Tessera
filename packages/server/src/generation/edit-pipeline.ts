@@ -1,10 +1,10 @@
-import type { Intent, Workspace } from "@tessera/contracts";
+import { profileIdSchema, type Intent, type Workspace } from "@tessera/contracts";
 import type { GenerationResult } from "./result.ts";
 import { candidateMount } from "../host/index.ts";
 import type { RepairClass } from "../prompts/index.ts";
 import type { Provider, Routes } from "../providers/index.ts";
 import { loadVersion, saveVersion } from "../versions/index.ts";
-import { getWorkspace, type Store } from "../workspaces/index.ts";
+import { getWorkspace, noteOf, type Store } from "../workspaces/index.ts";
 import { editTool } from "./edit.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
 import { DEFAULT_STAGE_TIME_LIMITS, type StageTimeLimits } from "./time-limits.ts";
@@ -34,6 +34,13 @@ export async function generateEdit(
   if (!current()) return stale;
   const original = loadVersion(store.db, baseline.currentVersion);
   if (original?.kind !== "ok") return stale;
+  // An edit keeps the profile the tool's current version was checked by, or none, whatever the
+  // edit's intent named (VER-03, L-94): a profile is the kind of tool it is, and an edit must never
+  // turn a calendar into a study planner to pass a check nobody asked for.
+  const kept = profileIdSchema.safeParse(
+    noteOf(store, baseline.id, baseline.currentVersion)?.profile ?? null,
+  );
+  intent = { ...intent, profile: kept.success ? kept.data : null };
   const result = await editTool(provider, routes, {
     request,
     intent,

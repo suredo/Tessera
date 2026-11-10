@@ -310,6 +310,10 @@ describe("a repaired candidate's continuation (GEN-09, VER-03)", () => {
           hash: made.hash,
           expectedDataRevision: made.expectedDataRevision,
           token: made.activation.token,
+          // As the app reports after staging, so the version is recorded as checked by its
+          // profile, which its edits keep (L-94).
+          startChecked: true,
+          behaviorChecked: true,
         }),
       ),
     ).toMatchObject({ ok: true });

@@ -57,6 +57,60 @@ const reply = (value: unknown, stage: "intent" | "edit" | "repair") => ({
 const provider = (...replies: unknown[]) =>
   createScriptedProvider({ name: "edit-pipeline", replies: replies as never });
 
+describe("an edit keeps the tool's own profile (VER-03, L-94)", () => {
+  /** Edits the fixture, made with `made` as its checked profile, while the intent names `named`. */
+  async function editWith(made: "item-list" | null, named: Intent["profile"]) {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-edit-profile-"));
+    const store = await openDataFolder(dir);
+    folders.push({ path: dir, close: () => store.close() });
+    const built = candidateFrom(editFixture);
+    if (built.kind !== "candidate") throw new Error("Expected fixture candidate");
+    const workspace = createWorkspace(store, editFixture.name, { data: built.startingData });
+    const hash = saveVersion(store.db, built.artifact);
+    const active = activateVersion(store, workspace.id, hash, workspace.dataRevision, {
+      note: made
+        ? { summary: "A list.", checks: ["code", "start", "behavior"], profile: made }
+        : { summary: "A calendar.", checks: ["code", "start", "acceptance"], profile: null },
+    });
+    if (!active.ok) throw new Error("Expected fixture activation");
+    const specs: { stage: string; parts: string[] }[] = [];
+    const scripted = provider(
+      reply(intent({ profile: named }), "intent"),
+      reply(quantityEdit, "edit"),
+    );
+    const result = await generate(
+      store,
+      {
+        ...scripted,
+        run: (spec) => {
+          specs.push({
+            stage: spec.stage,
+            parts: (spec.promptParts ?? []).map((part) => part.split("@")[0]!),
+          });
+          return scripted.run(spec);
+        },
+      },
+      DEFAULT_ROUTES,
+      { request: "Click a day to add an event", workspaceId: active.workspace.id },
+    );
+    return { result, editParts: specs.find((spec) => spec.stage === "edit")!.parts };
+  }
+
+  it("VER-03, L-94: a tool made with no profile gets none when its edit's intent names one, so no new check is imposed", async () => {
+    const { result, editParts } = await editWith(null, "scheduling");
+    expect(result).toMatchObject({ kind: "candidate", operation: "edit", profile: null });
+    expect(editParts).not.toContain("profile");
+  });
+
+  it("VER-03, L-94: a tool checked by a profile keeps it when its edit's intent names another or none", async () => {
+    for (const named of ["scheduling", null] as const) {
+      const { result, editParts } = await editWith("item-list", named);
+      expect(result).toMatchObject({ kind: "candidate", operation: "edit", profile: "item-list" });
+      expect(editParts).toContain("profile");
+    }
+  });
+});
+
 describe("edits through the pipeline (GEN-07, GEN-09)", () => {
   it("GEN-07, GEN-13, DATA-10: an edit candidate leaves the current version and entries intact until activation, and keeps the name and declarations", async () => {
     const { store, workspace, artifact } = await setup();
