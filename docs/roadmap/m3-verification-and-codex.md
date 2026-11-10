@@ -4,7 +4,7 @@ title: "M3: Verification and the Codex adapter"
 description: "Verification profiles, the acceptance-check experiment, the AI reviewer and the Codex adapter."
 tags: [roadmap, verification-and-codex]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T15:34:41Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T20:30:00Z }
 ---
 # M3: Verification and the Codex adapter (size M, live budget about 65 calls)
 
@@ -34,6 +34,6 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T15:34:41Z }
 - The AI review's agreement with your verdict is recorded.
 - The VER-09 report gives meaningful, wrongly-failed and wrongly-passed rates against your verdicts, with a decision on adopting it.
 - The Codex adapter passes the same contract tests as Claude Code's, and its probe is recorded.
-- The setup check guides a fresh machine to a working connection, with Claude Code and with Codex: the clean-setup scenario (P1) passes once in Windows Sandbox (A43), moved from M2.
+- ~~The setup check guides a fresh machine to a working connection, with Claude Code and with Codex: the clean-setup scenario (P1) passes once in Windows Sandbox (A43), moved from M2.~~ **Dropped from M3 by the owner on 2026-11-10 (A58):** functionality comes first, and P1 runs in M4's release run.
 
 **From the POC:** the study and flow check patterns (stable hooks, a synthetic fixture, checks driven in a hidden verification panel, failures sent to a behavior repair), the lesson that every checked requirement must be stated in the prompt, and the UI-standard enforcement (prompt part, layered stylesheets, static checks, custom mode).

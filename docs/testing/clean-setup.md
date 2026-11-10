@@ -4,14 +4,14 @@ title: "Clean setup in Windows Sandbox (P1)"
 description: "How to run the clean-setup scenario P1 (A43, J0): start a throwaway Windows with Tessera downloaded and built but no Claude Code or Codex, then follow Tessera's setup check from 'missing' through 'not signed in' to 'ready', and make T1's first tool with each program."
 tags: [testing, platform, setup]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T19:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T20:30:00Z }
 ---
 
 # Clean setup in Windows Sandbox (P1)
 
 P1 checks that a person can get from a fresh Windows to a first tool by following Tessera's own guidance (`PLAT-02`, `PLAT-03`, journey J0, [release acceptance](../spec/acceptance.md) item 7). It runs in **Windows Sandbox** (A43): a clean Windows each time, thrown away with everything in it, including any sign-in, when its window closes. The [catalogue](app-catalogue.md) defines the scenario; [the sandbox scripts](../code/scripts/sandbox.md) prepare it.
 
-**It makes live model calls, so it needs the owner's approval of its cap first** ([live evaluation](../practices/live-evaluation.md)).
+**It runs in M4's release run, not in M3 (A58).** **It makes live model calls, so it needs the owner's approval of its cap first** ([live evaluation](../practices/live-evaluation.md)).
 
 # Once per machine
 
