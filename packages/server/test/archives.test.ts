@@ -396,7 +396,8 @@ describe("import boundary checks (threat model, IMP-01 to IMP-07)", () => {
       ["const {call} = tessera; call('data.read');", [], false],
       ["tessera.call('clock.now');", [], false],
       ["tessera.call('clock.now');", ["clock"], true],
-      ["tessera.call('data.patch', {});", [], false],
+      // A write as the tool starts is the bridge's to refuse when it runs, not the import's (A60).
+      ["tessera.call('data.patch', {});", [], true],
       ["button.addEventListener('click', () => tessera.call('data.patch', {}));", [], true],
     ] as const) {
       const source = await openDataFolder(newFolder());

@@ -492,75 +492,36 @@ tessera.chart(document.querySelector("#chart"), spec);`;
   });
 });
 
-describe("startup data writes (VER-01, GEN-06)", () => {
-  const fixtures = JSON.parse(
-    fs.readFileSync(new URL("./fixtures/static-startup.json", import.meta.url), "utf8"),
-  ) as { passing: string[]; failing: string[] };
-  it("VER-01, GEN-06: startup reads and writes deferred to user handlers pass", () => {
-    for (const js of fixtures.passing) expect(checkJs(js, ["clock"]), js).toEqual([]);
-  });
-  it("VER-01, GEN-06: startup helpers, callbacks and synthetic interactions expose data writes", () => {
-    for (const js of fixtures.failing)
-      expect(
-        checkJs(js).some((f) => f.message.includes('"data.patch" writes data during startup')),
-        js,
-      ).toBe(true);
-  });
-  it("VER-01, GEN-09: repair gets the write line and host-owned starting-data alternatives", () => {
-    expect(checkJs("\ntessera.call('data.patch', {});")).toContainEqual({
-      part: "js",
-      line: 2,
-      message: expect.stringMatching(
-        /data.patch.*startup.*user action.*initialState.*reusableDefaults/,
-      ) as unknown,
-    });
-  });
-  it("VER-01, GEN-09: a write refused because a value couldn't be named says which value, where, and how to fix it (L-84)", () => {
-    // A calendar: the write runs only on click, but `parts[0]` at startup could be any function.
-    const js = [
-      "function save(day) { tessera.call('data.patch', { operations: [] }); }",
-      "document.getElementById('add').addEventListener('click', () => save(1));",
-      "const parts = '2026-11'.split('-');",
-      "const first = new Date(parts[0], 0, 1);",
+describe("startup data writes are the bridge's to refuse, not the static check's (A60)", () => {
+  // The bridge refuses a write until the person has interacted with the tool and throughout
+  // staging (GEN-06); a behavior check's writes go to a throwaway copy (BRG-06). Guessing startup
+  // writes from the code refused working tools (L-84, L-95), so the static check no longer does:
+  // these tools pass it whole, whatever a finding would have said.
+  const writes = (js: string) => staticCheck({ html: "", css: "", js }, []);
+
+  it("A60, L-95: the kanban's drag and drop, whose classList.add looked like its own add(), passes", () => {
+    const kanban = [
+      "const board = document.getElementById('board');",
+      "let drag = null;",
+      "async function add(){ await tessera.call('data.patch', {operations: []}); }",
+      "async function remove(){ await tessera.call('data.patch', {operations: []}); }",
+      "document.addEventListener('pointermove', () => { if (drag) drag.classList.add('dragging'); });",
+      "document.addEventListener('pointercancel', () => { if (drag) drag.classList.remove('dragging'); });",
+      "document.getElementById('add').addEventListener('click', add);",
     ].join("\n");
-    const finding = checkJs(js).find((f) => f.message.includes("writes data during startup"));
-    expect(finding?.line).toBe(1);
-    expect(finding?.message).toContain("`parts[0]` on line 4 can't be named");
-    expect(finding?.message).toContain("`const [y, m] = parts`");
-    // Destructured as the message says, the same tool passes: the write stays deferred.
-    const fixed = js
-      .replace("const parts = ", "const [y] = ")
-      .replace("new Date(parts[0], 0, 1)", "new Date(y, 0, 1)");
-    expect(checkJs(fixed)).toEqual([]);
+    expect(writes(kanban)).toEqual({ ok: true });
   });
-  it("VER-01, GEN-09: a write reached through named startup calls says where startup reaches it", () => {
-    const js =
-      "\nfunction save() { tessera.call('data.patch', {}); }\nfunction load() { save(); }\nload();";
-    expect(checkJs(js)).toContainEqual({
-      part: "js",
-      line: 2,
-      message: expect.stringContaining("It is reached at startup from line 4.") as unknown,
+
+  it("A60: a write the code makes as it starts gets no static finding; the bridge refuses it at run time", () => {
+    expect(writes("tessera.call('data.patch', {operations: []});")).toEqual({ ok: true });
+    expect(writes("function seed(){ tessera.call('data.patch', {}); } seed();")).toEqual({
+      ok: true,
     });
   });
-  it("VER-01, GEN-09: a write reached both through a named startup call and an unnamed value names the real call", () => {
-    const js = [
-      "function save() { tessera.call('data.patch', {}); }",
-      "function real() { save(); }",
-      "function ghost() { save(); }",
-      "const parts = [2026];",
-      "new Date(parts[0], 0, 1);",
-      "real();",
-    ].join(String.fromCharCode(10));
-    const finding = checkJs(js).find((f) => f.message.includes("writes data during startup"));
-    expect(finding?.message).toContain("It is reached at startup from line 6.");
-    expect(finding?.message).not.toContain("parts[0]");
-  });
-  it("VER-01: exhausted startup analysis fails closed, including otherwise deferred handlers", () => {
-    const js =
-      "0;".repeat(26_000) +
-      "button.addEventListener('click', () => tessera.call('data.patch', {}));";
-    expect(checkJs(js).some((f) => f.message.includes("writes data during startup"))).toBe(true);
-    expect(checkJs(js).some((f) => f.message.includes("too intricate to follow"))).toBe(true);
+
+  it("VER-01: the other bridge rules still hold", () => {
+    expect(checkJs("tessera.call('unknown.action');").length).toBeGreaterThan(0);
+    expect(checkJs("tessera.call('clock.now');").length).toBeGreaterThan(0);
   });
 });
 

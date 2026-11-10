@@ -521,7 +521,6 @@ describe("repair by failure class (GEN-09)", () => {
       "tessera.call('unknown.action');",
       "tessera.call('clock.now');",
       "const call = tessera.call; call('data.read');",
-      "tessera.call('data.patch', {});",
     ]) {
       const bad = tool({ code: { ...tool().code, js } });
       expect(candidateFrom(bad)).toMatchObject({ kind: "failed", failure: "static" });
@@ -535,8 +534,6 @@ describe("repair by failure class (GEN-09)", () => {
       expect(calls.map((c) => c.stage)).toEqual(["create", "repair"]);
       expect(calls[1]!.prompt).toContain(js);
       expect(calls[1]!.prompt).toMatch(/bridge|capability|clock/);
-      if (js.includes("data.patch"))
-        expect(calls[1]!.prompt).toContain("writes data during startup");
     }
     expect(
       candidateFrom(

@@ -8,8 +8,10 @@ import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 // A made tool never writes the person's data as it starts (GEN-06), end to end (TEST-03): the
 // request goes through the real pipeline to a scripted provider (ENG-11) whose first tool writes
-// an entry at startup. The host's checks refuse it before it runs (VER-01), the repair stage is
-// told why (GEN-09), and the repaired tool opens with only the starting data the host installed.
+// an entry at startup. The static check no longer guesses at startup writes (A60): the bridge
+// refuses the write when it happens, in the staging panel, so the smoke check sees the error, the
+// repair stage is told why (GEN-09), and the repaired tool opens with only the starting data the
+// host installed.
 // In Chrome at 1280 px (TEST-06), on a temporary data folder (ENG-19).
 
 const intent: Intent = {
@@ -93,7 +95,7 @@ test.afterAll(() => app.close());
 const toolText = (page: Page) =>
   page.frameLocator(".tool-frame iframe").frameLocator("iframe").frameLocator("iframe");
 
-test("TEST-03, GEN-06, GEN-09: a made tool that writes data as it starts is refused before it runs, repaired, and opens with only its starting data", async ({
+test("TEST-03, GEN-06, GEN-09, A60: a made tool that writes data as it starts has the write refused by the bridge, is repaired, and opens with only its starting data", async ({
   page,
 }) => {
   await page.goto(app.url);
@@ -105,14 +107,16 @@ test("TEST-03, GEN-06, GEN-09: a made tool that writes data as it starts is refu
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk"]);
   await page.screenshot({ path: test.info().outputPath("repaired-tool.png") });
 
-  // The checks found the startup write, and the repair was asked to fix exactly that.
+  // The bridge refused the startup write in the staging panel, the smoke check saw the error, and
+  // the repair was asked to fix exactly that.
+  const refused = "changes the person's data, so it waits until the tool is active";
   expect(calls.map((spec) => spec.stage)).toEqual(["intent", "create", "repair"]);
-  expect(calls[2]!.prompt).toContain('"data.patch" writes data during startup');
+  expect(calls[2]!.prompt).toContain(refused);
   // Only the starting data the host installed: no entry was ever written by the tool.
   const [workspace] = listWorkspaces(app.folder);
   expect(workspace?.data).toEqual({ items: [{ id: "i-1", title: "Milk" }] });
   // The ledger keeps why the repair happened (GEN-10).
   const [request] = new RequestLedger(app.folder).forWorkspace(workspace!.id);
   const repair = request?.calls.find((call) => call.stage === "repair");
-  expect(repair?.diagnostics.join("\n")).toContain("writes data during startup");
+  expect(repair?.diagnostics.join("\n")).toContain(refused);
 });
