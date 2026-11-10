@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The smoke check (VER-02), in Chrome and Edge (TEST-06): a candidate starts for real in the
+// The smoke check (VER-02), in Chrome (TEST-06): a candidate starts for real in the
 // hidden staging panel, 320 px wide, against synthetic data (RUN-03), and must show something,
 // start without errors, not scroll sideways, and meet the accessibility floor's basics. A failing
 // candidate is never activated; its reason lists every problem, for repair (GEN-09).

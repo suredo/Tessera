@@ -10,7 +10,7 @@ import {
 } from "./support/sandbox-host.ts";
 
 // The sandbox's boundary checks that face the host page and the person (SEC-05,
-// docs/spec/threat-model.md), in Chrome and Edge (TEST-06): forms, moving the host page, popups,
+// docs/spec/threat-model.md), in Chrome (TEST-06): forms, moving the host page, popups,
 // dialogs and downloads, reaching into the host, talking outside the bridge, and device features.
 
 // The checks the prober can run here, inside the sandboxed tool.

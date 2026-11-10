@@ -8,8 +8,11 @@ import { parse } from "yaml";
 
 type Step = { name?: string; run?: string; uses?: string };
 type Job = {
+  name?: string;
   "runs-on": string;
-  strategy?: { matrix: { check: string[] } };
+  needs?: string[];
+  if?: string;
+  strategy?: { matrix: { check?: string[]; shard?: number[] } };
   steps: Step[];
 };
 type Workflow = {
@@ -55,14 +58,26 @@ describe("the CI workflow", () => {
     expect(runs("merge-ready")).toContain("node scripts/okf-check.mjs --merge-ready");
   });
 
-  it("runs the fast checks on Linux and keeps one Windows job, which runs the checker's tests too (ENG-02)", () => {
+  it("runs the fast checks on Linux, and on Windows only the platform's tests and the browser tests, which runs the checker's tests too (ENG-02)", () => {
     const windows = Object.entries(workflow.jobs).filter(
       ([, j]) => j["runs-on"] !== "ubuntu-latest",
     );
     expect(windows.map(([name, j]) => [name, j["runs-on"]])).toEqual([
-      ["windows", "windows-latest"],
+      ["windows-platform", "windows-latest"],
+      ["windows-browser", "windows-latest"],
     ]);
-    expect(runs("windows")).toContain("node --test scripts/okf-check.test.mjs");
+    expect(runs("windows-platform")).toContain("node --test scripts/okf-check.test.mjs");
+  });
+
+  it("reports the Windows jobs under the one name the ruleset requires, failing if any of them failed or didn't run (ENG-15, A56)", () => {
+    const summary = job("windows");
+    expect(summary.name).toBe("Windows (platform and Chrome)");
+    expect(summary.needs).toEqual(["windows-platform", "windows-browser"]);
+    // always(): a failed part must fail this check, not skip it, which would count as passed.
+    expect(summary.if).toBe("always()");
+    expect(runs("windows").join(" ")).toContain(
+      'test "$PLATFORM" = success && test "$BROWSER" = success',
+    );
   });
 
   it("runs the unit tests of every package and script on every change (TEST-01)", () => {
@@ -75,11 +90,13 @@ describe("the CI workflow", () => {
     }
   });
 
-  it("runs the browser tests in Chrome and Edge on Windows (TEST-06, RUN-06)", () => {
-    expect(runs("windows")).toContain("pnpm e2e");
+  it("runs the browser tests in Chrome on Windows, split into three parts that run at once, and only the layout specs at 320 px (TEST-06, RUN-06, A56)", () => {
+    expect(job("windows-browser").strategy?.matrix.shard).toEqual([1, 2, 3]);
+    expect(runs("windows-browser")).toContain("pnpm e2e --shard=${{ matrix.shard }}/3");
     const playwright = read("playwright.config.ts");
-    expect(playwright).toContain('chrome: "chrome"');
-    expect(playwright).toContain('edge: "msedge"');
+    expect(playwright).toContain('channel: "chrome"');
+    expect(playwright).not.toContain("msedge");
+    expect(playwright).toMatch(/name: "chrome-320",\s*testMatch: LAYOUT_SPECS/);
   });
 
   it("runs four unit workers on CI and one test file at a time locally (ENG-31, #188)", () => {
@@ -89,13 +106,16 @@ describe("the CI workflow", () => {
     expect(scripts["e2e:local"]).toContain("--workers=1");
   });
 
-  it("records every browser test's video on CI, where the CI variable is set, and locally only when asked (ENG-10, ENG-31)", () => {
+  it("records videos only when asked, on CI too, and keeps a failed test's trace on CI (ENG-10, ENG-31, A56)", () => {
     const config = read("playwright.config.ts");
-    expect(config).toContain(
-      `const record = !!process.env["CI"] || process.env["TESSERA_E2E_RECORD"] === "1";`,
-    );
+    expect(config).toContain(`const record = process.env["TESSERA_E2E_RECORD"] === "1";`);
     expect(config).toContain(`video: record ? "on" : "off"`);
-    expect(config).toMatch(/trace: record\s*\?\s*\{ mode: "retain-on-failure"[^}]*\}\s*:\s*"off"/);
+    expect(config).toContain(`const traceFailures = !!process.env["CI"] || record;`);
+    expect(config).toMatch(
+      /trace: traceFailures\s*\?\s*\{ mode: "retain-on-failure"[^}]*\}\s*:\s*"off"/,
+    );
+    // No video encoder to install, and the traces are uploaded only when a part fails.
+    expect(text).not.toContain("playwright install ffmpeg");
   });
 
   it("gives no job a secret, such as a provider's key, and only read access (ENG-02)", () => {

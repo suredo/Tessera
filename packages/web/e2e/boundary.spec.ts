@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { FAILED, nothingArrived, probe, proberTool } from "./support/prober.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 
-// The sandbox's boundary checks (SEC-05, docs/spec/threat-model.md), in Chrome and Edge (TEST-06).
+// The sandbox's boundary checks (SEC-05, docs/spec/threat-model.md), in Chrome (TEST-06).
 // A hand-written hostile tool attempts each forbidden thing and reports what happened. A check
 // passes only if every attempt failed inside the tool and nothing reached the probe server, not
 // even a connection, nor the local server on either loopback name.

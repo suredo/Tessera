@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The item-list profile's behavior check (VER-03), in Chrome and Edge (TEST-06): in staging, after
+// The item-list profile's behavior check (VER-03), in Chrome (TEST-06): in staging, after
 // the smoke check, it adds an item, opens the tool again, removes it and opens it again, through
 // the hooks the profile names, its saves going to a throwaway copy (BRG-06). A good list passes;
 // each deliberately broken one fails, saying what was expected, what was observed and whose rule

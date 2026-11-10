@@ -86,13 +86,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run ${{ matrix.check }}
 
-  # The one Windows job (ENG-02): the OKF check's tests, which handle paths and line endings, the
-  # platform helpers', launcher's and local server's tests and the browser tests in Chrome and Edge, both preinstalled on the
-  # runner. Windows runners are slower, so the fast checks stay above.
-  windows:
-    name: Windows (platform, Chrome and Edge)
+  # Windows (ENG-02): the OKF check's tests, which handle paths and line endings, and the platform
+  # helpers', launcher's and local server's tests in one job; the browser tests in the preinstalled
+  # Chrome, split across three jobs that run at once (A56). Windows runners are slower, so the fast
+  # checks stay above.
+  windows-platform:
+    name: Windows platform
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -106,14 +107,48 @@ jobs:
         run: node --test scripts/okf-check.test.mjs
       - name: Platform helpers, SQLite storage, launcher and local server (PLAT-01, DATA-01, PLAT-02, SEC-03)
         run: pnpm exec vitest run packages/server/test/platform.test.ts packages/server/test/storage.test.ts packages/server/test/launcher.test.ts packages/server/test/local-server.test.ts
-      - name: Playwright's video encoder
-        run: pnpm exec playwright install ffmpeg
-      - name: Browser tests in Chrome and Edge (TEST-06)
-        run: pnpm e2e
-      - name: Keep the videos (ENG-10)
-        if: always()
+
+  windows-browser:
+    name: Windows browser tests (${{ matrix.shard }} of 3)
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false # each part reports on its own
+      matrix:
+        shard: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: pnpm from packageManager, through Corepack
+        run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Browser tests in Chrome (TEST-06)
+        run: pnpm e2e --shard=${{ matrix.shard }}/3
+      # No videos on CI (A56): a failed test's light trace is kept, and the owner records a video
+      # locally when one is needed.
+      - name: Keep the traces of failed tests (ENG-10)
+        if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-videos
+          name: playwright-traces-${{ matrix.shard }}
           path: test-output/playwright/
           retention-days: 14
+
+  # The one name the ruleset on main requires for Windows (ENG-15): it passes only when the
+  # platform job and every part of the browser tests passed, so a new part needs no ruleset change.
+  windows:
+    name: Windows (platform and Chrome)
+    needs: [windows-platform, windows-browser]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every Windows job passed
+        env:
+          PLATFORM: ${{ needs.windows-platform.result }}
+          BROWSER: ${{ needs.windows-browser.result }}
+        run: |
+          echo "Platform: $PLATFORM. Browser tests: $BROWSER."
+          test "$PLATFORM" = success && test "$BROWSER" = success

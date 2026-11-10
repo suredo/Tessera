@@ -6,7 +6,7 @@ import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-h
 
 // Export and import screens (APP-06, DATA-05): a workspace or saved tool saved as a file and
 // brought back, here as a copy and into another Tessera, with a plain report of what came in. In
-// Chrome and Edge at 320 and 1280 px (TEST-06), against real Tesseras on temporary data folders
+// Chrome at 1280 px (TEST-06), against real Tesseras on temporary data folders
 // (ENG-19).
 
 let app: AppHost;

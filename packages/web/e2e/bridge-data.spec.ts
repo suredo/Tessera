@@ -11,7 +11,7 @@ import {
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The bridge to saved data, end to end (RUN-04, BRG-04, DATA-02), in Chrome and Edge (TEST-06): a
+// The bridge to saved data, end to end (RUN-04, BRG-04, DATA-02), in Chrome (TEST-06): a
 // tool in the sandbox reads its workspace's data through the host page's serveBridge and
 // serverData, and the server's bridge route answers from a temporary data folder. A change planned
 // against a record that was edited since is refused whole; one to another record is saved.

@@ -10,7 +10,7 @@ import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 // request goes through the real pipeline to a scripted provider (ENG-11) whose first tool writes
 // an entry at startup. The host's checks refuse it before it runs (VER-01), the repair stage is
 // told why (GEN-09), and the repaired tool opens with only the starting data the host installed.
-// In Chrome and Edge at 320 and 1280 px (TEST-06), on a temporary data folder (ENG-19).
+// In Chrome at 1280 px (TEST-06), on a temporary data folder (ENG-19).
 
 const intent: Intent = {
   kind: "create",

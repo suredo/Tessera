@@ -11,7 +11,7 @@ import {
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// Staging before activation (RUN-03), end to end in Chrome and Edge (TEST-06): a candidate runs in
+// Staging before activation (RUN-03), end to end in Chrome (TEST-06): a candidate runs in
 // a hidden panel against synthetic data, its checks judge it, and only then does the server
 // activate it (DATA-10). A failed check never asks the server, and the person's data stays as it
 // was. The server's activation route answers from a temporary data folder (ENG-19).

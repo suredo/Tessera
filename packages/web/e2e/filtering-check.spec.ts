@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The filtering profile's behavior check (VER-03), in Chrome and Edge (TEST-06): in staging, after
+// The filtering profile's behavior check (VER-03), in Chrome (TEST-06): in staging, after
 // the smoke check, the item list's check, adding the item in a category of its own, and, with it
 // added and the tool opened again, the filter set to that category, to one a starting item has,
 // then emptied, its saves going to a throwaway copy (BRG-06). A good list passes, whether its

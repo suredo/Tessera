@@ -10,8 +10,8 @@ import {
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
 
-// My tools, the saved-tools library (APP-04, DATA-07, DATA-08), in Chrome and Edge at 320 and
-// 1280 px (TEST-06), against a real Tessera on a temporary data folder (ENG-19).
+// My tools, the saved-tools library (APP-04, DATA-07, DATA-08), in Chrome at 1280 px (TEST-06),
+// against a real Tessera on a temporary data folder (ENG-19).
 
 let app: AppHost;
 test.beforeAll(async () => {

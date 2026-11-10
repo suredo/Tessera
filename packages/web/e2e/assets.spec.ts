@@ -13,7 +13,7 @@ import {
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// Images in a tool (DATA-11, AST-04, AST-05), end to end in Chrome and Edge (TEST-06): a
+// Images in a tool (DATA-11, AST-04, AST-05), end to end in Chrome (TEST-06): a
 // hand-written tool shows an image its saved data names, through a blob: URL under its strict CSP
 // (RUN-01), with the bytes from the server's asset store over the bridge; it never sees a path,
 // and an image another workspace names is refused. The data folder is a temporary one (ENG-19).

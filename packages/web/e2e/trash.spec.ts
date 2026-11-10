@@ -5,7 +5,7 @@ import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
 
 // The trash (APP-08, DATA-09): what was deleted, when it goes for good, restore, and emptying it
-// early only once it names what goes. In Chrome and Edge at 320 and 1280 px (TEST-06), against a
+// early only once it names what goes. In Chrome at 1280 px (TEST-06), against a
 // real Tessera of its own on a temporary data folder (ENG-19). The tests run in order: the first
 // needs a Tessera with no workspaces, and emptying the trash empties it for the tests after.
 

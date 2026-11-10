@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The form profile's behavior check (VER-03), in Chrome and Edge (TEST-06): in staging, after the
+// The form profile's behavior check (VER-03), in Chrome (TEST-06): in staging, after the
 // smoke check, it reads what the form's fields are, sends the form with a required field empty and
 // expects nothing saved and the form saying what is missing, sends it filled in and expects one
 // more answer showing what was typed, and opens the tool again, its saves going to a throwaway

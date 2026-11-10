@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
 
-// The host app's first screen in a real browser (TEST-06): Chrome and Edge, the supported
+// The host app's first screen in a real browser (TEST-06): Chrome, the supported
 // browsers (RUN-06), at each fixed viewport, served by a real Tessera with no workspaces yet.
 
 let app: AppHost;

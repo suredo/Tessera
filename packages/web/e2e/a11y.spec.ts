@@ -12,10 +12,10 @@ import { startApp, testTool, TOOL_START, workspaceWith, type AppHost } from "./s
 
 // The host app is accessible (APP-11): an automated checker (axe) finds no WCAG 2.2 A or AA
 // violation on any of its screens, forms or confirmations, and the parts a checker can't judge are
-// checked directly: keyboard use, a visible focus and reduced motion. In Chrome and Edge at 320 and
-// 1280 px (TEST-06), against a real Tessera of its own on a temporary data folder (ENG-19), which
-// starts empty and is then filled with the sample workspaces. A tool's own frame is left out: a
-// tool meets the accessibility floor the runtime gives it (RUN-05, VER-06).
+// checked directly: keyboard use, a visible focus and reduced motion. In Chrome at 1280 and 320 px
+// (TEST-06), against a real Tessera of its own on a temporary data folder (ENG-19), which starts
+// empty and is then filled with the sample workspaces. A tool's own frame is left out: a tool meets
+// the accessibility floor the runtime gives it (RUN-05, VER-06).
 
 // Nothing here is about speed. Each test runs full axe scans, about 1 s idle but 4-5 s each on a
 // loaded machine, and the keyboard test presses Tab dozens of times, each a round trip to the

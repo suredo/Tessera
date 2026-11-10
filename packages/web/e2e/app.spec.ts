@@ -3,8 +3,8 @@ import { saveTool } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, TOOL_START, workspaceWith, type AppHost } from "./support/app-host.ts";
 
-// The host app's main screen and workspaces (APP-01, APP-03, RUN-02, UX-07), in Chrome and Edge at
-// 320 and 1280 px (TEST-06), against a real Tessera on a temporary data folder (ENG-19).
+// The host app's main screen and workspaces (APP-01, APP-03, RUN-02, UX-07), in Chrome at 1280 and
+// 320 px (TEST-06), against a real Tessera on a temporary data folder (ENG-19).
 
 let app: AppHost;
 test.beforeAll(async () => {

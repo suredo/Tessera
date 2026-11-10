@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The chart profile's behavior check (VER-03), in Chrome and Edge (TEST-06): in staging, after the
+// The chart profile's behavior check (VER-03), in Chrome (TEST-06): in staging, after the
 // smoke check, it reads what the chart helper drew (CAP-04) and the total, adds an entry of its
 // own, and expects the chart to show it with the others as they were and the total to be the new
 // sum, then opens the tool again, its saves going to a throwaway copy (BRG-06). A good tool passes,

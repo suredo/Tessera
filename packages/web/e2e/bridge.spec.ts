@@ -3,7 +3,7 @@ import type { Artifact } from "../../contracts/src/index.ts";
 import { startSandboxHost, toolFrame, type SandboxHost } from "./support/sandbox-host.ts";
 import { ready } from "./support/ready.ts";
 
-// The bridge end to end (RUN-04, GEN-06, RUN-07), in Chrome and Edge (TEST-06): a hostile tool in
+// The bridge end to end (RUN-04, GEN-06, RUN-07), in Chrome (TEST-06): a hostile tool in
 // the sandbox tries each bridge check of the threat model (BRG), and the host page serves it with
 // the runtime's own serveBridge, over the real port. BRG-04, a stale change, needs the server's
 // saved revisions and comes with the data routes (#46). BRG-05, another instance's call, is the
