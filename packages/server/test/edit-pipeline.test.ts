@@ -85,7 +85,7 @@ describe("a look CSS alone can't make is tried as a code edit (L-96)", () => {
   }
   const cannot = reply({ outcome: "cannot", reason: "This needs the tool's code." }, "edit");
 
-  it("L-96, GEN-07: a look-only edit that says CSS can't do it is asked once more with the tool's code, and its edit is the candidate", async () => {
+  it("L-96, GEN-14: a look-only edit that says CSS can't do it is asked once more with the tool's code, and its edit is the candidate", async () => {
     const { result, edits } = await lookEdit(cannot, reply(styleEdit, "edit"));
     expect(result).toMatchObject({ kind: "candidate", operation: "edit" });
     expect(edits).toHaveLength(2);
@@ -100,7 +100,7 @@ describe("a look CSS alone can't make is tried as a code edit (L-96)", () => {
     expect(edits).toHaveLength(2);
   });
 
-  it("GEN-07: a look-only edit that works is made with CSS alone, in one call", async () => {
+  it("GEN-14: a look-only edit that works is made with CSS alone, in one call", async () => {
     const { result, edits } = await lookEdit(reply(styleEdit, "edit"));
     expect(result).toMatchObject({ kind: "candidate", operation: "edit" });
     expect(edits).toHaveLength(1);
