@@ -4,7 +4,7 @@ title: "Acceptance-check experiment: live plan"
 description: "The plan for M3's acceptance-check experiment (VER-09, A49): four requests for tools no profile fits, each made with checks written from the request, in the V9 scenario; the measures and adoption rule frozen before the run; a hard cap of 16 calls in M3's envelope; expected tokens and time; and stop rules. No call is made before the owner approves the cap."
 tags: [reports, live-evaluation, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T21:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T22:00:00Z }
 ---
 
 # Acceptance-check experiment: live plan, 2026-11-10
@@ -38,7 +38,7 @@ Each is counted per request, out of 4. A request blocked by an earlier failure s
 
 - **Checks written:** the acceptance stage answered checks; or none, with its reason; or failed. A profile matched instead is reported apart: the experiment doesn't apply to that request.
 - **Meaningful checks:** for each check written, the owner judges whether it tests what the request asked through the tool's own controls. Reported as meaningful checks out of all checks written.
-- **The checks' result:** passed at once, passed after the one repair, or failed after it.
+- **The checks' result:** passed at once, passed after their one behavior repair, or failed after it. A request the cap refused before its tool was made is counted apart, as stopped by the budget, and stays in the denominator.
 - **Wrongly failed:** a tool the owner judges does what was asked, but whose checks failed it, with or without a repair. This is the cost: a good tool refused or needlessly repaired.
 - **Wrongly passed:** a tool the owner judges doesn't do what was asked, in something a check claimed to cover, yet the checks passed. This is the risk: false confidence.
 - **Owner's verdict on each tool:** accept, accept with notes, or reject, given before reading the checks' results.
@@ -66,10 +66,12 @@ The owner decides on the result, and the decision is recorded as a decision-log 
 | Acceptance | 1 | 4 |
 | Create | 1 | 4 |
 | **Expected** | **3** | **12** |
-| Reserve: one repair each, a smoke or behavior repair | 1 | 4 |
+| Reserve, shared by the four: repairs | | 4 |
 | **Hard cap** | | **16** |
 
-- **The hard cap** is the scenario file's budget, enforced by the harness. A request that uses its reserve can't borrow another's. A request whose checks fail again after its one repair is counted as failed, and is never retried within the cap.
+- **The hard cap is the whole scenario's,** the scenario file's budget, enforced by the harness. It has no allowance for each request: the reserve is shared, and a call past the cap is refused.
+- **What one request may spend:** the pipeline gives each creation one repair of each kind of failure: its data's shape, the static check, the smoke check, and the behavior check, which the checks from the request count as (`GEN-09`). So a request may use up to 7 calls: intent, acceptance, create and four repairs. One that uses more than its 3 leaves less for the later ones, which the cap may then stop. That is counted as above, never retried within the cap.
+- **No retries:** a request whose checks fail again after their behavior repair is counted as failed.
 - **M3's envelope** is about 65 calls, with 44 used ([budgets](../../docs/roadmap/budgets.md)). This cap of 16 leaves about 5.
 
 # Expected tokens and time
@@ -88,11 +90,13 @@ One scenario run takes about 5 to 10 minutes, in one sitting.
 
 # Stop rules
 
-As the protocol says:
-- **The first request fails** (no tool made): stop. The later requests would only spend calls with nothing to compare.
-- **The same failure in two requests,** such as the acceptance stage failing to answer twice: stop, to fix the cause offline and ask before spending more.
-- **A provider error** (sign-in, unavailable model): stop.
-- **A usage limit:** pause, then resume the remaining requests after it resets. Finished ones aren't repeated.
+The ones the runner and harness enforce:
+- **The first request fails** (no tool made): the runner stops the scenario, and the later requests aren't asked.
+- **A provider error** (sign-in, unavailable model, usage limit): the harness refuses every later call, and the run stops. The runner can't resume part of a scenario, so after a usage limit the requests left unmade are reported as stopped. Running the scenario again needs the owner's approval of a new cap.
+
+Not a stop:
+- **An acceptance stage that answers none, or can't be used.** Each costs one Haiku call, and the tool is still made and measured, without checks. So each is counted under "checks written", and the run goes on. If it happens for every request, the result is plain: the experiment is dropped under the rule above, at the cost of four cheap calls.
+- **Anything else,** such as two requests failing the same way, is seen in the report after the run, not stopped on: the runner doesn't stop on it. With four requests, at most 16 calls can be spent either way.
 
 # Record
 
