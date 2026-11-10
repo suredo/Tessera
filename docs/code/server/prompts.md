@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, VER-06, CON-03, GEN-14, SEC-02, VER-03, VER
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T08:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T13:30:00Z }
 ---
 
 # Purpose
@@ -21,7 +21,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
 - `src/prompts/prompts.ts`:
   - `assemblePrompt` builds a generation stage's prompt (`PromptInput` to `AssembledPrompt`): the instructions, the request, each part as name@version, and the size.
   - `assembleIntentPrompt` builds the intent stage's prompt: its instructions, then the open tool (`OpenTool`) with each `RecordList` it keeps, quoted as JSON between markers (`SEC-02`), or none; then the saved tools it may open (`SavedToolEntry`: ID, name and description, `GEN-18`), quoted the same way, or none; the request, and on a second ask the reminder. `INTENT_PROMPT_BUDGET` caps it, at 8,900 characters, measured on a second ask in a tool with two lists and a full catalogue.
-  - `assembleReviewPrompt` builds the review stage's prompt (`EVAL-03`): `review.md` with the scenario's items, each with its question from the contracts' one rubric, then `review-run.md` with the run's steps (`ReviewStep`) and each version's source (`ReviewVersion`) quoted as data (`SEC-02`), and the names of the screenshots attached as images, or why none are (A27). `REVIEW_PROMPT_BUDGET` caps it; the images go outside it.
+  - `assembleReviewPrompt` builds the review stage's prompt (`EVAL-03`): `review.md` with the scenario's items, each with its question from the contracts' one rubric, then `review-run.md` with the run's steps (`ReviewStep`), each version's source (`ReviewVersion`) and each tool's data at the end with its recorded changes (`ReviewData`, L-92) quoted as data (`SEC-02`), and the names of the screenshots attached as images, or why none are (A27). `REVIEW_PROMPT_BUDGET` caps it; the images go outside it.
   - `fixedPart` gives a part used as it is, such as the probe's.
   - `fillPart`, `partText` and `partVersion` read, fill and version a part. `PROMPT_PARTS` lists them, `PROMPT_BUDGETS` caps each stage, and `manifestForPrompt` is the bridge manifest as the bridge part quotes it.
 
@@ -58,5 +58,5 @@ The [contracts](../contracts/package.md)' bridge manifest and intent, and the [r
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `assembleIntentPrompt`, `assembleDataPrompt`, `assembleReviewPrompt`, `REVIEW_PROMPT_BUDGET`, `ReviewStep` (type), `ReviewVersion` (type), `DATA_PROMPT_BUDGET`, `assemblePrompt`, `fillPart`, `profilesForIntent`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `quoteTag`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `SavedToolEntry` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
-- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `quoteTag`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `profilesForIntent`, `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `DATA_PROMPT_BUDGET`, `assembleDataPrompt`, `RecordList` (type), `OpenTool` (type), `SavedToolEntry` (type), `assembleIntentPrompt`, `fixedPart`, `REVIEW_PROMPT_BUDGET`, `ReviewStep` (type), `ReviewVersion` (type), `assembleReviewPrompt`
+- `index.ts`: `assembleIntentPrompt`, `assembleDataPrompt`, `assembleReviewPrompt`, `REVIEW_PROMPT_BUDGET`, `ReviewData` (type), `ReviewStep` (type), `ReviewVersion` (type), `DATA_PROMPT_BUDGET`, `assemblePrompt`, `fillPart`, `profilesForIntent`, `fixedPart`, `INTENT_PROMPT_BUDGET`, `manifestForPrompt`, `partText`, `PROMPT_BUDGETS`, `PROMPT_PARTS`, `partVersion`, `quoteTag`, `REPAIR_CLASSES`, `AssembledPrompt` (type), `OpenTool` (type), `SavedToolEntry` (type), `RecordList` (type), `GenerationStage` (type), `PromptInput` (type), `PromptPart` (type), `RepairClass` (type)
+- `prompts.ts`: `PROMPT_PARTS`, `PromptPart` (type), `GenerationStage` (type), `REPAIR_CLASSES`, `RepairClass` (type), `PROMPT_BUDGETS`, `partText`, `partVersion`, `quoteTag`, `fillPart`, `manifestForPrompt`, `PromptInput` (type), `AssembledPrompt` (type), `profilesForIntent`, `assemblePrompt`, `INTENT_PROMPT_BUDGET`, `DATA_PROMPT_BUDGET`, `assembleDataPrompt`, `RecordList` (type), `OpenTool` (type), `SavedToolEntry` (type), `assembleIntentPrompt`, `fixedPart`, `REVIEW_PROMPT_BUDGET`, `ReviewStep` (type), `ReviewVersion` (type), `ReviewData` (type), `assembleReviewPrompt`

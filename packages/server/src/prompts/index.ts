@@ -5,6 +5,7 @@ export {
   assembleDataPrompt,
   assembleReviewPrompt,
   REVIEW_PROMPT_BUDGET,
+  type ReviewData,
   type ReviewStep,
   type ReviewVersion,
   DATA_PROMPT_BUDGET,
