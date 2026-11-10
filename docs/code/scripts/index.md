@@ -4,3 +4,4 @@
 * [Git hooks](git-hooks.md) - Local git hooks, turned on by pnpm install: pre-commit refuses likely secrets, videos and images over 1 MB; pre-push refuses pushes to main.
 * [OKF check](okf-check.md) - Checks the docs bundle, report frontmatter, code docs, task handoffs, skills and the rules files, and fails the build when one breaks a rule; --fix repairs index entries and generated symbol sections.
 * [Development data](dev-data.md) - pnpm seed fills a development data folder with hand-written sample tools, and pnpm dev starts Tessera on it; neither ever touches the real user data folder.
+* [Clean-setup sandbox](sandbox.md) - scripts/sandbox/p1.ps1 starts Windows Sandbox for the clean-setup scenario P1, and p1-prepare.ps1, inside it, downloads Tessera at a pinned commit and installs Node and Tessera, but never Claude Code or Codex.

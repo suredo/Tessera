@@ -2,6 +2,8 @@
 
 ## 2026-11-10
 
+* **New**: The clean-setup scenario P1 can run (A43, J0): `scripts/sandbox/p1.ps1` starts Windows Sandbox, where `p1-prepare.ps1` downloads Tessera at a pinned commit and installs Node and Tessera, but never Claude Code or Codex ([sandbox scripts](code/scripts/sandbox.md)), and the OKF check reads a PowerShell script's `Docs:` comment ([OKF check](code/scripts/okf-check.md)); the [procedure](testing/clean-setup.md) takes the owner from the setup check's missing to ready with each program; and the [live plan](../evals/reports/2026-11-10-p1-plan.md) asks the owner to approve two requests, 4 calls expected and at most 12. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T18:30:00Z.
+
 * **Fixed**: A check that can't see the tool, its frame still without a size after the wait, now fails saying it is Tessera's problem, not that the tool lacks a hook or scrolls sideways (L-91, #308): the cold-start failure came back twice on CI and couldn't be reproduced in about 100 diagnostic starts, so its cause stays open ([runtime](code/runtime/package.md), [lessons](lessons/tessera-issues.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T17:40:00Z.
 
 * **Changed**: Checks from the request are on by default for new tools that fit no profile (`VER-09`, A57): the launcher turns them on unless told otherwise ([launcher](code/server/launcher.md), [generation](code/server/generation.md)). The browser tests' Tessera and a scenario that doesn't set `acceptanceChecks` keep them off, so their scripted answers and recordings still fit ([runner](code/evals/runner.md), [scenario format](testing/scenario-format.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-10T16:20:00Z.
