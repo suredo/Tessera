@@ -199,8 +199,9 @@ export async function runScenario(
     now,
     openBrowser: () => Promise.resolve(),
     ...(options.twoPass ? { twoPass: options.twoPass } : {}),
-    // The scenario's own switch for the acceptance-check experiment (VER-09).
-    ...(scenario.acceptanceChecks ? { acceptanceChecks: true } : {}),
+    // The scenario's own switch for checks from the request (VER-09), off unless it says so, so a
+    // recording made without them still replays; Tessera has them on otherwise (A57).
+    acceptanceChecks: scenario.acceptanceChecks,
     ...(options.mode === "live"
       ? {}
       : {

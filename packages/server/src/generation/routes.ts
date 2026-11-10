@@ -61,7 +61,7 @@ export type GenerationOptions = {
   ledger?: RequestLedger;
   /** Makes a big new tool in two passes, its core first (GEN-17); one pass when left out. */
   twoPass?: TwoPassOptions;
-  /** Turns on the acceptance-check experiment (VER-09, A49); off when left out. */
+  /** Checks from the request (VER-09); off when left out. The launcher turns them on (A57). */
   acceptanceChecks?: boolean;
 };
 

@@ -4,7 +4,7 @@ title: "Scenario file format"
 description: "The scenario file format, step types and fields, with a full example."
 tags: [testing, scenario-format]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T21:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T16:20:00Z }
 ---
 # Scenario file format
 
@@ -57,7 +57,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 - `clock`: the starting date, time and time zone (`RUN-07`)
 - `budget`: the maximum calls for the live run
 - `profiles`: the verification profiles the person's tools should match, by their IDs in the registry; a `do` step uses their hooks
-- `acceptanceChecks`: true to run Tessera with the acceptance-check experiment on (`VER-09`), so a new tool that fits no profile gets checks written from the request; false when left out
+- `acceptanceChecks`: true to run Tessera with checks from the request on (`VER-09`), so a new tool that fits no profile gets checks written from the request; false when left out, so a recording made without them still replays, though Tessera itself has them on by default (A57). A scenario recorded from M4 on sets it to measure Tessera as it ships
 - `review`: the AI review items that apply ([AI technical review](judging.md#ai-technical-review-each-scenario-eval-03))
 
 **Answers.** A rehearsal (`evals/scenarios/rehearsals/<id>.json`, written by hand) or a replay (a live run's recording) gives the answers each stage asks for, in order. A saved tool is named as `{{saved:<name>}}`, since its ID is new on every run, and an answer can take its time (`delayMs`) so a `cancel` has something to stop. The [runner](../code/evals/runner.md) plays them.

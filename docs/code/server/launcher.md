@@ -4,10 +4,10 @@ title: "Launcher"
 description: "Starting Tessera with one double-click: one copy per data folder, a free port, the browser opened, and a clean stop when its window closes."
 resource: ../../../packages/server/src/launcher/
 implements: [PLAT-02]
-tests: [../../../packages/server/test/launcher.test.ts]
+tests: [../../../packages/server/test/launcher.test.ts, ../../../packages/server/test/acceptance.test.ts]
 tags: [code, server, platform, launcher]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T17:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T16:20:00Z }
 ---
 
 # Purpose
@@ -26,7 +26,7 @@ Starts Tessera with one double-click (`PLAT-02`): it opens the data folder ([sto
 
 - **Development and tests choose their own data folder** with `TESSERA_DATA_DIR` (`ENG-19`). `TESSERA_OPEN_BROWSER=0` starts Tessera without a browser, for tests.
 - **Stage time limits can be set** (`GEN-11`): `LaunchOptions.stageTimeLimitsMs` passes any of the stage limits to the [generation routes](generation.md), which refuse a bad one before the server starts answering; nothing sets it outside tests, so the defaults apply.
-- **The acceptance-check experiment is off unless asked for** (`VER-09`): `LaunchOptions.acceptanceChecks` turns it on in the [generation routes](generation.md), for evaluations of it.
+- **Checks from the request are on unless turned off** (`VER-09`, A57): the launcher turns them on in the [generation routes](generation.md) unless `LaunchOptions.acceptanceChecks` is false, as the browser tests' Tessera and a scenario without them set it, so their scripted answers, which have no acceptance stage, still fit.
 - **Two passes for big tools are off unless asked for** (`GEN-17`): `LaunchOptions.twoPass` passes `TwoPassOptions` to the [generation routes](generation.md); nothing sets it outside tests until the measurement against one pass decides the default.
 
 - **One copy per data folder.** The copy that runs holds an exclusive lock on `tessera.lock` in the data folder for as long as it runs, through `tryLockFile` from [storage](storage.md). A launch that can't take the lock starts nothing: it waits up to 10 seconds for the holder's address and opens the browser there, or says that Tessera is already starting in another window.
