@@ -297,7 +297,7 @@ describe("the checks are another model's words, quoted as data (SEC-02)", () => 
           ? {
               failure: "behavior" as const,
               diagnostics: ["A check from your request failed."],
-              attempt: tool as Extract<Creation, { outcome: "tool" }>,
+              attempt: tool,
             }
           : {}),
       });
