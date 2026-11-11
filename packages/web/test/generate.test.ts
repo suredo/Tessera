@@ -476,6 +476,38 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
   });
 });
 
+describe("answering a review in words (DATA-02, L-98)", () => {
+  const token = "00000000-0000-4000-8000-000000000009";
+  const workspace = "00000000-0000-4000-8000-000000000001";
+
+  it("L-98: the waiting changes' token goes with the request, and an answer to them confirms through the review's own route", async () => {
+    for (const approve of [true, false]) {
+      const { fake, seen } = deps({ kind: "proposal_answer", token, approve });
+      const confirm = vi.fn(() => Promise.resolve({ message: "Confirmed.", dataChanged: approve }));
+      fake.confirm = confirm;
+      const outcome = await carryOut("I approve", workspace, fake, undefined, undefined, {
+        token,
+        interfaceMessage: "Edited it.",
+      });
+      expect(seen.requests).toEqual([
+        { request: "I approve", workspaceId: workspace, proposal: token },
+      ]);
+      expect(confirm).toHaveBeenCalledWith(token, approve, "Edited it.", undefined);
+      expect(outcome).toEqual({ message: "Confirmed.", dataChanged: approve });
+    }
+  });
+
+  it("L-98: with nothing waiting, no token is sent, and an answer for other changes confirms nothing", async () => {
+    const { fake, seen } = deps({ kind: "proposal_answer", token, approve: true });
+    const confirm = vi.fn();
+    fake.confirm = confirm;
+    const outcome = await carryOut("yes", workspace, fake);
+    expect(seen.requests).toEqual([{ request: "yes", workspaceId: workspace }]);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(outcome.message).toBe(en["request.failedPlain"]);
+  });
+});
+
 describe("a big tool made in two passes (GEN-17, GEN-08)", () => {
   const activated = { outcome: "activated", workspace: {} as never, migrationCount: 0 } as const;
   const failedCheck = { outcome: "check-failed", check: "static", reason: "No." } as const;

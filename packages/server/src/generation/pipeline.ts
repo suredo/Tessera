@@ -52,6 +52,11 @@ export async function generate(
   limits: StageTimeLimits = DEFAULT_STAGE_TIME_LIMITS,
   /** The acceptance-check experiment (VER-09, A49): off unless the server is told. */
   acceptanceChecks = false,
+  /**
+   * What the entry changes waiting for review in this workspace do, when `input.proposal` names
+   * changes the server still holds for it; the request may then approve or decline them.
+   */
+  proposal?: string,
 ): Promise<GenerationResult> {
   const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
@@ -61,6 +66,7 @@ export async function generate(
       request: input.request,
       open,
       saved: recentSavedTools(store),
+      ...(proposal && input.proposal ? { proposal } : {}),
       signal,
       timeLimitMs: limits.intent,
     });
@@ -75,6 +81,16 @@ export async function generate(
     case "unsupported":
     case "ask_to_split":
       return { kind: "answer", answer: decision.action };
+    // The app confirms or cancels them through the review's own route, with its checks (DATA-02).
+    case "approve_proposal":
+    case "decline_proposal":
+      return input.proposal
+        ? {
+            kind: "proposal_answer",
+            token: input.proposal,
+            approve: decision.action === "approve_proposal",
+          }
+        : { kind: "answer", answer: "clarify" };
     case "edit":
       return generateEdit(
         store,

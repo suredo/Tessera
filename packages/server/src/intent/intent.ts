@@ -1,6 +1,7 @@
 import { intentSchema, type Artifact, type Intent } from "@tessera/contracts";
 import {
   assembleIntentPrompt,
+  intentProposalSize,
   type OpenTool,
   type RecordList,
   type SavedToolEntry,
@@ -25,14 +26,17 @@ export const CATALOGUE_MAX_CHARACTERS = 3_000;
  * The saved tools the intent stage is shown (GEN-18): the most recently used first, as given,
  * until the next one would pass either limit. Only these can be opened by asking.
  */
-export function savedToolCatalogue(tools: readonly SavedToolEntry[]): SavedToolEntry[] {
+export function savedToolCatalogue(
+  tools: readonly SavedToolEntry[],
+  maxCharacters = CATALOGUE_MAX_CHARACTERS,
+): SavedToolEntry[] {
   const listed: SavedToolEntry[] = [];
   // Measured as the prompt quotes them: one JSON array, so each entry adds itself and a comma.
   let size = 2;
   for (const { id, name, description } of tools) {
     const entry = { id, name, description };
     const added = JSON.stringify(entry).length + (listed.length > 0 ? 1 : 0);
-    if (listed.length === CATALOGUE_MAX_TOOLS || size + added > CATALOGUE_MAX_CHARACTERS) break;
+    if (listed.length === CATALOGUE_MAX_TOOLS || size + added > maxCharacters) break;
     listed.push(entry);
     size += added;
   }
@@ -90,6 +94,7 @@ export type IntentDecision = { intent: Intent } & (
   | { action: "mixed"; interfacePart: string; dataPart: string }
   | { action: "open_saved"; savedToolId: string }
   | { action: "clarify" | "unsupported" | "ask_to_split" }
+  | { action: "approve_proposal" | "decline_proposal" }
 );
 
 export type IntentInput = {
@@ -98,6 +103,11 @@ export type IntentInput = {
   open: OpenTool;
   /** The person's saved tools, the most recently used first; the catalogue is chosen from them (GEN-18). */
   saved?: readonly SavedToolEntry[];
+  /**
+   * What the entry changes waiting for the person's review do, in the data stage's words; left
+   * out when none wait. Only then may the request approve or decline them in words.
+   */
+  proposal?: string;
   signal?: AbortSignal;
   /** How long the call may take; `INTENT_TIME_LIMIT_MS` unless configured (GEN-11). */
   timeLimitMs?: number;
@@ -115,13 +125,22 @@ export async function decideIntent(
   routes: Routes,
   input: IntentInput,
 ): Promise<IntentDecision> {
-  const saved = savedToolCatalogue(input.saved ?? []);
+  // While entry changes wait for review, the catalogue gives up the room their quoted summary
+  // takes, so the prompt keeps its budget whatever the summary holds (GEN-03, L-98).
+  const saved = savedToolCatalogue(
+    input.saved ?? [],
+    Math.max(
+      0,
+      CATALOGUE_MAX_CHARACTERS - (input.proposal ? intentProposalSize(input.proposal) : 0),
+    ),
+  );
   const listed = saved.map((tool) => tool.id);
   const ask = async (retry: boolean) => {
     const prompt = assembleIntentPrompt({
       request: input.request,
       open: input.open,
       saved,
+      ...(input.proposal ? { proposal: input.proposal } : {}),
       retry,
     });
     const result = await runStage(provider, routes, {
@@ -148,6 +167,9 @@ export async function decideIntent(
 function route(input: IntentInput, listed: readonly string[], intent: Intent): IntentDecision {
   const { request, open } = input;
   const whole = { intent, interfacePart: request };
+  // An answer to a review only when one waits; otherwise the model saw none, so it is unclear.
+  if (intent.kind === "approve_proposal" || intent.kind === "decline_proposal")
+    return input.proposal ? { action: intent.kind, intent } : { action: "clarify", intent };
   // No tool open: nothing to change, so the request opens a saved tool or creates one (A12).
   if (open === null) {
     if (intent.kind === "open_saved" && listed.includes(intent.savedToolId)) {
