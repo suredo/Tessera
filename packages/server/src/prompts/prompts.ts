@@ -450,8 +450,9 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
 
 /**
  * The intent stage's budget, like the generation stages' (GEN-03): its largest shape, a second ask in a
- * tool with two lists with a catalogue of saved tools filled to its cap (GEN-18), measured 9,166
- * characters when raised from 8,900, which that shape could pass (the owner's choice, 2026-11-11).
+ * tool with its lists and a catalogue of saved tools filled to its cap (GEN-18): at most 9,184
+ * characters over the fixtures' requests when raised from 8,900, which that shape could pass (the
+ * owner's choice, 2026-11-11).
  */
 export const INTENT_PROMPT_BUDGET = 9_400;
 
