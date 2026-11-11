@@ -7,7 +7,7 @@ implements: [DATA-03, MIG-03, MIG-04, MIG-05]
 tests: [../../../packages/server/test/data-shape.test.ts]
 tags: [code, server, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T06:34:57Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T05:00:00Z }
 ---
 
 # Purpose
@@ -33,7 +33,7 @@ Each tool declares a versioned data shape: a JSON Schema and a schema version, w
 
 # Depends on / used by
 
-Depends on the contracts and Ajv (draft-07, the owner's choice on #50). Activation and restore (#50) will use it.
+Depends on the contracts and Ajv (draft-07, the owner's choice on #50). Used by [workspaces](workspaces.md) (activation, restore and undo), [generation](generation.md) (new tools, edits and chat data changes), the [prompts](prompts.md) and the [bridge route](bridge.md), which checks a tool's own writes against its shape.
 
 # Pitfalls
 
