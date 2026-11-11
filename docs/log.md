@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-11
+
+* **Fixed**: A reply in words answers a waiting review (L-98, [#328](https://github.com/suredo/Tessera/issues/328)): the owner typed "I approve" to proposed entry changes and was told "Tessera isn't sure what to make." While a review waits, the app sends its token with the next request; the intent stage is told what the changes do, as quoted data, and may answer that the request approves or declines them. The host takes that only for changes it still holds for that workspace, and the app confirms or cancels them through the review's own route. The saved-tools catalogue keeps 2,000 characters then, so the intent prompt keeps its budget ([intent](code/server/intent.md), [web app](code/web/package.md), [lessons](lessons/tessera-issues.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-11T03:20:00Z.
+
 ## 2026-11-10
 
 * **Fixed**: Motion that follows the mouse isn't a look (L-96): the kanban's cards were asked to dangle with the mouse, and the look-only route could only imitate it in CSS. The intent stage no longer counts such motion as look-only; a look-only edit says when CSS can't do it; and the pipeline then tries it once more as an edit of the tool's code. The intent prompt's new words are paid for by trimming redundant examples, within its budget ([generation](code/server/generation.md), [prompts](code/server/prompts.md), [lessons](lessons/tessera-issues.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-11T01:30:00Z.

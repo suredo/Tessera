@@ -161,6 +161,15 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     offers.set(token, { offer, expires });
     return token;
   };
+  // The entry changes a request names as waiting for review, when the server still holds them for
+  // its workspace: only then can it answer them in words. Nothing is consumed here; the review's
+  // own route does that (DATA-02).
+  const waitingProposal = (input: { proposal?: string; workspaceId?: string }) => {
+    const entry = input.proposal ? offers.get(input.proposal) : undefined;
+    return entry && entry.expires > Date.now() && entry.offer.workspaceId === input.workspaceId
+      ? entry.offer.plan.summary
+      : undefined;
+  };
   const available = (context: SmokeRepairContext) => {
     const workspace = getWorkspace(options.store, context.reply.workspaceId);
     for (const [token, entry] of [...pending, ...waitingData, ...waitingFollowUps]) {
@@ -326,6 +335,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   twoPass,
                   stageLimits,
                   options.acceptanceChecks === true,
+                  waitingProposal(input),
                 ),
               signal,
             );

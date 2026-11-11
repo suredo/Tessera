@@ -7,12 +7,12 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11, GEN-16, CLI-07, GEN-12, GEN
 tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T01:50:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T03:20:00Z }
 ---
 
 # Purpose
 
-The core of generation (#146): interface requests create or edit a candidate tool; data requests plan validated record patches. Creation stores a candidate with starting data; editing keeps the active tool and entries until activation. Failed checks are repaired by class. Adds can commit after validation; existing-entry changes wait for explicit review. Mixed requests edit first, then plan the separate data instruction against the activated tool.
+The core of generation (#146): interface requests create or edit a candidate tool; data requests plan validated record patches. Creation stores a candidate with starting data; editing keeps the active tool and entries until activation. Failed checks are repaired by class. Adds can commit after validation; existing-entry changes wait for explicit review. A request that names the waiting review's token (`GenerateRequest.proposal`) may answer it in words: the route passes the waiting changes' summary to the intent stage only when it still holds them for that workspace, and an approving or declining answer comes back as `proposal_answer` with that token, for the app to confirm through `CONFIRM_DATA_ROUTE`; nothing is consumed or applied by the request itself (L-98). Mixed requests edit first, then plan the separate data instruction against the activated tool.
 
 # Entry points
 

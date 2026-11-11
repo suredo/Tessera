@@ -165,6 +165,12 @@ export const generateRequestSchema = z
       .uuid()
       .optional()
       .describe("The workspace open when they asked; none when nothing is open."),
+    proposal: z
+      .uuid()
+      .optional()
+      .describe(
+        "The token of entry changes waiting for review in that workspace, so the request can approve or decline them in words.",
+      ),
   })
   .describe("A request for Tessera to carry out (GEN-01).");
 export type GenerateRequest = z.infer<typeof generateRequestSchema>;
@@ -338,6 +344,11 @@ export const generateReplySchema = z
         ),
     }),
     z.strictObject({ kind: z.literal("open_saved"), savedToolId: z.string().min(1) }),
+    z
+      .strictObject({ kind: z.literal("proposal_answer"), token: z.uuid(), approve: z.boolean() })
+      .describe(
+        "The request answered the entry changes waiting for review: the app confirms or cancels them as its own buttons do.",
+      ),
     generationFailureSchema,
   ])
   .describe("What came of a request: a candidate to stage, an answer, a saved tool, or a failure.");

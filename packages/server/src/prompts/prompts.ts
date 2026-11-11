@@ -65,6 +65,7 @@ export const PROMPT_PARTS = [
   "intent-saved",
   "intent-no-saved",
   "intent-retry",
+  "intent-proposal",
   "data-plan",
   "data-context",
   "repair-data-plan",
@@ -519,6 +520,8 @@ export function assembleIntentPrompt(input: {
   open: OpenTool;
   /** The catalogue, already chosen and in order (`savedToolCatalogue`); none when left out. */
   saved?: readonly SavedToolEntry[];
+  /** What the entry changes waiting for review do; none wait when left out. */
+  proposal?: string;
   retry?: boolean;
 }): AssembledPrompt {
   const used: string[] = [];
@@ -551,7 +554,11 @@ export function assembleIntentPrompt(input: {
         ),
       })
     : use("intent-no-saved");
-  let prompt = use("intent-request", { open, saved, request: input.request });
+  // The waiting changes' summary is a model's words: quoted as JSON too (SEC-02).
+  const context = input.proposal
+    ? `${open}\n\n${use("intent-proposal", { proposal: JSON.stringify(input.proposal) })}`
+    : open;
+  let prompt = use("intent-request", { open: context, saved, request: input.request });
   if (input.retry) prompt += `\n\n${use("intent-retry")}`;
   return { system, prompt, parts: used, size: system.length + prompt.length };
 }

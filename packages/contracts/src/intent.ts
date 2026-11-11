@@ -14,6 +14,9 @@ export const INTENT_KINDS = [
   "open_saved",
   "clarify",
   "unsupported",
+  // Only while proposed entry changes wait for review: the request answers them in words.
+  "approve_proposal",
+  "decline_proposal",
 ] as const;
 
 const feature = z.strictObject({

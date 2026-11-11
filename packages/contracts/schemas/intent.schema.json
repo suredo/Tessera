@@ -132,7 +132,9 @@
             "mixed",
             "new_tool",
             "clarify",
-            "unsupported"
+            "unsupported",
+            "approve_proposal",
+            "decline_proposal"
           ]
         },
         "interfacePart": {

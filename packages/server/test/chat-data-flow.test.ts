@@ -41,7 +41,7 @@ afterEach(async () => {
   for (const close of clean.splice(0)) await close();
   vi.restoreAllMocks();
 });
-async function fixture(operation: unknown, limit = 420_000) {
+async function fixture(operation: unknown, limit = 420_000, later: Intent[] = []) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-data-flow-"));
   const folder = await openDataFolder(dir);
   const built = candidateFrom(editFixture);
@@ -62,6 +62,7 @@ async function fixture(operation: unknown, limit = 420_000) {
           patch: { operations: [operation] },
         } as never,
       },
+      ...later.map((value) => ({ kind: "value" as const, stage: "intent" as const, value })),
     ],
   });
   let available = true;
@@ -109,6 +110,48 @@ const rename = {
   revisionCount: 999,
   fields: { title: "Oat milk" },
 };
+
+describe("answering a review in words (DATA-02, L-98)", () => {
+  it("L-98: a request that approves the waiting changes is answered with their token, and nothing is applied until confirmed", async () => {
+    const f = await fixture(rename, undefined, [{ ...intent, kind: "approve_proposal" }]);
+    const offer = await f.ask();
+    if (offer.kind !== "data_confirmation") throw new Error("Expected review");
+    const before = getWorkspace(f.folder, f.id)!;
+    const reply = await f.post(GENERATE_ROUTE, {
+      workspaceId: f.id,
+      request: "I approve",
+      proposal: offer.token,
+    });
+    expect(reply).toEqual({ kind: "proposal_answer", token: offer.token, approve: true });
+    expect(getWorkspace(f.folder, f.id)).toEqual(before);
+    // The review's own route applies it, with its revision guards.
+    const applied = await f.post(CONFIRM_DATA_ROUTE, { token: offer.token, approve: true });
+    expect(applied).toMatchObject({ kind: "data_changed", count: 1 });
+    expect(getWorkspace(f.folder, f.id)!.data?.["items"]).toContainEqual({
+      id: "i-1",
+      title: "Oat milk",
+    });
+  });
+
+  it("L-98: changes the server doesn't hold for that workspace can't be answered in words", async () => {
+    const f = await fixture(rename, undefined, [
+      { ...intent, kind: "approve_proposal" },
+      { ...intent, kind: "decline_proposal" },
+    ]);
+    const offer = await f.ask();
+    if (offer.kind !== "data_confirmation") throw new Error("Expected review");
+    const other = createWorkspace(f.folder, "Another");
+    for (const request of [
+      { workspaceId: other.id, request: "yes", proposal: offer.token },
+      { workspaceId: f.id, request: "no", proposal: "00000000-0000-4000-8000-000000000000" },
+    ])
+      expect(await f.post(GENERATE_ROUTE, request)).toEqual({ kind: "answer", answer: "clarify" });
+    // The waiting changes are still the review's to apply.
+    expect(await f.post(CONFIRM_DATA_ROUTE, { token: offer.token, approve: true })).toMatchObject({
+      kind: "data_changed",
+    });
+  });
+});
 
 describe("chat patch lifecycle", () => {
   it("DATA-02 GEN-08: adds commit as data only, keeping tool history and host IDs", async () => {

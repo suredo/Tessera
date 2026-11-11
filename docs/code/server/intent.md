@@ -7,7 +7,7 @@ implements: [GEN-01, GEN-15, GEN-18, VER-03]
 tests: [../../../packages/server/test/intent.test.ts]
 tags: [code, server, generation, intent]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T23:26:45Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T03:20:00Z }
 ---
 
 # Purpose
@@ -17,12 +17,12 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
 # Entry points
 
 - `src/intent/intent.ts`:
-  - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the person's saved tools, the most recently used first) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, or ask the person to split it.
+  - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the person's saved tools, the most recently used first) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, ask the person to split it, or approve or decline the entry changes waiting for review (L-98).
   - `recordLists` reads the lists a tool keeps, and their fields, from its declared data shape (`DATA-03`).
   - `wordsNotInRequest` is the word check of a split part.
   - `INTENT_TIME_LIMIT_MS` is the stage's default time limit (`GEN-11`); `IntentInput.timeLimitMs` replaces it with the configured one.
-  - `savedToolCatalogue` chooses the saved tools the stage is shown (`GEN-18`): each one's ID, name and description, in the order given, until the next would pass `CATALOGUE_MAX_TOOLS` (20) or `CATALOGUE_MAX_CHARACTERS` (3,000, as quoted). It stops there rather than skip one, so the most recent always come first.
-- Its prompt is assembled by the [prompt assembly](prompts.md) from the intent parts: the instructions, with the verification profiles listed from their registry so the answer can name the one the tool fits (`VER-03`), the request, the open tool or none, a tool with no records, the saved tools or none, and the reminder for a second ask. The answer also says whether the finished tool shows a chart (its drawsCharts field), which brings the chart part into the generation prompt (`CAP-04`).
+  - `savedToolCatalogue` chooses the saved tools the stage is shown (`GEN-18`): each one's ID, name and description, in the order given, until the next would pass `CATALOGUE_MAX_TOOLS` (20) or `CATALOGUE_MAX_CHARACTERS` (3,000, as quoted). It stops there rather than skip one, so the most recent always come first. While entry changes wait for review, the stage is told their summary too, so the catalogue keeps `CATALOGUE_WITH_PROPOSAL_CHARACTERS` (2,000) and the prompt its budget (`GEN-03`).
+- Its prompt is assembled by the [prompt assembly](prompts.md) from the intent parts: the instructions, with the verification profiles listed from their registry so the answer can name the one the tool fits (`VER-03`), the request, the open tool or none, a tool with no records, the saved tools or none, the entry changes waiting for review when some do, and the reminder for a second ask. The answer also says whether the finished tool shows a chart (its drawsCharts field), which brings the chart part into the generation prompt (`CAP-04`).
 - `packages/server/test/fixtures/intent/`: `requests.json`, the 31 requests of the intent spike plus ADR 0008's pairs, each with its context (the open tool, and the saved tools with their names and descriptions) and expected action; `replays.json`, the spike's recorded live answers (`TEST-04`).
 
 # Invariants
@@ -31,7 +31,9 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
   - With no tool open, a request opens a listed saved tool or creates one (A12).
   - A request that isn't about the open tool never changes it: it becomes a new tool. Building a tool while one is open is a new tool too.
   - A saved tool must be one of those the stage was shown in the catalogue; one left out, or unknown, is treated as no match. Clarify and unsupported reach the person as they are.
+  - A request approves or declines entry changes only while some wait (`IntentInput.proposal`, given only when the server still holds them for the open workspace); otherwise such an answer is clarify, and nothing is applied (L-98). The decision only names the answer: the review's own route applies or drops the changes, with its checks (`DATA-02`).
 - **The open tool's records decide data against mixed** (ADR 0008). The prompt lists each list the tool keeps with its fields, and says that adding what the tool keeps as records is data.
+- **The waiting changes are quoted data** (`SEC-02`). Their summary is the data stage's words, so it goes in as JSON between markers, like the open tool.
 - **The open tool is quoted data** (`SEC-02`). Its name and lists come from the tool, which may be generated or imported, so they go in as JSON between markers, and the instructions say they are never instructions; only the request says what the person wants.
 - **Nothing split, nothing reworded** (ADR 0008, L-75). For create, new tool and edit, the interface part is the whole request; for data, the data part is the whole request. A part the model wrote is never used for these.
 - **A mixed split must be the request's own words.** Every word of each part must be a word of the request, ignoring case and punctuation, in any script; a missing part fails too. A word keeps its marks (a changed vowel sign in Devanagari is a changed word), and text is normalized first, so an accent typed as a separate mark matches the accented letter. A failing split is asked once more on the same route, with a reminder; a second failure is `ask_to_split`, and nothing is done. The host never repairs or translates a part.
@@ -52,5 +54,5 @@ The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `CATALOGUE_MAX_CHARACTERS`, `CATALOGUE_MAX_TOOLS`, `decideIntent`, `INTENT_TIME_LIMIT_MS`, `recordLists`, `savedToolCatalogue`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type)
-- `intent.ts`: `INTENT_TIME_LIMIT_MS`, `CATALOGUE_MAX_TOOLS`, `CATALOGUE_MAX_CHARACTERS`, `savedToolCatalogue`, `recordLists`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type), `decideIntent`
+- `index.ts`: `CATALOGUE_MAX_CHARACTERS`, `CATALOGUE_WITH_PROPOSAL_CHARACTERS`, `CATALOGUE_MAX_TOOLS`, `decideIntent`, `INTENT_TIME_LIMIT_MS`, `recordLists`, `savedToolCatalogue`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type)
+- `intent.ts`: `INTENT_TIME_LIMIT_MS`, `CATALOGUE_MAX_TOOLS`, `CATALOGUE_MAX_CHARACTERS`, `CATALOGUE_WITH_PROPOSAL_CHARACTERS`, `savedToolCatalogue`, `recordLists`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type), `decideIntent`
