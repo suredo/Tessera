@@ -14,10 +14,11 @@ import { ready } from "./support/ready.ts";
 // The bridge to saved data, end to end (RUN-04, BRG-04, DATA-02), in Chrome (TEST-06): a
 // tool in the sandbox reads its workspace's data through the host page's serveBridge and
 // serverData, and the server's bridge route answers from a temporary data folder. A change planned
-// against a record that was edited since is refused whole; one to another record is saved.
+// against a record that was edited since is refused whole; one to another record is saved. A change
+// that wouldn't fit the tool's data shape is refused, and nothing of it is saved.
 
 const errands: Artifact["code"] = {
-  html: '<button id="one">Finish the first</button><button id="two">Finish the second</button>',
+  html: '<button id="one">Finish the first</button><button id="two">Finish the second</button><button id="wrong">Mark the first "yes"</button>',
   css: "button { width: 150px; height: 60px; }",
   js: `let revisions;
 tessera.call("data.read").then((read) => { revisions = read.revisions; tessera.send({ read }); });
@@ -30,7 +31,10 @@ document.getElementById("one").addEventListener("click", () => change("one", [
   { op: "add", collection: "tasks", record: { title: "Should not appear", done: false } },
   done("t-1"),
 ]));
-document.getElementById("two").addEventListener("click", () => change("two", [done("t-2")]));`,
+document.getElementById("two").addEventListener("click", () => change("two", [done("t-2")]));
+document.getElementById("wrong").addEventListener("click", () => change("wrong", [
+  { op: "replace", collection: "tasks", id: "t-1", revisionCount: revisions.tasks["t-1"], fields: { done: "yes" } },
+]));`,
 };
 const tasks = {
   tasks: [
@@ -53,14 +57,14 @@ type TestWindow = {
   messages: Reply[];
 };
 
-/** A workspace running the errands tool, with two tasks saved. */
-function newWorkspace(): string {
+/** A workspace running the errands tool, with data shape `schema` and two tasks saved. */
+function newWorkspace(schema: Artifact["data"]["schema"] = {}): string {
   const folder = host.folder!;
   const { id } = createWorkspace(folder, "Errands");
   const version = saveVersion(folder.db, {
     contractVersion: 2,
     code: errands,
-    data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
+    data: { schemaVersion: 1, schema, defaults: {}, migrations: [] },
     capabilities: [],
     pins: [],
     ui: { standardVersion: 1, mode: "standard" },
@@ -145,4 +149,46 @@ test("BRG-04: a change planned before another edit to its record is refused whol
     },
     revisions: { tasks: { "t-1": 2, "t-2": 2 } },
   });
+});
+
+test("DATA-02: a change that wouldn't fit the tool's data shape is refused, and nothing of it is saved", async ({
+  page,
+}) => {
+  const id = newWorkspace({
+    type: "object",
+    properties: {
+      tasks: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            done: { type: "boolean" },
+          },
+          required: ["id", "title", "done"],
+        },
+      },
+    },
+  });
+  await open(page, id);
+  await expect.poll(async () => (await messages(page)).some((m) => m?.read)).toBe(true);
+
+  await toolFrame(page).locator("#wrong").click();
+  await expect
+    .poll(() => labelled(page, "wrong"))
+    .toMatchObject({
+      ok: false,
+      code: "invalid-args",
+      message: "The change doesn't fit this tool. Your entries were kept.",
+    });
+  expect(readWorkspaceData(host.folder!, id)).toEqual({
+    data: tasks,
+    revisions: { tasks: { "t-1": 1, "t-2": 1 } },
+  });
+
+  // A change that fits is saved as before.
+  await toolFrame(page).locator("#two").click();
+  await expect.poll(() => labelled(page, "two")).toMatchObject({ ok: true });
+  expect(readWorkspaceData(host.folder!, id).revisions).toEqual({ tasks: { "t-1": 1, "t-2": 2 } });
 });

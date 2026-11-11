@@ -1,4 +1,5 @@
 import {
+  type Artifact,
   BRIDGE_ACTIONS,
   BRIDGE_REQUEST_LIMIT_BYTES,
   BRIDGE_ROUTE,
@@ -9,6 +10,7 @@ import {
   type BridgeReply,
 } from "@tessera/contracts";
 import { readAssetNow, workspaceAssets, type AssetStore } from "../assets/index.ts";
+import { checkToolData } from "../data-shape/index.ts";
 import { json, readJson, text, type Handler } from "../http/index.ts";
 import type { PatchRefusal } from "../patches/index.ts";
 import { loadVersion } from "../versions/index.ts";
@@ -42,11 +44,11 @@ const refusal = (requestId: string, code: BridgeErrorCode, message: string): Bri
   error: { code, message },
 });
 
-// The capabilities the workspace's current tool version declares; none without a usable one.
-function declaredCapabilities(store: Store, hash: string | null): string[] {
-  if (hash === null) return [];
+// The workspace's current tool version, when it is usable: its capabilities and data shape.
+function currentArtifact(store: Store, hash: string | null): Artifact | undefined {
+  if (hash === null) return undefined;
   const reading = loadVersion(store.db, hash);
-  return reading?.kind === "ok" ? reading.artifact.capabilities : [];
+  return reading?.kind === "ok" ? reading.artifact : undefined;
 }
 
 /**
@@ -60,10 +62,11 @@ export function answerDataCall(
   request: BridgeDataRequest,
 ): BridgeReply | null {
   const workspace = getWorkspace(store, request.workspaceId);
+  const artifact = workspace ? currentArtifact(store, workspace.currentVersion) : undefined;
   const checked = checkBridgeCall(SERVER_INSTANCE, request.call, {
     instanceId: SERVER_INSTANCE,
     phase: request.phase,
-    capabilities: workspace ? declaredCapabilities(store, workspace.currentVersion) : [],
+    capabilities: artifact?.capabilities ?? [],
   });
   if (!checked.ok) return checked.reply;
   const { requestId, action, args } = checked;
@@ -83,7 +86,15 @@ export function answerDataCall(
       return { requestId, ok: true, result: result.data };
     }
     if (action === "data.patch") {
-      const result = patchWorkspaceData(store, workspace.id, args);
+      // The data must still fit the shape of the version the tool runs, as a chat change must
+      // (DATA-02): checked inside the write, against that same version, so nothing that doesn't
+      // fit is saved. Without a usable version there is no shape to check, so nothing is written.
+      if (!artifact) return refusal(requestId, "failed", FAILED);
+      const schema = artifact.data.schema;
+      const result = patchWorkspaceData(store, workspace.id, args, {
+        expectedVersion: workspace.currentVersion ?? undefined,
+        validate: (data) => checkToolData(schema, data).ok,
+      });
       if (!result.ok) return refusal(requestId, PATCH_CODES[result.reason], result.message);
       return { requestId, ok: true, result: { addedIds: result.addedIds } };
     }

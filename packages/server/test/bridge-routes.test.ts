@@ -32,10 +32,10 @@ const newFolder = () => {
   return dir;
 };
 
-const tool = (capabilities: string[]): Artifact => ({
+const tool = (capabilities: string[], schema: Artifact["data"]["schema"] = {}): Artifact => ({
   contractVersion: 2,
   code: { html: "<p>Errands</p>", css: "", js: "" },
-  data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
+  data: { schemaVersion: 1, schema, defaults: {}, migrations: [] },
   capabilities,
   pins: [],
   ui: { standardVersion: 1, mode: "standard" },
@@ -47,11 +47,14 @@ const tasks = {
   ],
 };
 
-/** A data folder with one workspace running a tool that declares `capabilities`, holding tasks. */
-async function workspaceWith(capabilities: string[] = []) {
+/**
+ * A data folder with one workspace running a tool that declares `capabilities` and data `schema`,
+ * holding tasks.
+ */
+async function workspaceWith(capabilities: string[] = [], schema: Artifact["data"]["schema"] = {}) {
   const folder = await openDataFolder(newFolder());
   const { id } = createWorkspace(folder, "Errands");
-  addWorkspaceVersion(folder, id, saveVersion(folder.db, tool(capabilities)));
+  addWorkspaceVersion(folder, id, saveVersion(folder.db, tool(capabilities, schema)));
   saveWorkspaceData(folder, id, tasks, 0);
   let calls = 0;
   // Every call here has a request ID, so every one gets a reply.
@@ -143,6 +146,67 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
       error: { code: "too-large" },
     });
     expect(titles(folder, id)).toEqual(["Buy milk", "Call the bank"]);
+    folder.close();
+  });
+
+  it("DATA-02: refuses a write that would leave the data not fitting the tool's shape, saving nothing", async () => {
+    const shape = {
+      type: "object",
+      properties: {
+        tasks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              title: { type: "string" },
+              done: { type: "boolean" },
+            },
+            required: ["id", "title", "done"],
+          },
+        },
+      },
+    };
+    const { folder, id, ask } = await workspaceWith([], shape);
+    const before = getWorkspace(folder, id);
+    const misfit = ask("data.patch", {
+      operations: [
+        { op: "replace", collection: "tasks", id: "t-1", revisionCount: 1, fields: { title: 42 } },
+      ],
+    });
+    expect(misfit).toMatchObject({
+      ok: false,
+      error: {
+        code: "invalid-args",
+        message: "The change doesn't fit this tool. Your entries were kept.",
+      },
+    });
+    // An added record missing a field the shape requires is refused too.
+    const missing = ask("data.patch", {
+      operations: [{ op: "add", collection: "tasks", record: { title: "No done flag" } }],
+    });
+    expect(missing).toMatchObject({ ok: false, error: { code: "invalid-args" } });
+    expect(getWorkspace(folder, id)).toEqual(before);
+    // A change that fits is saved as before.
+    expect(ask("data.patch", done("t-1", 1))).toMatchObject({ ok: true, result: { addedIds: [] } });
+    expect(readWorkspaceData(folder, id).data["tasks"]).toMatchObject([
+      { id: "t-1", done: true },
+      {},
+    ]);
+    folder.close();
+  });
+
+  it("DATA-02: writes nothing for a workspace without a usable tool version, whose shape can't be checked", async () => {
+    const folder = await openDataFolder(newFolder());
+    const { id } = createWorkspace(folder, "Errands");
+    saveWorkspaceData(folder, id, tasks, 0);
+    const reply = answerDataCall(folder, {
+      workspaceId: id,
+      phase: "active",
+      call: { requestId: "r1", action: "data.patch", args: done("t-1", 1) },
+    });
+    expect(reply).toMatchObject({ ok: false, error: { code: "failed" } });
+    expect(readWorkspaceData(folder, id).revisions).toEqual({ tasks: { "t-1": 1, "t-2": 1 } });
     folder.close();
   });
 
