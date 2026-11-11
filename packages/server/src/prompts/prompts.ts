@@ -555,13 +555,23 @@ export function assembleIntentPrompt(input: {
       })
     : use("intent-no-saved");
   // The waiting changes' summary is a model's words: quoted as JSON too (SEC-02).
-  const context = input.proposal
-    ? `${open}\n\n${use("intent-proposal", { proposal: JSON.stringify(input.proposal) })}`
-    : open;
+  const context = input.proposal ? `${open}${proposalPart(input.proposal, use)}` : open;
   let prompt = use("intent-request", { open: context, saved, request: input.request });
   if (input.retry) prompt += `\n\n${use("intent-retry")}`;
   return { system, prompt, parts: used, size: system.length + prompt.length };
 }
+
+/** The waiting changes as the intent prompt tells them, after the open tool. */
+const proposalPart = (
+  proposal: string,
+  use: (part: PromptPart, values?: Record<string, string>) => string = fillPart,
+) => `\n\n${use("intent-proposal", { proposal: JSON.stringify(proposal) })}`;
+
+/**
+ * How many characters the waiting changes add to the intent prompt, quoted as they are told, so
+ * the saved-tools catalogue can give up as much and the prompt keep its budget (GEN-03, L-98).
+ */
+export const intentProposalSize = (proposal: string): number => proposalPart(proposal).length;
 
 /** A fixed part used as it is, such as the probe's: its text and its `name@version`. */
 export function fixedPart(part: PromptPart): { text: string; part: string } {

@@ -6,7 +6,6 @@ import { describe, expect, it } from "vitest";
 import {
   CATALOGUE_MAX_CHARACTERS,
   CATALOGUE_MAX_TOOLS,
-  CATALOGUE_WITH_PROPOSAL_CHARACTERS,
   decideIntent,
   recordLists,
   savedToolCatalogue,
@@ -17,6 +16,7 @@ import {
   assembleIntentPrompt,
   fillPart,
   INTENT_PROMPT_BUDGET,
+  intentProposalSize,
   profilesForIntent,
   partText,
   type SavedToolEntry,
@@ -323,19 +323,27 @@ describe("answering changes waiting for review in words (DATA-02, L-98)", () => 
     }
   });
 
-  it("GEN-18, L-98: while changes wait, the catalogue keeps less room", async () => {
-    const saved = Array.from({ length: CATALOGUE_MAX_TOOLS }, (_, i) => ({
-      id: `t-${i}`,
-      name: `Tool ${i}`,
-      description: "x".repeat(400),
-    }));
-    const { calls } = await decide(
-      { request: "yes", open: SHOPPING, saved, proposal: SUMMARY },
-      answer({ kind: "approve_proposal" }),
-    );
-    const listed = savedToolCatalogue(saved, CATALOGUE_WITH_PROPOSAL_CHARACTERS);
-    expect(listed.length).toBeLessThan(savedToolCatalogue(saved).length);
-    expect(calls[0]!.prompt).toContain(JSON.stringify(listed));
+  const SAVED = Array.from({ length: CATALOGUE_MAX_TOOLS }, (_, i) => ({
+    id: `t-${i}`,
+    name: `Tool ${i}`,
+    description: "x".repeat(400),
+  }));
+  // The longest summaries the data stage gives (400 characters), and ones whose quoting doubles them.
+  const SUMMARIES = ["x".repeat(400), '"'.repeat(400), "\\".repeat(400), "\n".repeat(400)];
+
+  it("GEN-18, L-98: while changes wait, the catalogue gives up the room their quoted summary takes", async () => {
+    for (const proposal of [SUMMARY, ...SUMMARIES]) {
+      const { calls } = await decide(
+        { request: "yes", open: SHOPPING, saved: SAVED, proposal },
+        answer({ kind: "approve_proposal" }),
+      );
+      const listed = savedToolCatalogue(
+        SAVED,
+        CATALOGUE_MAX_CHARACTERS - intentProposalSize(proposal),
+      );
+      expect(listed.length).toBeLessThan(savedToolCatalogue(SAVED).length);
+      expect(calls[0]!.prompt).toContain(`--- saved tools ---\n${JSON.stringify(listed)}\n`);
+    }
   });
 
   it("L-98: anything else while changes wait is decided as a new request", async () => {
@@ -346,23 +354,31 @@ describe("answering changes waiting for review in words (DATA-02, L-98)", () => 
     expect(decision).toMatchObject({ action: "data", dataPart: "Add bread" });
   });
 
-  it("GEN-03: the largest intent prompt, with changes waiting too, stays within its budget", () => {
-    const full = savedToolCatalogue(
-      Array.from({ length: CATALOGUE_MAX_TOOLS }, (_, i) => ({
-        id: `t-${i}`,
-        name: `Tool ${i}`,
-        description: "x".repeat(400),
-      })),
-      CATALOGUE_WITH_PROPOSAL_CHARACTERS,
+  it("GEN-03, L-98: waiting changes never make the intent prompt longer than a full catalogue could, whatever their summary holds", () => {
+    const base = { ...inputOf(fixture("r22")), retry: true };
+    // The prompt with no saved tools, plus the most the catalogue may quote: the largest without
+    // waiting changes.
+    const largest =
+      assembleIntentPrompt({ ...base, saved: [] }).size -
+      partText("intent-no-saved").length +
+      partText("intent-saved").replace("{{tools}}", "").length +
+      CATALOGUE_MAX_CHARACTERS;
+    for (const proposal of SUMMARIES) {
+      const saved = savedToolCatalogue(
+        SAVED,
+        CATALOGUE_MAX_CHARACTERS - intentProposalSize(proposal),
+      );
+      expect(JSON.stringify(saved).length + intentProposalSize(proposal)).toBeLessThanOrEqual(
+        CATALOGUE_MAX_CHARACTERS,
+      );
+      expect(assembleIntentPrompt({ ...base, saved, proposal }).size).toBeLessThanOrEqual(largest);
+    }
+    // A plain summary, with the catalogue measured as the budget's other tests measure it.
+    const plain = SUMMARIES[0]!;
+    const saved = savedToolCatalogue(SAVED, CATALOGUE_MAX_CHARACTERS - intentProposalSize(plain));
+    expect(assembleIntentPrompt({ ...base, saved, proposal: plain }).size).toBeLessThanOrEqual(
+      INTENT_PROMPT_BUDGET,
     );
-    expect(JSON.stringify(full).length).toBeLessThanOrEqual(CATALOGUE_WITH_PROPOSAL_CHARACTERS);
-    const { size } = assembleIntentPrompt({
-      ...inputOf(fixture("r22")),
-      saved: full,
-      proposal: "x".repeat(400),
-      retry: true,
-    });
-    expect(size).toBeLessThanOrEqual(INTENT_PROMPT_BUDGET);
   });
 });
 

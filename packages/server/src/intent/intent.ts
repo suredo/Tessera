@@ -1,6 +1,7 @@
 import { intentSchema, type Artifact, type Intent } from "@tessera/contracts";
 import {
   assembleIntentPrompt,
+  intentProposalSize,
   type OpenTool,
   type RecordList,
   type SavedToolEntry,
@@ -20,11 +21,6 @@ export const INTENT_TIME_LIMIT_MS = 60_000;
 export const CATALOGUE_MAX_TOOLS = 20;
 /** And at most this many characters of them, as quoted, so the prompt keeps its budget (GEN-03). */
 export const CATALOGUE_MAX_CHARACTERS = 3_000;
-/**
- * While entry changes wait for review their summary is told too, so the catalogue keeps less room
- * and the prompt its budget (GEN-03, L-98).
- */
-export const CATALOGUE_WITH_PROPOSAL_CHARACTERS = 2_000;
 
 /**
  * The saved tools the intent stage is shown (GEN-18): the most recently used first, as given,
@@ -129,9 +125,14 @@ export async function decideIntent(
   routes: Routes,
   input: IntentInput,
 ): Promise<IntentDecision> {
+  // While entry changes wait for review, the catalogue gives up the room their quoted summary
+  // takes, so the prompt keeps its budget whatever the summary holds (GEN-03, L-98).
   const saved = savedToolCatalogue(
     input.saved ?? [],
-    input.proposal ? CATALOGUE_WITH_PROPOSAL_CHARACTERS : CATALOGUE_MAX_CHARACTERS,
+    Math.max(
+      0,
+      CATALOGUE_MAX_CHARACTERS - (input.proposal ? intentProposalSize(input.proposal) : 0),
+    ),
   );
   const listed = saved.map((tool) => tool.id);
   const ask = async (retry: boolean) => {

@@ -7,7 +7,7 @@ implements: [GEN-01, GEN-15, GEN-18, VER-03]
 tests: [../../../packages/server/test/intent.test.ts]
 tags: [code, server, generation, intent]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T03:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T04:05:00Z }
 ---
 
 # Purpose
@@ -21,7 +21,7 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
   - `recordLists` reads the lists a tool keeps, and their fields, from its declared data shape (`DATA-03`).
   - `wordsNotInRequest` is the word check of a split part.
   - `INTENT_TIME_LIMIT_MS` is the stage's default time limit (`GEN-11`); `IntentInput.timeLimitMs` replaces it with the configured one.
-  - `savedToolCatalogue` chooses the saved tools the stage is shown (`GEN-18`): each one's ID, name and description, in the order given, until the next would pass `CATALOGUE_MAX_TOOLS` (20) or `CATALOGUE_MAX_CHARACTERS` (3,000, as quoted). It stops there rather than skip one, so the most recent always come first. While entry changes wait for review, the stage is told their summary too, so the catalogue keeps `CATALOGUE_WITH_PROPOSAL_CHARACTERS` (2,000) and the prompt its budget (`GEN-03`).
+  - `savedToolCatalogue` chooses the saved tools the stage is shown (`GEN-18`): each one's ID, name and description, in the order given, until the next would pass `CATALOGUE_MAX_TOOLS` (20) or `CATALOGUE_MAX_CHARACTERS` (3,000, as quoted). It stops there rather than skip one, so the most recent always come first. While entry changes wait for review, the stage is told their summary too, so the catalogue gives up as many characters as the summary takes once quoted (as the prompt assembly measures it): a summary of quotes or backslashes counts twice. So waiting changes never make the prompt longer than a full catalogue could (`GEN-03`).
 - Its prompt is assembled by the [prompt assembly](prompts.md) from the intent parts: the instructions, with the verification profiles listed from their registry so the answer can name the one the tool fits (`VER-03`), the request, the open tool or none, a tool with no records, the saved tools or none, the entry changes waiting for review when some do, and the reminder for a second ask. The answer also says whether the finished tool shows a chart (its drawsCharts field), which brings the chart part into the generation prompt (`CAP-04`).
 - `packages/server/test/fixtures/intent/`: `requests.json`, the 31 requests of the intent spike plus ADR 0008's pairs, each with its context (the open tool, and the saved tools with their names and descriptions) and expected action; `replays.json`, the spike's recorded live answers (`TEST-04`).
 
@@ -54,5 +54,5 @@ The [provider adapters](providers.md)' routing, the [prompt assembly](prompts.md
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `CATALOGUE_MAX_CHARACTERS`, `CATALOGUE_WITH_PROPOSAL_CHARACTERS`, `CATALOGUE_MAX_TOOLS`, `decideIntent`, `INTENT_TIME_LIMIT_MS`, `recordLists`, `savedToolCatalogue`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type)
-- `intent.ts`: `INTENT_TIME_LIMIT_MS`, `CATALOGUE_MAX_TOOLS`, `CATALOGUE_MAX_CHARACTERS`, `CATALOGUE_WITH_PROPOSAL_CHARACTERS`, `savedToolCatalogue`, `recordLists`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type), `decideIntent`
+- `index.ts`: `CATALOGUE_MAX_CHARACTERS`, `CATALOGUE_MAX_TOOLS`, `decideIntent`, `INTENT_TIME_LIMIT_MS`, `recordLists`, `savedToolCatalogue`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type)
+- `intent.ts`: `INTENT_TIME_LIMIT_MS`, `CATALOGUE_MAX_TOOLS`, `CATALOGUE_MAX_CHARACTERS`, `savedToolCatalogue`, `recordLists`, `wordsNotInRequest`, `IntentDecision` (type), `IntentInput` (type), `decideIntent`
