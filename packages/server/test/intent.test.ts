@@ -246,6 +246,21 @@ describe("finding saved tools by asking (GEN-18)", () => {
     const { size } = assembleIntentPrompt({ ...inputOf(fixture("r22")), saved: full, retry: true });
     expect(size).toBeLessThanOrEqual(INTENT_PROMPT_BUDGET);
   });
+
+  it("GEN-03: with a catalogue filled right to its cap, the intent prompt still stays within its budget", () => {
+    // Tools are listed whole, so a catalogue reaches its cap exactly only with entries sized to it.
+    const empty = JSON.stringify([{ ...BUDGET, description: "" }]).length;
+    const atCap = savedToolCatalogue([
+      { ...BUDGET, description: "x".repeat(CATALOGUE_MAX_CHARACTERS - empty) },
+    ]);
+    expect(JSON.stringify(atCap).length).toBe(CATALOGUE_MAX_CHARACTERS);
+    const { size } = assembleIntentPrompt({
+      ...inputOf(fixture("r22")),
+      saved: atCap,
+      retry: true,
+    });
+    expect(size).toBeLessThanOrEqual(INTENT_PROMPT_BUDGET);
+  });
 });
 
 describe("the host's guardrails (GEN-01)", () => {
