@@ -16,6 +16,7 @@ export {
   profilesForIntent,
   fixedPart,
   INTENT_PROMPT_BUDGET,
+  intentProposalSize,
   manifestForPrompt,
   partText,
   PROMPT_BUDGETS,

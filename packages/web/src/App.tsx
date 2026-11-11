@@ -393,6 +393,8 @@ export function App() {
     setCancelProblem("");
     setRequesting(true);
     setOffer(null);
+    // Changes waiting for review in this chat's workspace: the request may answer them in words.
+    const waiting = dataOffer && dataOffer.workspaceId === openId ? dataOffer : undefined;
     setDataOffer(undefined);
     try {
       const outcome = await carryOut(
@@ -406,6 +408,10 @@ export function App() {
           setView("workspaces");
         },
         owner,
+        waiting && {
+          token: waiting.token,
+          ...(waiting.interfaceMessage ? { interfaceMessage: waiting.interfaceMessage } : {}),
+        },
       );
       setDataOffer(owner.stopped ? undefined : outcome.dataOffer);
       // After Cancel the outcome is already known: say it now, not after the bounded refresh.

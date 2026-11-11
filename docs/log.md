@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-11
+
+* **Fixed**: A reply in words answers a waiting review (L-98, [#328](https://github.com/suredo/Tessera/issues/328)): the owner typed "I approve" to proposed entry changes and was told "Tessera isn't sure what to make." While a review waits, the app sends its token with the next request; the intent stage is told what the changes do, as quoted data, and may answer that the request approves or declines them. The host takes that only for changes it still holds for that workspace, and the app confirms or cancels them through the review's own route. The saved-tools catalogue gives up the room the quoted summary takes, so the intent prompt is never longer than a full catalogue could make it ([intent](code/server/intent.md), [prompts](code/server/prompts.md), [web app](code/web/package.md), [lessons](lessons/tessera-issues.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-11T03:20:00Z.
+
 ## 2026-11-10
 
 * **Fixed**: An edit's needed data change is kept, not repaired away (L-97): the kanban's "In review" column was made without the data allowing it, because the host refused the edit's migration when the intent expected no behavior change. The rule is gone for edits that aren't look-only, under the full migration checks; the intent counts a new status, category or column as a behavior change; T1's replay drops the repair it no longer asks for ([generation](code/server/generation.md), [lessons](lessons/tessera-issues.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-11T02:30:00Z.

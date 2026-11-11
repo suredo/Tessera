@@ -222,6 +222,8 @@ export type RequestDeps = {
   finishData: (request: FinishDataRequest) => Promise<DataReply>;
   followUp: (request: FollowUpRequest) => Promise<GenerateReply>;
   stage: (options: Parameters<typeof stageCandidate>[0]) => Promise<StagingResult>;
+  /** Confirms or cancels reviewed entry changes, as the review's buttons do; `confirmDataChoice` by default. */
+  confirm?: typeof confirmDataChoice;
 };
 
 const defaultDeps: RequestDeps = {
@@ -278,6 +280,9 @@ async function stageRequest(
   }
 }
 
+/** Entry changes waiting for review in the open workspace, which a request may answer in words. */
+export type WaitingProposal = { token: string; interfaceMessage?: string };
+
 /** Carries out a request from the chat, and says what happened in plain words (GEN-08). */
 export async function carryOut(
   request: string,
@@ -285,6 +290,7 @@ export async function carryOut(
   deps: RequestDeps = defaultDeps,
   onInterfaceApplied?: (workspaceId: string) => Promise<void>,
   control?: RequestControl,
+  proposal?: WaitingProposal,
 ): Promise<RequestOutcome> {
   const stopped = (): RequestOutcome => ({ message: t("request.stopped") });
   const reviewed = (outcome: RequestOutcome): RequestOutcome =>
@@ -312,6 +318,7 @@ export async function carryOut(
         request,
         ...(workspaceId ? { workspaceId } : {}),
         ...(controlToken ? { controlToken } : {}),
+        ...(proposal && workspaceId ? { proposal: proposal.token } : {}),
       }),
     );
   } catch (error) {
@@ -348,6 +355,16 @@ export async function carryOut(
   async function loop(): Promise<RequestOutcome> {
     for (;;) {
       switch (reply.kind) {
+        // The request approved or declined the waiting changes: the same route as the review's
+        // buttons, with its checks and revision guards (DATA-02).
+        case "proposal_answer":
+          if (reply.token !== proposal?.token) return { message: t("request.failedPlain") };
+          return (deps.confirm ?? confirmDataChoice)(
+            reply.token,
+            reply.approve,
+            proposal.interfaceMessage,
+            control,
+          );
         case "data_changed":
         case "data_confirmation":
         case "mixed_data":
