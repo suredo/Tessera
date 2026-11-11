@@ -604,6 +604,18 @@ describe("assembling a stage's prompt (GEN-03)", () => {
   });
 });
 
+describe("a new kind of value is a change to the data (L-97)", () => {
+  it("L-97, GEN-01: the intent counts a new status, category or column as a behavior change", () => {
+    expect(partText("intent")).toContain("or adds a status, category or column it keeps.");
+  });
+
+  it("L-97, GEN-13: an edit changes the data when the change needs a new shape, whatever the intent guessed", () => {
+    expect(partText("edit")).toContain(
+      "Data: unchanged unless the change needs a new shape, such as a new field or a new value a field allows;",
+    );
+  });
+});
+
 describe("motion that answers the person is not a look (L-96)", () => {
   it("L-96, GEN-01: the intent says motion following the mouse needs the tool's code, with the case as an example", () => {
     const intentPart = partText("intent");

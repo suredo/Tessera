@@ -179,9 +179,11 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
       kind: "failed",
       failure: "schema-shape",
     });
+    // An edit that isn't look-only may change the data declaration even when the intent didn't
+    // expect a behavior change, under the same migration checks (L-97).
     expect(
       editedCandidate({ ...input, intent: { ...intent, behaviorChange: false } }, quantity),
-    ).toMatchObject({ kind: "failed", failure: "schema-shape" });
+    ).toMatchObject({ kind: "candidate" });
   });
 
   it("GEN-14: a style answer changes only the CSS: the HTML and JavaScript stay as they were, by construction", () => {
