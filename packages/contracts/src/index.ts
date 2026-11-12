@@ -131,7 +131,14 @@ export {
   RESERVED_JSON_KEY,
   type JsonValue,
 } from "./json.ts";
-export { INTENT_KINDS, intentSchema, type Intent } from "./intent.ts";
+export {
+  DISCUSSION_MAX_CHARACTERS,
+  discussionSchema,
+  INTENT_KINDS,
+  intentSchema,
+  type Discussion,
+  type Intent,
+} from "./intent.ts";
 export {
   MIGRATION_MAX_MAPPINGS,
   MIGRATION_MAX_OPERATIONS,

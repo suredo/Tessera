@@ -94,6 +94,8 @@ export type IntentDecision = { intent: Intent } & (
   | { action: "mixed"; interfacePart: string; dataPart: string }
   | { action: "open_saved"; savedToolId: string }
   | { action: "clarify" | "unsupported" | "ask_to_split" }
+  // A question or an idea about a tool: answered in words, and nothing is built (GEN-19).
+  | { action: "discuss" }
   | { action: "approve_proposal" | "decline_proposal" }
 );
 
@@ -115,7 +117,8 @@ export type IntentInput = {
 
 /**
  * Asks the intent stage what `request` is, on its route (CLI-09), and decides what happens.
- * The guardrails (GEN-01): with no tool open, a request opens a saved tool or creates one (A12);
+ * The guardrails (GEN-01): with no tool open, a request opens a saved tool or creates one (A12),
+ * unless it only asks or talks about one, which builds nothing (GEN-19);
  * a request that isn't about the open tool never changes it; a saved tool must be one listed.
  * A mixed answer whose parts aren't the request's own words is asked once more, then left to the
  * person (ADR 0008). A provider failure goes back to the caller (CLI-05).
@@ -175,7 +178,7 @@ function route(input: IntentInput, listed: readonly string[], intent: Intent): I
     if (intent.kind === "open_saved" && listed.includes(intent.savedToolId)) {
       return { action: "open_saved", savedToolId: intent.savedToolId, intent };
     }
-    if (intent.kind === "clarify" || intent.kind === "unsupported") {
+    if (intent.kind === "clarify" || intent.kind === "unsupported" || intent.kind === "discuss") {
       return { action: intent.kind, intent };
     }
     return { action: "create", ...whole };
@@ -187,6 +190,7 @@ function route(input: IntentInput, listed: readonly string[], intent: Intent): I
         : { action: "new_tool", ...whole };
     case "clarify":
     case "unsupported":
+    case "discuss":
       return { action: intent.kind, intent };
     // With a tool open, building one is a new tool: the open one stays as it is.
     case "create":

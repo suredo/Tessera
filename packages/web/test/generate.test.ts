@@ -474,6 +474,13 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
     expect(await carryOut("x", null, saved.fake)).toEqual({ message: "", savedToolId: "t-1" });
     expect(saved.seen.stagings).toEqual([]);
   });
+
+  it("GEN-19: a question's answer is said as the stage wrote it, with nothing staged or reloaded", async () => {
+    const answer = "A dialog would work: it opens as a panel inside the tool.";
+    const { fake, seen } = deps({ kind: "discussion", answer });
+    expect(await carryOut("Would a modal work?", null, fake)).toEqual({ message: answer });
+    expect(seen.stagings).toEqual([]);
+  });
 });
 
 describe("answering a review in words (DATA-02, L-98)", () => {

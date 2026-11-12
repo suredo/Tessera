@@ -545,6 +545,9 @@ export async function carryOut(
           break;
         case "open_saved":
           return { message: "", savedToolId: reply.savedToolId };
+        // A question or an idea, answered in words: nothing was built or changed (GEN-19).
+        case "discussion":
+          return { message: reply.answer };
         case "failed":
           // A failed reply applied nothing; after Cancel it is the stop the person asked for, not
           // something that went wrong (GEN-08, GEN-12; the M2 live run's J6).

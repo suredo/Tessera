@@ -17,6 +17,7 @@ it("APP-09 GEN-12: each way a request ends is said plainly, a mixed one with its
   expect(outcomeText("candidate")).toBe(en["details.ended.candidate"]);
   expect(outcomeText("failed")).toBe(en["details.ended.failed"]);
   expect(outcomeText("open_saved")).toBe(en["details.ended.open_saved"]);
+  expect(outcomeText("discussion")).toBe(en["details.ended.discussion"]);
   expect(outcomeText("mixed_data:failed")).toBe(
     en["details.ended.mixed"].replace("{entries}", en["details.ended.failed"]),
   );

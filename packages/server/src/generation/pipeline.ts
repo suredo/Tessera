@@ -15,6 +15,7 @@ import {
   type Store,
 } from "../workspaces/index.ts";
 import { createTool } from "./create.ts";
+import { answerDiscussion } from "./discuss.ts";
 import { writeAcceptance } from "./acceptance.ts";
 import { generateEdit } from "./edit-pipeline.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
@@ -81,6 +82,21 @@ export async function generate(
     case "unsupported":
     case "ask_to_split":
       return { kind: "answer", answer: decision.action };
+    // A question or an idea: answered in words, with nothing built, changed or stored (GEN-19).
+    case "discuss":
+      try {
+        const answer = await answerDiscussion(provider, routes, {
+          request: input.request,
+          open,
+          language: decision.intent.language,
+          ...(signal ? { signal } : {}),
+          timeLimitMs: limits.intent,
+        });
+        return { kind: "discussion", answer };
+      } catch (error) {
+        if (!(error instanceof ProviderError)) throw error;
+        return { kind: "failed", failure: "provider", message: error.message, findings: [] };
+      }
     // The app confirms or cancels them through the review's own route, with its checks (DATA-02).
     case "approve_proposal":
     case "decline_proposal":

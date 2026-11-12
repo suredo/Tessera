@@ -68,6 +68,7 @@ describe("the routing table (CLI-09)", () => {
       intent: { model: "claude-haiku-5-5", effort: "low" },
       data: { model: "claude-haiku-5-5", effort: "low" },
       acceptance: { model: "claude-haiku-5-5", effort: "low" },
+      discuss: { model: "claude-haiku-5-5", effort: "low" },
       create: { model: "claude-sonnet-5-5", effort: "medium" },
       repair: { model: "claude-sonnet-5-5", effort: "medium" },
       edit: { model: "claude-sonnet-5-5", effort: "low" },
@@ -91,6 +92,7 @@ describe("the routing table (CLI-09)", () => {
       intent: { model: "gpt-6-luna", effort: "low" },
       data: { model: "gpt-6-luna", effort: "low" },
       acceptance: { model: "gpt-6-luna", effort: "low" },
+      discuss: { model: "gpt-6-luna", effort: "low" },
       create: { model: "gpt-6.1-sol", effort: "medium" },
       repair: { model: "gpt-6.1-sol", effort: "medium" },
       edit: { model: "gpt-6.1-sol", effort: "low" },
@@ -142,7 +144,7 @@ describe("the routing table (CLI-09)", () => {
       ["[]", "it should list steps, each with a model and an effort"],
       [
         JSON.stringify({ painting: { model: "claude-sonnet-5-5", effort: "low" } }),
-        'it names a step Tessera doesn\'t have, "painting"; the steps are intent, create, edit, repair, data, research, review or acceptance',
+        'it names a step Tessera doesn\'t have, "painting"; the steps are intent, create, edit, repair, data, research, review, acceptance or discuss',
       ],
       [
         JSON.stringify({ create: { model: "claude-sonnet-5-5" } }),

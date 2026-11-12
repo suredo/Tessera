@@ -37,6 +37,7 @@ const STAGES: Record<string, MessageKey> = {
   research: "details.stage.research",
   review: "details.stage.review",
   acceptance: "details.stage.acceptance",
+  discuss: "details.stage.discuss",
 };
 const OUTCOMES: Record<string, MessageKey> = {
   candidate: "details.ended.candidate",
@@ -45,6 +46,7 @@ const OUTCOMES: Record<string, MessageKey> = {
   data_changed: "details.ended.data_changed",
   data_confirmation: "details.ended.data_confirmation",
   open_saved: "details.ended.open_saved",
+  discussion: "details.ended.discussion",
 };
 const named = (names: Record<string, MessageKey>, name: string) => {
   const key = names[name];

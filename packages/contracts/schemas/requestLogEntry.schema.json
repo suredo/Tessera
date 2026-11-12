@@ -17,7 +17,8 @@
         "data",
         "research",
         "review",
-        "acceptance"
+        "acceptance",
+        "discuss"
       ]
     },
     "prompt": {

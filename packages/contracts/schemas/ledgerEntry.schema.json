@@ -28,7 +28,8 @@
         "data",
         "research",
         "review",
-        "acceptance"
+        "acceptance",
+        "discuss"
       ]
     },
     "model": {

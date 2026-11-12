@@ -3,11 +3,11 @@ type: Code Module
 title: "Intent stage"
 description: "One cheap call works out what a request asks for, in any language, and the host decides what happens: guardrails no answer gets past, the whole request where nothing is split, and a word check, second ask and hand-back for a mixed split (ADR 0008)."
 resource: ../../../packages/server/src/intent/
-implements: [GEN-01, GEN-15, GEN-18, VER-03]
+implements: [GEN-01, GEN-15, GEN-18, GEN-19, VER-03]
 tests: [../../../packages/server/test/intent.test.ts]
 tags: [code, server, generation, intent]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T04:05:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T00:30:00Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
 # Entry points
 
 - `src/intent/intent.ts`:
-  - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the person's saved tools, the most recently used first) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, ask the person to split it, or approve or decline the entry changes waiting for review (L-98).
+  - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the person's saved tools, the most recently used first) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, discuss (a question or an idea, answered in words, `GEN-19`), ask the person to split it, or approve or decline the entry changes waiting for review (L-98).
   - `recordLists` reads the lists a tool keeps, and their fields, from its declared data shape (`DATA-03`).
   - `wordsNotInRequest` is the word check of a split part.
   - `INTENT_TIME_LIMIT_MS` is the stage's default time limit (`GEN-11`); `IntentInput.timeLimitMs` replaces it with the configured one.
@@ -28,7 +28,8 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
 # Invariants
 
 - **Guardrails no answer gets past** (`GEN-01`):
-  - With no tool open, a request opens a listed saved tool or creates one (A12).
+  - With no tool open, a request opens a listed saved tool or creates one (A12), unless it is unclear, unsupported or only a question or an idea.
+  - A question or an idea (`discuss`) is never built, with a tool open or not, whatever the answer says it targets (`GEN-19`). The prompt says a change asked politely or as a question ("can you make it blue?") is that change, not a discussion.
   - A request that isn't about the open tool never changes it: it becomes a new tool. Building a tool while one is open is a new tool too.
   - A saved tool must be one of those the stage was shown in the catalogue; one left out, or unknown, is treated as no match. Clarify and unsupported reach the person as they are.
   - A request approves or declines entry changes only while some wait (`IntentInput.proposal`, given only when the server still holds them for the open workspace); otherwise such an answer is clarify, and nothing is applied (L-98). The decision only names the answer: the review's own route applies or drops the changes, with its checks (`DATA-02`).

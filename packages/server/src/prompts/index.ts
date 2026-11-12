@@ -5,6 +5,8 @@ export {
   assembleAcceptancePrompt,
   ACCEPTANCE_PROMPT_BUDGET,
   assembleDataPrompt,
+  assembleDiscussPrompt,
+  DISCUSS_PROMPT_BUDGET,
   assembleReviewPrompt,
   REVIEW_PROMPT_BUDGET,
   type ReviewData,

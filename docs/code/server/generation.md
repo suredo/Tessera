@@ -3,11 +3,11 @@ type: Code Module
 title: "Generation stages"
 description: "A request becomes a checked candidate tool: the create stage's answer, a discriminated union, with the tool's data shape, reusable defaults and the request's own entries apart, checked by the host before anything is stored or run, every failure classed, and a failure of the host's checks repaired by its class within its budget; and the pipeline that carries a request through intent and creation to a stored candidate with its workspace, ready to stage."
 resource: ../../../packages/server/src/generation/
-implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11, GEN-16, CLI-07, GEN-12, GEN-13, GEN-09, VER-03]
-tests: [../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
+implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11, GEN-16, CLI-07, GEN-12, GEN-13, GEN-09, VER-03, GEN-19]
+tests: [../../../packages/server/test/discuss.test.ts, ../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T03:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T00:30:00Z }
 ---
 
 # Purpose
@@ -26,6 +26,7 @@ The core of generation (#146): interface requests create or edit a candidate too
   - `candidateFrom` is the host's checks on a created tool.
   - `startingDataOf` builds a new workspace's data from the defaults and the request's entries.
 - `src/generation/pipeline.ts`: `generate` carries out a request as far as the server goes.
+- `src/generation/discuss.ts`: `answerDiscussion` answers a question or an idea (`GEN-19`, A59) with one call on the discuss route (Haiku 5.5 low, `CLI-09`), within the intent stage's time limit. The pipeline replies with a discussion, the answer in words, and builds, changes and stores nothing; a provider failure is a provider failure, as at any stage.
 - `src/generation/routes.ts`: `generationRoutes` answers the host app's requests on the generate route, each run as a job (`CLI-06`); `GenerationOptions` gives it the store, the job queue, the provider and the routes, and can set the request's and each stage's time limits (`GEN-11`).
 - `src/generation/control.ts`: `RequestControls` owns optional registered cancellation capabilities, their jobs and continuation authority, and each request's progress (`GEN-16`, `CLI-07`): waiting while its job is queued, then the stage of each model call as it starts, through a provider wrapper that notes each call's stage, with the seconds since it was sent; no stage between its parts, after it ends or once cancelled. Every request and its model calls are recorded in the [call ledger](ledger.md) (`OBS-01`, `GEN-10`). The progress route answers it for the registration token. Stage names and elapsed time only (ADR 0010).
 - `src/generation/result.ts`: `GenerationResult` separates internal candidates from public replies: stages cannot mint activation authority. The route adds a one-use token and original expiry to initial and repaired candidates.
@@ -104,6 +105,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `data-action.ts`: `DataOffer` (type), `OfferData` (type), `applyDataOffer`, `changeData`
 - `data.ts`: `DATA_TIME_LIMIT_MS`, `CHAT_DATA_MAX_OPERATIONS`, `PlannedData` (type), `DataPlanResult` (type), `checkedDataPlan`, `planDataChange`, `commitDataPlan`
 - `deadline.ts`: `REQUEST_TIME_LIMIT_MS`, `withinRequestDeadline`
+- `discuss.ts`: `answerDiscussion`
 - `edit-pipeline.ts`: `generateEdit`
 - `edit.ts`: `EditInput` (type), `EditResult` (type), `editedCandidate`, `editTool`
 - `index.ts`: `candidateFrom`, `dataProblems`, `createTool`, `PLAIN_CANNOT_REASON`, `GENERATION_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `REPAIR_TIME_LIMIT_MS`, `startingDataOf`, `Candidate` (type), `CreateInput` (type), `CreateResult` (type), `generate`, `planDataChange`, `checkedDataPlan`, `commitDataPlan`, `DATA_TIME_LIMIT_MS`, `CHAT_DATA_MAX_OPERATIONS`, `PlannedData` (type), `DataPlanResult` (type), `REQUEST_TIME_LIMIT_MS`, `editedCandidate`, `editTool`, `EditInput` (type), `EditResult` (type), `generationRoutes`, `GenerationOptions` (type), `DEFAULT_STAGE_TIME_LIMITS`, `checkStageTimeLimits`, `StageTimeLimits` (type), `TWO_PASS_STARTING_POINT`, `checkTwoPassOptions`, `twoPassPlan`, `TwoPassOptions` (type), `TwoPassPlan` (type)

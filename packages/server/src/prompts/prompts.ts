@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+  BRIDGE_CAPABILITIES,
   bridgeManifest,
   CHART_LIMITS,
   CHART_TYPES,
@@ -66,6 +67,8 @@ export const PROMPT_PARTS = [
   "intent-no-saved",
   "intent-retry",
   "intent-proposal",
+  "discuss",
+  "discuss-request",
   "data-plan",
   "data-context",
   "repair-data-plan",
@@ -536,16 +539,7 @@ export function assembleIntentPrompt(input: {
   // Each part's version covers its wording; what it quotes changes with every call. The tool's
   // name and lists come from the tool itself, so they are quoted as JSON between markers, data
   // and never instructions (SEC-02): a newline or an instruction in a name stays inside a string.
-  const tool = (open: NonNullable<OpenTool>) =>
-    JSON.stringify({
-      name: open.name,
-      lists: Object.fromEntries(open.lists.map((list) => [list.name, list.fields])),
-    });
-  const open = !input.open
-    ? use("intent-none")
-    : input.open.lists.length === 0
-      ? `${use("intent-open", { tool: tool(input.open) })}\n${use("intent-no-records")}`
-      : use("intent-open", { tool: tool(input.open) });
+  const open = openToolPart(input.open, use);
   // The saved tools' names and descriptions are the person's or a model's words: quoted as JSON
   // too, so none of them can read as an instruction (SEC-02).
   const saved = input.saved?.length
@@ -561,6 +555,28 @@ export function assembleIntentPrompt(input: {
   if (input.retry) prompt += `\n\n${use("intent-retry")}`;
   return { system, prompt, parts: used, size: system.length + prompt.length };
 }
+
+/** The open tool as JSON: its name and each list it keeps with the list's fields. */
+const quotedTool = (open: NonNullable<OpenTool>) =>
+  JSON.stringify({
+    name: open.name,
+    lists: Object.fromEntries(open.lists.map((list) => [list.name, list.fields])),
+  });
+
+/**
+ * The open tool as the intent and discuss stages are told of it, or that none is open. Its name
+ * and lists come from the tool itself, so they are quoted as JSON between markers, data and never
+ * instructions (SEC-02): a newline or an instruction in a name stays inside a string.
+ */
+const openToolPart = (
+  open: OpenTool,
+  use: (part: PromptPart, values?: Record<string, string>) => string,
+) =>
+  !open
+    ? use("intent-none")
+    : open.lists.length === 0
+      ? `${use("intent-open", { tool: quotedTool(open) })}\n${use("intent-no-records")}`
+      : use("intent-open", { tool: quotedTool(open) });
 
 /** The waiting changes as the intent prompt tells them, after the open tool. */
 const proposalPart = (
@@ -690,4 +706,42 @@ export function assembleAcceptancePrompt(input: {
     use("language", { language: input.language }),
   ].join("\n\n");
   return { system, prompt, parts, size: system.length + prompt.length };
+}
+
+/**
+ * The discuss stage's budget (GEN-03, GEN-19): its fixture, a question of a few sentences about a
+ * tool with two lists, measured 2,129 characters when set, about a tenth below it.
+ */
+export const DISCUSS_PROMPT_BUDGET = 2_350;
+
+/** The optional capabilities a tool may use, one per line, from their one definition (CAP-01). */
+const capabilityLines = () =>
+  Object.values(BRIDGE_CAPABILITIES)
+    .map((description) => `  - ${description.replace(/\s*\([^)]*\)\.$/, ".")}`)
+    .join("\n");
+
+/**
+ * Builds the discuss stage's prompt (GEN-19): its instructions, with what tools here can use, then
+ * the open tool as the intent stage is told of it, quoted as data, and the person's question in
+ * their language. It only answers: nothing it says is built.
+ */
+export function assembleDiscussPrompt(input: {
+  request: string;
+  open: OpenTool;
+  language: string;
+}): AssembledPrompt {
+  const used: string[] = [];
+  const use = (part: PromptPart, values?: Record<string, string>) => {
+    used.push(`${part}@${partVersion(partText(part))}`);
+    return fillPart(part, values);
+  };
+  // The system part's version covers the capabilities generated into it.
+  const system = fillPart("discuss", { capabilities: capabilityLines() });
+  used.push(`discuss@${partVersion(system)}`);
+  const prompt = use("discuss-request", {
+    open: openToolPart(input.open, use),
+    language: input.language,
+    request: input.request,
+  });
+  return { system, prompt, parts: used, size: system.length + prompt.length };
 }
