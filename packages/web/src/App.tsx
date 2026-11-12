@@ -153,6 +153,9 @@ export function App() {
   const [settled, setSettled] = useState(false);
   const [cancelProblem, setCancelProblem] = useState("");
   const [dataOffer, setDataOffer] = useState<RequestOutcome["dataOffer"]>();
+  // The last answer to a question or an idea, and the workspace it was asked in, or none: only the
+  // next request from there follows it (GEN-19).
+  const discussion = useRef<{ token: string; workspaceId: string | null } | undefined>(undefined);
   // Stage and elapsed time while the request runs, until a cancel has settled it (GEN-16).
   const progress = useRequestProgress(control, requesting && !settled);
   // Whose chat is on screen: the open workspace's on the workspaces, the first-run screen's (null)
@@ -396,6 +399,12 @@ export function App() {
     // Changes waiting for review in this chat's workspace: the request may answer them in words.
     const waiting = dataOffer && dataOffer.workspaceId === openId ? dataOffer : undefined;
     setDataOffer(undefined);
+    // The discussion this request follows, asked in the same place; it is followed once.
+    const followed =
+      discussion.current && discussion.current.workspaceId === openId
+        ? discussion.current.token
+        : undefined;
+    discussion.current = undefined;
     try {
       const outcome = await carryOut(
         text,
@@ -412,8 +421,11 @@ export function App() {
           token: waiting.token,
           ...(waiting.interfaceMessage ? { interfaceMessage: waiting.interfaceMessage } : {}),
         },
+        followed,
       );
       setDataOffer(owner.stopped ? undefined : outcome.dataOffer);
+      if (outcome.discussion && !owner.stopped)
+        discussion.current = { token: outcome.discussion, workspaceId: openId };
       // After Cancel the outcome is already known: say it now, not after the bounded refresh.
       if (owner.stopped && !outcome.savedToolId) {
         reply(

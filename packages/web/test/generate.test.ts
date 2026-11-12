@@ -477,9 +477,28 @@ describe("carrying out a request in the app (GEN-01, GEN-08)", () => {
 
   it("GEN-19: a question's answer is said as the stage wrote it, with nothing staged or reloaded", async () => {
     const answer = "A dialog would work: it opens as a panel inside the tool.";
-    const { fake, seen } = deps({ kind: "discussion", answer });
-    expect(await carryOut("Would a modal work?", null, fake)).toEqual({ message: answer });
+    const token = "00000000-0000-4000-8000-00000000000d";
+    const { fake, seen } = deps({ kind: "discussion", answer, token });
+    // Its token comes back, for the next request to follow it.
+    expect(await carryOut("Would a modal work?", null, fake)).toEqual({
+      message: answer,
+      discussion: token,
+    });
     expect(seen.stagings).toEqual([]);
+  });
+
+  it("GEN-19: a request that follows a discussion names it, and one that doesn't, doesn't", async () => {
+    const token = "00000000-0000-4000-8000-00000000000d";
+    const workspace = "00000000-0000-4000-8000-000000000002";
+    const { fake, seen } = deps({ kind: "answer", answer: "clarify" });
+    await carryOut("Do that", workspace, fake, undefined, undefined, undefined, token);
+    await carryOut("Do that", null, fake, undefined, undefined, undefined, token);
+    await carryOut("Something else", workspace, fake);
+    expect(seen.requests).toEqual([
+      { request: "Do that", workspaceId: workspace, discussion: token },
+      { request: "Do that", discussion: token },
+      { request: "Something else", workspaceId: workspace },
+    ]);
   });
 });
 
