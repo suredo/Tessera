@@ -3,11 +3,11 @@ import { CHAT_TEXT_LIMIT, type ChatEntry, type ChatMessage } from "@tessera/cont
 import { useEffect, useState } from "react";
 import { ask } from "./host-api.ts";
 
-// The chat's state in the host app (APP-01, APP-03): each workspace's kept messages, read from the
-// server, and the messages not kept (yet): the request while it runs, a turn on its way to being
-// kept, and a turn with no workspace to keep it, such as a failed first creation. The server
-// keeps a workspace's chat (ADR 0011); a turn shows at once and is replaced by its kept copy in
-// the same update, so nothing flickers.
+// The chat's state in the host app (APP-01, APP-03): each workspace's kept messages, and the empty
+// screen's, read from the server, and the messages not kept (yet): the request while it runs, and a
+// turn on its way to being kept. The server keeps a workspace's chat (ADR 0011), and what was said
+// with no tool open (A62); a turn shows at once and is replaced by its kept copy in the same
+// update, so nothing flickers.
 
 /** A message as the chat shows it: a kept one has its number; one not kept has none. */
 export type ShownMessage = ChatEntry & { number?: number };
@@ -39,7 +39,7 @@ export const fitted = (text: string): string =>
 
 /** What the chat shows for a workspace, or for the empty screen: kept first, then the rest. */
 export const shown = (state: State, workspaceId: string | null): ShownMessage[] => [
-  ...(workspaceId ? (state.kept[workspaceId] ?? []) : []),
+  ...(state.kept[key(workspaceId)] ?? []),
   ...(state.local[key(workspaceId)] ?? []),
 ];
 
@@ -53,8 +53,8 @@ export type Chat = {
   asking: (workspaceId: string | null, request: string) => Asked;
   /**
    * Ends the running request with Tessera's reply, in the workspace it belongs to: the one it
-   * made, or the one that was open. It is kept there; with no workspace, or if keeping it fails,
-   * it is still shown for as long as the page is open.
+   * made, or the one that was open, or the empty screen's chat with none. It is kept there; if
+   * keeping it fails, it is still shown for as long as the page is open.
    */
   answered: (asked: Asked, target: string | null, reply: string) => Promise<void>;
   /** A reply with no request of its own, such as a review's outcome, kept like a turn's. */
@@ -66,14 +66,13 @@ export function useChat(openId: string | null): Chat {
   const [state, setState] = useState<State>({ kept: {}, local: {} });
 
   useEffect(() => {
-    if (!openId) return;
     let current = true;
     ask("chat.list", { workspaceId: openId }).then(
       ({ messages }) => {
         if (!current) return;
         setState((s) => ({
           ...s,
-          kept: { ...s.kept, [openId]: mergeKept(s.kept[openId] ?? [], messages) },
+          kept: { ...s.kept, [key(openId)]: mergeKept(s.kept[key(openId)] ?? [], messages) },
         }));
       },
       // A chat that can't be read shows what this page has; the workspace itself still opens.
@@ -96,18 +95,18 @@ export function useChat(openId: string | null): Chat {
       local[key(target)] = [...(local[key(target)] ?? []), ...entries];
       return { ...s, local };
     });
-    if (!target) return;
     try {
       const { messages } = await ask("chat.add", { workspaceId: target, messages: entries });
+      const at = key(target);
       setState((s) => {
-        const left = [...(s.local[target] ?? [])];
+        const left = [...(s.local[at] ?? [])];
         for (const entry of entries) {
-          const at = left.indexOf(entry);
-          if (at >= 0) left.splice(at, 1);
+          const index = left.indexOf(entry);
+          if (index >= 0) left.splice(index, 1);
         }
         return {
-          kept: { ...s.kept, [target]: mergeKept(s.kept[target] ?? [], messages) },
-          local: { ...s.local, [target]: left },
+          kept: { ...s.kept, [at]: mergeKept(s.kept[at] ?? [], messages) },
+          local: { ...s.local, [at]: left },
         };
       });
     } catch {

@@ -5,7 +5,7 @@ import { CHAT_MESSAGES_KEPT, CHAT_TEXT_LIMIT, HOST_ACTIONS } from "@tessera/cont
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { ARCHIVE_LIMITS, exportWorkspace, readZip } from "../src/archives/index.ts";
-import { addToChat, listChat } from "../src/chat/index.ts";
+import { addToChat, listChat, searchChat, searchWords } from "../src/chat/index.ts";
 import { answerHost } from "../src/host/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { deleteWorkspace, emptyTrash, listTrash, restoreWorkspace } from "../src/trash/index.ts";
@@ -151,5 +151,101 @@ describe("the chat's host actions (APP-01, CON-01)", () => {
       ok: false,
       error: { code: "refused" },
     });
+  });
+});
+
+describe("what was said with no tool open (A62)", () => {
+  it("A62, APP-03: is kept in its own chat, through the host API, apart from every workspace's", async () => {
+    const store = await folder();
+    const { id } = createWorkspace(store, "Shopping");
+    addToChat(store, id, turn("A shopping list", "Ready."));
+    const added = answerHost(store, {
+      action: "chat.add",
+      args: {
+        workspaceId: null,
+        messages: turn("milk, eggs, bread", "Tessera isn't sure what to make."),
+      },
+    });
+    expect(added).toMatchObject({ ok: true, result: { messages: [{ number: 1 }, { number: 2 }] } });
+    expect(answerHost(store, { action: "chat.list", args: { workspaceId: null } })).toMatchObject({
+      ok: true,
+      result: {
+        messages: [{ text: "milk, eggs, bread" }, { text: "Tessera isn't sure what to make." }],
+      },
+    });
+    expect(listChat(store, id).map((m) => m.text)).toEqual(["A shopping list", "Ready."]);
+  });
+
+  it("A62, APP-03: keeps only its newest messages, and their numbers never change", async () => {
+    const store = await folder();
+    for (let i = 0; i < CHAT_MESSAGES_KEPT / 2 + 1; i++)
+      addToChat(store, null, turn(`ask ${i}`, `reply ${i}`));
+    const kept = listChat(store, null);
+    expect(kept).toHaveLength(CHAT_MESSAGES_KEPT);
+    expect(kept[0]).toMatchObject({ number: 3, text: "ask 1" });
+  });
+});
+
+describe("finding earlier messages by their words (A62)", () => {
+  it("A62: finds a chat's messages that share telling words, best first, accents and case aside", async () => {
+    const store = await folder();
+    const { id } = createWorkspace(store, "Groceries");
+    addToChat(store, id, [
+      ...turn("Adicione maçã, pão e café à lista", "Added three entries."),
+      ...turn("Make the cards blue", "Changed the colours."),
+      ...turn("Add bread and bread rolls for the party", "Added two entries."),
+    ]);
+    const found = searchChat(store, id, "remove the PAO and the bread");
+    expect(found.map((m) => m.text)).toEqual([
+      "Add bread and bread rolls for the party",
+      "Adicione maçã, pão e café à lista",
+    ]);
+    // What a request names as already in hand is left out.
+    expect(searchChat(store, id, "bread", { skip: [5] }).map((m) => m.number)).toEqual([]);
+    expect(searchChat(store, id, "bread pão", { limit: 1 })).toHaveLength(1);
+  });
+
+  it("A62: searches within one chat only, never another workspace's or the empty screen's", async () => {
+    const store = await folder();
+    const a = createWorkspace(store, "Garden").id;
+    const b = createWorkspace(store, "Budget").id;
+    addToChat(store, a, turn("Plant tomatoes", "Added tomatoes."));
+    addToChat(store, b, turn("Track tomatoes spending", "Added a category."));
+    addToChat(store, null, turn("tomatoes everywhere", "Not sure."));
+    expect(searchChat(store, a, "tomatoes").map((m) => m.text)).toEqual([
+      "Plant tomatoes",
+      "Added tomatoes.",
+    ]);
+    expect(searchChat(store, null, "tomatoes").map((m) => m.text)).toEqual(["tomatoes everywhere"]);
+  });
+
+  it("A62: common and very short words find nothing, and nothing in the words acts as search syntax", async () => {
+    const store = await folder();
+    const { id } = createWorkspace(store, "Notes");
+    addToChat(store, id, turn('He said "NEAR" OR AND * text', "Kept it."));
+    expect(searchWords("Remove what I just listed, please")).toEqual(["remove", "listed"]);
+    expect(searchChat(store, id, "what is it to me")).toEqual([]);
+    for (const text of ["NEAR(a b)", 'x" OR "y', "text*", "AND OR NOT", '"', "a:b column:text"]) {
+      expect(() => searchChat(store, id, text), text).not.toThrow();
+    }
+    expect(searchChat(store, id, 'said "near"').map((m) => m.number)).toEqual([1]);
+  });
+
+  it("A62, DATA-09: what goes from a chat goes from its search, with the oldest messages and the workspace", async () => {
+    const store = await folder();
+    const { id } = createWorkspace(store, "Shopping");
+    addToChat(store, id, turn("zucchini first", "Added."));
+    for (let i = 0; i < CHAT_MESSAGES_KEPT / 2; i++)
+      addToChat(store, id, turn(`ask ${i}`, `reply ${i}`));
+    expect(searchChat(store, id, "zucchini")).toEqual([]);
+    addToChat(store, id, turn("zucchini again", "Added."));
+    deleteWorkspace(store, id);
+    emptyTrash(store, listTrash(store).confirmation);
+    const left = store.db.all(
+      z.object({ n: z.number() }),
+      "SELECT COUNT(*) AS n FROM chat_search WHERE thread = ?",
+      id,
+    );
+    expect(left).toEqual([{ n: 0 }]);
   });
 });

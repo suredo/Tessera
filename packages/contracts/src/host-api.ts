@@ -166,7 +166,13 @@ export const HOST_ACTIONS = {
       .describe("What the details view shows, out of the person's way (APP-09, UX-06)."),
   },
   "chat.list": {
-    args: z.strictObject({ workspaceId: id }),
+    args: z.strictObject({
+      workspaceId: id
+        .nullable()
+        .describe(
+          "The workspace whose chat to list; null for what was said with no tool open (A62).",
+        ),
+    }),
     result: z.strictObject({
       messages: z
         .array(chatMessageSchema)
@@ -175,7 +181,11 @@ export const HOST_ACTIONS = {
   },
   "chat.add": {
     args: z.strictObject({
-      workspaceId: id,
+      workspaceId: id
+        .nullable()
+        .describe(
+          "The workspace whose chat to add to; null for what was said with no tool open (A62).",
+        ),
       messages: z
         .array(chatEntrySchema)
         .min(1)

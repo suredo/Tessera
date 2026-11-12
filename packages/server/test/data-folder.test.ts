@@ -13,6 +13,7 @@ import {
   schemaVersion,
   syncedFolderOf,
 } from "../src/storage/index.ts";
+import { listChat, searchChat } from "../src/chat/index.ts";
 import { RequestLedger } from "../src/ledger/index.ts";
 import { listTrash, restoreSavedTool } from "../src/trash/index.ts";
 import { loadVersion } from "../src/versions/index.ts";
@@ -184,6 +185,25 @@ describe("migrating real data (ENG-18)", () => {
     expect(workspaceVersions(reopened, "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4")).toMatchObject(
       notes,
     );
+    reopened.close();
+  });
+
+  it("ENG-18, A62: a schema-14 database migrates with its chat kept and searchable, and an empty chat for no tool open", async () => {
+    const root = folderFromFixture("schema-14.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated).toEqual([15]);
+    expect(backups(root)).toHaveLength(1);
+    const garden = "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4";
+    expect(listChat(folder, garden).map((m) => m.text)).toEqual([
+      "Plant tomatoes and basil in the sunny bed",
+      "Added tomatoes and basil to the garden plan.",
+    ]);
+    // Messages kept before the index existed are found by their words.
+    expect(searchChat(folder, garden, "move the basil").map((m) => m.number)).toEqual([1, 2]);
+    expect(listChat(folder, null)).toEqual([]);
+    folder.close();
+    const reopened = await openDataFolder(root);
+    expect(reopened.migrated).toEqual([]);
     reopened.close();
   });
 
