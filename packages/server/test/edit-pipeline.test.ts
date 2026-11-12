@@ -488,3 +488,57 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
     }
   });
 });
+
+describe("an edit that follows a discussion is told its answer (GEN-19)", () => {
+  const ANSWER = "A quantity beside each item would work, with a small number field.";
+  const told = (prompt: string) =>
+    /--- earlier answer ---\n(.*)\n--- end of the earlier answer ---/.exec(prompt)?.[1];
+  const followed = async (request: string, decided: Intent) => {
+    const { store, workspace } = await setup();
+    const calls: { stage: string; prompt: string }[] = [];
+    const scripted = provider(reply(decided, "intent"), reply(quantityEdit, "edit"));
+    const result = await generate(
+      store,
+      {
+        ...scripted,
+        run: (spec) => {
+          calls.push({ stage: spec.stage, prompt: spec.prompt });
+          return scripted.run(spec);
+        },
+      },
+      DEFAULT_ROUTES,
+      {
+        request,
+        workspaceId: workspace.id,
+        discussion: "00000000-0000-4000-8000-0000000000dd",
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      ANSWER,
+    );
+    return { result, calls };
+  };
+
+  it("GEN-19: 'do that' as an edit tells the intent and the edit the answer, quoted", async () => {
+    const { result, calls } = await followed("Do that", intent());
+    expect(result).toMatchObject({ kind: "candidate", operation: "edit" });
+    expect(calls.map((call) => call.stage)).toEqual(["intent", "edit"]);
+    for (const call of calls) expect(JSON.parse(told(call.prompt)!)).toBe(ANSWER);
+  });
+
+  it("GEN-19: a mixed request's edit half is told it too; its entries wait for the new version", async () => {
+    const { result, calls } = await followed(
+      "Do that and add bread",
+      intent({ kind: "mixed", interfacePart: "Do that", dataPart: "add bread" }),
+    );
+    expect(result).toMatchObject({ kind: "candidate", operation: "edit", dataPending: true });
+    expect(calls.map((call) => call.stage)).toEqual(["intent", "edit"]);
+    expect(JSON.parse(told(calls[1]!.prompt)!)).toBe(ANSWER);
+  });
+});
