@@ -165,7 +165,7 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     expect([details.checks, details.profile]).toEqual([[], null]);
     expect(details.requests.map((r) => [r.id, r.kind, r.outcome, r.findings])).toEqual([
       [newer, "repair", "failed", ["A button has no name."]],
-      [older, "generate", "answer", []],
+      [older, "generate", "answer:clarify", []],
     ]);
     ask(folder, "workspaces.delete", { id: workspace.id });
     expect(refusal(folder, "details.get", { workspaceId: workspace.id })).toEqual({
