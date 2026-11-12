@@ -4,7 +4,7 @@ title: "ADR 0009. Frames and navigation in generated tools"
 description: "Before generated tools run, ADR 0006's open limit is decided again: a tool steered by pasted data could leak a person's data through the names a blocked frame navigation makes the browser look up. The static check refuses frames, navigation, property names built at run time and code made at run time before any candidate or imported tool runs, as defence in depth: a closure, if needed, is at the platform."
 tags: [decisions, runtime, sandbox, security, generation]
 status: stable
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-27T04:57:55Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T05:00:00Z }
 ---
 # ADR 0009. Frames and navigation in generated tools
 
@@ -48,6 +48,19 @@ The owner decided on 2026-10-27:
 - **The static check is defence in depth.** It refuses every direct form and the plain ways to hide one, which covers what a model writes, even when nudged. A deliberately obfuscated leak can still pass. The limit of ADR 0006 stays open, and the threat model says so.
 - **No more patching of each bypass.** Known gaps are listed in the check's code doc. A new one is fixed when it is cheap and simple, and otherwise recorded.
 - **The closure, if one is needed, is at the platform.** Tessera needs no outside names, so a browser it controls can stop every name lookup except its own (Chrome and Edge's host-resolver rules), whatever a tool's code does. The owner plans to decide before any public release whether Tessera becomes a desktop app (Electron), a binary, or a web service. In Electron this closure comes with the app's own browser. Until then, the risk needs untrusted pasted material, a model steered into writing hidden code, and it carries only that tool's data, slowly and one way.
+
+## Amendment, 2026-11-12: names are followed by the variable they mean
+
+The value tracking followed names across the whole script, so shadowing could only make it refuse more. In practice it refused working tools: T10's `o` (L-89), and a calculator from the owner's hands-on testing whose parser's `b` and `r` shared names with the keypad's button and the saved data, so its saved revisions counted as an element and the request failed (L-99). The same calculator was first refused for keeping its own `history` of results, because `history` was refused as a name anywhere.
+
+The owner chose on 2026-11-12 to follow each name to the variable it refers to, with a proven scope analyser (`eslint-scope`) rather than one written here:
+
+- A variable that holds the page's objects is followed through scopes, closures, hoisting and calls; a different variable of the same name is the tool's own. A global the browser doesn't build in still counts as the page, since an element with an `id` is a global of that name, so a name declared in one scope and used undeclared in another is now refused rather than missed.
+- A forbidden global is refused where it means the global; the tool's own variable of that name is its own. `location`, `history` and `navigation` after a dot are refused on the page's objects and on values that may be them, not on the tool's own data.
+- A script that uses `with` or `eval`, whose names can't be read from the code, falls back to following each name through the whole script, as before.
+- The finding says where a borrowed element started, so a repair can see the real cause.
+
+This narrows what the check refuses only where the old rule was a guess about names; every form it refuses on the page's own objects is still refused. Every tool on record was checked both ways: the only change was three false findings fewer, in T10's recordings. The check stays defence in depth, as amended above.
 
 ## Consequences
 

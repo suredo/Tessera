@@ -7,7 +7,7 @@ implements: [SBX-06, SBX-07, RUN-07, VER-01]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T00:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T05:00:00Z }
 ---
 
 # Purpose
@@ -29,7 +29,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 - **No navigation** (`SBX-07`):
   - links whose address isn't `#` or empty;
   - form actions, meta refresh and `ping`;
-  - `location`, `history`, `navigation`, `window.open` and a bare `open`;
+  - the page's `location`, `history` and `navigation`, `window.open` and a bare `open`. A name refused as a global is refused only where it means the global: a variable the tool declares, such as a calculator's `history` of past results, is its own. After a dot, `location`, `history` and `navigation` are refused on the page's objects and on values the check can't tell apart from them, such as a destructured parameter; on the tool's own data (`r.data.history`) they are plain names (L-99). The other forbidden names, such as `prototype`, `write` or `ownerDocument`, are refused on any object;
   - writing an address or a part of one (`href`, `host`, `hostname`, `protocol`, `pathname`, `action`, …), directly, in a pattern, or with `setAttribute`.
 - **No code or HTML made at run time.** The tool's policy forbids `eval` but allows inline scripts, so a script or handler built from text would run unread. The check therefore refuses:
   - `on…` attributes, in the HTML or set from JavaScript;
@@ -38,7 +38,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
   - `import()`, `DOMParser` and `createContextualFragment` with text built at run time;
   - `innerHTML`, `outerHTML` and `insertAdjacentHTML` with anything but fixed text, which must itself pass the HTML rules;
   - `document.write`, and `srcdoc`.
-- **No name made at run time on the page or its elements.** The check follows which values may be the page or one of its elements, by name across the script, over-approximating:
+- **No name made at run time on the page or its elements.** The check follows which values may be the page or one of its elements, by the variable each name refers to, as `eslint-scope` resolves it (scopes, closures, hoisting, `var` across blocks, catch), over-approximating:
   - the page's objects, and anything reached from them;
   - callbacks given to them (events, observers, `forEach` over elements), and the loop variables over them;
   - functions called with them, and functions that return them;
@@ -47,7 +47,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
   - if the tracking is still finding more after many rounds, everything, so it fails closed;
   - names the script never declares, since an element with an `id` is a global of that name.
 
-  Since it follows names, one name that holds an element in one place and the tool's own data in another counts as the page everywhere. The finding then says which line gave the name an element and to rename one of them (`VER-07`, L-89); that explanation (`borrowedName`) never changes what is refused.
+  Each variable is its own: one that holds an element doesn't make another of the same name in another scope count as the page (L-89, L-99). When a variable of the tool's own counts as the page because another gave it the page's objects, the finding says where it started: which line gave the first one an element and through which variables it reached this one (`VER-07`); that explanation (`borrowedName`) never changes what is refused. When the script uses `with` or `eval`, whose names can't be read from the code, or the analysis can't run, the check follows each name through the whole script instead, as it did before, and the finding says so: shadowing can then only make it refuse more.
 
   What crosses the bridge is plain data: the bridge's own calls (`tessera.call`, `send` and `assetUrl`, with the name written out) copy their arguments and results, and the page's objects can't be copied, so nothing given to or returned by them counts as the page. Nothing else reached through `tessera` is trusted. A tool may not declare a name `tessera` of its own, nor write anything onto `tessera`, which could pass the page off as the bridge.
 
@@ -68,7 +68,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 
 # Depends on / used by
 
-acorn and parse5, pinned exactly. The [export and import](archives.md) module refuses an archive whose tool fails it. The generation pipeline (#146) runs it on every candidate before staging, and its findings feed repair. The base prompt part tells the model these rules ([prompt assembly](prompts.md)).
+acorn, eslint-scope and parse5, pinned exactly. The [export and import](archives.md) module refuses an archive whose tool fails it. The generation pipeline (#146) runs it on every candidate before staging, and its findings feed repair. The base prompt part tells the model these rules ([prompt assembly](prompts.md)).
 
 # Pitfalls
 
@@ -80,7 +80,6 @@ acorn and parse5, pinned exactly. The [export and import](archives.md) module re
   - a function passed by name as a callback, or called inline, receiving the page's objects;
   - `createElement` or `setAttribute` taken out of an object by destructuring, then called with `call`;
   - `Object` reached through an alias;
-  - a name declared in one scope and used undeclared in another;
   - an attribute's value changed through its attribute node (`a.attributes.item(0).value = …`);
   - native copies of the page's objects (`{...document}`) read back without a computed name.
 

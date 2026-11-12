@@ -1,4 +1,5 @@
 import { parse, type Node as JsNode } from "acorn";
+import { analyze } from "eslint-scope";
 import {
   BRIDGE_ACTIONS,
   BRIDGE_METHODS,
@@ -75,6 +76,8 @@ const FORBIDDEN_NAMES = new Set([
   "parseHTMLUnsafe",
   "createContextualFragment",
 ]);
+/** Forbidden names that are forbidden only on the page's objects: elsewhere they are plain data. */
+const NAVIGATING_NAMES = new Set(["location", "history", "navigation"]);
 /** Names that navigate when written: an address or a part of one. */
 const ADDRESS_NAMES = new Set([
   "href",
@@ -389,6 +392,38 @@ function boundNames(pattern: AnyNode | null | undefined): string[] {
 }
 
 /** The identifier at the root of a member chain (`a` in `a.b[c].d`), if any. */
+/** The identifiers a declaration or assignment pattern binds. */
+function boundIdentifiers(pattern: AnyNode | null | undefined): AnyNode[] {
+  if (!pattern) return [];
+  switch (pattern.type) {
+    case "Identifier":
+      return [pattern];
+    case "ObjectPattern":
+      return (pattern["properties"] as AnyNode[]).flatMap((p) =>
+        boundIdentifiers((p.type === "RestElement" ? p["argument"] : p["value"]) as AnyNode),
+      );
+    case "ArrayPattern":
+      return (pattern["elements"] as (AnyNode | null)[]).flatMap((e) => boundIdentifiers(e));
+    case "RestElement":
+      return boundIdentifiers(pattern["argument"] as AnyNode);
+    case "AssignmentPattern":
+      return boundIdentifiers(pattern["left"] as AnyNode);
+    default:
+      return [];
+  }
+}
+
+/** The identifier a member chain starts from (`a` in `a.b.c`), if it starts from one. */
+function rootIdentifier(node: AnyNode): AnyNode | undefined {
+  let current = node;
+  while (current.type === "MemberExpression" || current.type === "ChainExpression") {
+    current = (
+      current.type === "ChainExpression" ? current["expression"] : current["object"]
+    ) as AnyNode;
+  }
+  return current.type === "Identifier" ? current : undefined;
+}
+
 function rootName(node: AnyNode): string | undefined {
   let current = node;
   while (current.type === "MemberExpression" || current.type === "ChainExpression") {
@@ -400,25 +435,88 @@ function rootName(node: AnyNode): string | undefined {
 }
 
 /**
- * Which names and functions may hold the page or its elements, by name across the whole script:
- * shadowing can only make it refuse more, never less. Repeated until nothing new is found.
+ * What a name in the script refers to: the variable it means, as the scope analysis resolves it,
+ * or, for a global, its name. When the script uses `with` or `eval`, whose names can't be read
+ * from the code, or the analysis can't run, every name is its own key across the whole script, as
+ * before: shadowing can then only make the check refuse more, never less.
+ */
+type Key = object | string;
+
+class Bindings {
+  /** True when names can't be resolved, so each name counts as one across the whole script. */
+  readonly byName: boolean;
+  private readonly keys = new Map<AnyNode, Key>();
+
+  constructor(program: AnyNode) {
+    let manager: ReturnType<typeof analyze> | undefined;
+    let dynamic = false;
+    visitAll(program, (node) => {
+      if (node.type === "WithStatement") dynamic = true;
+      if (node.type === "Identifier" && node["name"] === "eval") dynamic = true;
+    });
+    if (!dynamic) {
+      try {
+        manager = analyze(program as never, { ecmaVersion: 2025, sourceType: "script" });
+      } catch {
+        manager = undefined;
+      }
+    }
+    this.byName = !manager;
+    if (!manager) return;
+    for (const scope of manager.scopes) {
+      for (const variable of scope.variables) {
+        for (const identifier of variable.identifiers) {
+          this.keys.set(identifier as unknown as AnyNode, variable);
+        }
+      }
+      for (const reference of scope.references) {
+        const identifier = reference.identifier as unknown as AnyNode;
+        this.keys.set(identifier, reference.resolved ?? `global:${identifier["name"] as string}`);
+      }
+    }
+  }
+
+  /** What an identifier refers to. */
+  key(identifier: AnyNode): Key {
+    const name = identifier["name"] as string;
+    return this.byName ? name : (this.keys.get(identifier) ?? `global:${name}`);
+  }
+
+  /**
+   * Whether an identifier means the global of its name, not a variable of the tool's own. When
+   * names can't be resolved, every use counts as the global, as before.
+   */
+  isGlobal(identifier: AnyNode): boolean {
+    return this.byName || typeof this.key(identifier) === "string";
+  }
+}
+
+/**
+ * Which variables and functions may hold the page or its elements, each by the variable a name
+ * refers to (or, when names can't be resolved, by name across the whole script). Repeated until
+ * nothing new is found.
  */
 class PageValues {
-  readonly names = new Set<string>();
-  /** For each name in `names`, the line where it was first found to hold the page's objects. */
-  private readonly origins = new Map<string, number>();
-  readonly returning = new Set<string>();
+  readonly names = new Set<Key>();
+  /**
+   * For each variable in `names`: its name, the line where it was first found to hold the page's
+   * objects, and the variable it got them from, when that was one of the tool's own.
+   */
+  private readonly origins = new Map<Key, { name: string; line: number; from?: Key }>();
+  readonly returning = new Set<Key>();
   thisIsPage = false;
   /** Set when the tracking gave up: every value may then be the page's. */
   everything = false;
-  private readonly functions = new Map<string, AnyNode>();
+  private readonly functions = new Map<Key, AnyNode>();
 
   private readonly program: AnyNode;
+  readonly bindings: Bindings;
   /** Every name the script declares, anywhere. */
   readonly declared = new Set<string>();
 
   constructor(program: AnyNode) {
     this.program = program;
+    this.bindings = new Bindings(program);
     this.visit(program, (node) => {
       const declare = (names: string[]) => names.forEach((name) => this.declared.add(name));
       switch (node.type) {
@@ -440,11 +538,11 @@ class PageValues {
           break;
       }
       if (node.type === "FunctionDeclaration" && node["id"]) {
-        this.functions.set((node["id"] as AnyNode)["name"] as string, node);
+        this.functions.set(this.bindings.key(node["id"] as AnyNode), node);
       }
       if (node.type === "VariableDeclarator" && isFunction(node["init"] as AnyNode)) {
-        for (const name of boundNames(node["id"] as AnyNode)) {
-          this.functions.set(name, node["init"] as AnyNode);
+        for (const identifier of boundIdentifiers(node["id"] as AnyNode)) {
+          this.functions.set(this.bindings.key(identifier), node["init"] as AnyNode);
         }
       }
     });
@@ -458,6 +556,14 @@ class PageValues {
     }
   }
 
+  /** Whether an identifier is a variable of the tool's own, not a global. */
+  private isOwn(identifier: AnyNode): boolean {
+    const name = identifier["name"] as string;
+    return this.bindings.byName
+      ? this.declared.has(name) && !PAGE_GLOBALS.has(name)
+      : !this.bindings.isGlobal(identifier);
+  }
+
   /** Whether an expression may be the page or one of its elements. */
   isPage(node: AnyNode | null | undefined): boolean {
     if (!node) return false;
@@ -465,12 +571,13 @@ class PageValues {
     switch (node.type) {
       case "Identifier": {
         const name = node["name"] as string;
-        return (
-          PAGE_GLOBALS.has(name) ||
-          this.names.has(name) ||
+        if (this.names.has(this.bindings.key(node))) return true;
+        if (this.bindings.byName)
           // Not declared and not built in: it may be an element, by its id.
-          (!this.declared.has(name) && !BUILT_INS.has(name))
-        );
+          return PAGE_GLOBALS.has(name) || (!this.declared.has(name) && !BUILT_INS.has(name));
+        // A variable of the tool's own holds the page's objects only when marked; a global may be
+        // the page, or an element by its id, unless it is built in.
+        return this.bindings.isGlobal(node) && (PAGE_GLOBALS.has(name) || !BUILT_INS.has(name));
       }
       case "ThisExpression":
         return this.thisIsPage;
@@ -503,7 +610,9 @@ class PageValues {
       case "NewExpression": {
         const callee = node["callee"] as AnyNode;
         return (
-          (callee.type === "Identifier" && PAGE_CONSTRUCTOR.test(callee["name"] as string)) ||
+          (callee.type === "Identifier" &&
+            this.bindings.isGlobal(callee) &&
+            PAGE_CONSTRUCTOR.test(callee["name"] as string)) ||
           this.isPage(callee)
         );
       }
@@ -512,7 +621,7 @@ class PageValues {
         const args = node["arguments"] as AnyNode[];
         // What crosses the bridge is copied as plain data; the page's objects can't cross it.
         if (isBridgeCall(callee)) return false;
-        if (callee.type === "Identifier") return this.returning.has(callee["name"] as string);
+        if (callee.type === "Identifier") return this.returning.has(this.bindings.key(callee));
         if (callee.type === "MemberExpression") {
           const method = propertyName(callee);
           if (method !== undefined && PLAIN_METHODS.has(method)) return false;
@@ -527,83 +636,116 @@ class PageValues {
   }
 
   /**
-   * Why an expression counts as the page's, when the reason is a name of the tool's own that holds
-   * the page's objects somewhere else: that name and the line where it first does. Only explains a
-   * finding; it never decides one (VER-07). Undefined when the reason is the page itself, a name
-   * the tool never declares, or something else.
+   * The variable of the tool's own an expression gets the page's objects from, when that is the
+   * reason it counts as the page's; undefined when the reason is the page itself, a global, or
+   * something else.
    */
-  borrowedName(node: AnyNode | null | undefined): { name: string; line: number } | undefined {
+  private borrowedKey(node: AnyNode | null | undefined): Key | undefined {
     if (!node || this.everything) return undefined;
     switch (node.type) {
       case "Identifier": {
-        const name = node["name"] as string;
-        const line = this.origins.get(name);
-        return line !== undefined && this.declared.has(name) && !PAGE_GLOBALS.has(name)
-          ? { name, line }
-          : undefined;
+        const key = this.bindings.key(node);
+        return this.origins.has(key) && this.isOwn(node) ? key : undefined;
       }
       case "MemberExpression":
-        return this.borrowedName(node["object"] as AnyNode);
+        return this.borrowedKey(node["object"] as AnyNode);
       case "ChainExpression":
       case "ParenthesizedExpression":
       case "AwaitExpression":
       case "SpreadElement":
-        return this.borrowedName((node["expression"] ?? node["argument"]) as AnyNode);
+        return this.borrowedKey((node["expression"] ?? node["argument"]) as AnyNode);
       case "ConditionalExpression":
       case "LogicalExpression": {
         const [a, b] =
           node.type === "LogicalExpression"
             ? [node["left"] as AnyNode, node["right"] as AnyNode]
             : [node["consequent"] as AnyNode, node["alternate"] as AnyNode];
-        return this.isPage(a) ? this.borrowedName(a) : this.borrowedName(b);
+        return this.isPage(a) ? this.borrowedKey(a) : this.borrowedKey(b);
       }
       default:
         return undefined;
     }
   }
 
+  /**
+   * Why an expression counts as the page's, when the reason is a variable of the tool's own: that
+   * variable, the ones it got the page's objects from, in order, and the line where the first of
+   * them got them. Only explains a finding; it never decides one (VER-07).
+   */
+  borrowedName(node: AnyNode | null | undefined): { chain: string[]; line: number } | undefined {
+    let key = this.borrowedKey(node);
+    if (key === undefined) return undefined;
+    const chain: string[] = [];
+    const seen = new Set<Key>();
+    let line = 0;
+    while (key !== undefined && !seen.has(key) && chain.length < 5) {
+      seen.add(key);
+      const origin: { name: string; line: number; from?: Key } = this.origins.get(key)!;
+      chain.push(origin.name);
+      line = origin.line;
+      key = origin.from;
+    }
+    return { chain, line };
+  }
+
   /** One pass; true if it found something new. */
   private round(): boolean {
     const before = this.names.size + this.returning.size + (this.thisIsPage ? 1 : 0);
-    const mark = (names: string[], at: AnyNode) =>
-      names.forEach((name) => {
-        this.names.add(name);
-        if (!this.origins.has(name)) this.origins.set(name, lineOf(at));
-      });
+    const mark = (identifiers: AnyNode[], at: AnyNode, value?: AnyNode | null) => {
+      const from = value ? this.borrowedKey(value) : undefined;
+      for (const identifier of identifiers) {
+        const key = this.bindings.key(identifier);
+        this.names.add(key);
+        if (!this.origins.has(key)) {
+          this.origins.set(key, {
+            name: identifier["name"] as string,
+            line: lineOf(at),
+            ...(from !== undefined && from !== key ? { from } : {}),
+          });
+        }
+      }
+    };
     const markParams = (fn: AnyNode | undefined) => {
       if (fn && isFunction(fn)) {
         mark(
-          (fn["params"] as AnyNode[]).flatMap((p) => boundNames(p)),
+          (fn["params"] as AnyNode[]).flatMap((p) => boundIdentifiers(p)),
           fn,
         );
       }
     };
     this.visit(this.program, (node) => {
       switch (node.type) {
-        case "VariableDeclarator":
-          if (this.isPage(node["init"] as AnyNode)) mark(boundNames(node["id"] as AnyNode), node);
+        case "VariableDeclarator": {
+          const init = node["init"] as AnyNode;
+          if (this.isPage(init)) mark(boundIdentifiers(node["id"] as AnyNode), node, init);
           break;
+        }
         case "AssignmentExpression": {
-          if (!this.isPage(node["right"] as AnyNode)) break;
+          const right = node["right"] as AnyNode;
+          if (!this.isPage(right)) break;
           const left = node["left"] as AnyNode;
           if (left.type === "MemberExpression") {
             if ((left["object"] as AnyNode).type === "ThisExpression") this.thisIsPage = true;
-            const root = rootName(left);
-            if (root) mark([root], node);
+            const root = rootIdentifier(left);
+            if (root) mark([root], node, right);
           } else {
-            mark(boundNames(left), node);
+            mark(boundIdentifiers(left), node, right);
           }
           break;
         }
         case "ForOfStatement":
         case "ForInStatement": {
-          if (!this.isPage(node["right"] as AnyNode)) break;
+          const right = node["right"] as AnyNode;
+          if (!this.isPage(right)) break;
           const left = node["left"] as AnyNode;
           mark(
             left.type === "VariableDeclaration"
-              ? (left["declarations"] as AnyNode[]).flatMap((d) => boundNames(d["id"] as AnyNode))
-              : boundNames(left),
+              ? (left["declarations"] as AnyNode[]).flatMap((d) =>
+                  boundIdentifiers(d["id"] as AnyNode),
+                )
+              : boundIdentifiers(left),
             node,
+            right,
           );
           break;
         }
@@ -618,6 +760,7 @@ class PageValues {
             (callee.type === "MemberExpression" && this.isPage(callee["object"] as AnyNode)) ||
             (node.type === "NewExpression" &&
               callee.type === "Identifier" &&
+              this.bindings.isGlobal(callee) &&
               PAGE_CONSTRUCTOR.test(callee["name"] as string))
           ) {
             args.forEach(markParams);
@@ -625,11 +768,16 @@ class PageValues {
           if (args.some((a) => this.isPage(a))) {
             // A function called with the page's objects receives them.
             if (callee.type === "Identifier")
-              markParams(this.functions.get(callee["name"] as string));
+              markParams(this.functions.get(this.bindings.key(callee)));
             // A container given them (list.push(el), map.set(k, el)) holds them.
             // The bridge copies what it is given, so it never holds the page's objects.
-            const root = callee.type === "MemberExpression" ? rootName(callee) : undefined;
-            if (root && !isBridgeCall(callee)) mark([root], node);
+            const root = callee.type === "MemberExpression" ? rootIdentifier(callee) : undefined;
+            if (root && !isBridgeCall(callee))
+              mark(
+                [root],
+                node,
+                args.find((a) => this.isPage(a)),
+              );
           }
           break;
         }
@@ -642,13 +790,13 @@ class PageValues {
       }
     });
     // A function that returns the page's objects makes its calls the page's.
-    for (const [name, fn] of this.functions) {
+    for (const [key, fn] of this.functions) {
       const body = fn["body"] as AnyNode;
       const returns =
         body.type !== "BlockStatement"
           ? this.isPage(body)
           : this.anyReturn(body, (argument) => this.isPage(argument));
-      if (returns) this.returning.add(name);
+      if (returns) this.returning.add(key);
     }
     return this.names.size + this.returning.size + (this.thisIsPage ? 1 : 0) !== before;
   }
@@ -673,6 +821,12 @@ class PageValues {
       this.visit(child, see, ownBody);
     }
   }
+}
+
+/** Visits every node of a tree. */
+function visitAll(node: AnyNode, see: (node: AnyNode) => void) {
+  see(node);
+  for (const child of children(node)) visitAll(child, see);
 }
 
 /** A node's line, or 0 when the parser gave it none. */
@@ -738,6 +892,7 @@ export function checkJs(
       ecmaVersion: "latest",
       sourceType: "script",
       locations: true,
+      ranges: true,
     }) as unknown as AnyNode;
   } catch (error) {
     return [{ message: `The JavaScript can't be read: ${(error as Error).message}.` }];
@@ -757,13 +912,19 @@ export function checkJs(
       line: (node.loc as { start: { line: number } } | undefined)?.start.line,
       message,
     });
-  // A name the check follows through the whole script can hold the tool's own data in one place
-  // and an element in another; the finding then says which line made it count (VER-07).
+  // A variable of the tool's own that holds an element or the page because another one gave it
+  // to it: the finding says where it started, so a repair can see the real cause (VER-07).
   const because = (value: AnyNode | null | undefined) => {
     const borrowed = page.borrowedName(value);
-    return borrowed
-      ? ` Here \`${borrowed.name}\` counts as one because line ${borrowed.line} gives \`${borrowed.name}\` an element or the page, and the check follows a name through the whole JavaScript. If this \`${borrowed.name}\` is the tool's own data, give one of them another name.`
+    if (!borrowed) return "";
+    const [name, ...through] = borrowed.chain;
+    const first = through.at(-1);
+    const byName = page.bindings.byName
+      ? " The check follows each name through the whole JavaScript here, because it uses with or eval."
       : "";
+    return first
+      ? ` Here \`${name}\` counts as one: line ${borrowed.line} gives \`${first}\` an element or the page, and \`${name}\` gets it from there${through.length > 1 ? ` through \`${through.slice(0, -1).join("`, `")}\`` : ""}.${byName}`
+      : ` Here \`${name}\` counts as one because line ${borrowed.line} gives it an element or the page.${byName}`;
   };
 
   /**
@@ -868,7 +1029,12 @@ export function checkJs(
               property,
               "The JavaScript takes a property out by a name computed at run time. Write the name out.",
             );
-          } else if (name !== undefined && FORBIDDEN_NAMES.has(name)) {
+          } else if (
+            name !== undefined &&
+            FORBIDDEN_NAMES.has(name) &&
+            // Out of an unknown value, such as a parameter's, it may be the page's.
+            (!NAVIGATING_NAMES.has(name) || !source || page.isPage(source))
+          ) {
             found(property, `The JavaScript takes out ${name}, which a tool can't use.`);
           } else if (name === "Chart" && source && page.isPage(source)) {
             // const { Chart: C } = window names Chart.js as window.Chart does (CAP-04).
@@ -935,7 +1101,9 @@ export function checkJs(
     if (parent && isNameNotReference(node, parent)) return;
     if (name === "Chart") found(node, CHART_DIRECT);
     if (name === "Date") checkDate(node, parent);
-    if (FORBIDDEN_GLOBALS.has(name)) {
+    // The tool's own variable of that name, declared and used as its own, is not the global.
+    const global = page.bindings.isGlobal(node);
+    if (FORBIDDEN_GLOBALS.has(name) && global) {
       found(node, `The JavaScript uses ${name}, which a tool can't use.`);
       return;
     }
@@ -948,7 +1116,7 @@ export function checkJs(
       }
       return;
     }
-    if (!PAGE_GLOBALS.has(name)) return;
+    if (!PAGE_GLOBALS.has(name) || !global) return;
     const usedAsObject =
       parent?.type === "MemberExpression" && parent["object"] === node && !parent["computed"];
     if (!usedAsObject) {
@@ -984,7 +1152,9 @@ export function checkJs(
       }
       return;
     }
-    if (FORBIDDEN_NAMES.has(name)) {
+    // The page's location, history and navigation navigate; the tool's own data may well have a
+    // history or a location of its own.
+    if (FORBIDDEN_NAMES.has(name) && (!NAVIGATING_NAMES.has(name) || page.isPage(object))) {
       found(node, `The JavaScript uses .${name}, which a tool can't use.`);
       return;
     }

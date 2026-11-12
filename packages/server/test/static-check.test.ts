@@ -190,10 +190,10 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
     }
   });
 
-  it("VER-07, L-89: a name that holds an element elsewhere is still refused, and the finding says which line made it count", () => {
-    // M3's live T10: `o` held the tool's own revisions in one loop and an <option> further down.
-    // The check follows names through the whole script, so both loops count as the page; the
-    // finding said only "on an element or the page", and the repair kept the name and was refused.
+  it("VER-07, L-89, L-99: a variable that shares a name with an element elsewhere is the tool's own, and is plain data", () => {
+    // M3's live T10: `o` held the tool's own revisions in one loop and an <option> in another
+    // function. The check followed names through the whole script, so both counted as the page,
+    // and the repair kept the name and was refused. Each is its own variable now.
     const tool = (loop: string) =>
       [
         "async function load() {",
@@ -207,38 +207,33 @@ describe("the tool's JavaScript (VER-01, ADR 0009)", () => {
         "  }",
         "}",
       ].join("\n");
-    const cases = [
-      [
-        "for (const [c, o] of Object.entries(res.revisions)) { Object.entries(o); }",
-        "Object.entries on an element or the page",
-      ],
-      [
-        "for (const c of ['tasks']) { const o = res.revisions[c]; for (const id in o) {} }",
-        "for…in",
-      ],
-      [
-        "const revs = new Map(); const id = 'a'; for (const c of ['tasks']) { const o = res.revisions[c]; revs.set(c, o[id]); }",
-        "by a name computed at run time",
-      ],
-      ["const o = res.revisions; const copy = { ...o };", "copies an element or the page"],
-    ] as const;
-    for (const [loop, rule] of cases) {
-      const findings = checkJs(tool(loop));
-      const finding = findings.find((f) => f.message.includes(rule));
-      expect(finding, loop).toBeDefined();
-      expect(finding?.line, loop).toBe(3);
-      expect(finding?.message, loop).toContain(
-        "Here `o` counts as one because line 7 gives `o` an element or the page, and the check follows a name through the whole JavaScript. If this `o` is the tool's own data, give one of them another name.",
-      );
+    for (const loop of [
+      "for (const [c, o] of Object.entries(res.revisions)) { Object.entries(o); }",
+      "for (const c of ['tasks']) { const o = res.revisions[c]; for (const id in o) {} }",
+      "const revs = new Map(); const id = 'a'; for (const c of ['tasks']) { const o = res.revisions[c]; revs.set(c, o[id]); }",
+      "const o = res.revisions; const copy = { ...o };",
+    ]) {
+      expect(checkJs(tool(loop)), loop).toEqual([]);
     }
-    // Renamed, the tool's own data is plain again, and indexing it is fine.
-    expect(
-      checkJs(
-        tool(cases[2][0])
-          .replace("const o = document", "const opt = document")
-          .replace("o.textContent", "opt.textContent"),
-      ),
-    ).toEqual([]);
+  });
+
+  it("VER-07, L-99: a variable that really gets an element from another is refused, and the finding says where it started", () => {
+    const js = [
+      "const box = document.createElement('div');",
+      "const held = box;",
+      "const again = held;",
+      "Object.entries(again);",
+    ].join("\n");
+    const finding = checkJs(js).find((f) => f.message.includes("Object.entries on an element"));
+    expect(finding?.line).toBe(4);
+    expect(finding?.message).toContain(
+      "Here `again` counts as one: line 1 gives `box` an element or the page, and `again` gets it from there through `held`.",
+    );
+    // One step: the variable itself.
+    const direct = checkJs("const box = document.createElement('div');\nObject.entries(box);");
+    expect(direct.find((f) => f.message.includes("Object.entries"))?.message).toContain(
+      "Here `box` counts as one because line 1 gives it an element or the page.",
+    );
     // The page itself, or a name the tool never declares, needs no explanation.
     for (const js of ["for (const name in document.body) {}", "box[key] = html;"]) {
       for (const finding of checkJs(js)) expect(finding.message, js).not.toContain("counts as one");
@@ -567,5 +562,88 @@ describe("real tools (VER-01)", () => {
     );
     expect(result.ok).toBe(false);
     expect(!result.ok && [...new Set(result.findings.map((f) => f.part))]).toEqual(["html", "js"]);
+  });
+});
+
+describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
+  const calculator = JSON.parse(
+    fs.readFileSync(new URL("./fixtures/static-calculator.json", import.meta.url), "utf8"),
+  ) as { history: string; repaired: string };
+
+  it("L-99: the calculator's own history, and its parser's names shared with an element, pass", () => {
+    expect(checkJs(calculator.history)).toEqual([]);
+    expect(checkJs(calculator.repaired)).toEqual([]);
+  });
+
+  it("L-99: a tool's own variable or data named history, location or navigation is its own", () => {
+    for (const js of [
+      "let history = []; history.push(1); history.length;",
+      "const saved = { location: 'Lisbon' }; saved.location.toUpperCase();",
+      "async function f() { const r = await tessera.call('data.read', {}); return r.data.history; }",
+      "const { history } = { history: [] }; history.slice();",
+      "function show(navigation) { return navigation.steps; }\nshow({ steps: [] });",
+      "const open = () => 1; open();",
+    ]) {
+      expect(checkJs(js), js).toEqual([]);
+    }
+  });
+
+  it("L-99, ADR 0009: the page's history, location and navigation are still refused, however they are reached", () => {
+    for (const js of [
+      "history.back();",
+      "location.href;",
+      "navigation.navigate('x');",
+      "window.history.pushState({}, '', 'x');",
+      "document.location;",
+      "const w = window; w.history.back();",
+      "const d = document; const again = d; again.location;",
+      "function go(w) { return w.history; }\ngo(window);",
+      "const { history } = window;",
+      "function take({ location }) { return location; }",
+      "{ const history = []; history.push(1); }\nhistory.back();",
+      "open('https://example.com');",
+      "const button = document.createElement('button'); button.ownerDocument;",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: hoisting, closures, var across blocks and catch are followed to the variable they mean", () => {
+    for (const js of [
+      // A function declared before the variable it returns.
+      "function get() { return el; }\nvar el = document.body;\nObject.entries(get());",
+      // A closure that sets an outer variable.
+      "let el;\nfunction set() { el = document.body; }\nset();\nObject.entries(el);",
+      // var belongs to the whole function, not its block.
+      "function f() { if (true) { var x = document.body; } Object.entries(x); }",
+      // A name declared in one scope and used undeclared in another is a global there: it may be
+      // an element by its id (the gap this closes).
+      "function a() { const x = 1; return x; }\nfunction b() { Object.entries(x); }",
+      // An inner variable of the same name doesn't hide the outer one that holds the page.
+      "const box = document.body;\nfunction f() { const box = {}; return box; }\nObject.entries(box);",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+    // And the other way: an inner variable that holds data is not the outer element.
+    expect(
+      checkJs(
+        "const box = document.body;\nfunction f() { const box = { a: 1 }; return Object.entries(box); }\nbox.textContent = 'x';",
+      ),
+    ).toEqual([]);
+    expect(
+      checkJs(
+        "try { JSON.parse('x'); } catch (location) { location.message; }\nconst el = document.body;",
+      ),
+    ).toEqual([]);
+  });
+
+  it("ADR 0009: with `with` the names can't be read from the code, so each counts across the whole script, as before", () => {
+    const js =
+      "const o = document.body;\nfunction f() { const o = { a: 1 }; return Object.entries(o); }\nwith ({}) {}";
+    const findings = checkJs(js);
+    expect(findings.some((f) => f.message.includes("Object.entries on an element"))).toBe(true);
+    expect(findings.find((f) => f.message.includes("Object.entries"))?.message).toContain(
+      "The check follows each name through the whole JavaScript here, because it uses with or eval.",
+    );
   });
 });
