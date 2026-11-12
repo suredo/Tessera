@@ -183,13 +183,13 @@ describe("discussing without building (GEN-19)", () => {
 });
 
 describe("what the discuss stage is told (GEN-19, SEC-02)", () => {
-  it("CAP-01: it is told what tools here can use, from the capabilities' one definition, and what they can't do", () => {
+  it("CAP-01: it is told what tools here can use, every capability the bridge has, and what they can't do", () => {
     const { system } = assembleDiscussPrompt({ request: "x", open: null, language: "en" });
-    for (const description of Object.values(BRIDGE_CAPABILITIES)) {
-      // Without the requirement IDs, which mean nothing to the person.
-      expect(system).toContain(description.replace(/\s*\([^)]*\)\.$/, "."));
-    }
-    expect(system).not.toMatch(/\b[A-Z]{2,4}-\d{2}\b/);
+    // Each capability the bridge has, in the person's words: no requirement IDs or call names.
+    expect(Object.keys(BRIDGE_CAPABILITIES).sort()).toEqual(["chart", "clock"]);
+    expect(system).toContain("  - the current date, time and time zone");
+    expect(system).toContain("  - charts and graphs, drawn by Tessera");
+    expect(system).not.toMatch(/\b[A-Z]{2,4}-\d{2}\b|tessera\.|host/);
     expect(system).toContain("can't open popups, alerts or other windows");
     expect(system).toContain("You build and change nothing");
   });

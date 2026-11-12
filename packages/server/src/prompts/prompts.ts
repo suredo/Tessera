@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
-  BRIDGE_CAPABILITIES,
   bridgeManifest,
+  type BridgeCapability,
   CHART_LIMITS,
   CHART_TYPES,
   PROFILE_IDS,
@@ -714,10 +714,17 @@ export function assembleAcceptancePrompt(input: {
  */
 export const DISCUSS_PROMPT_BUDGET = 2_350;
 
-/** The optional capabilities a tool may use, one per line, from their one definition (CAP-01). */
+/**
+ * The optional capabilities a tool may use, in the person's terms (CAP-01). Typed by the bridge's
+ * one list of them, so a new capability can't be added without words here.
+ */
+const CAPABILITY_WORDS = {
+  clock: "the current date, time and time zone",
+  chart: "charts and graphs, drawn by Tessera",
+} as const satisfies Record<BridgeCapability, string>;
 const capabilityLines = () =>
-  Object.values(BRIDGE_CAPABILITIES)
-    .map((description) => `  - ${description.replace(/\s*\([^)]*\)\.$/, ".")}`)
+  Object.values(CAPABILITY_WORDS)
+    .map((words) => `  - ${words}`)
     .join("\n");
 
 /**
