@@ -542,3 +542,23 @@ describe("the fixtures from the POC's routing failures (GEN-01, TEST-04)", () =>
     }
   });
 });
+
+describe("a question or an idea is discussed, never built (GEN-19)", () => {
+  it("GEN-19, GEN-01: discuss is kept as discuss with no tool open and with one, whatever it targets", async () => {
+    for (const open of [null, SHOPPING]) {
+      for (const targetsCurrentTool of [true, false]) {
+        const { decision } = await decide(
+          { request: "Would a modal be better here?", open },
+          answer({ kind: "discuss", targetsCurrentTool }),
+        );
+        expect(decision.action).toBe("discuss");
+      }
+    }
+  });
+
+  it("GEN-19: the intent prompt tells a question or an idea from a change asked politely", () => {
+    const { system } = assembleIntentPrompt({ request: "x", open: SHOPPING });
+    expect(system).toContain("- discuss: a question or idea about a tool");
+    expect(system).toContain('("can you make it blue?") is that change');
+  });
+});

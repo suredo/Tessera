@@ -13,6 +13,7 @@ export const STAGES = [
   "research",
   "review",
   "acceptance",
+  "discuss",
 ] as const;
 export const stageSchema = z.enum(STAGES);
 export type Stage = z.infer<typeof stageSchema>;

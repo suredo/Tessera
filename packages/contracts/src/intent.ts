@@ -14,6 +14,8 @@ export const INTENT_KINDS = [
   "open_saved",
   "clarify",
   "unsupported",
+  // A question or an idea about a tool: answered in words, and nothing is built (GEN-19).
+  "discuss",
   // Only while proposed entry changes wait for review: the request answers them in words.
   "approve_proposal",
   "decline_proposal",
@@ -85,6 +87,22 @@ export const intentSchema = z
     }),
   ])
   .describe("The intent stage's answer: what a request asks for, used to route it (GEN-01).");
+
+/** The most a discussion's answer may say, in characters: a few short paragraphs (GEN-19). */
+export const DISCUSSION_MAX_CHARACTERS = 1_500;
+
+/** The discuss stage's answer (GEN-19): plain words for the person, and nothing built. */
+export const discussionSchema = z
+  .strictObject({
+    answer: z
+      .string()
+      .trim()
+      .min(1)
+      .max(DISCUSSION_MAX_CHARACTERS)
+      .describe("The answer to the question or idea, in plain words, in the person's language."),
+  })
+  .describe("The discuss stage's answer to a question or an idea about a tool (GEN-19).");
+export type Discussion = z.infer<typeof discussionSchema>;
 
 /**
  * An intent as the host passes it: `profile` may be left out, meaning none, as in answers recorded

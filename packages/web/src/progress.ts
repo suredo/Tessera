@@ -16,6 +16,7 @@ const STAGE_KEYS: Partial<Record<NonNullable<RequestProgress["stage"]>, MessageK
   edit: "request.stage.edit",
   repair: "request.stage.repair",
   data: "request.stage.data",
+  discuss: "request.stage.discuss",
 };
 
 /** What a stage is called; any other, or none, is the general working message. */

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { acceptanceChecksSchema } from "./acceptance.ts";
+import { discussionSchema } from "./intent.ts";
 import { STAGES } from "./provider.ts";
 import { UI_MODES } from "./artifact.ts";
 import { BRIDGE_CAPABILITIES } from "./bridge.ts";
@@ -344,6 +345,11 @@ export const generateReplySchema = z
         ),
     }),
     z.strictObject({ kind: z.literal("open_saved"), savedToolId: z.string().min(1) }),
+    z
+      .strictObject({ kind: z.literal("discussion"), answer: discussionSchema.shape.answer })
+      .describe(
+        "The request was a question or an idea: its answer in words, with nothing built or changed (GEN-19).",
+      ),
     z
       .strictObject({ kind: z.literal("proposal_answer"), token: z.uuid(), approve: z.boolean() })
       .describe(

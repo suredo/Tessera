@@ -133,6 +133,7 @@
             "new_tool",
             "clarify",
             "unsupported",
+            "discuss",
             "approve_proposal",
             "decline_proposal"
           ]
