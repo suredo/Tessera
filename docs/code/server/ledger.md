@@ -7,7 +7,7 @@ implements: [OBS-01, GEN-10]
 tests: [../../../packages/server/test/ledger.test.ts]
 tags: [code, server, ledger, observability]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-07T19:35:02Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T15:00:00Z }
 ---
 
 # Purpose
@@ -25,6 +25,7 @@ Keeps what the host learns from each request instead of throwing it away (`OBS-0
 - **What the person asked isn't kept,** only the prompt's and the instructions' sizes in characters and the prompt parts with their versions (`ENG-16`).
 - **A call keeps the code it answered with** (`GEN-10`), so an answer the host's checks refused can still be read in the details view: a created tool's or a replaced edit's HTML, CSS and JavaScript, or a style edit's CSS (`answerCode`, migration `0013-call-code.sql`). Only the code: never the request, nor the entries an answer starts a tool with. An answer refused for its shape keeps its code too: the provider's schema failure carries the answer unchecked (`ProviderError.answer`), and the call still fails. A call with no code, such as intent or a data plan, keeps none, and so does one whose code is over `CALL_CODE_LIMIT` (256 KiB, in UTF-8 bytes as stored, `keptCode`), rather than a part of it. It goes with its request, as the rest of the call does.
 - **A failure keeps its reasons** (`GEN-10`), even when the request ends well: a model failure keeps its kind, its plain message and what the provider itself said; a crash, an error that isn't a model failure, is kept apart as `crashed`; a repair call keeps the host's findings it was asked to fix, from the stage call's diagnostics, so a static or smoke check that a repair then satisfied is still on record; and the request keeps the reply's message and its check findings. A mixed request's are its entry part's, which can fail after the interface part is done, with an outcome such as `mixed_data:failed`.
+- **An outcome says what came of a request:** the reply's kind; for an answer, which one (`answer:clarify`), and for a mixed request its entry part's after another colon (`mixed_data:answer:data_stale`), so the details view can say what Tessera replied (`OBS-01`, L-100). Requests recorded before keep plain `answer`. A discussion keeps its answer as the request's message, the words the person read (`GEN-19`), as any other plain message is kept.
 - **The ledger never changes a request.** A write that fails goes to the error handler the ledger was given (the console by default) and the call or reply goes on as if it had been recorded.
 - **Calls are numbered per request** in the order they end, across every provider wrapper the request used.
 - **A request goes with its workspace:** the rows are deleted with it, when it leaves the trash for good. A request for a workspace that doesn't exist stays unattached; the newest `UNATTACHED_REQUESTS_KEPT` unattached ones are kept and older ones go.

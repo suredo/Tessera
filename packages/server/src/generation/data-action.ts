@@ -57,6 +57,8 @@ export async function changeData(
   offerData?: OfferData,
   repairUsage?: Partial<Record<RepairClass, number>>,
   limits: StageTimeLimits = DEFAULT_STAGE_TIME_LIMITS,
+  /** The answer of the discussion the request follows (GEN-19): the plan is told it. */
+  discussed?: string,
 ): Promise<DataReply> {
   const workspace = workspaceId ? getWorkspace(store, workspaceId) : undefined;
   const hash = workspace?.currentVersion;
@@ -71,6 +73,7 @@ export async function changeData(
     signal,
     repairUsage,
     timeLimitMs: limits.data,
+    ...(discussed ? { discussed } : {}),
   });
   if (result.kind === "failed")
     return {

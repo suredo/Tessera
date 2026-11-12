@@ -542,3 +542,83 @@ describe("an edit that follows a discussion is told its answer (GEN-19)", () => 
     expect(JSON.parse(told(calls[1]!.prompt)!)).toBe(ANSWER);
   });
 });
+
+describe("an entry change that follows a discussion is told its answer (GEN-19)", () => {
+  const ANSWER = "Brazil's GDP was about US$2.2 trillion in 2024, from memory, not looked up.";
+  const told = (prompt: string) =>
+    /--- earlier answer ---\n(.*)\n--- end of the earlier answer ---/.exec(prompt)?.[1];
+
+  it("GEN-19: 'add it' as an entry change tells the intent and the entry plan the answer, quoted", async () => {
+    const { store, workspace } = await setup();
+    const calls: { stage: string; prompt: string }[] = [];
+    const scripted = provider(reply(intent({ kind: "data", behaviorChange: false }), "intent"), {
+      kind: "value",
+      stage: "data",
+      value: {
+        outcome: "patch",
+        summary: "Adds Brazil's GDP.",
+        patch: { operations: [{ op: "add", collection: "items", record: { title: "Brazil" } }] },
+      },
+    });
+    const result = await generate(
+      store,
+      {
+        ...scripted,
+        run: (spec) => {
+          calls.push({ stage: spec.stage, prompt: spec.prompt });
+          return scripted.run(spec);
+        },
+      },
+      DEFAULT_ROUTES,
+      {
+        request: "Add it to the list",
+        workspaceId: workspace.id,
+        discussion: "00000000-0000-4000-8000-0000000000de",
+      },
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      ANSWER,
+    );
+    expect(result).toMatchObject({ kind: "data_changed", count: 1 });
+    expect(calls.map((call) => call.stage)).toEqual(["intent", "data"]);
+    for (const call of calls) expect(JSON.parse(told(call.prompt)!)).toBe(ANSWER);
+  });
+
+  it("GEN-19: a mixed request keeps the answer for its entry part, planned once its version is active", async () => {
+    const { store, workspace } = await setup();
+    const kept: SmokeRepairContext[] = [];
+    await generate(
+      store,
+      provider(
+        reply(
+          intent({ kind: "mixed", interfacePart: "Show the GDP", dataPart: "add Brazil" }),
+          "intent",
+        ),
+        reply(quantityEdit, "edit"),
+      ),
+      DEFAULT_ROUTES,
+      {
+        request: "Show the GDP and add Brazil",
+        workspaceId: workspace.id,
+        discussion: "00000000-0000-4000-8000-0000000000df",
+      },
+      undefined,
+      (context) => kept.push(context),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      ANSWER,
+    );
+    expect(kept).toHaveLength(1);
+    expect(kept[0]).toMatchObject({ dataPart: "add Brazil", discussed: ANSWER });
+  });
+});

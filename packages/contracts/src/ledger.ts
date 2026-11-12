@@ -116,7 +116,7 @@ export const ledgerRequestSchema = z
       .string()
       .nullable()
       .describe(
-        "The reply's kind, and a mixed request's entry part after a colon; null while it runs.",
+        "The reply's kind, with an answer's kind after a colon (answer:clarify), and a mixed request's entry part after another (mixed_data:answer:data_stale); null while it runs.",
       ),
     message: z.string().nullable().describe("The plain message the person read."),
     findings: z.array(z.string()).describe("The checks' findings when it failed (GEN-10)."),

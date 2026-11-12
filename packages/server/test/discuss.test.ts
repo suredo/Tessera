@@ -21,6 +21,7 @@ import {
 } from "../src/intent/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
 import {
+  assembleDataPrompt,
   assembleDiscussPrompt,
   assembleIntentPrompt,
   assemblePrompt,
@@ -209,6 +210,11 @@ describe("what the discuss stage is told (GEN-19, SEC-02)", () => {
     expect(system).not.toMatch(/\b[A-Z]{2,4}-\d{2}\b|tessera\.|host/);
     expect(system).toContain("can't open popups, alerts or other windows");
     expect(system).toContain("You build and change nothing");
+    // A question of fact is answered from memory, said as such, and never made up (GEN-19).
+    expect(system).toContain("or a question of fact for what they are making");
+    expect(system).toContain(
+      "answer from memory, with the year it refers to, and say it is from memory, not looked up, so it may be out of date. If you don't know it, say so; never make one up.",
+    );
   });
 
   it("SEC-02: the open tool's name and lists are quoted data, and an instruction in them stays inside its string", () => {
@@ -411,6 +417,17 @@ describe("building what a discussion described (GEN-19)", () => {
       diagnostics: ["The Add button has no name."],
     });
     expect(repair.prompt).not.toContain(EARLIER);
+    // The entry plan is told it the same way, after the request (GEN-19).
+    const data = assembleDataPrompt({
+      request: "Add it",
+      language: "en",
+      schema: {},
+      data: {},
+      revisions: {},
+      discussed: hostile,
+    });
+    expect(JSON.parse(quoted(data.prompt)!)).toBe(hostile);
+    expect(data.prompt.indexOf("Add it")).toBeLessThan(data.prompt.indexOf(EARLIER));
     const plain = assemblePrompt({ request: "Do that", uiMode: "standard", stage: "create" });
     expect(plain.prompt).not.toContain(EARLIER);
   });
