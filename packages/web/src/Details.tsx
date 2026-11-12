@@ -1,5 +1,6 @@
 import {
   PROFILES,
+  type GenerateAnswer,
   type HostResult,
   type LedgerCall,
   type LedgerRequest,
@@ -48,17 +49,40 @@ const OUTCOMES: Record<string, MessageKey> = {
   open_saved: "details.ended.open_saved",
   discussion: "details.ended.discussion",
 };
+// What an answer said, typed by the contract's one list of answers, so none is left without words.
+const ANSWERS: Record<GenerateAnswer, MessageKey> = {
+  clarify: "details.answer.clarify",
+  unsupported: "details.answer.unsupported",
+  cannot: "details.answer.cannot",
+  ask_to_split: "details.answer.ask_to_split",
+  not_yet: "details.answer.not_yet",
+  unchanged: "details.answer.unchanged",
+  stale: "details.answer.stale",
+  data_unchanged: "details.answer.data_unchanged",
+  data_cancelled: "details.answer.data_cancelled",
+  data_stale: "details.answer.data_stale",
+  data_clarify: "details.answer.data_clarify",
+  data_cannot: "details.answer.data_cannot",
+};
 const named = (names: Record<string, MessageKey>, name: string) => {
   const key = names[name];
   return key ? t(key) : name;
 };
-/** How a request ended; a mixed request's entry part follows its own (as `mixed_data:failed`). */
+/** One outcome: a kind, or an answer with what it said (as `answer:clarify`). */
+const ended = (kind: string, answer?: string) =>
+  kind === "answer" && answer
+    ? t("details.ended.answered", { answer: named(ANSWERS, answer) })
+    : named(OUTCOMES, kind);
+/**
+ * How a request ended; an answer says which (as `answer:clarify`), and a mixed request's entry
+ * part follows its own (as `mixed_data:failed` or `mixed_data:answer:data_stale`).
+ */
 export function outcomeText(outcome: string | null): string {
   if (outcome === null) return t("details.running");
-  const [kind, part] = outcome.split(":");
+  const [kind, part, answer] = outcome.split(":");
   if (kind === "mixed_data" && part)
-    return t("details.ended.mixed", { entries: named(OUTCOMES, part) });
-  return named(OUTCOMES, outcome);
+    return t("details.ended.mixed", { entries: ended(part, answer) });
+  return ended(kind!, part);
 }
 export const stageText = (stage: string) => named(STAGES, stage);
 

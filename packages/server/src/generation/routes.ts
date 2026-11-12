@@ -483,6 +483,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   (offer) => offerData(offer, entry.expires, control),
                   entry.context.repairUsage,
                   stageLimits,
+                  entry.context.discussed,
                 );
               },
               signal,

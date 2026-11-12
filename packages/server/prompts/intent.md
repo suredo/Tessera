@@ -9,7 +9,7 @@ Choose one kind:
 - mixed: a change to the tool and a change to its records in one request. Put the change to the tool in interfacePart and the change to the records in dataPart, so neither is lost.
 - new_tool: a tool is open, but the request asks for a different tool that has nothing to do with it. The open tool must stay as it is.
 - open_saved: the request asks to open or use one of the saved tools listed, by its name or by what it does. Give that tool's ID, exactly as listed, in savedToolId. When no saved tool is listed, or none is the one asked for, never choose it. A request for a new tool ("a new budget", "another shopping list") is create or new_tool, even when a saved one is like it.
-- discuss: a question or idea about a tool, not yet asking for it to be built ("would a modal be better here?"). A change asked politely or as a question ("can you make it blue?") is that change.
+- discuss: a question or idea about a tool, not yet asking for it to be built ("would a modal be better here?"), or a question of fact ("what was Brazil's GDP?"). A change asked politely or as a question ("can you make it blue?") is that change.
 - clarify: you can't tell what the request wants built or changed.
 - unsupported: the request asks for something no tool on this computer can do, such as booking, buying, ordering or sending messages.
 

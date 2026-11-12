@@ -147,6 +147,7 @@ export async function generate(
         offerData,
         undefined,
         limits,
+        discussed,
       );
     case "mixed": {
       const repairUsage: Partial<Record<RepairClass, number>> = {};
@@ -162,6 +163,7 @@ export async function generate(
           remember?.({
             ...context,
             dataPart: decision.dataPart,
+            ...(discussed ? { discussed } : {}),
             reply: { ...context.reply, dataPending: true },
           }),
         beforeStore,
@@ -191,6 +193,7 @@ export async function generate(
           offerData,
           repairUsage,
           limits,
+          discussed,
         ),
       };
     }

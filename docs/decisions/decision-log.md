@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A60), with its choice and reasons."
+description: "Every decision made so far (A1–A61), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-11T00:40:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T15:00:00Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -75,6 +75,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A58 | When the clean-setup test runs | **Not in M3: functionality comes first, and P1 runs later, in M4's release run** | Chosen by the owner on 2026-11-10: a sandboxed clean setup is too much for now, and testing what Tessera does matters more. M3's exit criterion for P1 is dropped, unmet, not passed. P1 stays in M4's release run, with Windows Sandbox (A43) and the [kit](../code/scripts/sandbox.md) ready for it; before then, the setup check's fix for a missing program should give the exact steps (`PLAT-03`). The [plan](../../evals/reports/2026-11-10-p1-plan.md)'s approved cap of 10 calls went unused and authorizes nothing later. |
 | A59 | Talking a design through | **A discuss route: questions and ideas get a plain answer, and nothing is built until the person asks for it (M4)** | Chosen by the owner on 2026-11-10, in hands-on testing: every message was routed to building, changing data, opening a saved tool, clarifying or refusing, so asking whether a modal would work started a build. A cheap call answers instead, knowing the open tool and what tools here can do; asking for the change afterwards builds it with that answer as context (`GEN-19`). It goes in M4, with the chat's other changes. |
 | A60 | Refusing tools for writes at startup | **The static check no longer refuses them; the bridge refuses the write when it happens** | Chosen by the owner on 2026-11-10, in hands-on testing, reversing the M2 choice to keep the check strict (L-84). The check guessed from the code which calls run while a tool starts, and refused working tools: two of M2's, and a kanban's drag and drop, whose `classList.add` it took for the tool's own `add` (L-95). The person's data is kept safe without it, by what was already there: the bridge refuses any write before the person's real interaction and throughout staging (`GEN-06`), and a behavior check's writes go to a throwaway copy (`BRG-06`). A data change can be undone from the history (`DATA-04`). A note when an accepted tool changes entries before the person has touched it was offered, then dropped: the bridge's guard already refuses such a change, so the note could never show. |
+| A61 | Questions of fact | **A discussion also answers a question of fact from the model's memory, said as such, and "add it" puts the figure in the tool's entries, as any entry change: an addition at once, undoable, and a change to an existing entry after review** | Chosen by the owner on 2026-11-12, in hands-on testing (L-100): asking "what was Brazil's GDP?" beside a GDP chart was read as an entry change, or as unclear, and nothing answered it. The answer says it is from memory, not looked up, with its year; Tessera still can't look things up, and a data source (`CAP-02`, D11) takes over facts that must be current when it lands. The entry stage is told the answer, quoted, as creation and edits are (`GEN-19`). |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2

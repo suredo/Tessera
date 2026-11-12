@@ -277,6 +277,7 @@ export {
   type DataPlan,
   type DataChangePreview,
   GENERATE_ANSWERS,
+  type GenerateAnswer,
   GENERATE_ROUTE,
   REGISTER_REQUEST_ROUTE,
   CANCEL_REQUEST_ROUTE,

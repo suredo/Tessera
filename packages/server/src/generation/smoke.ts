@@ -21,6 +21,8 @@ export type SmokeRepairContext = {
   baseVersion: string | null;
   /** Isolated from the edit stage; only planned after this candidate activates. */
   dataPart?: string;
+  /** The answer of the discussion a mixed request followed, for its entry part (GEN-19). */
+  discussed?: string;
   /** A big new tool's core pass: its repair keeps to the core, and the rest comes later (GEN-17). */
   plan?: TwoPassPlan;
 };

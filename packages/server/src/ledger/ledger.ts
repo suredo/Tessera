@@ -187,9 +187,18 @@ export class RequestLedger {
   finish(id: string, reply: GenerateReply): void {
     this.#safely(() => {
       const told = reply.kind === "mixed_data" ? reply.data : reply;
-      const outcome = reply.kind === "mixed_data" ? `mixed_data:${reply.data.kind}` : reply.kind;
+      // An answer says which one, so the details view can say what Tessera replied (OBS-01).
+      const kind = told.kind === "answer" ? `answer:${told.answer}` : told.kind;
+      const outcome = reply.kind === "mixed_data" ? `mixed_data:${kind}` : kind;
+      // A discussion's words are the answer itself (GEN-19).
       const message =
-        "message" in told ? told.message : "reason" in told ? (told.reason ?? null) : null;
+        told.kind === "discussion"
+          ? told.answer
+          : "message" in told
+            ? told.message
+            : "reason" in told
+              ? (told.reason ?? null)
+              : null;
       this.#store.db.run(
         "UPDATE requests SET ended_at = ?, outcome = ?, message = ?, findings = ? WHERE id = ?",
         this.#store.now().toISOString(),

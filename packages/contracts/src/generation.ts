@@ -275,6 +275,7 @@ export const GENERATE_ANSWERS = [
   "stale",
   ...DATA_ANSWERS,
 ] as const;
+export type GenerateAnswer = (typeof GENERATE_ANSWERS)[number];
 
 export const generateReplySchema = z
   .discriminatedUnion("kind", [

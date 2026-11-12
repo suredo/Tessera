@@ -260,7 +260,22 @@ eval("1");`,
       });
       const answered = ledger.start("data", workspace.id);
       ledger.finish(answered, { kind: "answer", answer: "clarify", reason: "Which list?" });
-      expect(ledger.request(answered)).toMatchObject({ outcome: "answer", message: "Which list?" });
+      // An answer says which one, so the details can say what Tessera replied (OBS-01).
+      expect(ledger.request(answered)).toMatchObject({
+        outcome: "answer:clarify",
+        message: "Which list?",
+      });
+      // A discussion's words are its message (GEN-19).
+      const discussed = ledger.start("generate", workspace.id);
+      ledger.finish(discussed, {
+        kind: "discussion",
+        answer: "About US$2.2 trillion in 2024, from what I know.",
+        token: "00000000-0000-4000-8000-000000000001",
+      });
+      expect(ledger.request(discussed)).toMatchObject({
+        outcome: "discussion",
+        message: "About US$2.2 trillion in 2024, from what I know.",
+      });
       // A refusal whose words had to be replaced keeps them for the details (GEN-10, GEN-12).
       const refused = ledger.start("generate", workspace.id);
       ledger.finish(refused, {
@@ -344,7 +359,7 @@ eval("1");`,
     const last = ledger.start("generate");
     ledger.finish(last, { kind: "answer", answer: "clarify" });
     expect(ledger.request(stray)).toBeUndefined();
-    expect(ledger.request(last)).toMatchObject({ outcome: "answer" });
+    expect(ledger.request(last)).toMatchObject({ outcome: "answer:clarify" });
     const count = store.db.get(
       z.object({ n: z.number() }),
       "SELECT COUNT(*) AS n FROM requests",

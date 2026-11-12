@@ -7,7 +7,7 @@ implements: [GEN-01, GEN-15, GEN-18, GEN-19, VER-03]
 tests: [../../../packages/server/test/intent.test.ts]
 tags: [code, server, generation, intent]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T03:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T15:00:00Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ The first step of every request (`GEN-01`): a cheap model call, on the intent ro
 # Entry points
 
 - `src/intent/intent.ts`:
-  - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the person's saved tools, the most recently used first) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, discuss (a question or an idea, answered in words, `GEN-19`), ask the person to split it, or approve or decline the entry changes waiting for review (L-98).
+  - `decideIntent` asks the stage about a request (`IntentInput`: the request, the open tool with its lists, the person's saved tools, the most recently used first) and gives the host's `IntentDecision`: create, new tool, edit, data, mixed, open saved, clarify, unsupported, discuss (a question or an idea, or a question of fact, answered in words, `GEN-19`, A61), ask the person to split it, or approve or decline the entry changes waiting for review (L-98).
   - `recordLists` reads the lists a tool keeps, and their fields, from its declared data shape (`DATA-03`).
   - `wordsNotInRequest` is the word check of a split part.
   - `INTENT_TIME_LIMIT_MS` is the stage's default time limit (`GEN-11`); `IntentInput.timeLimitMs` replaces it with the configured one.

@@ -484,6 +484,8 @@ export function assembleDataPrompt(input: {
   revisions: Record<string, Record<string, number>>;
   diagnostics?: readonly string[];
   attempt?: unknown;
+  /** The answer of the discussion the request follows (GEN-19); only one `discussedFits`. */
+  discussed?: string;
 }): AssembledPrompt {
   const parts: string[] = [];
   const use = (part: PromptPart, values?: Record<string, string>) => {
@@ -497,6 +499,8 @@ export function assembleDataPrompt(input: {
   const prompt = [
     use("request", { request: input.request }),
     use("language", { language: input.language }),
+    // The answer this request follows, quoted as data, so "add it" has its figures (GEN-19).
+    ...(input.discussed ? [use("discussed", { answer: JSON.stringify(input.discussed) })] : []),
     use("data-context", {
       context: JSON.stringify({
         schema: input.schema,
@@ -624,9 +628,10 @@ export const intentDiscussedSize = (answer: string): number => discussedPart(ans
 
 /**
  * The most a discussion's answer may take once quoted for the next request to be told it: the room
- * every stage's budget keeps (GEN-03, GEN-19). The largest creation, 18,559 characters when set,
- * reaches about 19,830 with it, within its 20,000; the largest edit, 20,212, about 21,480. Repairs
- * aren't told it: they work from the failed answer, already made with it. The
+ * every stage's budget keeps (GEN-03, GEN-19). With it, the largest creation measured 19,856
+ * characters, within its 20,000, and the largest edit 21,509, within 22,000; the entry plan's budget
+ * is checked on each call, with the entries. Repairs of a tool aren't told it: they work from the
+ * failed answer, already made with it. The
  * discuss stage is asked for about 120 words, so an answer nearly always fits; one quoted longer
  * is told to no stage, and the request is read on its own words.
  */
@@ -754,7 +759,8 @@ export function assembleAcceptancePrompt(input: {
 
 /**
  * The discuss stage's budget (GEN-03, GEN-19): its fixture, a question of a few sentences about a
- * tool with two lists, measured 2,129 characters when set, about a tenth below it.
+ * tool with two lists, measured 2,129 characters when set, about a tenth below it, and 2,324 once
+ * it also answered questions of fact (the owner's choice, 2026-11-12).
  */
 export const DISCUSS_PROMPT_BUDGET = 2_350;
 

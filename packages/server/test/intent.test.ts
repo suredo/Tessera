@@ -560,5 +560,6 @@ describe("a question or an idea is discussed, never built (GEN-19)", () => {
     const { system } = assembleIntentPrompt({ request: "x", open: SHOPPING });
     expect(system).toContain("- discuss: a question or idea about a tool");
     expect(system).toContain('("can you make it blue?") is that change');
+    expect(system).toContain(`or a question of fact ("what was Brazil's GDP?")`);
   });
 });
