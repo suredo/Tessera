@@ -7,7 +7,7 @@ implements: [SBX-06, SBX-07, RUN-07, VER-01]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T05:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T06:30:00Z }
 ---
 
 # Purpose
@@ -29,7 +29,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 - **No navigation** (`SBX-07`):
   - links whose address isn't `#` or empty;
   - form actions, meta refresh and `ping`;
-  - the page's `location`, `history` and `navigation`, `window.open` and a bare `open`. A name refused as a global is refused only where it means the global: a variable the tool declares, such as a calculator's `history` of past results, is its own. After a dot, `location`, `history` and `navigation` are refused on the page's objects and on values the check can't tell apart from them, such as a destructured parameter; on the tool's own data (`r.data.history`) they are plain names (L-99). The other forbidden names, such as `prototype`, `write` or `ownerDocument`, are refused on any object;
+  - the page's `location`, `history` and `navigation`, `window.open` and a bare `open`. A name refused as a global is refused only where it means the global: a variable the tool declares, such as a calculator's `history` of past results, is its own. After a dot, `history` is refused on the page's objects and on values the check can't tell apart from them, such as a destructured parameter; on the tool's own data (`r.data.history`) it is a plain name (L-99), since history only moves through pages already visited. `location` and `navigation`, which can reach an address the tool chooses, and the other forbidden names, such as `prototype`, `write` or `ownerDocument`, are refused on any object, since the tracking can lose the page's objects (the known gaps below);
   - writing an address or a part of one (`href`, `host`, `hostname`, `protocol`, `pathname`, `action`, …), directly, in a pattern, or with `setAttribute`.
 - **No code or HTML made at run time.** The tool's policy forbids `eval` but allows inline scripts, so a script or handler built from text would run unread. The check therefore refuses:
   - `on…` attributes, in the HTML or set from JavaScript;
@@ -78,6 +78,7 @@ acorn, eslint-scope and parse5, pinned exactly. The [export and import](archives
 - **It is defence in depth, not a closure** (ADR 0009, amended). A deliberately obfuscated leak can pass. Known gaps, from Codex's review of pull request 168, recorded rather than patched one by one:
   - properties and methods counted as plain by their name (such as `value` or `data`) whose value is an element the tool stored there;
   - a function passed by name as a callback, or called inline, receiving the page's objects;
+  - `arguments` of a function called with the page's objects, which counts as built in;
   - `createElement` or `setAttribute` taken out of an object by destructuring, then called with `call`;
   - `Object` reached through an alias;
   - an attribute's value changed through its attribute node (`a.attributes.item(0).value = …`);

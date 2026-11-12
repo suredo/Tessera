@@ -76,8 +76,13 @@ const FORBIDDEN_NAMES = new Set([
   "parseHTMLUnsafe",
   "createContextualFragment",
 ]);
-/** Forbidden names that are forbidden only on the page's objects: elsewhere they are plain data. */
-const NAVIGATING_NAMES = new Set(["location", "history", "navigation"]);
+/**
+ * Forbidden names refused only on the page's objects, and values that may be them: elsewhere they
+ * are plain data. Only `history`, which moves through pages already visited and can't reach an
+ * address the tool chooses; `location` and `navigation` can, so they stay refused on any object,
+ * since the tracking can lose the page's objects (the check's known gaps).
+ */
+const NAVIGATING_NAMES = new Set(["history"]);
 /** Names that navigate when written: an address or a part of one. */
 const ADDRESS_NAMES = new Set([
   "href",
@@ -446,6 +451,13 @@ class Bindings {
   /** True when names can't be resolved, so each name counts as one across the whole script. */
   readonly byName: boolean;
   private readonly keys = new Map<AnyNode, Key>();
+  /**
+   * Names the script declares as properties of the global object: a top-level `var` or function,
+   * and a function declared in a block, which sloppy code also binds outside it (Annex B). Each is
+   * the global of its name, so `var location` is the page's location; but its own declaration
+   * hides an element of that id, so it is not taken for one.
+   */
+  readonly globalDeclared = new Set<string>();
 
   constructor(program: AnyNode) {
     let manager: ReturnType<typeof analyze> | undefined;
@@ -463,15 +475,32 @@ class Bindings {
     }
     this.byName = !manager;
     if (!manager) return;
+    const globals = new Set<object>();
+    for (const scope of manager.scopes) {
+      for (const variable of scope.variables) {
+        if (bindsGlobal(variable)) {
+          this.globalDeclared.add(variable.name);
+          globals.add(variable);
+        }
+      }
+    }
+    // What each identifier means: its variable, or the global of its name.
+    const keyOf = (
+      variable: (typeof manager.scopes)[number]["variables"][number] | null,
+      name: string,
+    ) =>
+      // A variable nothing declares, such as `arguments`, counts as the global of its name, as it
+      // did when names were followed: the same rules apply to it.
+      variable && variable.defs.length > 0 && !globals.has(variable) ? variable : `global:${name}`;
     for (const scope of manager.scopes) {
       for (const variable of scope.variables) {
         for (const identifier of variable.identifiers) {
-          this.keys.set(identifier as unknown as AnyNode, variable);
+          this.keys.set(identifier as unknown as AnyNode, keyOf(variable, variable.name));
         }
       }
       for (const reference of scope.references) {
         const identifier = reference.identifier as unknown as AnyNode;
-        this.keys.set(identifier, reference.resolved ?? `global:${identifier["name"] as string}`);
+        this.keys.set(identifier, keyOf(reference.resolved, identifier["name"] as string));
       }
     }
   }
@@ -577,7 +606,11 @@ class PageValues {
           return PAGE_GLOBALS.has(name) || (!this.declared.has(name) && !BUILT_INS.has(name));
         // A variable of the tool's own holds the page's objects only when marked; a global may be
         // the page, or an element by its id, unless it is built in.
-        return this.bindings.isGlobal(node) && (PAGE_GLOBALS.has(name) || !BUILT_INS.has(name));
+        return (
+          this.bindings.isGlobal(node) &&
+          (PAGE_GLOBALS.has(name) ||
+            (!BUILT_INS.has(name) && !this.bindings.globalDeclared.has(name)))
+        );
       }
       case "ThisExpression":
         return this.thisIsPage;
@@ -821,6 +854,26 @@ class PageValues {
       this.visit(child, see, ownBody);
     }
   }
+}
+
+/**
+ * Whether a variable is a property of the global object in a classic script: declared at the top
+ * level with `var` or as a function, or a function declared in a block (Annex B), which sloppy code
+ * also binds in the enclosing function or at the top level. A block's function inside a function
+ * only binds there, so taking it for a global can only make the check refuse more.
+ */
+function bindsGlobal(variable: {
+  scope: { type: string };
+  defs: readonly { type: string; parent?: unknown }[];
+}): boolean {
+  const top = variable.scope.type === "global";
+  return variable.defs.some(
+    (def) =>
+      (def.type === "FunctionName" && (top || variable.scope.type !== "function")) ||
+      (top &&
+        def.type === "Variable" &&
+        (def.parent as { kind?: string } | undefined)?.kind === "var"),
+  );
 }
 
 /** Visits every node of a tree. */
@@ -1152,8 +1205,7 @@ export function checkJs(
       }
       return;
     }
-    // The page's location, history and navigation navigate; the tool's own data may well have a
-    // history or a location of its own.
+    // The page's history moves through it; the tool's own data may well have a history of its own.
     if (FORBIDDEN_NAMES.has(name) && (!NAVIGATING_NAMES.has(name) || page.isPage(object))) {
       found(node, `The JavaScript uses .${name}, which a tool can't use.`);
       return;

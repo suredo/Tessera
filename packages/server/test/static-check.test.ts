@@ -575,14 +575,16 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
     expect(checkJs(calculator.repaired)).toEqual([]);
   });
 
-  it("L-99: a tool's own variable or data named history, location or navigation is its own", () => {
+  it("L-99: a tool's own variable named history, location or navigation, or its data's history, is its own", () => {
     for (const js of [
       "let history = []; history.push(1); history.length;",
-      "const saved = { location: 'Lisbon' }; saved.location.toUpperCase();",
       "async function f() { const r = await tessera.call('data.read', {}); return r.data.history; }",
       "const { history } = { history: [] }; history.slice();",
       "function show(navigation) { return navigation.steps; }\nshow({ steps: [] });",
       "const open = () => 1; open();",
+      // A function's own var is its own; a top-level var hides any element of its id.
+      "function f() { var history = []; return history.length; }\nf();",
+      "var saved = [];\nconst i = 0;\nsaved[i];",
     ]) {
       expect(checkJs(js), js).toEqual([]);
     }
@@ -599,10 +601,21 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
       "const d = document; const again = d; again.location;",
       "function go(w) { return w.history; }\ngo(window);",
       "const { history } = window;",
+      // location and navigation can reach an address the tool chooses: refused on any object,
+      // since the tracking can lose the page's objects.
+      "const saved = { location: 'Lisbon' }; saved.location.toUpperCase();",
+      "const steps = { navigation: [] }; steps.navigation.length;",
       "function take({ location }) { return location; }",
       "{ const history = []; history.push(1); }\nhistory.back();",
       "open('https://example.com');",
       "const button = document.createElement('button'); button.ownerDocument;",
+      // A top-level var or function, and a block's function in sloppy code, are the global object's
+      // properties: `var location` is the page's location.
+      "var history = [];\nhistory.back();",
+      "var location;\nlocation = 'https://example.com';",
+      "function location() {}",
+      "{ function location() {} }",
+      "var document;\nconst key = 'x';\ndocument.body[key];",
     ]) {
       expect(refusedJs(js), js).toBe(true);
     }

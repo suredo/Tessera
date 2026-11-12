@@ -4,7 +4,7 @@ title: "ADR 0009. Frames and navigation in generated tools"
 description: "Before generated tools run, ADR 0006's open limit is decided again: a tool steered by pasted data could leak a person's data through the names a blocked frame navigation makes the browser look up. The static check refuses frames, navigation, property names built at run time and code made at run time before any candidate or imported tool runs, as defence in depth: a closure, if needed, is at the platform."
 tags: [decisions, runtime, sandbox, security, generation]
 status: stable
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T05:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T06:30:00Z }
 ---
 # ADR 0009. Frames and navigation in generated tools
 
@@ -56,7 +56,7 @@ The value tracking followed names across the whole script, so shadowing could on
 The owner chose on 2026-11-12 to follow each name to the variable it refers to, with a proven scope analyser (`eslint-scope`) rather than one written here:
 
 - A variable that holds the page's objects is followed through scopes, closures, hoisting and calls; a different variable of the same name is the tool's own. A global the browser doesn't build in still counts as the page, since an element with an `id` is a global of that name, so a name declared in one scope and used undeclared in another is now refused rather than missed.
-- A forbidden global is refused where it means the global; the tool's own variable of that name is its own. `location`, `history` and `navigation` after a dot are refused on the page's objects and on values that may be them, not on the tool's own data.
+- A forbidden global is refused where it means the global; the tool's own variable of that name is its own. A top-level `var` or function, and a function declared in a block, are the global object's properties in a classic script, so they count as the global of their name: `var location` is the page's location. `history` after a dot is refused on the page's objects and on values that may be them, not on the tool's own data, since it only moves through pages already visited; `location` and `navigation`, which can reach an address the tool chooses, stay refused on any object, because the tracking can lose the page's objects.
 - A script that uses `with` or `eval`, whose names can't be read from the code, falls back to following each name through the whole script, as before.
 - The finding says where a borrowed element started, so a repair can see the real cause.
 
