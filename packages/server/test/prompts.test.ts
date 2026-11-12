@@ -24,6 +24,7 @@ import {
   partText,
   partVersion,
   PROMPT_BUDGETS,
+  DISCUSSED_MAX_QUOTED,
   PROMPT_PARTS,
   quoteTag,
   type PromptInput,
@@ -506,7 +507,13 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(names(repair.parts)).toContain("chart");
   });
 
-  it("GEN-03: each stage's fixture prompt stays within its budget", () => {
+  // GEN-19: and with a discussion's answer at its longest once quoted, which every shape keeps room for.
+  const LONGEST = "x".repeat(DISCUSSED_MAX_QUOTED - 2);
+  it.each([
+    ["", {}],
+    [", following a discussion", { discussed: LONGEST }],
+  ] as const)("GEN-03: each stage's fixture prompt stays within its budget%s", (_, told) => {
+    expect(JSON.stringify(LONGEST)).toHaveLength(DISCUSSED_MAX_QUOTED);
     const sizes = {
       // A creation that fits a profile, with its language: the largest creation shape (VER-03).
       create: assemblePrompt({
@@ -514,11 +521,13 @@ describe("assembling a stage's prompt (GEN-03)", () => {
         request: "I need a shopping list I can tick off at the store.",
         intent: intent({ kind: "create", profile: "item-list" }),
         uiMode: "standard",
+        ...told,
       }).size,
       edit: assemblePrompt({
         stage: "edit",
         request: "Add a quantity next to each item, and sort them by name",
         uiMode: "standard",
+        ...told,
         source: shoppingList,
         // A tool that fits a profile carries its part too (VER-03).
         intent: intent({ profile: "item-list" }),
@@ -527,6 +536,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
         stage: "repair",
         request: "Add a quantity next to each item, and sort them by name",
         uiMode: "standard",
+        ...told,
         source: shoppingList,
         failure: "static",
         diagnostics: [
@@ -551,6 +561,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
           request: "I need a shopping list I can tick off at the store.",
           intent: intent({ kind: "create", profile, drawsCharts }),
           uiMode: "standard",
+          ...told,
         }).size;
         expect(create, `create with ${shape} is ${create} characters`).toBeLessThanOrEqual(
           PROMPT_BUDGETS.create,
@@ -559,6 +570,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
           stage: "edit",
           request: "Add a quantity next to each item, and sort them by name",
           uiMode: "standard",
+          ...told,
           source: shoppingList,
           intent: intent({ profile, drawsCharts }),
         }).size;
@@ -575,6 +587,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
         "I need a shopping list I can tick off at the store, with milk, eggs and bread on it.",
       intent: intent({ kind: "create", profile: "item-list" }),
       uiMode: "standard",
+      ...told,
       failure: "schema-shape",
       attempt: {
         outcome: "tool",

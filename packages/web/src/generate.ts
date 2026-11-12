@@ -101,6 +101,8 @@ export type RequestOutcome = {
   dataChanged?: boolean;
   reloadData?: boolean;
   dataOffer?: Extract<GenerateReply, { kind: "data_confirmation" }> & { interfaceMessage?: string };
+  /** The token of a discussion's answer, for the next request to follow it (GEN-19). */
+  discussion?: string;
 };
 
 /** Keep verified interface facts when later entries are refused, cancelled or uncertain. */
@@ -291,6 +293,8 @@ export async function carryOut(
   onInterfaceApplied?: (workspaceId: string) => Promise<void>,
   control?: RequestControl,
   proposal?: WaitingProposal,
+  /** The token of the discussion this request follows, so "do that" builds it (GEN-19). */
+  discussion?: string,
 ): Promise<RequestOutcome> {
   const stopped = (): RequestOutcome => ({ message: t("request.stopped") });
   const reviewed = (outcome: RequestOutcome): RequestOutcome =>
@@ -319,6 +323,7 @@ export async function carryOut(
         ...(workspaceId ? { workspaceId } : {}),
         ...(controlToken ? { controlToken } : {}),
         ...(proposal && workspaceId ? { proposal: proposal.token } : {}),
+        ...(discussion ? { discussion } : {}),
       }),
     );
   } catch (error) {
@@ -547,7 +552,7 @@ export async function carryOut(
           return { message: "", savedToolId: reply.savedToolId };
         // A question or an idea, answered in words: nothing was built or changed (GEN-19).
         case "discussion":
-          return { message: reply.answer };
+          return { message: reply.answer, discussion: reply.token };
         case "failed":
           // A failed reply applied nothing; after Cancel it is the stop the person asked for, not
           // something that went wrong (GEN-08, GEN-12; the M2 live run's J6).

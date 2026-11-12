@@ -46,6 +46,11 @@ import { checkStageTimeLimits, isTimerLimit, type StageTimeLimits } from "./time
 const REQUEST_LIMIT_BYTES = 16 * 1024;
 const FAILED = "Tessera couldn't carry out that request. Nothing was changed.";
 const MAX_PENDING = 100;
+/**
+ * How long a discussion's answer is kept for the request that follows it (GEN-19): the person
+ * reads it and thinks before asking for the change, so it outlives its own request.
+ */
+export const DISCUSSION_KEPT_MS = 30 * 60_000;
 
 export type GenerationOptions = {
   store: Store;
@@ -79,6 +84,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
   // A big tool's features still to come (GEN-17), for after the version before them activates.
   const waitingFollowUps = new Map<string, { context: SmokeRepairContext; expires: number }>();
   const offers = new Map<string, { offer: DataOffer; expires: number }>();
+  // Each discussion's answer, for the request that follows it in the same workspace, or with none
+  // open (GEN-19). It grants nothing: it is only told to the next request's stages, as quoted data.
+  const discussions = new Map<
+    string,
+    { answer: string; workspaceId: string | null; expires: number }
+  >();
   const activations = new Map<
     string,
     Omit<ActivationRequest, "token"> & {
@@ -96,7 +107,24 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     offers.delete(token);
     activations.delete(token);
   });
-  const grant = (reply: GenerationResult, expires: number, token: string): GenerateReply => {
+  const grant = (
+    reply: GenerationResult,
+    expires: number,
+    token: string,
+    workspaceId: string | null,
+  ): GenerateReply => {
+    if (reply.kind === "discussion") {
+      for (const [id, entry] of discussions)
+        if (entry.expires <= Date.now()) discussions.delete(id);
+      if (discussions.size >= MAX_PENDING) discussions.delete(discussions.keys().next().value!);
+      const named = randomUUID();
+      discussions.set(named, {
+        answer: reply.answer,
+        workspaceId,
+        expires: Date.now() + DISCUSSION_KEPT_MS,
+      });
+      return { ...reply, token: named };
+    }
     if (reply.kind !== "candidate") return reply;
     for (const [token, entry] of activations)
       if (entry.expires <= Date.now()) activations.delete(token);
@@ -168,6 +196,14 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
     const entry = input.proposal ? offers.get(input.proposal) : undefined;
     return entry && entry.expires > Date.now() && entry.offer.workspaceId === input.workspaceId
       ? entry.offer.plan.summary
+      : undefined;
+  };
+  // The answer a request names as the discussion it follows, when the server still holds it for
+  // the same workspace, or for none open: only then is the request built with it (GEN-19).
+  const followedDiscussion = (input: { discussion?: string; workspaceId?: string }) => {
+    const entry = input.discussion ? discussions.get(input.discussion) : undefined;
+    return entry && entry.expires > Date.now() && entry.workspaceId === (input.workspaceId ?? null)
+      ? entry.answer
       : undefined;
   };
   const available = (context: SmokeRepairContext) => {
@@ -336,6 +372,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   stageLimits,
                   options.acceptanceChecks === true,
                   waitingProposal(input),
+                  followedDiscussion(input),
                 ),
               signal,
             );
@@ -530,7 +567,7 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                 message: "The request was stopped.",
                 findings: [],
               }
-            : grant(ended.value, expires, nextToken);
+            : grant(ended.value, expires, nextToken, input.workspaceId ?? null);
         return answer(reply);
       }
       return answer({
