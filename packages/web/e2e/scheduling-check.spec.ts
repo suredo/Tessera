@@ -257,3 +257,15 @@ test("VER-03: a planner that drops the other tasks' sessions when a rule is adde
     /expected every task that had a session still in one or more after adding the rule; observed none for "Algebra", "Geometry", of 3 sessions\.$/,
   );
 });
+
+test("VER-05, L-28: the check holds a planner to no rule of the person's: it passes the same with none, with Fridays ruled out, with Fridays allowed again and with most weekdays ruled out, and keeps them", async ({
+  page,
+}) => {
+  const tasks = PLANNED.tasks;
+  for (const weekdays of [[], [5], [], [1, 2, 3, 4, 5]]) {
+    const rules = weekdays.map((weekday) => ({ weekday }));
+    expect(await check(page, "none", { tasks, rules }), `rules on ${weekdays.join(",")}`).toEqual(
+      PASSED,
+    );
+  }
+});
