@@ -7,3 +7,4 @@ export {
   type StaticCheckResult,
   type StaticFinding,
 } from "./static-check.ts";
+export { STYLE_NOTES_LIMIT, styleNotes } from "./style-notes.ts";

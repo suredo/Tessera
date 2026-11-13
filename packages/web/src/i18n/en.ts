@@ -219,6 +219,8 @@ export const en = {
   "details.ended.discussion": "answered a question or an idea, building nothing",
   "details.ended.answered": "answered without changing anything: {answer}",
   "details.told": "Messages from the chat it was told: {count}",
+  "details.styleNotes":
+    "Where its look differs from Tessera's standard, kept where you asked for it:",
   "details.toldYou": "You",
   "details.toldTessera": "Tessera",
   "details.toldGone": "The chat no longer keeps {count} of them.",

@@ -1,3 +1,4 @@
+import { styleNotes } from "../checks/index.ts";
 import {
   HOST_ACTIONS,
   HOST_REQUEST_LIMIT_BYTES,
@@ -84,6 +85,7 @@ const run: {
       return {
         source: null,
         capabilities: [],
+        styleNotes: [],
         checks: [],
         profile: null,
         requests: [],
@@ -98,6 +100,8 @@ const run: {
     return {
       source: artifact ? artifact.code : null,
       capabilities: artifact ? artifact.capabilities : [],
+      // Where its look differs from the standard, read from its code, never stored (VER-06, A63).
+      styleNotes: artifact ? styleNotes(artifact.code, artifact.ui.mode) : [],
       checks: current?.checks ?? [],
       profile: current?.profile ?? null,
       requests: ledger.forWorkspace(workspaceId, DETAILS_REQUESTS),
