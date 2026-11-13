@@ -11,7 +11,9 @@ import {
 } from "@tessera/contracts";
 import { candidateFrom, generationRoutes } from "../src/generation/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
+import { addToChat } from "../src/chat/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
+import { RequestLedger } from "../src/ledger/index.ts";
 import { createScriptedProvider } from "../src/providers/index.ts";
 import { openDataFolder } from "../src/storage/index.ts";
 import { saveVersion } from "../src/versions/index.ts";
@@ -112,6 +114,33 @@ const rename = {
 };
 
 describe("answering a review in words (DATA-02, L-98)", () => {
+  it("A62, L-98: a reply to a waiting review is told no conversation and records none; an unknown review's reply is told it", async () => {
+    const f = await fixture(rename, undefined, [
+      { ...intent, kind: "approve_proposal" },
+      { ...intent, kind: "clarify" },
+    ]);
+    addToChat(f.folder, f.id, [
+      { from: "person", text: "Rename the first one" },
+      { from: "tessera", text: "Which name?" },
+    ]);
+    const offer = await f.ask();
+    if (offer.kind !== "data_confirmation") throw new Error("Expected review");
+    const ledger = new RequestLedger(f.folder);
+    expect(ledger.forWorkspace(f.id)[0]).toMatchObject({ told: { numbers: [1, 2] } });
+    await f.post(GENERATE_ROUTE, {
+      workspaceId: f.id,
+      request: "I approve",
+      proposal: offer.token,
+    });
+    expect(ledger.forWorkspace(f.id)[0]).toMatchObject({ outcome: "proposal_answer", told: null });
+    await f.post(GENERATE_ROUTE, {
+      workspaceId: f.id,
+      request: "yes",
+      proposal: "00000000-0000-4000-8000-000000000000",
+    });
+    expect(ledger.forWorkspace(f.id)[0]).toMatchObject({ told: { numbers: [1, 2] } });
+  });
+
   it("L-98: a request that approves the waiting changes is answered with their token, and nothing is applied until confirmed", async () => {
     const f = await fixture(rename, undefined, [{ ...intent, kind: "approve_proposal" }]);
     const offer = await f.ask();

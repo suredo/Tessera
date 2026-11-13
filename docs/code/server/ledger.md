@@ -7,7 +7,7 @@ implements: [OBS-01, GEN-10]
 tests: [../../../packages/server/test/ledger.test.ts]
 tags: [code, server, ledger, observability]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T00:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T01:30:00Z }
 ---
 
 # Purpose
@@ -22,7 +22,7 @@ Keeps what the host learns from each request instead of throwing it away (`OBS-0
 # Invariants
 
 - **Unknown usage stays unknown** (`CLI-04`): tokens and time are stored as the provider gave them, `NULL` when it didn't know, never 0.
-- **What a request was told of the conversation before it is kept as where it is kept** (A62): its subject, a workspace's ID or null for the empty screen's chat, and the chat messages' numbers, in `told` (migration `0016-request-told.sql`), written by `told` as the request's job starts; never the words, which the details view reads from the chat while it keeps them. NULL for a request told nothing, or run before this.
+- **What a request was told of the conversation before it is kept as where it is kept** (A62): its subject, a workspace's ID or null for the empty screen's chat, and the chat messages' numbers, in `told` (migration `0016-request-told.sql`), written by `told` as the request's job starts, only for what it is actually told, so not while a review waits; a mixed request's entry part, planned later as its own request, records the conversation the request it continues was told, as kept then. Never the words, which the details view reads from the chat while it keeps them. NULL for a request told nothing, or run before this.
 - **What the person asked isn't kept,** only the prompt's and the instructions' sizes in characters and the prompt parts with their versions (`ENG-16`).
 - **A call keeps the code it answered with** (`GEN-10`), so an answer the host's checks refused can still be read in the details view: a created tool's or a replaced edit's HTML, CSS and JavaScript, or a style edit's CSS (`answerCode`, migration `0013-call-code.sql`). Only the code: never the request, nor the entries an answer starts a tool with. An answer refused for its shape keeps its code too: the provider's schema failure carries the answer unchecked (`ProviderError.answer`), and the call still fails. A call with no code, such as intent or a data plan, keeps none, and so does one whose code is over `CALL_CODE_LIMIT` (256 KiB, in UTF-8 bytes as stored, `keptCode`), rather than a part of it. It goes with its request, as the rest of the call does.
 - **A failure keeps its reasons** (`GEN-10`), even when the request ends well: a model failure keeps its kind, its plain message and what the provider itself said; a crash, an error that isn't a model failure, is kept apart as `crashed`; a repair call keeps the host's findings it was asked to fix, from the stage call's diagnostics, so a static or smoke check that a repair then satisfied is still on record; and the request keeps the reply's message and its check findings. A mixed request's are its entry part's, which can fail after the interface part is done, with an outcome such as `mixed_data:failed`.

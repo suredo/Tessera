@@ -29,6 +29,7 @@ import { ProviderError, RoutesError, type Provider, type Routes } from "../provi
 import { activationRoutes, getWorkspace, type Store } from "../workspaces/index.ts";
 import type { GenerationResult } from "./result.ts";
 import { conversationFor } from "./conversation.ts";
+import type { LedgerTold } from "@tessera/contracts";
 import { generate } from "./pipeline.ts";
 import { generateEdit } from "./edit-pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
@@ -259,10 +260,16 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
         mode === "smoke" ? "repair" : mode === "data" ? "data" : "generate",
         input.workspaceId,
       );
-      // The conversation a request is told, recorded with it as where it is kept (A62).
-      const told = (workspaceId: string | null, request: string) => {
+      // The conversation a request is told, recorded with it as where it is kept (A62): only what
+      // it is actually told, so not while a review waits, whose summary takes its room.
+      let toldNow: LedgerTold | undefined;
+      const told = (workspaceId: string | null, request: string, reviewWaits: boolean) => {
+        if (reviewWaits) return undefined;
         const conversation = conversationFor(options.store, workspaceId, request);
-        if (conversation) ledger.told(recorded, conversation.told);
+        if (conversation) {
+          toldNow = conversation.told;
+          ledger.told(recorded, conversation.told);
+        }
         return conversation?.quoted;
       };
       const answer = (value: unknown) => {
@@ -321,6 +328,8 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
             : jobSignal;
           if (control) controls.check(control);
           if ("request" in input) {
+            // The entry changes waiting for review this request may answer, resolved once (L-98).
+            const proposal = waitingProposal(input);
             expires = Date.now() + limit;
             if (control) control.expires = expires;
             return withinRequestDeadline(
@@ -335,17 +344,24 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   stopped,
                   (context) => {
                     controls.bind(control, nextToken);
-                    remember(nextToken, context, expires, control);
+                    // A mixed request's entry part, planned later as its own request, keeps
+                    // where its conversation came from, for its own ledger row (A62).
+                    remember(
+                      nextToken,
+                      context.conversation && toldNow ? { ...context, told: toldNow } : context,
+                      expires,
+                      control,
+                    );
                   },
                   check,
                   (offer) => offerData(offer, expires, control),
                   twoPass,
                   stageLimits,
                   options.acceptanceChecks === true,
-                  waitingProposal(input),
+                  proposal,
                   // The conversation before it in its subject, read as its job starts, once the
                   // turns before it are kept (A62), and what it was made of, for the ledger.
-                  told(input.workspaceId ?? null, input.request),
+                  told(input.workspaceId ?? null, input.request, proposal !== undefined),
                 ),
               signal,
             );
@@ -444,6 +460,9 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
               (bounded, stopped, check) => {
                 if (getWorkspace(options.store, input.workspaceId)?.currentVersion !== input.hash)
                   return Promise.resolve<GenerateReply>({ kind: "answer", answer: "data_stale" });
+                // Told the conversation the request it continues was told, recorded as it was then.
+                if (entry.context.conversation && entry.context.told)
+                  ledger.told(recorded, entry.context.told);
                 return changeData(
                   options.store,
                   bounded,
