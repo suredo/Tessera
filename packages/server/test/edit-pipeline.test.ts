@@ -489,10 +489,16 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
   });
 });
 
-describe("an edit that follows a discussion is told its answer (GEN-19)", () => {
+describe("an edit is told the conversation before it (GEN-19, A62)", () => {
   const ANSWER = "A quantity beside each item would work, with a small number field.";
+  const CONVERSATION = JSON.stringify({
+    last: [
+      { from: "person", text: "Would quantities help?" },
+      { from: "tessera", text: ANSWER },
+    ],
+  });
   const told = (prompt: string) =>
-    /--- earlier answer ---\n(.*)\n--- end of the earlier answer ---/.exec(prompt)?.[1];
+    /--- conversation ---\n(.*)\n--- end of the conversation ---/.exec(prompt)?.[1];
   const followed = async (request: string, decided: Intent) => {
     const { store, workspace } = await setup();
     const calls: { stage: string; prompt: string }[] = [];
@@ -510,7 +516,6 @@ describe("an edit that follows a discussion is told its answer (GEN-19)", () => 
       {
         request,
         workspaceId: workspace.id,
-        discussion: "00000000-0000-4000-8000-0000000000dd",
       },
       undefined,
       undefined,
@@ -520,7 +525,7 @@ describe("an edit that follows a discussion is told its answer (GEN-19)", () => 
       undefined,
       false,
       undefined,
-      ANSWER,
+      CONVERSATION,
     );
     return { result, calls };
   };
@@ -529,7 +534,7 @@ describe("an edit that follows a discussion is told its answer (GEN-19)", () => 
     const { result, calls } = await followed("Do that", intent());
     expect(result).toMatchObject({ kind: "candidate", operation: "edit" });
     expect(calls.map((call) => call.stage)).toEqual(["intent", "edit"]);
-    for (const call of calls) expect(JSON.parse(told(call.prompt)!)).toBe(ANSWER);
+    for (const call of calls) expect(told(call.prompt)).toBe(CONVERSATION);
   });
 
   it("GEN-19: a mixed request's edit half is told it too; its entries wait for the new version", async () => {
@@ -539,14 +544,20 @@ describe("an edit that follows a discussion is told its answer (GEN-19)", () => 
     );
     expect(result).toMatchObject({ kind: "candidate", operation: "edit", dataPending: true });
     expect(calls.map((call) => call.stage)).toEqual(["intent", "edit"]);
-    expect(JSON.parse(told(calls[1]!.prompt)!)).toBe(ANSWER);
+    expect(told(calls[1]!.prompt)).toBe(CONVERSATION);
   });
 });
 
-describe("an entry change that follows a discussion is told its answer (GEN-19)", () => {
+describe("an entry change is told the conversation before it (GEN-19, A62)", () => {
   const ANSWER = "Brazil's GDP was about US$2.2 trillion in 2024, from memory, not looked up.";
+  const CONVERSATION = JSON.stringify({
+    last: [
+      { from: "person", text: "What was Brazil's GDP?" },
+      { from: "tessera", text: ANSWER },
+    ],
+  });
   const told = (prompt: string) =>
-    /--- earlier answer ---\n(.*)\n--- end of the earlier answer ---/.exec(prompt)?.[1];
+    /--- conversation ---\n(.*)\n--- end of the conversation ---/.exec(prompt)?.[1];
 
   it("GEN-19: 'add it' as an entry change tells the intent and the entry plan the answer, quoted", async () => {
     const { store, workspace } = await setup();
@@ -573,7 +584,6 @@ describe("an entry change that follows a discussion is told its answer (GEN-19)"
       {
         request: "Add it to the list",
         workspaceId: workspace.id,
-        discussion: "00000000-0000-4000-8000-0000000000de",
       },
       undefined,
       undefined,
@@ -583,11 +593,11 @@ describe("an entry change that follows a discussion is told its answer (GEN-19)"
       undefined,
       false,
       undefined,
-      ANSWER,
+      CONVERSATION,
     );
     expect(result).toMatchObject({ kind: "data_changed", count: 1 });
     expect(calls.map((call) => call.stage)).toEqual(["intent", "data"]);
-    for (const call of calls) expect(JSON.parse(told(call.prompt)!)).toBe(ANSWER);
+    for (const call of calls) expect(told(call.prompt)).toBe(CONVERSATION);
   });
 
   it("GEN-19: a mixed request keeps the answer for its entry part, planned once its version is active", async () => {
@@ -606,7 +616,6 @@ describe("an entry change that follows a discussion is told its answer (GEN-19)"
       {
         request: "Show the GDP and add Brazil",
         workspaceId: workspace.id,
-        discussion: "00000000-0000-4000-8000-0000000000df",
       },
       undefined,
       (context) => kept.push(context),
@@ -616,9 +625,9 @@ describe("an entry change that follows a discussion is told its answer (GEN-19)"
       undefined,
       false,
       undefined,
-      ANSWER,
+      CONVERSATION,
     );
     expect(kept).toHaveLength(1);
-    expect(kept[0]).toMatchObject({ dataPart: "add Brazil", discussed: ANSWER });
+    expect(kept[0]).toMatchObject({ dataPart: "add Brazil", conversation: CONVERSATION });
   });
 });

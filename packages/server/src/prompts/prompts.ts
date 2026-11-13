@@ -67,8 +67,8 @@ export const PROMPT_PARTS = [
   "intent-no-saved",
   "intent-retry",
   "intent-proposal",
-  "intent-discussed",
-  "discussed",
+  "intent-conversation",
+  "conversation",
   "discuss",
   "discuss-request",
   "data-plan",
@@ -253,11 +253,12 @@ export type PromptInput = {
    */
   acceptance?: AcceptanceChecks;
   /**
-   * The answer of the discussion this request follows (GEN-19), quoted as data after the request,
-   * so a request such as "do that" is built as it says; creation and edits only, never a repair.
-   * Only one `discussedFits`.
+   * The conversation before the request in its subject (A62): the last exchange and earlier
+   * messages that share its words, as `requestConversation` quotes them, within
+   * `CONVERSATION_MAX_QUOTED`. Told after the request, so "do that" or "remove what I just listed"
+   * is carried out as it says; creation and edits only, never a repair.
    */
-  discussed?: string;
+  conversation?: string;
 };
 
 export type AssembledPrompt = {
@@ -389,11 +390,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // The language the intent stage found, given as a fact, so the tool's words never depend on the
   // model guessing it (GEN-15).
   if (input.intent) addRequest("language", { language: input.intent.language });
-  // The answer this request follows, a model's words: quoted as JSON, data and never instructions
-  // (SEC-02, GEN-19). Not for a repair, which works from the failed answer it quotes, already made
-  // with it.
-  if (input.discussed && stage !== "repair")
-    addRequest("discussed", { answer: JSON.stringify(input.discussed) });
+  // The conversation before the request, the person's words and a model's: already quoted as JSON,
+  // data and never instructions (SEC-02, A62). Not for a repair, which works from the failed answer
+  // it quotes, already made with it.
+  if (input.conversation && stage !== "repair")
+    addRequest("conversation", { conversation: input.conversation });
   // The core pass's scope, as data: what to build now and what to leave for later (GEN-17).
   if (input.core && creating) {
     addRequest("core", {
@@ -484,8 +485,8 @@ export function assembleDataPrompt(input: {
   revisions: Record<string, Record<string, number>>;
   diagnostics?: readonly string[];
   attempt?: unknown;
-  /** The answer of the discussion the request follows (GEN-19); only one `discussedFits`. */
-  discussed?: string;
+  /** The conversation before the request, as `requestConversation` quotes it (A62). */
+  conversation?: string;
 }): AssembledPrompt {
   const parts: string[] = [];
   const use = (part: PromptPart, values?: Record<string, string>) => {
@@ -500,7 +501,7 @@ export function assembleDataPrompt(input: {
     use("request", { request: input.request }),
     use("language", { language: input.language }),
     // The answer this request follows, quoted as data, so "add it" has its figures (GEN-19).
-    ...(input.discussed ? [use("discussed", { answer: JSON.stringify(input.discussed) })] : []),
+    ...(input.conversation ? [use("conversation", { conversation: input.conversation })] : []),
     use("data-context", {
       context: JSON.stringify({
         schema: input.schema,
@@ -543,8 +544,8 @@ export function assembleIntentPrompt(input: {
   saved?: readonly SavedToolEntry[];
   /** What the entry changes waiting for review do; none wait when left out. */
   proposal?: string;
-  /** The answer of the discussion the request follows (GEN-19); told only while no review waits. */
-  discussed?: string;
+  /** The conversation before the request, as `requestConversation` quotes it (A62); told only while no review waits. */
+  conversation?: string;
   retry?: boolean;
 }): AssembledPrompt {
   const used: string[] = [];
@@ -572,8 +573,8 @@ export function assembleIntentPrompt(input: {
   // So is a discussion's answer, told only when no review waits (GEN-19).
   const context = input.proposal
     ? `${open}${proposalPart(input.proposal, use)}`
-    : input.discussed
-      ? `${open}${discussedPart(input.discussed, use)}`
+    : input.conversation
+      ? `${open}${conversationPart(input.conversation, use)}`
       : open;
   let prompt = use("intent-request", { open: context, saved, request: input.request });
   if (input.retry) prompt += `\n\n${use("intent-retry")}`;
@@ -614,30 +615,27 @@ const proposalPart = (
  */
 export const intentProposalSize = (proposal: string): number => proposalPart(proposal).length;
 
-/** A discussion's answer as the intent prompt tells it, after the open tool (GEN-19). */
-const discussedPart = (
-  answer: string,
+/** The conversation before the request as the intent prompt tells it, after the open tool (A62). */
+const conversationPart = (
+  conversation: string,
   use: (part: PromptPart, values?: Record<string, string>) => string = fillPart,
-) => `\n\n${use("intent-discussed", { answer: JSON.stringify(answer) })}`;
+) => `\n\n${use("intent-conversation", { conversation })}`;
 
 /**
- * How many characters a discussion's answer adds to the intent prompt, quoted as it is told, so
- * the saved-tools catalogue can give up as much and the prompt keep its budget (GEN-03, GEN-19).
+ * How many characters the conversation adds to the intent prompt, as it is told, so the
+ * saved-tools catalogue can give up as much and the prompt keep its budget (GEN-03, A62).
  */
-export const intentDiscussedSize = (answer: string): number => discussedPart(answer).length;
+export const intentConversationSize = (conversation: string): number =>
+  conversationPart(conversation).length;
 
 /**
- * The most a discussion's answer may take once quoted for the next request to be told it: the room
- * every stage's budget keeps (GEN-03, GEN-19). With it, the largest creation measured 19,856
- * characters, within its 20,000, and the largest edit 21,509, within 22,000; the entry plan's budget
- * is checked on each call, with the entries. Repairs of a tool aren't told it: they work from the
- * failed answer, already made with it. The
- * discuss stage is asked for about 120 words, so an answer nearly always fits; one quoted longer
- * is told to no stage, and the request is read on its own words.
+ * The most the conversation before a request may take, quoted: the room every stage's budget keeps
+ * (GEN-03, A62). With it, the largest creation measured 19,909 characters, within its 20,000, and
+ * the largest edit 21,562, within 22,000; the entry plan's budget is checked on each call, with the
+ * entries. Repairs of a tool aren't told it: they work from the failed answer, already made with
+ * it.
  */
-export const DISCUSSED_MAX_QUOTED = 900;
-export const discussedFits = (answer: string): boolean =>
-  JSON.stringify(answer).length <= DISCUSSED_MAX_QUOTED;
+export const CONVERSATION_MAX_QUOTED = 900;
 
 /** A fixed part used as it is, such as the probe's: its text and its `name@version`. */
 export function fixedPart(part: PromptPart): { text: string; part: string } {

@@ -2,7 +2,7 @@ import type { AcceptanceChecks, GenerateRequest } from "@tessera/contracts";
 import type { GenerationResult } from "./result.ts";
 import { candidateMount } from "../host/index.ts";
 import { decideIntent, recordLists } from "../intent/index.ts";
-import { discussedFits, type OpenTool, type RepairClass } from "../prompts/index.ts";
+import type { OpenTool, RepairClass } from "../prompts/index.ts";
 import { ProviderError, type Provider, type Routes } from "../providers/index.ts";
 import { saveVersion, loadVersion } from "../versions/index.ts";
 import {
@@ -59,19 +59,16 @@ export async function generate(
    */
   proposal?: string,
   /**
-   * The answer of the discussion this request follows, when `input.discussion` names one the
-   * server still holds for this workspace (GEN-19). The intent, creation and edits are told it,
-   * quoted; not while a review waits, nor when it is too long to quote.
+   * The conversation before this request in its subject, as `requestConversation` quotes it (A62).
+   * The intent, creation, edits and entry changes are told it; not while a review waits, whose
+   * summary takes its room.
    */
-  discussion?: string,
+  told?: string,
 ): Promise<GenerationResult> {
   const baseline = input.workspaceId ? getWorkspace(store, input.workspaceId) : undefined;
   const open = openTool(store, input.workspaceId);
   const waiting = proposal && input.proposal ? proposal : undefined;
-  const discussed =
-    !waiting && discussion && input.discussion && discussedFits(discussion)
-      ? discussion
-      : undefined;
+  const conversation = waiting ? undefined : told;
   let decision;
   try {
     decision = await decideIntent(provider, routes, {
@@ -79,7 +76,7 @@ export async function generate(
       open,
       saved: recentSavedTools(store),
       ...(waiting ? { proposal: waiting } : {}),
-      ...(discussed ? { discussed } : {}),
+      ...(conversation ? { conversation } : {}),
       signal,
       timeLimitMs: limits.intent,
     });
@@ -132,7 +129,7 @@ export async function generate(
         beforeStore,
         undefined,
         limits,
-        discussed,
+        conversation,
       );
     case "data":
       return changeData(
@@ -147,7 +144,7 @@ export async function generate(
         offerData,
         undefined,
         limits,
-        discussed,
+        conversation,
       );
     case "mixed": {
       const repairUsage: Partial<Record<RepairClass, number>> = {};
@@ -163,13 +160,13 @@ export async function generate(
           remember?.({
             ...context,
             dataPart: decision.dataPart,
-            ...(discussed ? { discussed } : {}),
+            ...(conversation ? { conversation } : {}),
             reply: { ...context.reply, dataPending: true },
           }),
         beforeStore,
         repairUsage,
         limits,
-        discussed,
+        conversation,
       );
       if (edited.kind === "candidate") return { ...edited, dataPending: true };
       if (edited.kind !== "answer" || edited.answer !== "unchanged") return edited;
@@ -193,7 +190,7 @@ export async function generate(
           offerData,
           repairUsage,
           limits,
-          discussed,
+          conversation,
         ),
       };
     }
@@ -205,9 +202,7 @@ export async function generate(
   // the request by a separate stage before it is made (VER-09). The stage never blocks the tool:
   // with none, or an answer it can't use, the tool is made as it would be without them.
   let acceptance: AcceptanceChecks | undefined;
-  // Not for a request that follows a discussion: the stage sees only the request's words, and "do
-  // that" alone says nothing to check (GEN-19).
-  if (acceptanceChecks && !decision.intent.profile && !plan && !discussed) {
+  if (acceptanceChecks && !decision.intent.profile && !plan) {
     try {
       const written = await writeAcceptance(provider, routes, {
         request: decision.interfacePart,
@@ -228,7 +223,7 @@ export async function generate(
     repairUsage,
     ...(plan ? { core: plan } : {}),
     ...(acceptance ? { acceptance } : {}),
-    ...(discussed ? { discussed } : {}),
+    ...(conversation ? { conversation } : {}),
     timeLimits: limits,
   });
   if (created.kind === "cannot")

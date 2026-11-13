@@ -266,13 +266,12 @@ eval("1");`,
         message: "Which list?",
       });
       // A discussion's words are its message (GEN-19).
-      const discussed = ledger.start("generate", workspace.id);
-      ledger.finish(discussed, {
+      const conversation = ledger.start("generate", workspace.id);
+      ledger.finish(conversation, {
         kind: "discussion",
         answer: "About US$2.2 trillion in 2024, from what I know.",
-        token: "00000000-0000-4000-8000-000000000001",
       });
-      expect(ledger.request(discussed)).toMatchObject({
+      expect(ledger.request(conversation)).toMatchObject({
         outcome: "discussion",
         message: "About US$2.2 trillion in 2024, from what I know.",
       });

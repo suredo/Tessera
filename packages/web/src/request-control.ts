@@ -89,3 +89,26 @@ export class RequestControl {
     }
   }
 }
+
+/**
+ * Waits for `pending`, but no longer than `ms`, and not past `signal`'s abort; it never fails. For
+ * something a request would like done first but can go without, such as keeping the turn before
+ * it in the chat (A62).
+ */
+export function settleWithin(
+  pending: Promise<unknown>,
+  ms: number,
+  signal: AbortSignal,
+): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    if (signal.aborted) done();
+    else signal.addEventListener("abort", done, { once: true });
+    pending.then(done, done);
+  });
+}

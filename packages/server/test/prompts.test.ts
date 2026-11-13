@@ -24,7 +24,7 @@ import {
   partText,
   partVersion,
   PROMPT_BUDGETS,
-  DISCUSSED_MAX_QUOTED,
+  CONVERSATION_MAX_QUOTED,
   PROMPT_PARTS,
   quoteTag,
   type PromptInput,
@@ -507,13 +507,14 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(names(repair.parts)).toContain("chart");
   });
 
-  // GEN-19: and with a discussion's answer at its longest once quoted, which every shape keeps room for.
-  const LONGEST = "x".repeat(DISCUSSED_MAX_QUOTED - 2);
+  // A62: and with the conversation before the request at its longest, told already quoted, which
+  // every shape keeps room for.
+  const LONGEST = `{"last":[{"from":"person","text":"${"x".repeat(CONVERSATION_MAX_QUOTED - 38)}"}]}`;
   it.each([
     ["", {}],
-    [", following a discussion", { discussed: LONGEST }],
+    [", with the conversation before it", { conversation: LONGEST }],
   ] as const)("GEN-03: each stage's fixture prompt stays within its budget%s", (_, told) => {
-    expect(JSON.stringify(LONGEST)).toHaveLength(DISCUSSED_MAX_QUOTED);
+    expect(LONGEST).toHaveLength(CONVERSATION_MAX_QUOTED);
     const sizes = {
       // A creation that fits a profile, with its language: the largest creation shape (VER-03).
       create: assemblePrompt({

@@ -1,7 +1,7 @@
 import { intentSchema, type Artifact, type Intent } from "@tessera/contracts";
 import {
   assembleIntentPrompt,
-  intentDiscussedSize,
+  intentConversationSize,
   intentProposalSize,
   type OpenTool,
   type RecordList,
@@ -115,7 +115,7 @@ export type IntentInput = {
    * The answer of the discussion the request follows, so "do that" reads as what it describes
    * (GEN-19); told only while no review waits.
    */
-  discussed?: string;
+  conversation?: string;
   signal?: AbortSignal;
   /** How long the call may take; `INTENT_TIME_LIMIT_MS` unless configured (GEN-11). */
   timeLimitMs?: number;
@@ -137,11 +137,11 @@ export async function decideIntent(
   // While entry changes wait for review, the catalogue gives up the room their quoted summary
   // takes, so the prompt keeps its budget whatever the summary holds (GEN-03, L-98). Otherwise it
   // gives up the room a discussion's answer takes, when the request follows one (GEN-19).
-  const discussed = input.proposal ? undefined : input.discussed;
+  const conversation = input.proposal ? undefined : input.conversation;
   const told = input.proposal
     ? intentProposalSize(input.proposal)
-    : discussed
-      ? intentDiscussedSize(discussed)
+    : conversation
+      ? intentConversationSize(conversation)
       : 0;
   const saved = savedToolCatalogue(input.saved ?? [], Math.max(0, CATALOGUE_MAX_CHARACTERS - told));
   const listed = saved.map((tool) => tool.id);
@@ -151,7 +151,7 @@ export async function decideIntent(
       open: input.open,
       saved,
       ...(input.proposal ? { proposal: input.proposal } : {}),
-      ...(discussed ? { discussed } : {}),
+      ...(conversation ? { conversation } : {}),
       retry,
     });
     const result = await runStage(provider, routes, {

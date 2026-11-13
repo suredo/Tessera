@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { GenerateReply } from "@tessera/contracts";
-import { RequestControl } from "../src/request-control.ts";
+import { RequestControl, settleWithin } from "../src/request-control.ts";
 import { carryOut, confirmDataChoice, type RequestDeps } from "../src/generate.ts";
 import { HostError } from "../src/host-api.ts";
 import { en } from "../src/i18n/en.ts";
@@ -417,4 +417,41 @@ it("GEN-09: a request whose candidate fails its checks with no repair left lets 
   expect(fake.repairSmoke).toHaveBeenCalledTimes(1);
   await vi.waitFor(() => expect(calls).toContain("/api/generate/cancel"));
   expect(owner.stopped).toBe(false);
+});
+
+describe("waiting for the turn before a request to be kept (A62, GEN-16)", () => {
+  const never = new Promise<void>(() => undefined);
+
+  it("A62: goes on once the turn is kept, or failed to be", async () => {
+    const signal = new AbortController().signal;
+    await expect(settleWithin(Promise.resolve(), 60_000, signal)).resolves.toBeUndefined();
+    await expect(
+      settleWithin(Promise.reject(new Error("no")), 60_000, signal),
+    ).resolves.toBeUndefined();
+  });
+
+  it("A62: a turn that is never kept holds the request only so long", async () => {
+    vi.useFakeTimers();
+    try {
+      let settled = false;
+      const waiting = settleWithin(never, 3_000, new AbortController().signal).then(() => {
+        settled = true;
+      });
+      await vi.advanceTimersByTimeAsync(2_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      await waiting;
+      expect(settled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("GEN-16: Cancel ends the wait at once, before or during it", async () => {
+    const control = new RequestControl();
+    const waiting = settleWithin(never, 60_000, control.controller.signal);
+    control.controller.abort();
+    await expect(waiting).resolves.toBeUndefined();
+    await expect(settleWithin(never, 60_000, control.controller.signal)).resolves.toBeUndefined();
+  });
 });

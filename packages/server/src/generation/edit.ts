@@ -35,7 +35,7 @@ export type EditInput = {
   /** The configured stage limits; creation's constants unless given (GEN-11). */
   timeLimits?: Pick<StageTimeLimits, "edit" | "repair">;
   /** The answer of the discussion the request follows, which the edit is told (GEN-19). */
-  discussed?: string;
+  conversation?: string;
 };
 export type EditResult = (
   | { kind: "candidate"; artifact: Artifact; summary: string; leftOut?: string[] }
@@ -173,7 +173,7 @@ export async function editTool(
       uiMode: input.artifact.ui.mode,
       source: input.artifact.code,
       editArtifact: input.artifact,
-      ...(input.discussed ? { discussed: input.discussed } : {}),
+      ...(input.conversation ? { conversation: input.conversation } : {}),
       ...(repair && {
         failure: repair.failure,
         diagnostics: repair.diagnostics,
