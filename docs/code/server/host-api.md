@@ -7,7 +7,7 @@ implements: [CON-01, APP-09, UX-06]
 tests: [../../../packages/server/test/host-api.test.ts]
 tags: [code, server, api, host]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T19:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T21:30:00Z }
 ---
 
 # Purpose
@@ -28,7 +28,7 @@ Connects the host app's screens (#53) to the server's modules. Everything the ap
 - **Nothing of the server leaks.** An action the contract doesn't list, or arguments that don't fit it, get `invalid`. A module's own refusal, a plain error written for the person (such as "The workspace is in the trash; restore it first."), gets `refused` with its words. Anything else, such as a database error, which carries a code, gets `failed`, "Tessera couldn't do that. Nothing was changed.", with none of its words. A result that doesn't fit the contract is `failed` too.
 - **Refusals that are answers stay answers.** A restore or undo that is refused for a reason, such as stale data, comes back as its result with `ok: false`, its reason and plain message, as the modules give it, so the screen can say why.
 - **A mount shows only a workspace's current, readable version.** One that is missing, in the trash, without a tool or with a damaged version shows nothing (the runtime routes answer 404).
-- **The details give the code, its capabilities and the ledger** (`APP-09`, `UX-06`, `OBS-01`, `GEN-10`). `details.get` answers with the current tool's code (none without a tool), what it declares, the checks its current version passed and the profile of its behavior check, from the last entry of its history (`VER-08`), the workspace's newest 20 requests from the [call ledger](ledger.md), each with its calls, and the newest 20 requests that made no workspace. With no workspace (`null`) it gives only those; a workspace in the trash or missing is refused like any other action on it.
+- **The details give the code, its capabilities and the ledger** (`APP-09`, `UX-06`, `OBS-01`, `GEN-10`). `details.get` answers with the current tool's code (none without a tool), what it declares, the checks its current version passed and the profile of its behavior check, from the last entry of its history (`VER-08`), where its look differs from the UI standard (`styleNotes`, `VER-06`, A63), the workspace's newest 20 requests from the [call ledger](ledger.md), each with its calls, and the newest 20 requests that made no workspace. With no workspace (`null`) it gives only those; a workspace in the trash or missing is refused like any other action on it.
 - **The chat is the workspace's** (`APP-01`, `APP-03`). `chat.list` gives the workspace's kept messages, oldest first, and `chat.add` adds a turn, the person's request, Tessera's reply or both, as the [workspace chat](chat.md) keeps them. Both refuse a workspace in the trash. With `workspaceId: null` they read and add to the empty screen's chat, what was said with no tool open (A62).
 - **The route is behind the guard** (`SEC-03`): another site's page can't reach it.
 

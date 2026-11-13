@@ -1,13 +1,13 @@
 ---
 type: Code Module
 title: "Static check"
-description: "Every candidate's and imported tool's code, parsed before it runs: sandbox, bridge and host-clock checks (ADR 0009, VER-01); startup writes are the runtime's to refuse (A60)."
+description: "Every candidate's and imported tool's code, parsed before it runs: sandbox, bridge and host-clock checks (ADR 0009, VER-01); startup writes are the runtime's to refuse (A60); where a look differs from the UI standard is noted, never refused (VER-06, A63)."
 resource: ../../../packages/server/src/checks/
-implements: [SBX-06, SBX-07, RUN-07, VER-01]
-tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
+implements: [SBX-06, SBX-07, RUN-07, VER-01, VER-06, UX-04]
+tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts, ../../../packages/server/test/style-notes.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T07:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T21:30:00Z }
 ---
 
 # Purpose
@@ -63,6 +63,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
   - elements and attributes whose names are computed at run time.
 - **`this` is the page except in a class's methods and fields.** A computed key in a class, an ordinary function nested in a method, and an object's method all run with a `this` that can be the page, and are refused.
 - **The HTML is read in a body**, where the tool's HTML goes, so what the parser drops there (a `<frameset>`) makes no element and isn't reported.
+- **Where a tool's look differs from the UI standard is noted, never refused** (`VER-06`, `UX-04`, A63). `styleNotes` reads a standard-mode tool's CSS with `postcss` and notes, for each selector, a shadow, a gradient, a glass effect (`backdrop-filter`), a fixed or sticky position, a font other than `var(--ui-font)`, a font in the `font` shorthand (what follows its size), or a literal colour where a `--ui-*` variable would do, a hex value, a colour function or any CSS named colour, looked for in what is left once each `var()` is removed, so a token's fallback isn't the tool's own and `var(--ui-gap) solid red` is. A value that turns an effect off or resets it (`none`, `inherit`) is never noted. A few words each, each kind once per place, at most `STYLE_NOTES_LIMIT` (3) and then how many more. Custom properties are never noted, since overriding a `--ui-*` variable in `:root` is how a tool applies what the person asked for, such as blue buttons; custom mode and CSS that can't be read get none. The notes are worked out when needed, never stored.
 - **Imported tools are checked too.** An archive whose tool fails is refused whole, and nothing is imported ([export and import](archives.md)).
 - **Real tools pass.** The shopping-list fixture and every development sample pass: ordinary code (events, `textContent`, `items[i]`, `obj[key]`, `this` in a class, blob addresses for images) isn't refused.
 
@@ -92,6 +93,7 @@ acorn, eslint-scope and parse5, pinned exactly. The [export and import](archives
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `checkHtml`, `checkJs`, `staticCheck`, `StaticCheckResult` (type), `StaticFinding` (type)
+- `index.ts`: `checkHtml`, `checkJs`, `staticCheck`, `StaticCheckResult` (type), `StaticFinding` (type), `STYLE_NOTES_LIMIT`, `styleNotes`
 - `js-check.ts`: `JsFinding` (type), `checkJs`
 - `static-check.ts`: `StaticFinding` (type), `StaticCheckResult` (type), `staticCheck`, `checkHtml`, `checkJs`
+- `style-notes.ts`: `STYLE_NOTES_LIMIT`, `styleNotes`

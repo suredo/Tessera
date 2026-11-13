@@ -220,6 +220,7 @@ function Body({
                   list: details.capabilities.join(", ") || t("details.none"),
                 })}
               </p>
+              <StyleNotes notes={details.styleNotes} />
               {(["html", "css", "js"] as const).map((part) => (
                 <details key={part}>
                   <summary>{t(`details.source.${part}`)}</summary>
@@ -274,6 +275,24 @@ function Checks({ details }: { details: Details }) {
         ) : (
           <li>{t("details.check.noBehavior")}</li>
         )}
+      </ul>
+    </>
+  );
+}
+
+/**
+ * Where the current version's look differs from Tessera's UI standard (VER-06, A63): notes, not
+ * faults, since the standard is only the look for what the person didn't ask for. None, nothing.
+ */
+export function StyleNotes({ notes }: { notes: readonly string[] }) {
+  if (notes.length === 0) return null;
+  return (
+    <>
+      <p>{t("details.styleNotes")}</p>
+      <ul className="details-style-notes">
+        {notes.map((note) => (
+          <li key={note}>{note}</li>
+        ))}
       </ul>
     </>
   );

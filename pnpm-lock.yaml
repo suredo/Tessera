@@ -270,6 +270,9 @@ importers:
       parse5:
         specifier: 8.0.1
         version: 8.0.1
+      postcss:
+        specifier: 8.5.29
+        version: 8.5.29
       zod:
         specifier: 4.6.6
         version: 4.6.6

@@ -69,6 +69,7 @@ export const PROMPT_PARTS = [
   "intent-proposal",
   "intent-conversation",
   "conversation",
+  "style-notes",
   "discuss",
   "discuss-request",
   "data-plan",
@@ -259,6 +260,11 @@ export type PromptInput = {
    * is carried out as it says; creation and edits only, never a repair.
    */
   conversation?: string;
+  /**
+   * Where the tool's look now differs from the UI standard (VER-06, A63), for an edit in standard
+   * mode: quoted as data, never a reason to change what the person asked for.
+   */
+  styleNotes?: readonly string[];
 };
 
 export type AssembledPrompt = {
@@ -395,6 +401,10 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // it quotes, already made with it.
   if (input.conversation && stage !== "repair")
     addRequest("conversation", { conversation: input.conversation });
+  // Where the look differs from the standard, the model's own CSS selectors: quoted as JSON too
+  // (SEC-02), for an edit only (VER-06, A63).
+  if (input.styleNotes?.length && stage === "edit")
+    addRequest("style-notes", { notes: JSON.stringify(input.styleNotes) });
   // The core pass's scope, as data: what to build now and what to leave for later (GEN-17).
   if (input.core && creating) {
     addRequest("core", {

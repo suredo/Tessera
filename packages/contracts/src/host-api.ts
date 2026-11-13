@@ -148,6 +148,11 @@ export const HOST_ACTIONS = {
           .nullable()
           .describe("The current tool's code; none without a tool or a workspace."),
         capabilities: z.array(z.string()).describe("What the current tool declares (CAP-01)."),
+        styleNotes: z
+          .array(z.string())
+          .describe(
+            "Where the current tool's look differs from the UI standard, in standard mode; none in custom mode or without a tool (VER-06, A63).",
+          ),
         checks: versionNoteSchema.shape.checks.describe(
           "The host's checks the current version passed (APP-05, VER-08); none without a tool.",
         ),

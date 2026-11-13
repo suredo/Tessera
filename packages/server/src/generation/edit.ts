@@ -1,3 +1,4 @@
+import { styleNotes } from "../checks/index.ts";
 import {
   artifactSchema,
   canonicalJson,
@@ -174,6 +175,9 @@ export async function editTool(
       source: input.artifact.code,
       editArtifact: input.artifact,
       ...(input.conversation ? { conversation: input.conversation } : {}),
+      // Where the tool's look differs from the standard now, for the edit to bring back where the
+      // person said nothing (VER-06, A63).
+      styleNotes: styleNotes(input.artifact.code, input.artifact.ui.mode),
       ...(repair && {
         failure: repair.failure,
         diagnostics: repair.diagnostics,

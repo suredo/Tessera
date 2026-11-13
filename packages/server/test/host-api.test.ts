@@ -124,6 +124,7 @@ describe("the host app's API (APP-03 to APP-08)", () => {
       capabilities: [],
       checks: [],
       profile: null,
+      styleNotes: [],
       requests: [],
       unattached: [],
     });
@@ -156,6 +157,7 @@ describe("the host app's API (APP-03 to APP-08)", () => {
       capabilities: [],
       checks: [],
       profile: null,
+      styleNotes: [],
       requests: [],
       unattached: details.unattached,
     });
@@ -194,9 +196,11 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     activateVersion(folder, workspace.id, next, revision, {
       note: { summary: "Darker.", checks: ["code", "start"], profile: null },
     });
+    // VER-06, A63: the details also say where the current version's look differs from the standard.
     expect(ask(folder, "details.get", { workspaceId: workspace.id })).toMatchObject({
       checks: ["code", "start"],
       profile: null,
+      styleNotes: ["p: its own colour"],
     });
     folder.close();
   });
