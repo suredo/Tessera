@@ -159,11 +159,13 @@ export {
   ledgerEntrySchema,
   ledgerCallSchema,
   ledgerRequestSchema,
+  ledgerToldSchema,
   requestLogEntrySchema,
   RUN_MODES,
   type LedgerCall,
   type LedgerEntry,
   type LedgerRequest,
+  type LedgerTold,
   type RequestLogEntry,
 } from "./ledger.ts";
 export {

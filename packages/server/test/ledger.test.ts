@@ -271,6 +271,12 @@ eval("1");`,
         kind: "discussion",
         answer: "About US$2.2 trillion in 2024, from what I know.",
       });
+      // What it was told is where it is kept, never the words (A62, ENG-16); none by default.
+      expect(ledger.request(answered)).toMatchObject({ told: null });
+      ledger.told(conversation, { workspaceId: workspace.id, numbers: [3, 4] });
+      expect(ledger.request(conversation)).toMatchObject({
+        told: { workspaceId: workspace.id, numbers: [3, 4] },
+      });
       expect(ledger.request(conversation)).toMatchObject({
         outcome: "discussion",
         message: "About US$2.2 trillion in 2024, from what I know.",

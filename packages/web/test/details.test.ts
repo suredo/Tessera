@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { GENERATE_ANSWERS, PROFILE_IDS, PROFILES, STAGES } from "@tessera/contracts";
-import { outcomeText, ruleTexts, stageText } from "../src/Details.tsx";
+import { outcomeText, ruleTexts, stageText, toldMessages } from "../src/Details.tsx";
 import { en } from "../src/i18n/en.ts";
 
 // The details view says the ledger's steps and outcomes in plain words (APP-09, GEN-12, UX-05).
@@ -59,4 +59,31 @@ it("VER-08 GEN-12 UX-05: each profile's rules have a plain line each, through th
     return !rules || Number(match[2]) > rules.length;
   });
   expect(extra).toEqual([]);
+});
+
+it("A62, ENG-16: a request's told messages are read from the chat, in order, saying how many it no longer keeps", () => {
+  const message = (number: number, text: string) => ({
+    number,
+    from: number % 2 ? ("person" as const) : ("tessera" as const),
+    text,
+    at: "2026-11-12T00:00:00.000Z",
+  });
+  const chats = {
+    "": [message(1, "milk, eggs"), message(2, "Not sure.")],
+    w: [message(5, "Add bread")],
+  };
+  expect(toldMessages({ workspaceId: null, numbers: [1, 2] }, chats)).toEqual({
+    shown: [message(1, "milk, eggs"), message(2, "Not sure.")],
+    gone: 0,
+  });
+  // A workspace's subject is its own chat; numbers it no longer keeps are counted, not shown.
+  expect(toldMessages({ workspaceId: "w", numbers: [3, 5] }, chats)).toEqual({
+    shown: [message(5, "Add bread")],
+    gone: 1,
+  });
+  expect(toldMessages({ workspaceId: "gone", numbers: [1] }, chats)).toEqual({
+    shown: [],
+    gone: 1,
+  });
+  expect(en["details.told"]).not.toMatch(/JSON|number|thread/i);
 });

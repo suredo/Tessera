@@ -6,7 +6,7 @@ import { startApp, type AppHost, newestReply } from "./support/app-host.ts";
 
 // The conversation before a request (A62, L-101, TEST-03): with no tool open, a list Tessera isn't
 // sure about, then "remove what I just listed", which is told the list it means, from the chat the
-// app keeps, even right after the reply. The model's answers are scripted; nothing reaches a
+// app keeps, even right after the reply; and the details view shows what it was told. The model's answers are scripted; nothing reaches a
 // model (ENG-11).
 
 test.describe.configure({ mode: "serial" });
@@ -72,4 +72,16 @@ test("L-101, A62: 'remove what I just listed' is told the list it means, right a
     { from: "tessera", text: en["request.clarify"] },
   ]);
   expect(steps).toHaveLength(0);
+
+  // The details view shows what that request was told, read from the chat (A62, ENG-16).
+  await page.getByRole("button", { name: en["details.show"] }).click();
+  const shownTold = page
+    .locator(".details-requests > li")
+    .filter({ hasText: en["details.told"].replace("{count}", "2") });
+  await expect(shownTold).toHaveCount(1);
+  await shownTold.getByText(en["details.told"].replace("{count}", "2")).click();
+  await expect(shownTold.getByRole("listitem")).toHaveText([
+    `${en["details.toldYou"]}: milk, eggs, bread, coffee`,
+    `${en["details.toldTessera"]}: ${en["request.clarify"]}`,
+  ]);
 });

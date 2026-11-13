@@ -104,6 +104,16 @@ export const ledgerCallSchema = z
   .describe("One call in the host app's ledger; null usage is unknown, never 0 (CLI-04).");
 export type LedgerCall = z.infer<typeof ledgerCallSchema>;
 
+/**
+ * What a request was told of the conversation before it (A62): its subject, a workspace or the
+ * empty screen's chat (null), and the numbers of the chat messages. No words: they stay in the chat.
+ */
+export const ledgerToldSchema = z.strictObject({
+  workspaceId: z.uuid().nullable(),
+  numbers: z.array(z.int().min(1)),
+});
+export type LedgerTold = z.infer<typeof ledgerToldSchema>;
+
 /** One request the host app carried out, with its calls in order (OBS-01, GEN-10). */
 export const ledgerRequestSchema = z
   .strictObject({
@@ -120,6 +130,10 @@ export const ledgerRequestSchema = z
       ),
     message: z.string().nullable().describe("The plain message the person read."),
     findings: z.array(z.string()).describe("The checks' findings when it failed (GEN-10)."),
+    told: ledgerToldSchema
+      .nullable()
+      .default(null)
+      .describe("What it was told of the conversation before it; null when nothing (A62)."),
     calls: z.array(ledgerCallSchema),
   })
   .describe("One request in the host app's ledger (OBS-01).");

@@ -1,4 +1,4 @@
-import type { Intent, SmokeRepairRequest } from "@tessera/contracts";
+import type { Intent, LedgerTold, SmokeRepairRequest } from "@tessera/contracts";
 import type { GenerationResult } from "./result.ts";
 import { canonicalJson, creationSchema } from "@tessera/contracts";
 import { candidateMount } from "../host/index.ts";
@@ -21,8 +21,10 @@ export type SmokeRepairContext = {
   baseVersion: string | null;
   /** Isolated from the edit stage; only planned after this candidate activates. */
   dataPart?: string;
-  /** The answer of the discussion a mixed request followed, for its entry part (GEN-19). */
+  /** The conversation a mixed request was told, for its entry part (A62). */
   conversation?: string;
+  /** Where that conversation is kept, for the entry part's own ledger row (A62). */
+  told?: LedgerTold;
   /** A big new tool's core pass: its repair keeps to the core, and the rest comes later (GEN-17). */
   plan?: TwoPassPlan;
 };

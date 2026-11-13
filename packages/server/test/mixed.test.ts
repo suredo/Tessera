@@ -13,7 +13,9 @@ import {
 } from "@tessera/contracts";
 import { candidateFrom, generationRoutes, type StageTimeLimits } from "../src/generation/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
+import { addToChat } from "../src/chat/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
+import { RequestLedger } from "../src/ledger/index.ts";
 import { createScriptedProvider, type Provider } from "../src/providers/index.ts";
 import { openDataFolder } from "../src/storage/index.ts";
 import { saveVersion } from "../src/versions/index.ts";
@@ -175,6 +177,40 @@ describe("mixed request sequencing", () => {
     expect(f.calls.at(-1)?.prompt).toContain("Add Cheese");
     expect(f.calls.at(-1)?.prompt).not.toContain("Add Bread");
   });
+  it("A62: a mixed request's entry part, planned later as its own request, is told and records the conversation the request was told", async () => {
+    const f = await fixture(
+      [
+        { stage: "edit", value: styleEdit },
+        {
+          stage: "data",
+          value: {
+            ...add,
+            patch: { operations: [{ op: "add", collection: "items", record: { title: "Bread" } }] },
+          },
+        },
+      ],
+      { interfacePart: "Make it dark", dataPart: "Add Bread" },
+    );
+    addToChat(f.store, f.id, [
+      { from: "person", text: "Which colours would suit it?" },
+      { from: "tessera", text: "Dark grey with a green accent." },
+    ]);
+    const first = await f.ask();
+    if (first.kind !== "candidate") throw new Error("Expected candidate");
+    expect(activateVersion(f.store, f.id, first.hash, first.expectedDataRevision).ok).toBe(true);
+    const continued = { workspaceId: f.id, hash: first.hash, token: first.activation.token };
+    expect(await f.post(FINISH_DATA_ROUTE, continued)).toMatchObject({ kind: "data_changed" });
+    expect(f.calls.at(-1)).toMatchObject({ stage: "data" });
+    expect(f.calls.at(-1)?.prompt).toContain("Dark grey with a green accent.");
+    // Its own ledger row says what it was told, as the request it continues recorded it.
+    const [entries, request] = new RequestLedger(f.store).forWorkspace(f.id);
+    expect(entries).toMatchObject({ kind: "data", told: { workspaceId: f.id, numbers: [1, 2] } });
+    expect(request).toMatchObject({
+      kind: "generate",
+      told: { workspaceId: f.id, numbers: [1, 2] },
+    });
+  });
+
   it("GEN-04 GEN-09: mismatched continuation fields cannot consume valid repair or data authority", async () => {
     const f = await fixture(
       [

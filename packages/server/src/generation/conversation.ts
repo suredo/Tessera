@@ -13,8 +13,15 @@ import type { Store } from "../workspaces/index.ts";
 /** How many earlier messages, besides the last exchange, a request is told at most. */
 export const CONVERSATION_EARLIER = 3;
 
-type Told = { from: ChatMessage["from"]; text: string };
-const told = (message: ChatMessage): Told => ({ from: message.from, text: message.text });
+type Told = { from: ChatMessage["from"]; text: string; number?: number };
+const told = (message: ChatMessage): Told => ({
+  from: message.from,
+  text: message.text,
+  number: message.number,
+});
+
+/** What a request was told, for the ledger (A62): its subject and the chat messages' numbers. */
+export type ToldConversation = { workspaceId: string | null; numbers: number[] };
 const MARK = "…";
 
 /**
@@ -26,6 +33,18 @@ export function requestConversation(
   workspaceId: string | null,
   request: string,
 ): string | undefined {
+  return conversationFor(store, workspaceId, request)?.quoted;
+}
+
+/**
+ * The conversation before `request`, quoted as `requestConversation` gives it, with what it is
+ * made of, for the ledger: no words, only where they are kept (A62, ENG-16).
+ */
+export function conversationFor(
+  store: Store,
+  workspaceId: string | null,
+  request: string,
+): { quoted: string; told: ToldConversation } | undefined {
   let messages: ChatMessage[];
   try {
     messages = listChat(store, workspaceId);
@@ -38,10 +57,16 @@ export function requestConversation(
     limit: CONVERSATION_EARLIER,
     skip: last.map((message) => message.number),
   });
-  return fitConversation(
+  let kept: number[] = [];
+  const fitted = fitConversation(
     last.map(told),
     earlier.map((message) => ({ ...told(message), number: message.number })),
+    CONVERSATION_MAX_QUOTED,
+    (numbers) => (kept = numbers),
   );
+  return fitted === undefined
+    ? undefined
+    : { quoted: fitted, told: { workspaceId, numbers: kept.sort((a, b) => a - b) } };
 }
 
 /**
@@ -64,6 +89,8 @@ export function fitConversation(
   last: readonly Told[],
   earlier: readonly (Told & { number: number })[],
   limit = CONVERSATION_MAX_QUOTED,
+  /** Given the numbers of the messages told, when they fit. */
+  numbered?: (numbers: number[]) => void,
 ): string | undefined {
   const quote = (now: readonly Told[], before: readonly (Told & { number: number })[]) =>
     JSON.stringify({
@@ -74,7 +101,7 @@ export function fitConversation(
               .map(({ from, text }) => ({ from, text })),
           }
         : {}),
-      last: now,
+      last: now.map(({ from, text }) => ({ from, text })),
     });
   let kept = [...earlier];
   const now = last.map((message) => ({ ...message }));
@@ -86,5 +113,8 @@ export function fitConversation(
     const keep = Math.max(1, longest.text.length - over - MARK.length - 8);
     longest.text = `${longest.text.slice(0, keep).trimEnd()}${MARK}`;
   }
+  numbered?.(
+    [...kept, ...now].flatMap((message) => (message.number === undefined ? [] : [message.number])),
+  );
   return quote(now, kept);
 }

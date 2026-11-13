@@ -1,9 +1,11 @@
 import {
   PROFILES,
+  type ChatMessage,
   type GenerateAnswer,
   type HostResult,
   type LedgerCall,
   type LedgerRequest,
+  type LedgerTold,
   type ProfileId,
   type Workspace,
 } from "@tessera/contracts";
@@ -98,11 +100,29 @@ type Props = {
 
 type Details = HostResult<"details.get">;
 
+/** Kept chats by subject: a workspace's ID, or "" for the empty screen's. */
+type Chats = Record<string, readonly ChatMessage[]>;
+const subject = (workspaceId: string | null) => workspaceId ?? "";
+
+/**
+ * What a request was told of the conversation before it (A62), as the chat still keeps it: the
+ * messages it names, in order, and how many of them the chat no longer keeps.
+ */
+export function toldMessages(
+  told: LedgerTold,
+  chats: Chats,
+): { shown: ChatMessage[]; gone: number } {
+  const kept = new Map((chats[subject(told.workspaceId)] ?? []).map((m) => [m.number, m]));
+  const shown = told.numbers.flatMap((number) => kept.get(number) ?? []);
+  return { shown, gone: told.numbers.length - shown.length };
+}
+
 export function Details({ workspace, changes }: Props) {
   const id = workspace?.id ?? null;
   const [open, setOpen] = useState(false);
   const [details, setDetails] = useState<Details | null>(null);
   const [message, setMessage] = useState("");
+  const [chats, setChats] = useState<Chats>({});
 
   useEffect(() => {
     if (!open) return;
@@ -122,6 +142,31 @@ export function Details({ workspace, changes }: Props) {
     };
   }, [open, id, workspace?.currentVersion, workspace?.dataRevision, changes]);
 
+  // The chats the requests were told from (A62), read so their messages can be shown; one that
+  // can't be read shows as no longer kept.
+  useEffect(() => {
+    if (!details) return;
+    let current = true;
+    const subjects = new Set(
+      [...details.requests, ...details.unattached].flatMap((request) =>
+        request.told ? [request.told.workspaceId] : [],
+      ),
+    );
+    void Promise.all(
+      [...subjects].map((workspaceId) =>
+        ask("chat.list", { workspaceId }).then(
+          ({ messages }) => [subject(workspaceId), messages] as const,
+          () => [subject(workspaceId), []] as const,
+        ),
+      ),
+    ).then((read) => {
+      if (current) setChats(Object.fromEntries(read) as Chats);
+    });
+    return () => {
+      current = false;
+    };
+  }, [details]);
+
   return (
     <section aria-labelledby="details-heading" className="details">
       <h2 id="details-heading">{t("details.heading")}</h2>
@@ -136,24 +181,32 @@ export function Details({ workspace, changes }: Props) {
       {open && (
         <div id="details-body">
           <p role="status">{message || (details ? "" : t("details.loading"))}</p>
-          {details && <Body details={details} hasWorkspace={id !== null} />}
+          {details && <Body details={details} chats={chats} hasWorkspace={id !== null} />}
         </div>
       )}
     </section>
   );
 }
 
-function Body({ details, hasWorkspace }: { details: Details; hasWorkspace: boolean }) {
+function Body({
+  details,
+  chats,
+  hasWorkspace,
+}: {
+  details: Details;
+  chats: Chats;
+  hasWorkspace: boolean;
+}) {
   return (
     <>
       {hasWorkspace && (
         <>
           <h3>{t("details.requestsHeading")}</h3>
-          <Requests requests={details.requests} empty={t("details.noRequests")} />
+          <Requests requests={details.requests} chats={chats} empty={t("details.noRequests")} />
         </>
       )}
       <h3>{t("details.unattachedHeading")}</h3>
-      <Requests requests={details.unattached} empty={t("details.noUnattached")} />
+      <Requests requests={details.unattached} chats={chats} empty={t("details.noUnattached")} />
       {hasWorkspace && details.source !== null && <Checks details={details} />}
       {hasWorkspace && (
         <>
@@ -226,18 +279,44 @@ function Checks({ details }: { details: Details }) {
   );
 }
 
-function Requests({ requests, empty }: { requests: LedgerRequest[]; empty: string }) {
+function Requests({
+  requests,
+  chats,
+  empty,
+}: {
+  requests: LedgerRequest[];
+  chats: Chats;
+  empty: string;
+}) {
   if (requests.length === 0) return <p>{empty}</p>;
   return (
     <ol className="details-requests">
       {requests.map((request) => (
-        <Request key={request.id} request={request} />
+        <Request key={request.id} request={request} chats={chats} />
       ))}
     </ol>
   );
 }
 
-function Request({ request }: { request: LedgerRequest }) {
+/** The conversation a request was told (A62), as the chat still keeps it. */
+function Told({ told, chats }: { told: LedgerTold; chats: Chats }) {
+  const { shown, gone } = toldMessages(told, chats);
+  return (
+    <details>
+      <summary>{t("details.told", { count: String(told.numbers.length) })}</summary>
+      <ul>
+        {shown.map((m) => (
+          <li key={m.number}>
+            {t(m.from === "person" ? "details.toldYou" : "details.toldTessera")}: {m.text}
+          </li>
+        ))}
+      </ul>
+      {gone > 0 && <p>{t("details.toldGone", { count: String(gone) })}</p>}
+    </details>
+  );
+}
+
+function Request({ request, chats }: { request: LedgerRequest; chats: Chats }) {
   return (
     <li>
       <p>
@@ -245,6 +324,7 @@ function Request({ request }: { request: LedgerRequest }) {
         {outcomeText(request.outcome)}
       </p>
       {request.message && <p>{request.message}</p>}
+      {request.told && <Told told={request.told} chats={chats} />}
       {request.findings.length > 0 && (
         <>
           <p>{t("details.findings")}</p>

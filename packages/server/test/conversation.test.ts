@@ -12,6 +12,7 @@ import { addToChat } from "../src/chat/index.ts";
 import { generate, generationRoutes } from "../src/generation/index.ts";
 import {
   CONVERSATION_EARLIER,
+  conversationFor,
   fitConversation,
   lastExchange,
   requestConversation,
@@ -24,6 +25,7 @@ import {
   savedToolCatalogue,
 } from "../src/intent/index.ts";
 import { JobQueue } from "../src/jobs/index.ts";
+import { RequestLedger } from "../src/ledger/index.ts";
 import {
   assembleDataPrompt,
   assembleIntentPrompt,
@@ -169,6 +171,30 @@ describe("what a request is told of the conversation before it (A62)", () => {
         })),
       ).map((m) => m.text),
     ).toEqual(["y", "z"]);
+    folder.close();
+  });
+
+  it("A62, ENG-16: what a request is told is also given as where it is kept: its subject and the messages' numbers", async () => {
+    const folder = await newFolder();
+    const { id } = createWorkspace(folder, "Groceries");
+    addToChat(folder, id, [
+      ...turn("Add bread rolls for the party", "Added two entries."),
+      ...turn("Make the cards blue", "Changed the colours."),
+      ...turn("Add oat milk", "Added one entry."),
+    ]);
+    expect(conversationFor(folder, id, "remove the bread rolls")?.told).toEqual({
+      workspaceId: id,
+      numbers: [1, 5, 6],
+    });
+    // A match that doesn't fit isn't counted as told.
+    let numbers: number[] = [];
+    fitConversation(
+      [{ from: "person", text: "y".repeat(2_000), number: 9 }],
+      [{ from: "person", text: "w".repeat(400), number: 2 }],
+      undefined,
+      (told) => (numbers = told),
+    );
+    expect(numbers).toEqual([9]);
     folder.close();
   });
 
@@ -333,6 +359,13 @@ describe("the generate route tells each request its conversation (A62)", () => {
       expect(reply).toMatchObject({ kind: "candidate", operation: "create" });
       expect(calls.map((call) => call.stage)).toEqual(["intent", "create"]);
       for (const call of calls) expect(told(call.prompt)?.last[0]?.text).toBe(LIST);
+      // The ledger keeps where it was told from, never the words (ENG-16): the empty screen's
+      // chat, though the request now belongs to the workspace it made.
+      if (reply.kind !== "candidate") throw new Error("Expected a candidate");
+      expect(new RequestLedger(folder).forWorkspace(reply.workspaceId)[0]).toMatchObject({
+        workspaceId: reply.workspaceId,
+        told: { workspaceId: null, numbers: [1, 2] },
+      });
     } finally {
       await server.close();
       folder.close();

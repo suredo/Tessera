@@ -3,9 +3,11 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import {
   ledgerCallSchema,
+  ledgerToldSchema,
   type GenerateReply,
   type LedgerCall,
   type LedgerRequest,
+  type LedgerTold,
   type Usage,
 } from "@tessera/contracts";
 import { ProviderError, UNKNOWN_USAGE, type Provider } from "../providers/index.ts";
@@ -29,6 +31,7 @@ const requestRow = z.object({
   outcome: z.string().nullable(),
   message: z.string().nullable(),
   findings: z.string(),
+  told: z.string().nullable(),
 });
 const callRow = z.object({
   call_index: z.number(),
@@ -184,6 +187,20 @@ export class RequestLedger {
    * A mixed request's entry part can fail after its interface part is done, so its outcome, message
    * and findings are the ones kept (GEN-10).
    */
+  /**
+   * What a request was told of the conversation before it (A62): its subject and the chat
+   * messages' numbers, never their words (ENG-16).
+   */
+  told(id: string, told: LedgerTold): void {
+    this.#safely(() => {
+      this.#store.db.run(
+        "UPDATE requests SET told = ? WHERE id = ?",
+        JSON.stringify(ledgerToldSchema.parse(told)),
+        id,
+      );
+    });
+  }
+
   finish(id: string, reply: GenerateReply): void {
     this.#safely(() => {
       const told = reply.kind === "mixed_data" ? reply.data : reply;
@@ -256,6 +273,7 @@ export class RequestLedger {
       outcome: row.outcome,
       message: row.message,
       findings: strings.parse(JSON.parse(row.findings)),
+      told: row.told === null ? null : ledgerToldSchema.parse(JSON.parse(row.told)),
       calls: calls.map((c) => ({
         index: c.call_index,
         stage: c.stage,

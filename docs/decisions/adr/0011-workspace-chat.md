@@ -4,7 +4,7 @@ title: "ADR 0011. A workspace keeps its chat, and exports leave it out"
 description: "Each workspace keeps its conversation in the data folder, through the trash and back; export files carry only the tool and its data."
 tags: [decisions, app, data, chat]
 status: stable
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T22:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T00:30:00Z }
 ---
 
 # ADR 0011. A workspace keeps its chat, and exports leave it out
@@ -31,6 +31,6 @@ Each request was read alone, so "remove what I just listed" had nothing to go on
 
 - **What is said with no tool open is kept too,** in the empty screen's own chat, like a workspace's: the newest 200, in the data folder, never in an export. A request that ends with no workspace now keeps its turn there.
 - **The chat is searchable,** within one subject only: a workspace's chat, or the empty screen's. A full-text index, kept in step with the chat by the database, finds earlier messages that share a request's telling words.
-- **Requests are told their context** ([#338](https://github.com/suredo/Tessera/issues/338)'s second step): the last exchange and the best matches, quoted as data and capped within every stage's budget. Nothing else of the chat reaches a prompt.
+- **Requests are told their context** ([#338](https://github.com/suredo/Tessera/issues/338)'s second step): the last exchange and the best matches, quoted as data and capped within every stage's budget. Nothing else of the chat reaches a prompt. The call ledger keeps only where a request's conversation is kept, its subject and the messages' numbers, and the details view shows those messages from the chat ([#338](https://github.com/suredo/Tessera/issues/338)'s third step).
 
 The person's words still never leave the data folder in a file, and the call ledger still keeps only sizes.
