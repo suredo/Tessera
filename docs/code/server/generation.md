@@ -102,7 +102,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `acceptance.ts`: `AcceptanceResult` (type), `writeAcceptance`
 - `control.ts`: `RequestControls`
-- `conversation.ts`: `CONVERSATION_EARLIER`, `requestConversation`, `fitConversation`
+- `conversation.ts`: `CONVERSATION_EARLIER`, `requestConversation`, `lastExchange`, `fitConversation`
 - `create.ts`: `GENERATION_TIME_LIMIT_MS`, `REPAIR_TIME_LIMIT_MS`, `REPAIR_BUDGETS`, `Candidate` (type), `CreateResult` (type), `startingDataOf`, `dataProblems`, `candidateFrom`, `CreateInput` (type), `createTool`, `leftOutProblems`, `plainWordProblems`, `PLAIN_CANNOT_REASON`, `plainRefusal`
 - `data-action.ts`: `DataOffer` (type), `OfferData` (type), `applyDataOffer`, `changeData`
 - `data.ts`: `DATA_TIME_LIMIT_MS`, `CHAT_DATA_MAX_OPERATIONS`, `PlannedData` (type), `DataPlanResult` (type), `checkedDataPlan`, `planDataChange`, `commitDataPlan`

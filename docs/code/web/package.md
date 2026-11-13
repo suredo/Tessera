@@ -134,7 +134,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `src/i18n/translate.ts`: `Messages` (type), `Params` (type), `Translate` (type), `MissingHandler` (type), `createTranslator`, `t`
 - `src/index.ts`: `App`, `EmptyState`, `checkSetup`, `formatBytes`, `runProbe`, `SetupNotice`, `Status`, `ask`, `HostError`, `Send` (type), `en`, `MessageKey` (type), `createTranslator`, `t`, `Messages` (type), `MissingHandler` (type), `Params` (type), `Translate` (type)
 - `src/progress.ts`: `stageText`, `Progress` (type), `useRequestProgress`
-- `src/request-control.ts`: `RequestControl`
+- `src/request-control.ts`: `RequestControl`, `settleWithin`
 - `src/setup.ts`: `checkSetup`, `runProbe`, `chooseProvider`, `chosenCheck`, `formatBytes`
 - `src/tool-start.ts`: `StartDeps` (type), `StartOptions` (type), `startTool`, `rememberedState`, `rememberState`
 - `vite.config.ts`: `default`
