@@ -520,9 +520,27 @@ class Bindings {
    * names can't be resolved, every use counts as the global, as before.
    */
   isGlobal(identifier: AnyNode): boolean {
+    const name = identifier["name"] as string;
+    // The page's own names, and the forbidden globals, are followed by name wherever they are
+    // declared, as before: a variable of the tool's that is called so may still be given the real
+    // one through a path the tracking doesn't follow (a call's `call`, a `catch`, a callback), so
+    // only `history`, `location` and `navigation`, which no path can fetch, are the tool's own when
+    // it declares them (Codex's review of #342).
+    if (PAGE_NAMES.has(name)) return true;
     return this.byName || typeof this.key(identifier) === "string";
   }
 }
+
+/**
+ * Names that mean the page's objects or a forbidden global wherever they appear, however the tool
+ * declares them: all but `history`, `location` and `navigation`, whose real objects can't be
+ * fetched without a name the check refuses everywhere.
+ */
+const PAGE_NAMES = new Set(
+  [...PAGE_GLOBALS, ...FORBIDDEN_GLOBALS].filter(
+    (name) => !["history", "location", "navigation"].includes(name),
+  ),
+);
 
 /**
  * Which variables and functions may hold the page or its elements, each by the variable a name
@@ -540,7 +558,12 @@ class PageValues {
   thisIsPage = false;
   /** Set when the tracking gave up: every value may then be the page's. */
   everything = false;
-  private readonly functions = new Map<Key, AnyNode>();
+  /** Every function a key may be, so none is lost when names are merged (Codex's review of #342). */
+  private readonly functions = new Map<Key, AnyNode[]>();
+  private addFunction(key: Key, fn: AnyNode) {
+    const known = this.functions.get(key) ?? [];
+    if (!known.includes(fn)) this.functions.set(key, [...known, fn]);
+  }
 
   private readonly program: AnyNode;
   readonly bindings: Bindings;
@@ -571,17 +594,17 @@ class PageValues {
           break;
       }
       if (node.type === "FunctionDeclaration" && node["id"]) {
-        this.functions.set(this.bindings.key(node["id"] as AnyNode), node);
+        this.addFunction(this.bindings.key(node["id"] as AnyNode), node);
       }
       if (node.type === "VariableDeclarator" && isFunction(node["init"] as AnyNode)) {
         for (const identifier of boundIdentifiers(node["id"] as AnyNode)) {
-          this.functions.set(this.bindings.key(identifier), node["init"] as AnyNode);
+          this.addFunction(this.bindings.key(identifier), node["init"] as AnyNode);
         }
       }
       // A named function expression is its own variable inside it, so a recursive call reaches it
       // by that name: the same function, with the same arguments and returns (Codex's review).
       if (node.type === "FunctionExpression" && node["id"]) {
-        this.functions.set(this.bindings.key(node["id"] as AnyNode), node);
+        this.addFunction(this.bindings.key(node["id"] as AnyNode), node);
       }
     });
     let rounds = 0;
@@ -652,9 +675,9 @@ class PageValues {
       case "NewExpression": {
         const callee = node["callee"] as AnyNode;
         return (
-          (callee.type === "Identifier" &&
-            this.bindings.isGlobal(callee) &&
-            PAGE_CONSTRUCTOR.test(callee["name"] as string)) ||
+          // A page constructor's name, however declared: a constructor may return an object
+          // other than its own instance, such as an element (Codex's review of #342).
+          (callee.type === "Identifier" && PAGE_CONSTRUCTOR.test(callee["name"] as string)) ||
           this.isPage(callee)
         );
       }
@@ -809,7 +832,6 @@ class PageValues {
             (callee.type === "MemberExpression" && this.isPage(callee["object"] as AnyNode)) ||
             (node.type === "NewExpression" &&
               callee.type === "Identifier" &&
-              this.bindings.isGlobal(callee) &&
               PAGE_CONSTRUCTOR.test(callee["name"] as string))
           ) {
             args.forEach(markParams);
@@ -817,7 +839,7 @@ class PageValues {
           if (args.some((a) => this.isPage(a))) {
             // A function called with the page's objects receives them.
             if (callee.type === "Identifier")
-              markParams(this.functions.get(this.bindings.key(callee)));
+              (this.functions.get(this.bindings.key(callee)) ?? []).forEach(markParams);
             // A container given them (list.push(el), map.set(k, el)) holds them.
             // The bridge copies what it is given, so it never holds the page's objects.
             const root = callee.type === "MemberExpression" ? rootIdentifier(callee) : undefined;
@@ -839,12 +861,13 @@ class PageValues {
       }
     });
     // A function that returns the page's objects makes its calls the page's.
-    for (const [key, fn] of this.functions) {
-      const body = fn["body"] as AnyNode;
-      const returns =
-        body.type !== "BlockStatement"
+    for (const [key, fns] of this.functions) {
+      const returns = fns.some((fn) => {
+        const body = fn["body"] as AnyNode;
+        return body.type !== "BlockStatement"
           ? this.isPage(body)
           : this.anyReturn(body, (argument) => this.isPage(argument));
+      });
       if (returns) this.returning.add(key);
     }
     return this.names.size + this.returning.size + (this.thisIsPage ? 1 : 0) !== before;
@@ -901,6 +924,8 @@ function inBlockFunction(variable: {
   return (
     variable.scope.type !== "global" &&
     variable.scope.type !== "function" &&
+    // A function expression's own name has a scope of its own; it is no block's.
+    variable.scope.type !== "function-expression-name" &&
     variable.defs.some((def) => def.type === "FunctionName")
   );
 }

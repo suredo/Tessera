@@ -581,7 +581,6 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
       "async function f() { const r = await tessera.call('data.read', {}); return r.data.history; }",
       "const { history } = { history: [] }; history.slice();",
       "function show(navigation) { return navigation.steps; }\nshow({ steps: [] });",
-      "const open = () => 1; open();",
       // A function's own var is its own; a top-level var hides any element of its id.
       "function f() { var history = []; return history.length; }\nf();",
       "var saved = [];\nconst i = 0;\nsaved[i];",
@@ -608,6 +607,8 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
       "function take({ location }) { return location; }",
       "{ const history = []; history.push(1); }\nhistory.back();",
       "open('https://example.com');",
+      // A forbidden global's name stays refused even as the tool's own: it may be given the real one.
+      "const open = () => 1; open();",
       "const button = document.createElement('button'); button.ownerDocument;",
       // A top-level var or function, and a block's function in sloppy code, are the global object's
       // properties: `var location` is the page's location.
@@ -693,6 +694,47 @@ describe("bindings the scope analysis keeps apart are still followed (Codex's re
       checkJs(
         "function run(saved = { a: 1 }) {\n  const key = 'a';\n  return saved[key];\n}\nrun();",
       ),
+    ).toEqual([]);
+  });
+});
+
+describe("names the page may reach through paths the tracking doesn't follow stay the page's (Codex's review of #342)", () => {
+  const write = "['inner' + 'HTML'] = '<b>x</b>';";
+
+  it("ADR 0009: a function expression's own name never takes the place of another function of that name", () => {
+    for (const js of [
+      `function take(el) { el${write} }\nconst other = function take() {};\ntake(document.body);`,
+      `function get() { return document.body; }\nconst other = function get() {};\nget()${write}`,
+      `{ function noop() {} }\nfunction take(el) { el${write} }\nconst other = function take() {};\ntake(document.body);`,
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: a variable with a page's name is the page's however it is given its value", () => {
+    for (const js of [
+      `try { throw window.document; } catch (document) { document.body${write} }`,
+      `function run(document) { document.body${write} }\nrun.call(null, window.document);`,
+      `function run(document) { document.body${write} }\nrun.apply(null, [window.document]);`,
+      `(function (document) { document.body${write} })(window.document);`,
+      `class Box { put(window) { window.document.body${write} } }\nnew Box().put(window);`,
+      `const box = { value: window.document };\nfunction run(document) { document.body${write} }\nrun(box.value);`,
+      `function run() { const document = arguments[0]; document.body${write} }\nrun(window.document);`,
+      `let run;\nrun = function (document) { document.body${write} };\nrun(window.document);`,
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: a page constructor's name means the page's object however the class is declared", () => {
+    expect(
+      refusedJs(
+        `class Element {\n  constructor() { return document.body; }\n}\nnew Element()${write}`,
+      ),
+    ).toBe(true);
+    // The tool's own class with its own name stays plain.
+    expect(
+      checkJs("class Box {\n  constructor() { this.a = 1; }\n}\nconst key = 'a';\nnew Box()[key];"),
     ).toEqual([]);
   });
 });
