@@ -114,7 +114,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
   // Until this frame has its width, or 5 seconds have passed. On a cold browser Chrome could leave
   // a nested frame without its size for seconds; a check that measured it then saw a page as wide
   // as its widest control and no element shown (#302). The staging panel lies inside the window,
-  // so Chrome doesn't hold the frame's rendering back (#337), and the wrapper lays the frames out
+  // so Chrome has no reason to hold the frame's rendering back (a mitigation, #337), and the wrapper lays the frames out
   // while a check waits (wrapper.ts); the checks measure the tool only once its frame has its width.
   const NO_SIZE =
     "Tessera couldn't see the tool: its frame still had no size after 5 seconds. This is Tessera's problem, not the tool's.";
