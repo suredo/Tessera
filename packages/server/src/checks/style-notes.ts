@@ -13,13 +13,42 @@ import postcss, { type Declaration } from "postcss";
 export const STYLE_NOTES_LIMIT = 3;
 const SELECTOR_LIMIT = 30;
 
-// Colour words a literal colour may be written as; `transparent`, `currentColor` and `inherit`
-// aren't colours of their own, so they're never noted.
-const KEEPS = /^(inherit|initial|unset|revert)$/i;
-const NAMES_FAMILY = /["',]|\b(serif|sans-serif|monospace|cursive|fantasy|system-ui)\s*$/i;
-const COLOUR_WORDS =
-  /\b(white|black|red|green|blue|yellow|orange|purple|pink|gray|grey|brown|navy|teal|silver|gold|maroon|olive|lime|aqua|fuchsia|cyan|magenta|beige|ivory|coral|salmon|tomato|crimson|indigo|violet|turquoise|tan|khaki|lavender|plum|orchid|chocolate|tomato)\b/i;
-const LITERAL_COLOUR = /#[0-9a-f]{3,8}\b|\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(/i;
+// A value that keeps or resets what's there, or turns an effect off, is never a difference.
+const KEEPS = /^(none|inherit|initial|unset|revert|revert-layer)$/i;
+// The `font` shorthand: what follows its size, and line height if any, is the family.
+const FONT_SIZE =
+  /(?:^|\s)(?:[\d.]+(?:px|em|rem|%|pt|pc|ex|ch|lh|rlh|vw|vh|vmin|vmax|cm|mm|in|q)|xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|smaller|larger|(?:calc|min|max|clamp)\([^)]*\))(?:\s*\/\s*\S+)?\s+(\S.*)$/i;
+// A `var()`, its fallback too, is the standard's or a variable's value, never a colour of the
+// tool's own; what's left of the value is looked at. Nested parentheses one level deep, as in a
+// fallback of `rgb(…)`, are removed with it.
+const VARIABLE = /var\((?:[^()]|\([^()]*\))*\)/gi;
+const LITERAL_COLOUR = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/i;
+// The CSS named colours (CSS Color 4); `transparent` and `currentColor` aren't colours of a tool's
+// own, so they aren't here.
+const NAMED_COLOURS = new Set(
+  (
+    "aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet " +
+    "brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan " +
+    "darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta " +
+    "darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue " +
+    "darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey " +
+    "dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray " +
+    "green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush " +
+    "lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray " +
+    "lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray " +
+    "lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon " +
+    "mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue " +
+    "mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin " +
+    "navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen " +
+    "paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple " +
+    "rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna " +
+    "silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle " +
+    "tomato turquoise violet wheat white whitesmoke yellow yellowgreen"
+  ).split(" "),
+);
+const namesColour = (value: string) =>
+  LITERAL_COLOUR.test(value) ||
+  (value.match(/[a-z]+/gi) ?? []).some((word) => NAMED_COLOURS.has(word.toLowerCase()));
 const COLOUR_PROPERTIES =
   /^(color|background|background-color|border(-(top|right|bottom|left|block|inline)(-start|-end)?)?(-color)?|outline(-color)?|fill|stroke|caret-color|accent-color|text-decoration-color)$/i;
 
@@ -40,28 +69,21 @@ function kindOf(declaration: Declaration): Kind | undefined {
   const value = declaration.value.trim();
   // Custom properties, such as a `--ui-*` override in `:root`, are how a tool applies a change the
   // person asked for: never noted.
-  if (property.startsWith("--")) return undefined;
-  if ((property === "box-shadow" || property === "text-shadow") && !/^none$/i.test(value))
-    return "shadow";
+  if (property.startsWith("--") || KEEPS.test(value)) return undefined;
+  if (property === "box-shadow" || property === "text-shadow") return "shadow";
   if (/gradient\(/i.test(value)) return "gradient";
   if (property === "backdrop-filter" || property === "-webkit-backdrop-filter") return "glass";
   if (property === "position" && /^(fixed|sticky)$/i.test(value)) return "position";
-  if (property === "font-family" && !/var\(--ui-font\)/i.test(value) && !KEEPS.test(value))
-    return "font";
-  // The `font` shorthand names a family of its own when it quotes one, lists them, or ends with a
-  // generic one.
-  if (
-    property === "font" &&
-    !/var\(--ui-font\)/i.test(value) &&
-    !KEEPS.test(value) &&
-    NAMES_FAMILY.test(value)
-  )
-    return "font";
-  if (
-    COLOUR_PROPERTIES.test(property) &&
-    !/var\(--/i.test(value) &&
-    (LITERAL_COLOUR.test(value) || COLOUR_WORDS.test(value))
-  )
+  // A family of its own: `font-family`'s value, or what follows the `font` shorthand's size; a
+  // shorthand with no size, such as a system font's keyword, names none.
+  const family =
+    property === "font-family"
+      ? value
+      : property === "font"
+        ? FONT_SIZE.exec(value)?.[1]
+        : undefined;
+  if (family !== undefined && !/var\(--ui-font\)/i.test(family)) return "font";
+  if (COLOUR_PROPERTIES.test(property) && namesColour(value.replace(VARIABLE, " ")))
     return "colour";
   return undefined;
 }

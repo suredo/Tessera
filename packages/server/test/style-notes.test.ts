@@ -40,6 +40,22 @@ describe("where a tool's look differs from the UI standard (VER-06, A63)", () =>
     ]);
   });
 
+  it("VER-06: a colour beside a variable, any named colour, and a font in the shorthand are noted; an effect turned off isn't (review of #344)", () => {
+    const notes = (css: string) => styleNotes(code(css), "standard");
+    expect(notes(`.a { border: var(--ui-gap) solid red; }`)).toEqual([".a: its own colour"]);
+    expect(notes(`.a { color: rgb(255 0 0 / var(--opacity)); }`)).toEqual([".a: its own colour"]);
+    expect(notes(`.a { color: rebeccapurple; }`)).toEqual([".a: its own colour"]);
+    expect(notes(`.a { font: 16px Arial; }`)).toEqual([".a: its own font"]);
+    expect(notes(`.a { font: italic bold 1rem/1.4 "Inter"; }`)).toEqual([".a: its own font"]);
+    expect(notes(`.a { backdrop-filter: none; -webkit-backdrop-filter: none; }`)).toEqual([]);
+    // The standard's own: a variable with a fallback, the standard font in the shorthand or first
+    // in a list, a system font, and a border coloured by a token.
+    expect(
+      notes(`.a { color: var(--ui-text, #222); font: 1rem/1.5 var(--ui-font); border: 1px solid var(--ui-divider); }
+.b { font-family: var(--ui-font), serif; font: caption; background: transparent; }`),
+    ).toEqual([]);
+  });
+
   it("A63: a change applied as the standard says, by overriding a --ui- variable, is never noted, nor is the standard itself", () => {
     // "Make the buttons blue", as the standard asks a tool to apply it.
     const asked = `:root { --ui-accent: #1f5fbf; --ui-font: Georgia, serif; }
