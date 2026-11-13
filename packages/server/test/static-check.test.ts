@@ -570,22 +570,36 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
     fs.readFileSync(new URL("./fixtures/static-calculator.json", import.meta.url), "utf8"),
   ) as { history: string; repaired: string };
 
-  it("L-99: the calculator's own history, and its parser's names shared with an element, pass", () => {
-    expect(checkJs(calculator.history)).toEqual([]);
+  it("L-99: the calculator's repair passes, though its parser's names are shared with an element; its first answer is refused only for naming its own variable history", () => {
+    // A variable may not be called `history`: it may be given the page through a path the
+    // tracking doesn't follow (Codex's review of #342). The repair renames it, as it did.
+    const first = checkJs(calculator.history);
+    expect(first.length).toBeGreaterThan(0);
+    expect(first.every((f) => f.message.includes("history"))).toBe(true);
     expect(checkJs(calculator.repaired)).toEqual([]);
   });
 
-  it("L-99: a tool's own variable named history, location or navigation, or its data's history, is its own", () => {
+  it("L-99: the tool's data may have a history; a variable may not be named history, location or navigation", () => {
     for (const js of [
-      "let history = []; history.push(1); history.length;",
       "async function f() { const r = await tessera.call('data.read', {}); return r.data.history; }",
-      "const { history } = { history: [] }; history.slice();",
-      "function show(navigation) { return navigation.steps; }\nshow({ steps: [] });",
-      // A function's own var is its own; a top-level var hides any element of its id.
-      "function f() { var history = []; return history.length; }\nf();",
+      "const saved = { history: [] }; saved.history.length;",
+      // A top-level var hides any element of its id.
       "var saved = [];\nconst i = 0;\nsaved[i];",
     ]) {
       expect(checkJs(js), js).toEqual([]);
+    }
+    // A variable so named may be given the page through a path the tracking doesn't follow
+    // (Codex's review of #342): refused by its name, as before #335, for each of the three.
+    const write = "['inner' + 'HTML'] = '<b>x</b>';";
+    for (const name of ["history", "location", "navigation"]) {
+      for (const js of [
+        `let ${name} = []; ${name}.push(1);`,
+        `function run(${name}) { ${name}.body${write} }\nrun.call(null, window.document);`,
+        `try { throw window.document; } catch (${name}) { ${name}.body${write} }`,
+        `function run(${name}) { ${name}.target${write} }\nwindow.document.body.addEventListener('click', run);`,
+      ]) {
+        expect(refusedJs(js), js).toBe(true);
+      }
     }
   });
 
@@ -645,9 +659,7 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
       ),
     ).toEqual([]);
     expect(
-      checkJs(
-        "try { JSON.parse('x'); } catch (location) { location.message; }\nconst el = document.body;",
-      ),
+      checkJs("try { JSON.parse('x'); } catch (err) { err.message; }\nconst el = document.body;"),
     ).toEqual([]);
   });
 

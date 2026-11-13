@@ -522,25 +522,16 @@ class Bindings {
   isGlobal(identifier: AnyNode): boolean {
     const name = identifier["name"] as string;
     // The page's own names, and the forbidden globals, are followed by name wherever they are
-    // declared, as before: a variable of the tool's that is called so may still be given the real
-    // one through a path the tracking doesn't follow (a call's `call`, a `catch`, a callback), so
-    // only `history`, `location` and `navigation`, which no path can fetch, are the tool's own when
-    // it declares them (Codex's review of #342).
+    // declared, as before #335: a variable of the tool's that is called so may be given the page
+    // through a path the tracking doesn't follow (a call's `call`, a `catch`, a callback), whatever
+    // the real object of that name is (Codex's reviews of #342).
     if (PAGE_NAMES.has(name)) return true;
     return this.byName || typeof this.key(identifier) === "string";
   }
 }
 
-/**
- * Names that mean the page's objects or a forbidden global wherever they appear, however the tool
- * declares them: all but `history`, `location` and `navigation`, whose real objects can't be
- * fetched without a name the check refuses everywhere.
- */
-const PAGE_NAMES = new Set(
-  [...PAGE_GLOBALS, ...FORBIDDEN_GLOBALS].filter(
-    (name) => !["history", "location", "navigation"].includes(name),
-  ),
-);
+/** Names that mean the page's objects or a forbidden global wherever they appear, however declared. */
+const PAGE_NAMES = new Set([...PAGE_GLOBALS, ...FORBIDDEN_GLOBALS]);
 
 /**
  * Which variables and functions may hold the page or its elements, each by the variable a name

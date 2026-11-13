@@ -7,7 +7,7 @@ implements: [SBX-06, SBX-07, RUN-07, VER-01]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T05:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T07:00:00Z }
 ---
 
 # Purpose
@@ -29,7 +29,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 - **No navigation** (`SBX-07`):
   - links whose address isn't `#` or empty;
   - form actions, meta refresh and `ping`;
-  - the page's `location`, `history` and `navigation`, `window.open` and a bare `open`. The page's own names (`window`, `document` and the rest) and the forbidden globals are followed by name wherever they are declared, as before: a variable of the tool's called so may still be given the real one through a path the tracking doesn't follow, such as `call`, `apply`, a `catch` or a callback. Only `history`, `location` and `navigation`, whose real objects can't be fetched without a name the check refuses everywhere, are the tool's own when it declares them, such as a calculator's `history` of past results (L-99). A page constructor's name (`Element` and the like) means the page's object however the class is declared, since a constructor may return an element. After a dot, `history` is refused on the page's objects and on values the check can't tell apart from them, such as a destructured parameter; on the tool's own data (`r.data.history`) it is a plain name (L-99), since history only moves through pages already visited. `location` and `navigation`, which can reach an address the tool chooses, and the other forbidden names, such as `prototype`, `write` or `ownerDocument`, are refused on any object, since the tracking can lose the page's objects (the known gaps below);
+  - the page's `location`, `history` and `navigation`, `window.open` and a bare `open`. The page's own names (`window`, `document` and the rest) and the forbidden globals, `history`, `location` and `navigation` among them, are followed by name wherever they are declared, as before #335: a variable of the tool's called so may be given the page through a path the tracking doesn't follow, such as `call`, `apply`, a `catch` or a callback, whatever the real object of that name is (Codex's reviews of #342). So a calculator's variable `history` is refused, and its repair renames it, as before (L-99). A page constructor's name (`Element` and the like) means the page's object however the class is declared, since a constructor may return an element. After a dot, `history` is refused on the page's objects and on values the check can't tell apart from them, such as a destructured parameter; on the tool's own data (`r.data.history`) it is a plain name (L-99), since history only moves through pages already visited. `location` and `navigation`, which can reach an address the tool chooses, and the other forbidden names, such as `prototype`, `write` or `ownerDocument`, are refused on any object, since the tracking can lose the page's objects (the known gaps below);
   - writing an address or a part of one (`href`, `host`, `hostname`, `protocol`, `pathname`, `action`, …), directly, in a pattern, or with `setAttribute`.
 - **No code or HTML made at run time.** The tool's policy forbids `eval` but allows inline scripts, so a script or handler built from text would run unread. The check therefore refuses:
   - `on…` attributes, in the HTML or set from JavaScript;
