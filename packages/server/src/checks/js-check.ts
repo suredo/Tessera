@@ -452,10 +452,10 @@ class Bindings {
   readonly byName: boolean;
   private readonly keys = new Map<AnyNode, Key>();
   /**
-   * Names the script declares as properties of the global object: a top-level `var` or function,
-   * and a function declared in a block, which sloppy code also binds outside it (Annex B). Each is
-   * the global of its name, so `var location` is the page's location; but its own declaration
-   * hides an element of that id, so it is not taken for one.
+   * Names the script declares as properties of the global object: a top-level `var` or function.
+   * Each is the global of its name, so `var location` is the page's location; but its own
+   * declaration hides an element of that id, so it is not taken for one. (A script with a function
+   * declared in a block follows names instead.)
    */
   readonly globalDeclared = new Set<string>();
 
@@ -473,6 +473,10 @@ class Bindings {
         manager = undefined;
       }
     }
+    // A function declared in a block is also bound in the enclosing function, or at the top level,
+    // in sloppy code (Annex B), to a variable the analysis keeps apart from it: names are followed
+    // instead, which can only refuse more (Codex's review of #335).
+    if (manager?.scopes.some((scope) => scope.variables.some(inBlockFunction))) manager = undefined;
     this.byName = !manager;
     if (!manager) return;
     const globals = new Set<object>();
@@ -573,6 +577,11 @@ class PageValues {
         for (const identifier of boundIdentifiers(node["id"] as AnyNode)) {
           this.functions.set(this.bindings.key(identifier), node["init"] as AnyNode);
         }
+      }
+      // A named function expression is its own variable inside it, so a recursive call reaches it
+      // by that name: the same function, with the same arguments and returns (Codex's review).
+      if (node.type === "FunctionExpression" && node["id"]) {
+        this.functions.set(this.bindings.key(node["id"] as AnyNode), node);
       }
     });
     let rounds = 0;
@@ -748,6 +757,13 @@ class PageValues {
     };
     this.visit(this.program, (node) => {
       switch (node.type) {
+        // A default, a parameter's or a pattern's, gives its value when none is passed: one that
+        // may be the page makes what it gives a value to the page's (Codex's review of #335).
+        case "AssignmentPattern": {
+          const right = node["right"] as AnyNode;
+          if (this.isPage(right)) mark(boundIdentifiers(node["left"] as AnyNode), node, right);
+          break;
+        }
         case "VariableDeclarator": {
           const init = node["init"] as AnyNode;
           if (this.isPage(init)) mark(boundIdentifiers(node["id"] as AnyNode), node, init);
@@ -866,13 +882,26 @@ function bindsGlobal(variable: {
   scope: { type: string };
   defs: readonly { type: string; parent?: unknown }[];
 }): boolean {
-  const top = variable.scope.type === "global";
+  if (variable.scope.type !== "global") return false;
   return variable.defs.some(
     (def) =>
-      (def.type === "FunctionName" && (top || variable.scope.type !== "function")) ||
-      (top &&
-        def.type === "Variable" &&
-        (def.parent as { kind?: string } | undefined)?.kind === "var"),
+      def.type === "FunctionName" ||
+      (def.type === "Variable" && (def.parent as { kind?: string } | undefined)?.kind === "var"),
+  );
+}
+
+/**
+ * Whether a variable is a function declared in a block, neither a function's own scope nor the top
+ * level: sloppy code binds it outside the block too (Annex B).
+ */
+function inBlockFunction(variable: {
+  scope: { type: string };
+  defs: readonly { type: string }[];
+}): boolean {
+  return (
+    variable.scope.type !== "global" &&
+    variable.scope.type !== "function" &&
+    variable.defs.some((def) => def.type === "FunctionName")
   );
 }
 

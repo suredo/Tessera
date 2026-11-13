@@ -660,3 +660,39 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
     );
   });
 });
+
+describe("bindings the scope analysis keeps apart are still followed (Codex's review of #335)", () => {
+  it("ADR 0009: a function declared in a block, reached by the enclosing function's variable of its name, is followed for its returns and its arguments", () => {
+    for (const js of [
+      "function run() {\n  var get;\n  { function get() { return document.body; } }\n  const key = 'inner' + 'HTML';\n  get()[key] = '<b>x</b>';\n}\nrun();",
+      "function run() {\n  var take;\n  { function take(el) { el[key] = '<b>x</b>'; } }\n  const key = 'x';\n  take(document.body);\n}\nrun();",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: a named function expression is followed through its own name, for its returns and its arguments", () => {
+    for (const js of [
+      "const key = 'inner' + 'HTML';\nconst get = function get(n) {\n  if (n) get(0)[key] = '<b>x</b>';\n  return document.body;\n};\nget(1);",
+      "const key = 'x';\nconst walk = function walk(el, n) {\n  if (n) return walk(document.body, 0);\n  el[key] = '<b>x</b>';\n};\nwalk({}, 1);",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: a default that may be the page makes the parameter, or the pattern's name, the page's", () => {
+    for (const js of [
+      "function run(document = window.document) {\n  const key = 'inner' + 'HTML';\n  document.body[key] = '<b>x</b>';\n}\nrun();",
+      "function run(el = document.body) {\n  const key = 'x';\n  el[key] = '<b>x</b>';\n}\nrun();",
+      "const { box = document.body } = {};\nconst key = 'x';\nbox[key] = '<b>x</b>';",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+    // A default that is the tool's own data stays plain.
+    expect(
+      checkJs(
+        "function run(saved = { a: 1 }) {\n  const key = 'a';\n  return saved[key];\n}\nrun();",
+      ),
+    ).toEqual([]);
+  });
+});

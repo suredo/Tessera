@@ -4,7 +4,7 @@ title: "ADR 0009. Frames and navigation in generated tools"
 description: "Before generated tools run, ADR 0006's open limit is decided again: a tool steered by pasted data could leak a person's data through the names a blocked frame navigation makes the browser look up. The static check refuses frames, navigation, property names built at run time and code made at run time before any candidate or imported tool runs, as defence in depth: a closure, if needed, is at the platform."
 tags: [decisions, runtime, sandbox, security, generation]
 status: stable
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T06:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T03:00:00Z }
 ---
 # ADR 0009. Frames and navigation in generated tools
 
@@ -60,7 +60,7 @@ The owner chose on 2026-11-12 to follow each name to the variable it refers to, 
 - A script that uses `with` or `eval`, whose names can't be read from the code, falls back to following each name through the whole script, as before.
 - The finding says where a borrowed element started, so a repair can see the real cause.
 
-This narrows what the check refuses only where the old rule was a guess about names; every form it refuses on the page's own objects is still refused. Every tool on record was checked both ways: the only change was three false findings fewer, in T10's recordings. The check stays defence in depth, as amended above.
+This narrows what the check refuses only where the old rule was a guess about names; every form it refuses on the page's own objects is still refused. Codex's review after the merge found three paths the first version lost, a function declared in a block, a named function expression's own name and a default that is the page, each now followed or refused, with a test (#342). Every tool on record was checked both ways: the only change was three false findings fewer, in T10's recordings. The check stays defence in depth, as amended above.
 
 ## Consequences
 

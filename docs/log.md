@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-13
+
+* **Fixed**: Three paths to the page the static check lost when it began following each name to its variable (L-99, ADR 0009, Codex's review of #335): a function declared in a block, which sloppy code also binds outside it, now makes the check follow names as before; a named function expression is followed through its own name too; and a default that may be the page makes the parameter or pattern's name the page's. Each is refused again, with a test that fails without the fix; every recorded tool keeps its result ([checks](code/server/checks.md), [ADR 0009](decisions/adr/0009-frames-and-navigation-in-generated-tools.md), [lessons](lessons/tessera-issues.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-13T03:00:00Z.
+
 ## 2026-11-12
 
 * **New**: The details view shows what each request was told of the conversation before it (A62, [#338](https://github.com/suredo/Tessera/issues/338) step 3): the call ledger keeps, for each request, its conversation's subject and the chat messages' numbers, never the words (migration 0016, `ENG-16`), and the details view reads those messages from the chat, saying how many it no longer keeps ([ledger](code/server/ledger.md), [storage](code/server/storage.md), [generation](code/server/generation.md), [contracts](code/contracts/package.md), [web app](code/web/package.md), [ADR 0011](decisions/adr/0011-workspace-chat.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-13T00:30:00Z.

@@ -7,7 +7,7 @@ implements: [SBX-06, SBX-07, RUN-07, VER-01]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T06:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-13T03:00:00Z }
 ---
 
 # Purpose
@@ -47,7 +47,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
   - if the tracking is still finding more after many rounds, everything, so it fails closed;
   - names the script never declares, since an element with an `id` is a global of that name.
 
-  Each variable is its own: one that holds an element doesn't make another of the same name in another scope count as the page (L-89, L-99). When a variable of the tool's own counts as the page because another gave it the page's objects, the finding says where it started: which line gave the first one an element and through which variables it reached this one (`VER-07`); that explanation (`borrowedName`) never changes what is refused. When the script uses `with` or `eval`, whose names can't be read from the code, or the analysis can't run, the check follows each name through the whole script instead, as it did before, and the finding says so: shadowing can then only make it refuse more.
+  Each variable is its own: one that holds an element doesn't make another of the same name in another scope count as the page (L-89, L-99). When a variable of the tool's own counts as the page because another gave it the page's objects, the finding says where it started: which line gave the first one an element and through which variables it reached this one (`VER-07`); that explanation (`borrowedName`) never changes what is refused. When the script uses `with` or `eval`, whose names can't be read from the code, declares a function inside a block, which sloppy code also binds outside it (Annex B), or the analysis can't run, the check follows each name through the whole script instead, as it did before, and the finding says so: shadowing can then only make it refuse more. A named function expression is followed through its own name too, so a recursive call shares its arguments and returns; and a default, a parameter's or a pattern's, that may be the page makes what it gives a value to the page's (Codex's review of #335).
 
   What crosses the bridge is plain data: the bridge's own calls (`tessera.call`, `send` and `assetUrl`, with the name written out) copy their arguments and results, and the page's objects can't be copied, so nothing given to or returned by them counts as the page. Nothing else reached through `tessera` is trusted. A tool may not declare a name `tessera` of its own, nor write anything onto `tessera`, which could pass the page off as the bridge.
 
