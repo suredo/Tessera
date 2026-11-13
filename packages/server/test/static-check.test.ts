@@ -570,23 +570,36 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
     fs.readFileSync(new URL("./fixtures/static-calculator.json", import.meta.url), "utf8"),
   ) as { history: string; repaired: string };
 
-  it("L-99: the calculator's own history, and its parser's names shared with an element, pass", () => {
-    expect(checkJs(calculator.history)).toEqual([]);
+  it("L-99: the calculator's repair passes, though its parser's names are shared with an element; its first answer is refused only for naming its own variable history", () => {
+    // A variable may not be called `history`: it may be given the page through a path the
+    // tracking doesn't follow (Codex's review of #342). The repair renames it, as it did.
+    const first = checkJs(calculator.history);
+    expect(first.length).toBeGreaterThan(0);
+    expect(first.every((f) => f.message.includes("history"))).toBe(true);
     expect(checkJs(calculator.repaired)).toEqual([]);
   });
 
-  it("L-99: a tool's own variable named history, location or navigation, or its data's history, is its own", () => {
+  it("L-99: the tool's data may have a history; a variable may not be named history, location or navigation", () => {
     for (const js of [
-      "let history = []; history.push(1); history.length;",
       "async function f() { const r = await tessera.call('data.read', {}); return r.data.history; }",
-      "const { history } = { history: [] }; history.slice();",
-      "function show(navigation) { return navigation.steps; }\nshow({ steps: [] });",
-      "const open = () => 1; open();",
-      // A function's own var is its own; a top-level var hides any element of its id.
-      "function f() { var history = []; return history.length; }\nf();",
+      "const saved = { history: [] }; saved.history.length;",
+      // A top-level var hides any element of its id.
       "var saved = [];\nconst i = 0;\nsaved[i];",
     ]) {
       expect(checkJs(js), js).toEqual([]);
+    }
+    // A variable so named may be given the page through a path the tracking doesn't follow
+    // (Codex's review of #342): refused by its name, as before #335, for each of the three.
+    const write = "['inner' + 'HTML'] = '<b>x</b>';";
+    for (const name of ["history", "location", "navigation"]) {
+      for (const js of [
+        `let ${name} = []; ${name}.push(1);`,
+        `function run(${name}) { ${name}.body${write} }\nrun.call(null, window.document);`,
+        `try { throw window.document; } catch (${name}) { ${name}.body${write} }`,
+        `function run(${name}) { ${name}.target${write} }\nwindow.document.body.addEventListener('click', run);`,
+      ]) {
+        expect(refusedJs(js), js).toBe(true);
+      }
     }
   });
 
@@ -608,6 +621,8 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
       "function take({ location }) { return location; }",
       "{ const history = []; history.push(1); }\nhistory.back();",
       "open('https://example.com');",
+      // A forbidden global's name stays refused even as the tool's own: it may be given the real one.
+      "const open = () => 1; open();",
       "const button = document.createElement('button'); button.ownerDocument;",
       // A top-level var or function, and a block's function in sloppy code, are the global object's
       // properties: `var location` is the page's location.
@@ -644,9 +659,7 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
       ),
     ).toEqual([]);
     expect(
-      checkJs(
-        "try { JSON.parse('x'); } catch (location) { location.message; }\nconst el = document.body;",
-      ),
+      checkJs("try { JSON.parse('x'); } catch (err) { err.message; }\nconst el = document.body;"),
     ).toEqual([]);
   });
 
@@ -658,5 +671,82 @@ describe("each name is the variable it refers to (L-99, ADR 0009)", () => {
     expect(findings.find((f) => f.message.includes("Object.entries"))?.message).toContain(
       "The check follows each name through the whole JavaScript here, because it uses with or eval.",
     );
+  });
+});
+
+describe("bindings the scope analysis keeps apart are still followed (Codex's review of #335)", () => {
+  it("ADR 0009: a function declared in a block, reached by the enclosing function's variable of its name, is followed for its returns and its arguments", () => {
+    for (const js of [
+      "function run() {\n  var get;\n  { function get() { return document.body; } }\n  const key = 'inner' + 'HTML';\n  get()[key] = '<b>x</b>';\n}\nrun();",
+      "function run() {\n  var take;\n  { function take(el) { el[key] = '<b>x</b>'; } }\n  const key = 'x';\n  take(document.body);\n}\nrun();",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: a named function expression is followed through its own name, for its returns and its arguments", () => {
+    for (const js of [
+      "const key = 'inner' + 'HTML';\nconst get = function get(n) {\n  if (n) get(0)[key] = '<b>x</b>';\n  return document.body;\n};\nget(1);",
+      "const key = 'x';\nconst walk = function walk(el, n) {\n  if (n) return walk(document.body, 0);\n  el[key] = '<b>x</b>';\n};\nwalk({}, 1);",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: a default that may be the page makes the parameter, or the pattern's name, the page's", () => {
+    for (const js of [
+      "function run(document = window.document) {\n  const key = 'inner' + 'HTML';\n  document.body[key] = '<b>x</b>';\n}\nrun();",
+      "function run(el = document.body) {\n  const key = 'x';\n  el[key] = '<b>x</b>';\n}\nrun();",
+      "const { box = document.body } = {};\nconst key = 'x';\nbox[key] = '<b>x</b>';",
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+    // A default that is the tool's own data stays plain.
+    expect(
+      checkJs(
+        "function run(saved = { a: 1 }) {\n  const key = 'a';\n  return saved[key];\n}\nrun();",
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("names the page may reach through paths the tracking doesn't follow stay the page's (Codex's review of #342)", () => {
+  const write = "['inner' + 'HTML'] = '<b>x</b>';";
+
+  it("ADR 0009: a function expression's own name never takes the place of another function of that name", () => {
+    for (const js of [
+      `function take(el) { el${write} }\nconst other = function take() {};\ntake(document.body);`,
+      `function get() { return document.body; }\nconst other = function get() {};\nget()${write}`,
+      `{ function noop() {} }\nfunction take(el) { el${write} }\nconst other = function take() {};\ntake(document.body);`,
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: a variable with a page's name is the page's however it is given its value", () => {
+    for (const js of [
+      `try { throw window.document; } catch (document) { document.body${write} }`,
+      `function run(document) { document.body${write} }\nrun.call(null, window.document);`,
+      `function run(document) { document.body${write} }\nrun.apply(null, [window.document]);`,
+      `(function (document) { document.body${write} })(window.document);`,
+      `class Box { put(window) { window.document.body${write} } }\nnew Box().put(window);`,
+      `const box = { value: window.document };\nfunction run(document) { document.body${write} }\nrun(box.value);`,
+      `function run() { const document = arguments[0]; document.body${write} }\nrun(window.document);`,
+      `let run;\nrun = function (document) { document.body${write} };\nrun(window.document);`,
+    ]) {
+      expect(refusedJs(js), js).toBe(true);
+    }
+  });
+
+  it("ADR 0009: a page constructor's name means the page's object however the class is declared", () => {
+    expect(
+      refusedJs(
+        `class Element {\n  constructor() { return document.body; }\n}\nnew Element()${write}`,
+      ),
+    ).toBe(true);
+    // The tool's own class with its own name stays plain.
+    expect(
+      checkJs("class Box {\n  constructor() { this.a = 1; }\n}\nconst key = 'a';\nnew Box()[key];"),
+    ).toEqual([]);
   });
 });
