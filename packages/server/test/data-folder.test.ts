@@ -191,7 +191,7 @@ describe("migrating real data (ENG-18)", () => {
   it("ENG-18, A62: a schema-14 database migrates with its chat kept and searchable, and an empty chat for no tool open", async () => {
     const root = folderFromFixture("schema-14.sql");
     const folder = await openDataFolder(root);
-    expect(folder.migrated).toEqual([15]);
+    expect(folder.migrated[0]).toBe(15);
     expect(backups(root)).toHaveLength(1);
     const garden = "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4";
     expect(listChat(folder, garden).map((m) => m.text)).toEqual([
@@ -201,6 +201,27 @@ describe("migrating real data (ENG-18)", () => {
     // Messages kept before the index existed are found by their words.
     expect(searchChat(folder, garden, "move the basil").map((m) => m.number)).toEqual([1, 2]);
     expect(listChat(folder, null)).toEqual([]);
+    folder.close();
+    const reopened = await openDataFolder(root);
+    expect(reopened.migrated).toEqual([]);
+    reopened.close();
+  });
+
+  it("ENG-18, A62: a schema-15 database migrates with its requests told nothing, and the empty screen's chat kept", async () => {
+    const root = folderFromFixture("schema-15.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated).toEqual([16]);
+    expect(backups(root)).toHaveLength(1);
+    const ledger = new RequestLedger(folder);
+    const [request] = ledger
+      .unattached()
+      .concat(ledger.forWorkspace("0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4"));
+    expect(request).toMatchObject({ told: null });
+    expect(listChat(folder, null).map((m) => m.text)).toEqual([
+      "milk, eggs, bread, coffee",
+      "Tessera isn't sure what to make.",
+    ]);
+    expect(searchChat(folder, null, "the bread").map((m) => m.number)).toEqual([1]);
     folder.close();
     const reopened = await openDataFolder(root);
     expect(reopened.migrated).toEqual([]);

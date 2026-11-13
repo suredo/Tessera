@@ -28,7 +28,7 @@ import type { JobQueue } from "../jobs/index.ts";
 import { ProviderError, RoutesError, type Provider, type Routes } from "../providers/index.ts";
 import { activationRoutes, getWorkspace, type Store } from "../workspaces/index.ts";
 import type { GenerationResult } from "./result.ts";
-import { requestConversation } from "./conversation.ts";
+import { conversationFor } from "./conversation.ts";
 import { generate } from "./pipeline.ts";
 import { generateEdit } from "./edit-pipeline.ts";
 import { repairSmoke, type SmokeRepairContext } from "./smoke.ts";
@@ -259,6 +259,12 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
         mode === "smoke" ? "repair" : mode === "data" ? "data" : "generate",
         input.workspaceId,
       );
+      // The conversation a request is told, recorded with it as where it is kept (A62).
+      const told = (workspaceId: string | null, request: string) => {
+        const conversation = conversationFor(options.store, workspaceId, request);
+        if (conversation) ledger.told(recorded, conversation.told);
+        return conversation?.quoted;
+      };
       const answer = (value: unknown) => {
         const reply = generateReplySchema.parse(value);
         ledger.finish(recorded, reply);
@@ -338,8 +344,8 @@ export function generationRoutes(options: GenerationOptions): Record<string, Han
                   options.acceptanceChecks === true,
                   waitingProposal(input),
                   // The conversation before it in its subject, read as its job starts, once the
-                  // turns before it are kept (A62).
-                  requestConversation(options.store, input.workspaceId ?? null, input.request),
+                  // turns before it are kept (A62), and what it was made of, for the ledger.
+                  told(input.workspaceId ?? null, input.request),
                 ),
               signal,
             );
