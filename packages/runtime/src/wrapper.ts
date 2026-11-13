@@ -27,9 +27,9 @@
   let watchingInput: ReturnType<typeof setInterval> | undefined;
   let checkInput: (() => void) | undefined;
   // Lays out this wrapper and the page frame while a check waits for its answer (VER-02, VER-03).
-  // The staging panel lies off-screen, where Chrome may not lay out a frame until something asks:
-  // on a cold browser the tool's frame then had no width, and a check measured a page as wide as
-  // its widest control with nothing shown (#302). Reading the frames' boxes lays both documents
+  // On a cold browser, Chrome may not lay out a frame until something asks: the tool's frame then
+  // had no width, and a check measured a page as wide as its widest control with nothing shown
+  // (#302). The staging panel now lies inside the window, transparent, a mitigation (#337), and this still asks. Reading the frames' boxes lays both documents
   // out, which gives the tool's frame its width; nothing is changed.
   let layingOut: ReturnType<typeof setInterval> | undefined;
   const layOut = () => {

@@ -112,7 +112,10 @@ function throwawayData(start: Record<string, JsonValue>): DataHandlers {
 }
 
 // Hidden from sight, assistive technology and input, but laid out at the UI standard's narrow
-// width, so a check can measure it.
+// width, so a check can measure it. It lies inside the window, transparent and behind the page,
+// rather than off-screen, a mitigation: Chrome may hold back rendering, and so the size, of a frame
+// from another site that lies outside the window. On a cold browser the tool's frame once had no
+// width after 5 seconds; whether this was the cause isn't established (L-91, L-102, #337).
 const PANEL = { width: "320px", height: "640px" };
 
 function hiddenPanel(doc: Document): HTMLElement {
@@ -122,10 +125,12 @@ function hiddenPanel(doc: Document): HTMLElement {
   panel.inert = true;
   Object.assign(panel.style, {
     position: "fixed",
-    left: "-10000px",
+    left: "0",
     top: "0",
     ...PANEL,
     overflow: "hidden",
+    opacity: "0",
+    zIndex: "-1",
     pointerEvents: "none",
   });
   doc.body.append(panel);

@@ -155,8 +155,9 @@ const PASSED = {
   message: "Passed the checks: start true, request true.",
 };
 
-// Quarantined (ENG-20): on CI for #336 the tool's frame had no size after five seconds, so the smoke
-// check failed. Find the cause, fix it, and remove this before M4 closes (#337).
+// Quarantined (ENG-20, #337): on CI, the first test on a cold browser saw the tool's frame with no
+// size after five seconds. The staging panel now lies inside the window, a mitigation; the cause
+// isn't established, so this stays quarantined until it is, before M4 closes.
 test.fixme("VER-09: a tool that does what its request's checks say passes them, capitals and spaces aside", async ({
   page,
 }) => {
