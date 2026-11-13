@@ -47,11 +47,14 @@ describe("where a tool's look differs from the UI standard (VER-06, A63)", () =>
     expect(notes(`.a { color: rebeccapurple; }`)).toEqual([".a: its own colour"]);
     expect(notes(`.a { font: 16px Arial; }`)).toEqual([".a: its own font"]);
     expect(notes(`.a { font: italic bold 1rem/1.4 "Inter"; }`)).toEqual([".a: its own font"]);
+    // The standard's size doesn't make the family the standard's.
+    expect(notes(`.a { font: var(--ui-size-body) Georgia, serif; }`)).toEqual([".a: its own font"]);
+    expect(notes(`.a { font: var(--ui-size-body)/1.4 "Inter"; }`)).toEqual([".a: its own font"]);
     expect(notes(`.a { backdrop-filter: none; -webkit-backdrop-filter: none; }`)).toEqual([]);
     // The standard's own: a variable with a fallback, the standard font in the shorthand or first
     // in a list, a system font, and a border coloured by a token.
     expect(
-      notes(`.a { color: var(--ui-text, #222); font: 1rem/1.5 var(--ui-font); border: 1px solid var(--ui-divider); }
+      notes(`.a { color: var(--ui-text, #222); font: var(--ui-size-body)/1.5 var(--ui-font); border: 1px solid var(--ui-divider); }
 .b { font-family: var(--ui-font), serif; font: caption; background: transparent; }`),
     ).toEqual([]);
   });

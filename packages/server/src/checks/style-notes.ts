@@ -15,9 +15,10 @@ const SELECTOR_LIMIT = 30;
 
 // A value that keeps or resets what's there, or turns an effect off, is never a difference.
 const KEEPS = /^(none|inherit|initial|unset|revert|revert-layer)$/i;
-// The `font` shorthand: what follows its size, and line height if any, is the family.
+// The `font` shorthand: what follows its size, and line height if any, is the family. A size may
+// be a variable, such as the standard's `--ui-size-body`; the family after it is still read.
 const FONT_SIZE =
-  /(?:^|\s)(?:[\d.]+(?:px|em|rem|%|pt|pc|ex|ch|lh|rlh|vw|vh|vmin|vmax|cm|mm|in|q)|xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|smaller|larger|(?:calc|min|max|clamp)\([^)]*\))(?:\s*\/\s*\S+)?\s+(\S.*)$/i;
+  /(?:^|\s)(?:[\d.]+(?:px|em|rem|%|pt|pc|ex|ch|lh|rlh|vw|vh|vmin|vmax|cm|mm|in|q)|xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|smaller|larger|(?:calc|min|max|clamp)\([^)]*\)|var\((?:[^()]|\([^()]*\))*\))(?:\s*\/\s*\S+)?\s+(\S.*)$/i;
 // A `var()`, its fallback too, is the standard's or a variable's value, never a colour of the
 // tool's own; what's left of the value is looked at. Nested parentheses one level deep, as in a
 // fallback of `rgb(…)`, are removed with it.
