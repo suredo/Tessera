@@ -153,9 +153,9 @@ export function App() {
   const [settled, setSettled] = useState(false);
   const [cancelProblem, setCancelProblem] = useState("");
   const [dataOffer, setDataOffer] = useState<RequestOutcome["dataOffer"]>();
-  // The last answer to a question or an idea, and the workspace it was asked in, or none: only the
-  // next request from there follows it (GEN-19).
-  const discussion = useRef<{ token: string; workspaceId: string | null } | undefined>(undefined);
+  // The last turn on its way to being kept: the next request waits for it, so the server reads it
+  // as the conversation before that request (A62).
+  const keeping = useRef<Promise<void>>(Promise.resolve());
   // Stage and elapsed time while the request runs, until a cancel has settled it (GEN-16).
   const progress = useRequestProgress(control, requesting && !settled);
   // Whose chat is on screen: the open workspace's on the workspaces, the first-run screen's (null)
@@ -386,7 +386,7 @@ export function App() {
     const reply = (message: string, target: string | null = madeIn ?? askedIn) => {
       if (replied) return;
       replied = true;
-      void chat.answered(asked, target, message);
+      keeping.current = chat.answered(asked, target, message).catch(() => undefined);
       tellReply(message, target);
     };
     const owner = new RequestControl();
@@ -399,13 +399,9 @@ export function App() {
     // Changes waiting for review in this chat's workspace: the request may answer them in words.
     const waiting = dataOffer && dataOffer.workspaceId === openId ? dataOffer : undefined;
     setDataOffer(undefined);
-    // The discussion this request follows, asked in the same place; it is followed once.
-    const followed =
-      discussion.current && discussion.current.workspaceId === openId
-        ? discussion.current.token
-        : undefined;
-    discussion.current = undefined;
     try {
+      // The turn before this one is kept first, so it is part of this request's conversation.
+      await keeping.current;
       const outcome = await carryOut(
         text,
         openId,
@@ -421,11 +417,8 @@ export function App() {
           token: waiting.token,
           ...(waiting.interfaceMessage ? { interfaceMessage: waiting.interfaceMessage } : {}),
         },
-        followed,
       );
       setDataOffer(owner.stopped ? undefined : outcome.dataOffer);
-      if (outcome.discussion && !owner.stopped)
-        discussion.current = { token: outcome.discussion, workspaceId: openId };
       // After Cancel the outcome is already known: say it now, not after the bounded refresh.
       if (owner.stopped && !outcome.savedToolId) {
         reply(

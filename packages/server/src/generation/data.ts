@@ -40,7 +40,7 @@ type Input = {
   /** How long each call, its repair too, may take; `DATA_TIME_LIMIT_MS` unless given (GEN-11). */
   timeLimitMs?: number;
   /** The answer of the discussion the request follows, which the plan and its repair are told (GEN-19). */
-  discussed?: string;
+  conversation?: string;
 };
 const failed = (reason: string): DataPlanResult => ({
   kind: "failed",

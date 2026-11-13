@@ -543,7 +543,7 @@ describe("the fixtures from the POC's routing failures (GEN-01, TEST-04)", () =>
   });
 });
 
-describe("a question or an idea is discussed, never built (GEN-19)", () => {
+describe("a question or an idea is conversation, never built (GEN-19)", () => {
   it("GEN-19, GEN-01: discuss is kept as discuss with no tool open and with one, whatever it targets", async () => {
     for (const open of [null, SHOPPING]) {
       for (const targetsCurrentTool of [true, false]) {

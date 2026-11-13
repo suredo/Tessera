@@ -39,7 +39,13 @@ const steps = [
   { stage: "intent", value: intent("clarify") },
   { stage: "intent", value: intent("clarify") },
 ];
-const EARLIER = "--- earlier answer ---";
+/** The conversation a prompt was told (A62), parsed back, or undefined if none. */
+const told = (prompt: string) => {
+  const quoted = /--- conversation ---\n(.*)\n--- end of the conversation ---/.exec(prompt)?.[1];
+  return quoted === undefined
+    ? undefined
+    : (JSON.parse(quoted) as { earlier?: unknown[]; last: { from: string; text: string }[] });
+};
 const prompts: { stage: string; prompt: string }[] = [];
 const provider: Provider = {
   name: "scripted:discuss",
@@ -70,7 +76,7 @@ async function ask(page: Page, text: string) {
   });
 }
 
-test("GEN-19: with no tool open, a question gets its answer and nothing is made; the request after it is built with the answer as context", async ({
+test("GEN-19, A62: with no tool open, a question gets its answer and nothing is made; the request after it is told the answer", async ({
   page,
 }) => {
   await page.goto(app.url);
@@ -83,12 +89,16 @@ test("GEN-19: with no tool open, a question gets its answer and nothing is made;
   await ask(page, "Build it, as a shopping list with milk and eggs");
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
   const [intentCall, createCall] = prompts.slice(-2);
-  expect(intentCall!.prompt).toContain(`${EARLIER}\n${JSON.stringify(ABOUT_NONE)}`);
+  const before = [
+    { from: "person", text: "Could a tool here remind me of birthdays?" },
+    { from: "tessera", text: ABOUT_NONE },
+  ];
+  expect(told(intentCall!.prompt)?.last).toEqual(before);
   expect(createCall).toMatchObject({ stage: "create" });
-  expect(createCall!.prompt).toContain(`${EARLIER}\n${JSON.stringify(ABOUT_NONE)}`);
+  expect(told(createCall!.prompt)?.last).toEqual(before);
 });
 
-test("GEN-19, DATA-02: a question about the open tool changes nothing, and only the next request follows it", async ({
+test("GEN-19, DATA-02, A62: a question about the open tool changes nothing, and each request is told the exchange before it", async ({
   page,
 }) => {
   await page.goto(app.url);
@@ -105,8 +115,15 @@ test("GEN-19, DATA-02: a question about the open tool changes nothing, and only 
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
 
   await ask(page, "Do that");
-  expect(prompts.at(-1)!.prompt).toContain(`${EARLIER}\n${JSON.stringify(ABOUT_LIST)}`);
+  expect(told(prompts.at(-1)!.prompt)?.last).toEqual([
+    { from: "person", text: "Would a modal be better for adding an item?" },
+    { from: "tessera", text: ABOUT_LIST },
+  ]);
+  // The next request's last exchange is the one just before it.
   await ask(page, "And again");
-  expect(prompts.at(-1)!.prompt).not.toContain(EARLIER);
+  expect(told(prompts.at(-1)!.prompt)?.last).toEqual([
+    { from: "person", text: "Do that" },
+    { from: "tessera", text: en["request.clarify"] },
+  ]);
   expect(steps).toHaveLength(0);
 });

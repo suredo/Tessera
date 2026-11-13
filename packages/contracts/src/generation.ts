@@ -172,12 +172,6 @@ export const generateRequestSchema = z
       .describe(
         "The token of entry changes waiting for review in that workspace, so the request can approve or decline them in words.",
       ),
-    discussion: z
-      .uuid()
-      .optional()
-      .describe(
-        "The token of the discussion this request follows, so a request such as 'do that' is built with its answer as context (GEN-19).",
-      ),
   })
   .describe("A request for Tessera to carry out (GEN-01).");
 export type GenerateRequest = z.infer<typeof generateRequestSchema>;
@@ -353,13 +347,7 @@ export const generateReplySchema = z
     }),
     z.strictObject({ kind: z.literal("open_saved"), savedToolId: z.string().min(1) }),
     z
-      .strictObject({
-        kind: z.literal("discussion"),
-        answer: discussionSchema.shape.answer,
-        token: z
-          .uuid()
-          .describe("Names this answer to the next request, which is built with it as context."),
-      })
+      .strictObject({ kind: z.literal("discussion"), answer: discussionSchema.shape.answer })
       .describe(
         "The request was a question or an idea: its answer in words, with nothing built or changed (GEN-19).",
       ),

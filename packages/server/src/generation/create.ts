@@ -241,7 +241,7 @@ export type CreateInput = {
   /** The checks written from the request, which creation and its repairs must pass (VER-09). */
   acceptance?: AcceptanceChecks;
   /** The answer of the discussion the request follows, which creation is told (GEN-19). */
-  discussed?: string;
+  conversation?: string;
 };
 
 const repairable = (failure: FailureClass): failure is RepairClass =>
@@ -343,7 +343,7 @@ async function ask(
     uiMode: repair.attempt?.uiMode ?? "standard",
     ...(input.core ? { core: input.core } : {}),
     ...(input.acceptance ? { acceptance: input.acceptance } : {}),
-    ...(input.discussed ? { discussed: input.discussed } : {}),
+    ...(input.conversation ? { conversation: input.conversation } : {}),
     ...repair,
   });
   let creation: Creation;

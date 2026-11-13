@@ -7,7 +7,7 @@ implements: [APP-03]
 tests: [../../../packages/server/test/chat.test.ts]
 tags: [code, server, chat, app]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T19:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T22:00:00Z }
 ---
 
 # Purpose
@@ -32,7 +32,7 @@ Keeps each workspace's chat with it, as `APP-03` asks and [ADR 0011](../../decis
 
 # Pitfalls
 
-- **The text is the person's own words,** kept on their machine in the data folder. Nothing else reads it: not the [call ledger](ledger.md), which keeps only sizes, not exports, and not yet any prompt, until requests are told their context ([#338](https://github.com/suredo/Tessera/issues/338)).
+- **The text is the person's own words,** kept on their machine in the data folder. Nothing else reads it: not the [call ledger](ledger.md), which keeps only sizes, not exports, and no prompt except as the conversation a request is told: the last exchange and the messages that share its words, quoted and capped ([generation](generation.md), A62).
 - **The host app writes Tessera's replies.** Only the host app can reach the host API; a generated tool can't (`RUN-01`), so a tool can't write words into the chat as Tessera.
 
 # Symbols (generated)

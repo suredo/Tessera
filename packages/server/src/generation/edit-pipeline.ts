@@ -23,7 +23,7 @@ export async function generateEdit(
   repairUsage: Partial<Record<RepairClass, number>> = {},
   limits: StageTimeLimits = DEFAULT_STAGE_TIME_LIMITS,
   /** The answer of the discussion the request follows (GEN-19): the edit is told it. */
-  discussed?: string,
+  conversation?: string,
 ): Promise<GenerationResult> {
   const stale = { kind: "answer", answer: "stale" } as const;
   if (!baseline?.currentVersion || baseline.data === null) return stale;
@@ -48,7 +48,7 @@ export async function generateEdit(
     editTool(provider, routes, {
       request,
       intent,
-      ...(discussed ? { discussed } : {}),
+      ...(conversation ? { conversation } : {}),
       artifact: original.artifact,
       data,
       signal,
