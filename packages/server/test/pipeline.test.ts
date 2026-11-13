@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   DEFAULT_ROUTES,
   GENERATE_ROUTE,
+  SCHEDULING_PROFILE,
   SMOKE_REPAIR_ROUTE,
   generateReplySchema,
   TOOL_DATA_LIMIT_BYTES,
@@ -131,6 +132,25 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
       clock.mockRestore();
       folder.close();
     }
+  });
+
+  it("VER-05, L-28: a tool whose page carries a profile's hooks gets no check of it when the intent named none; markup never chooses a check", async () => {
+    const folder = await newFolder();
+    const hooks = SCHEDULING_PROFILE.hooks.map((hook) => `<p data-hook="${hook.name}"></p>`);
+    const reply = await generate(
+      folder,
+      script(
+        intentReply({ kind: "create", profile: null }),
+        createReply({
+          ...tool,
+          code: { ...tool.code, html: `${tool.code.html}\n${hooks.join("\n")}` },
+        }),
+      ),
+      DEFAULT_ROUTES,
+      { request: "A shopping list, never on Fridays" },
+    );
+    expect(reply).toMatchObject({ kind: "candidate", profile: null });
+    folder.close();
   });
 
   it("VER-03, GEN-09: a tool that fits a profile carries it to staging, and its behavior failure is repaired once with its own part and the profile's", async () => {
