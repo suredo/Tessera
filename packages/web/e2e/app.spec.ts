@@ -218,10 +218,12 @@ test("GEN-12: a first load that gets no answer says so plainly and can be tried 
   page,
 }) => {
   const { shopping } = twoWorkspaces();
-  // The first request for the lists gets no answer, as when the network drops it (#217).
+  // The first request for the lists gets no answer, as when the network drops it (#217). Only that
+  // one: the empty screen's chat is read too (A62), and its loss is no load failure.
   let dropped = false;
   await page.route("**/api/host", (route) => {
-    if (dropped) return route.continue();
+    const action = (route.request().postDataJSON() as { action?: string } | null)?.action;
+    if (dropped || action !== "workspaces.list") return route.continue();
     dropped = true;
     return route.abort("failed");
   });

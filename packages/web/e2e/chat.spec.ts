@@ -18,8 +18,8 @@ import {
 
 // The chat (APP-01, APP-03, ADR 0011): each request and Tessera's reply show in the chat, said
 // once; they are kept with the workspace the request made or acted on, so they are there after a
-// reload, and each workspace shows its own. A turn with no workspace to keep it, on the empty
-// screen, shows for as long as the page is open. Through the real pipeline with scripted answers
+// reload, and each workspace shows its own. A turn on the empty screen, with no tool open, is kept
+// in the empty screen's own chat (A62). Through the real pipeline with scripted answers
 // (TEST-03, ENG-11), in Chrome at 1280 px (TEST-06), on a temporary data folder
 // (ENG-19). The tests run in order, each taking the next answers from the script.
 
@@ -123,7 +123,7 @@ async function ask(page: Page, request: string) {
   });
 }
 
-test("APP-01, GEN-08: on the empty screen, a request and its reply show in the chat, the reply said once, and nothing keeps them", async ({
+test("APP-01, GEN-08, A62: on the empty screen, a request and its reply show in the chat, said once, and are kept there", async ({
   page,
 }) => {
   await page.goto(app.url);
@@ -133,7 +133,7 @@ test("APP-01, GEN-08: on the empty screen, a request and its reply show in the c
   await expect(page.getByText(en["request.clarify"])).toHaveCount(1);
   await page.reload();
   await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeVisible();
-  await expect(said(page)).toHaveCount(0);
+  await expect(said(page)).toHaveText(["Do the thing", en["request.clarify"]]);
 });
 
 test("APP-03: the workspace a request made keeps its turn, there after a reload", async ({

@@ -37,4 +37,16 @@ describe("the chat in the host app (APP-01)", () => {
     expect(shown(state, null).map((m) => m.text)).toEqual(["Do the thing"]);
     expect(shown(state, "b")).toEqual([]);
   });
+
+  it("A62, APP-03: the empty screen shows its kept messages too, then what isn't kept yet", () => {
+    const state = {
+      kept: { "": [kept(1, "milk, eggs, bread"), kept(2, "Not sure what to make.")] },
+      local: { "": [{ from: "person" as const, text: "Remove what I just listed" }] },
+    };
+    expect(shown(state, null).map((m) => m.text)).toEqual([
+      "milk, eggs, bread",
+      "Not sure what to make.",
+      "Remove what I just listed",
+    ]);
+  });
 });
