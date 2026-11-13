@@ -220,7 +220,7 @@ test("VER-02: a tool that shows nothing fails", async ({ page }) => {
 test("VER-02: the check waits for the tool's frame to have its width before measuring it (#302)", async ({
   page,
 }) => {
-  // On a cold browser, Chrome left the off-screen frame without its width for seconds, and the
+  // On a cold browser, Chrome left the staging frame without its width for seconds, and the
   // check saw a page as wide as its widest control. Here the frame, once the tool has started,
   // has no width for 3 s, past the check's own 2 s after the tool's code ran, then gets 320 px.
   await page.goto(host.url);
