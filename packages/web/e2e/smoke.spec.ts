@@ -294,11 +294,13 @@ test("VER-02, L-91: a frame that never gets its width fails as Tessera's problem
         Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
     });
   });
+  // The reason says what the frame saw while it waited, so a failure on CI tells why (#337).
   expect(result).toEqual({
     outcome: "check-failed",
     check: "smoke",
-    reason:
-      "Tessera couldn't see the tool: its frame still had no size after 5 seconds. This is Tessera's problem, not the tool's.",
+    reason: expect.stringMatching(
+      /^Tessera couldn't see the tool: its frame still had no size after 5 seconds \(it waited \d+\.\d s, the frame drew \d+ times, and its page was (visible|hidden)\)\. This is Tessera's problem, not the tool's\.$/,
+    ),
   });
 });
 

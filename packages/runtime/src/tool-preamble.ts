@@ -116,10 +116,26 @@ import type { BridgeMethodName } from "@tessera/contracts";
   // as its widest control and no element shown (#302). The staging panel lies inside the window,
   // so Chrome has no reason to hold the frame's rendering back (a mitigation, #337), and the wrapper lays the frames out
   // while a check waits (wrapper.ts); the checks measure the tool only once its frame has its width.
-  const NO_SIZE =
-    "Tessera couldn't see the tool: its frame still had no size after 5 seconds. This is Tessera's problem, not the tool's.";
+  // What the last wait saw, so a frame left without its size says why (#337): how long it really
+  // waited, how many times the frame drew meanwhile (none means Chrome held its rendering back;
+  // some means it rendered but its size never came), and whether its page was visible.
+  let sizeWait = { ms: 0, frames: 0 };
+  const noSize = () =>
+    `Tessera couldn't see the tool: its frame still had no size after 5 seconds (it waited ${(sizeWait.ms / 1000).toFixed(1)} s, the frame drew ${sizeWait.frames} times, and its page was ${document.visibilityState}). This is Tessera's problem, not the tool's.`;
   const sized = async () => {
+    if (window.innerWidth !== 0) return;
+    const started = performance.now();
+    let frames = 0;
+    let counting = true;
+    const count = () => {
+      if (!counting) return;
+      frames += 1;
+      requestAnimationFrame(count);
+    };
+    requestAnimationFrame(count);
     for (let waited = 0; window.innerWidth === 0 && waited < 5000; waited += 50) await wait(50);
+    counting = false;
+    sizeWait = { ms: performance.now() - started, frames };
   };
   // Settled, then 50 quiet ms to show the result: a call made or settled in that time starts the
   // wait again, a bounded number of times.
@@ -155,7 +171,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
       // A frame still without its size can't show anything, so nothing found then is Tessera's
       // problem, not the tool's: said so, rather than that the tool lacks the hook (#308, L-91).
       if (window.innerWidth === 0) {
-        results.push({ ok: false, problem: NO_SIZE });
+        results.push({ ok: false, problem: noSize() });
         break;
       }
       if (!/^[a-z][a-z0-9-]{0,40}$/.test(hook)) {
@@ -435,7 +451,7 @@ import type { BridgeMethodName } from "@tessera/contracts";
     post({
       report: {
         id,
-        problems: unsized ? [...problems, NO_SIZE] : [...problems],
+        problems: unsized ? [...problems, noSize()] : [...problems],
         elements: all("*").length,
         text: body ? body.innerText.trim().length : 0,
         media: all("canvas, svg, img, video").filter(shown).length,

@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-14
+
+* **Changed**: The acceptance check's passing case is out of quarantine, to be diagnosed in place (L-102, [#337](https://github.com/suredo/Tessera/issues/337), the owner's choice). It had failed twice on CI, each time as a run's first test with the staging panel still off-screen; an experiment on CI's Windows machines ran 120 cold starts, 60 with the panel off-screen and 60 inside the window, and none failed, so the cause isn't established. A frame left without its width now says how long it really waited, how many times it drew meanwhile and whether its page was visible, so the next failure tells why ([runtime](code/runtime/package.md), [lessons](lessons/tessera-issues.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T01:30:00Z.
+
 ## 2026-11-13
 
 * **Changed**: `VER-05` amended (A64, the owner's choice, [#323](https://github.com/suredo/Tessera/issues/323)): a person's policy, such as "never on Fridays", is their data, not a check, so nothing records a policy's version. The scheduling check tests that rules work with a rule of its own on a throwaway copy, and is now tested to pass the same with no rule of the person's, a Friday rule, Fridays allowed again and most weekdays ruled out; a tool whose page carries a profile's hooks gets no check when the intent named none (L-28) ([decision log](decisions/decision-log.md), [spec](spec/verification.md), [runtime](code/runtime/package.md), [generation](code/server/generation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-13T23:30:00Z.
