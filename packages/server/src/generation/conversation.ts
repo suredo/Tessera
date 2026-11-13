@@ -33,7 +33,7 @@ export function requestConversation(
     return undefined;
   }
   if (messages.length === 0) return undefined;
-  const last = messages.slice(-2);
+  const last = lastExchange(messages);
   const earlier = searchChat(store, workspaceId, request, {
     limit: CONVERSATION_EARLIER,
     skip: last.map((message) => message.number),
@@ -42,6 +42,17 @@ export function requestConversation(
     last.map(told),
     earlier.map((message) => ({ ...told(message), number: message.number })),
   );
+}
+
+/**
+ * The last exchange: the person's last request and at most the two replies after it, such as a
+ * review's reply and then the outcome of its buttons, so the request is never lost behind replies
+ * of their own (A62). With no request of the person's kept, the last two messages.
+ */
+export function lastExchange(messages: readonly ChatMessage[]): ChatMessage[] {
+  const asked = messages.findLastIndex((message) => message.from === "person");
+  if (asked < 0) return messages.slice(-2);
+  return [messages[asked]!, ...messages.slice(asked + 1).slice(-2)];
 }
 
 /**

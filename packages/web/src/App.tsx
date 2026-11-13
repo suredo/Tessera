@@ -18,7 +18,7 @@ import {
 } from "./generate.ts";
 import { DataChangeOffer } from "./DataChangeOffer.tsx";
 import { Details } from "./Details.tsx";
-import { RequestControl } from "./request-control.ts";
+import { RequestControl, settleWithin } from "./request-control.ts";
 import { RequestBox } from "./RequestBox.tsx";
 import { Split } from "./Split.tsx";
 import { useRequestProgress, type Progress } from "./progress.ts";
@@ -102,6 +102,9 @@ export function EmptyState({
     </main>
   );
 }
+
+/** How long a request waits for the turn before it to be kept in the chat, at most (A62). */
+const KEEP_WAIT_MS = 3_000;
 
 // Which workspace is open is kept for this tab, so a reload opens it again (UX-07).
 const OPEN_KEY = "tessera.openWorkspace";
@@ -400,8 +403,9 @@ export function App() {
     const waiting = dataOffer && dataOffer.workspaceId === openId ? dataOffer : undefined;
     setDataOffer(undefined);
     try {
-      // The turn before this one is kept first, so it is part of this request's conversation.
-      await keeping.current;
+      // The turn before this one is kept first, so it is part of this request's conversation; but
+      // not for long, nor past Cancel (A62, GEN-16).
+      await settleWithin(keeping.current, KEEP_WAIT_MS, owner.controller.signal);
       const outcome = await carryOut(
         text,
         openId,

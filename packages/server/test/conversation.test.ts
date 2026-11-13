@@ -13,6 +13,7 @@ import { generate, generationRoutes } from "../src/generation/index.ts";
 import {
   CONVERSATION_EARLIER,
   fitConversation,
+  lastExchange,
   requestConversation,
 } from "../src/generation/conversation.ts";
 import { startLocalServer } from "../src/http/index.ts";
@@ -133,6 +134,41 @@ describe("what a request is told of the conversation before it (A62)", () => {
         { from: "tessera", text: "Added one entry." },
       ],
     });
+    folder.close();
+  });
+
+  it("A62: the last exchange keeps the person's request when replies of their own follow it, such as a review's", async () => {
+    const folder = await newFolder();
+    const { id } = createWorkspace(folder, "Groceries");
+    addToChat(folder, id, [
+      ...turn("Change milk to oat milk", "Please review the changes."),
+      { from: "tessera", text: "Changed one entry." },
+    ]);
+    expect(JSON.parse(requestConversation(folder, id, "Try that again")!)).toEqual({
+      last: [
+        { from: "person", text: "Change milk to oat milk" },
+        { from: "tessera", text: "Please review the changes." },
+        { from: "tessera", text: "Changed one entry." },
+      ],
+    });
+    // At most the two replies after it; and with no request kept, the last two messages.
+    const many = (from: "person" | "tessera", text: string) => ({ from, text });
+    expect(
+      lastExchange(
+        [many("person", "a"), many("tessera", "b"), many("tessera", "c"), many("tessera", "d")].map(
+          (m, i) => ({ ...m, number: i + 1, at: "2026-11-12T00:00:00.000Z" }),
+        ),
+      ).map((m) => m.text),
+    ).toEqual(["a", "c", "d"]);
+    expect(
+      lastExchange(
+        [many("tessera", "x"), many("tessera", "y"), many("tessera", "z")].map((m, i) => ({
+          ...m,
+          number: i + 1,
+          at: "2026-11-12T00:00:00.000Z",
+        })),
+      ).map((m) => m.text),
+    ).toEqual(["y", "z"]);
     folder.close();
   });
 
