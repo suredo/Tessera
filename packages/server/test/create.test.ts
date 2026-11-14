@@ -699,4 +699,39 @@ describe("a creation's repair keeps its connections (A69, A74, #367 review)", ()
     expect(asked[1]!.prompt).toContain('"connections":{"movies":["/search"]}');
     expect(asked[1]!.prompt).not.toContain("a made-up answer only the samples hold");
   });
+
+  it("GEN-09 A69: they are kept across repairs, even when a repair fails the plain-word check (#367 review)", async () => {
+    const movies = {
+      movies: { samples: { "/search": { statusCode: 200, contentType: "text/plain", body: "x" } } },
+    };
+    const js = (name: string) =>
+      `tessera.call("connection.request", { connection: "${name}", method: "GET", path: "/search" });`;
+    const { provider } = answering(
+      {
+        kind: "value",
+        stage: "create",
+        value: tool({ code: { ...tool().code, js: js("bank") }, connections: movies }),
+      },
+      // A repair with no connections and a name that isn't plain words.
+      {
+        kind: "value",
+        stage: "repair",
+        value: tool({
+          name: "Capability declaration fix",
+          code: { ...tool().code, js: js("movies") },
+        }),
+      },
+      {
+        kind: "value",
+        stage: "repair",
+        value: tool({ code: { ...tool().code, js: js("movies") } }),
+      },
+    );
+    const result = await createTool(provider, DEFAULT_ROUTES, {
+      request: "Find movies",
+      allowedConnections: ["movies"],
+    });
+    expect(result).toMatchObject({ kind: "candidate", repairs: 2 });
+    expect(result.kind === "candidate" && result.artifact.connections).toEqual(movies);
+  });
 });

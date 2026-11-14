@@ -424,23 +424,24 @@ async function ask(
   if (creation.outcome === "cannot") {
     return { outcome: plainRefusal(creation.reason, input.request) };
   }
+  // A repair that leaves its connections out keeps the failed answer's, samples and all, which its
+  // prompt names by path only (#367 review): before any check, so a repair that fails again
+  // still carries them to the next.
+  const kept =
+    creation.connections === undefined && repair.attempt?.connections
+      ? { ...creation, connections: repair.attempt.connections }
+      : creation;
   // Plain words first: a name like "Capability declaration fix" never becomes a tool (L-36).
   const words = [
-    ...plainWordProblems("The tool's name", creation.name, input.request),
-    ...plainWordProblems("The tool's summary", creation.summary, input.request),
-    ...leftOutProblems(creation.leftOut, input.request),
+    ...plainWordProblems("The tool's name", kept.name, input.request),
+    ...plainWordProblems("The tool's summary", kept.summary, input.request),
+    ...leftOutProblems(kept.leftOut, input.request),
   ];
   if (words.length > 0) {
     return {
       outcome: { kind: "failed", failure: "schema-shape", findings: words },
-      answer: creation,
+      answer: kept,
     };
   }
-  // A repair that leaves its connections out keeps the failed answer's, samples and all, which its
-  // prompt names by path only (#367 review).
-  const kept =
-    creation.outcome === "tool" && creation.connections === undefined && repair.attempt?.connections
-      ? { ...creation, connections: repair.attempt.connections }
-      : creation;
   return { outcome: candidateFrom(kept, input.allowedConnections), answer: kept };
 }
