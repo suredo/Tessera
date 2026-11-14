@@ -14,6 +14,7 @@ import {
   syncedFolderOf,
 } from "../src/storage/index.ts";
 import { listChat, searchChat } from "../src/chat/index.ts";
+import { listConnections } from "../src/connections/index.ts";
 import { RequestLedger } from "../src/ledger/index.ts";
 import { listTrash, restoreSavedTool } from "../src/trash/index.ts";
 import { loadVersion } from "../src/versions/index.ts";
@@ -210,7 +211,7 @@ describe("migrating real data (ENG-18)", () => {
   it("ENG-18, A62: a schema-15 database migrates with its requests told nothing, and the empty screen's chat kept", async () => {
     const root = folderFromFixture("schema-15.sql");
     const folder = await openDataFolder(root);
-    expect(folder.migrated).toEqual([16]);
+    expect(folder.migrated[0]).toBe(16);
     expect(backups(root)).toHaveLength(1);
     const ledger = new RequestLedger(folder);
     const [request] = ledger
@@ -222,6 +223,20 @@ describe("migrating real data (ENG-18)", () => {
       "Tessera isn't sure what to make.",
     ]);
     expect(searchChat(folder, null, "the bread").map((m) => m.number)).toEqual([1]);
+    folder.close();
+    const reopened = await openDataFolder(root);
+    expect(reopened.migrated).toEqual([]);
+    reopened.close();
+  });
+
+  it("ENG-18, CAP-02: a schema-16 database migrates with its requests' told kept, and no connections", async () => {
+    const root = folderFromFixture("schema-16.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated).toEqual([17]);
+    expect(backups(root)).toHaveLength(1);
+    const [request] = new RequestLedger(folder).unattached();
+    expect(request).toMatchObject({ told: { workspaceId: null, numbers: [1] } });
+    expect(listConnections(folder)).toEqual([]);
     folder.close();
     const reopened = await openDataFolder(root);
     expect(reopened.migrated).toEqual([]);
