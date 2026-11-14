@@ -25,6 +25,7 @@ afterAll(() =>
     fs.rmSync(f.path, { recursive: true, force: true });
   }),
 );
+const sample = { statusCode: 200, contentType: "application/json", body: '{"results":[]}' };
 async function setup() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-edit-pipeline-"));
   const store = await openDataFolder(dir);
@@ -33,7 +34,10 @@ async function setup() {
   if (built.kind !== "candidate") throw new Error("Expected fixture candidate");
   const workspace = createWorkspace(store, editFixture.name, { data: built.startingData });
   // A version that names a connection, so an edit is seen to keep it (A66).
-  const artifact = { ...built.artifact, connections: ["home-lights", "movies"] };
+  const artifact = {
+    ...built.artifact,
+    connections: { "home-lights": { samples: {} }, movies: { samples: { "/search": sample } } },
+  };
   const hash = saveVersion(store.db, artifact);
   const active = activateVersion(store, workspace.id, hash, workspace.dataRevision);
   if (!active.ok) throw new Error("Expected fixture activation");
@@ -220,7 +224,7 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
         data: { schemaVersion: 2 },
         ui: artifact.ui,
         capabilities: artifact.capabilities,
-        connections: ["home-lights", "movies"],
+        connections: { "home-lights": { samples: {} }, movies: { samples: { "/search": sample } } },
         pins: artifact.pins,
       },
     });

@@ -198,3 +198,51 @@ export const connectionAnswerSchema = z
   })
   .describe("A service's answer, as the host hands it to the tool (CAP-02).");
 export type ConnectionAnswer = z.infer<typeof connectionAnswerSchema>;
+
+// What a connection answers while a tool is checked (A69, ADR 0015 point 5): sample answers the
+// tool's version carries, by path, written with the tool, so its checks see realistic data and
+// never reach the service.
+
+/** How many sample answers a tool may carry for one connection. */
+export const CONNECTION_SAMPLES_LIMIT = 10;
+/**
+ * The longest sample answer's text, in characters: a limit zod and the JSON Schema both check,
+ * which a limit in bytes couldn't be (CON-01).
+ */
+export const CONNECTION_SAMPLE_LIMIT = 16 * 1024;
+
+const samplePathSchema = z
+  .string()
+  .max(CONNECTION_PATH_LIMIT)
+  .regex(/^\/(?!\/)[^\s#?\\\p{Cc}]*$/u)
+  .describe(
+    "The path this answer is for, without a query, such as /search/movie. A request gets the sample whose path is the longest one its own path starts with.",
+  );
+
+export const connectionSampleSchema = z
+  .strictObject({
+    statusCode: connectionAnswerSchema.shape.statusCode,
+    contentType: connectionAnswerSchema.shape.contentType,
+    body: z
+      .string()
+      .max(CONNECTION_SAMPLE_LIMIT)
+      .describe("The answer's text, as the service would send it, with made-up content."),
+  })
+  .describe("A made-up answer a check gets in place of the service's (A69).");
+export type ConnectionSample = z.infer<typeof connectionSampleSchema>;
+
+/** How a tool version uses one connection: for now, the sample answers its checks get. */
+export const connectionUseSchema = z
+  .strictObject({
+    samples: z
+      .record(samplePathSchema, connectionSampleSchema)
+      .refine(
+        (samples) => Object.keys(samples).length <= CONNECTION_SAMPLES_LIMIT,
+        `At most ${CONNECTION_SAMPLES_LIMIT} sample answers.`,
+      )
+      // The same limit for the JSON Schema, which a refine doesn't reach (CON-01).
+      .meta({ maxProperties: CONNECTION_SAMPLES_LIMIT })
+      .describe("Sample answers by path, each path once (A69)."),
+  })
+  .describe("A connection the tool uses (CAP-02, A66).");
+export type ConnectionUse = z.infer<typeof connectionUseSchema>;

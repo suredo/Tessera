@@ -33,8 +33,8 @@ const newFolder = () => {
 };
 
 const tool = (capabilities: string[], schema: Artifact["data"]["schema"] = {}): Artifact => ({
-  contractVersion: 3,
-  connections: [],
+  contractVersion: 4,
+  connections: {},
   code: { html: "<p>Errands</p>", css: "", js: "" },
   data: { schemaVersion: 1, schema, defaults: {}, migrations: [] },
   capabilities,

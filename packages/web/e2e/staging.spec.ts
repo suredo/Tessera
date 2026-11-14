@@ -53,8 +53,8 @@ const toV2: Migration = {
   operations: [{ op: "renameField", collection: "tasks", from: "name", to: "title" }],
 };
 const artifact = (code: Artifact["code"], data: Artifact["data"]): Artifact => ({
-  contractVersion: 3,
-  connections: [],
+  contractVersion: 4,
+  connections: {},
   code,
   data,
   capabilities: [],

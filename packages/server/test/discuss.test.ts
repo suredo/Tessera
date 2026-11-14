@@ -86,8 +86,8 @@ const QUESTION =
   "Would a modal be better than the side panel for editing a card? I keep losing my place when the panel opens, and I'm not sure what would work best here.";
 
 const board: Artifact = {
-  contractVersion: 3,
-  connections: [],
+  contractVersion: 4,
+  connections: {},
   code: { html: "<p>Board</p>", css: "", js: "" },
   data: {
     schemaVersion: 1,

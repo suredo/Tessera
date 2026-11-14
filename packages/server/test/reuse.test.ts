@@ -50,8 +50,8 @@ const schema = {
 } as Artifact["data"]["schema"];
 
 const version = (html: string, defaults: Artifact["data"]["defaults"]): Artifact => ({
-  contractVersion: 3,
-  connections: [],
+  contractVersion: 4,
+  connections: {},
   code: { html, css: "", js: "" },
   data: { schemaVersion: 1, schema, defaults, migrations: [] },
   capabilities: [],

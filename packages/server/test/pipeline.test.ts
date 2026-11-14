@@ -489,8 +489,8 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     const folder = await newFolder();
     const workspace = createWorkspace(folder, "Shopping list");
     const hash = saveVersion(folder.db, {
-      contractVersion: 3,
-      connections: [],
+      contractVersion: 4,
+      connections: {},
       code: { html: "<p>List</p>", css: "", js: "" },
       data: { schemaVersion: 1, schema: listSchema, defaults: { items: [] }, migrations: [] },
       capabilities: [],

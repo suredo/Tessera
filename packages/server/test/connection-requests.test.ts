@@ -229,8 +229,8 @@ async function setup(
     key: ODD_KEY,
   });
   const tool: Artifact = {
-    contractVersion: 3,
-    connections: uses,
+    contractVersion: 4,
+    connections: Object.fromEntries(uses.map((name) => [name, { samples: {} }])),
     code: { html: "<p>Movies</p>", css: "", js: "" },
     data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
     capabilities,
