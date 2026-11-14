@@ -4,7 +4,7 @@ title: "ADR 0015. Outside services through connections the person adds"
 description: "Decides D11 (CAP-02, A65): no vetted sources; the person adds a connection to any service, a tool uses one by name through the host, reads run freely, a tool's first write through a connection is confirmed, and checks never reach the real service."
 tags: [decisions, capabilities, outside-data, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T05:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T05:30:00Z }
 ---
 # ADR 0015. Outside services through connections the person adds
 
@@ -21,7 +21,7 @@ What must still hold:
 - **A key in a tool's code can be read by the tool.** Any tool, or anything injected into one, could leak it.
 - **Every candidate is checked before the person sees it** (`VER-02`, `VER-03`), and a check must not do anything real (`BRG-06`).
 
-The comparison put to the owner, for the movie finder: the **Internet Archive** (no key; public-domain films that play on its site; mostly older films, uneven fields), **TMDB** (almost every film; a key per person, non-commercial use only, its logo and a notice, cached at most 6 months; doesn't say where a film can be watched), **OMDb** (IMDb-based details; a key, 1,000 requests a day free, posters only for patrons) and **Wikidata** (film facts, no key, a descriptive User-Agent and a processing-time limit). The recommendation was the Internet Archive first. The owner chose none, as below.
+The comparison put to the owner, for the movie finder: the **Internet Archive** (no key; public-domain films that play on its site; mostly older films, uneven fields), **TMDB** (almost every film; a key per person, non-commercial use only, its logo and a notice, cached at most 6 months; where a film can be streamed, rented or bought, by country, from JustWatch, credited as such, with a link to TMDB's page rather than to the film ([watch providers](https://developer.themoviedb.org/reference/movie-watch-providers)); the comparison put to the owner wrongly said TMDB doesn't say where a film can be watched), **OMDb** (IMDb-based details; a key, 1,000 requests a day free, posters only for patrons) and **Wikidata** (film facts, no key, a descriptive User-Agent and a processing-time limit). The recommendation was the Internet Archive first. The owner chose none, as below.
 
 ## Decision
 
