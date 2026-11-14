@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T05:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T09:00:00Z }
 ---
 # Threat model and boundary checks
 
@@ -40,7 +40,7 @@ A check that passes shows that the attempt it describes failed, in the browsers 
 | Assets | Bytes a tool, a person or an archive hands over | Files that aren't the image types they claim, oversize files, reads outside the asset store, paths reaching a tool, cross-workspace reads | `DATA-11`, `DATA-09` | AST-01 to AST-06 | M1, the asset store ([#49](https://github.com/suredo/Tessera/issues/49)) |
 | Imports | An archive file | Writing outside the import's own folder, oversize or bomb archives, malformed or newer formats, hash mismatches, executable content, overwriting existing work | `DATA-05`, `SEC-01` | IMP-01 to IMP-07 | M1, export and import ([#48](https://github.com/suredo/Tessera/issues/48)); assets in archives with [#49](https://github.com/suredo/Tessera/issues/49) |
 | The local server | Web pages and other local processes | Requests from foreign `Host` headers and other origins | `SEC-03`, `PLAT-02` | Its own tests | M1, the launcher and server ([#54](https://github.com/suredo/Tessera/issues/54)) |
-| Connections to outside services | A tool's requests through a connection; the service's answers | Requests to addresses outside the connection (another host, a redirect elsewhere, a path that escapes), the key reaching a tool, a prompt, the ledger, the logs or an export, a write the person didn't allow (a first write unconfirmed, or after the permission was taken back), any request to the service during staging, and answers taken as instructions | `CAP-02`, `SEC-02`, `RUN-01` | Not yet numbered: #349 numbers them with their tests | M4, connections ([#349](https://github.com/suredo/Tessera/issues/349), [ADR 0015](../decisions/adr/0015-person-connections.md)) |
+| Connections to outside services | A tool's requests through a connection; the service's answers | Requests through a connection the tool wasn't built for (A66), requests to addresses outside the connection (another host, a redirect elsewhere, a path that escapes), the key reaching a tool, a prompt, the ledger, the logs or an export, a write the person didn't allow (a first write unconfirmed, or after the permission was taken back), any request to the service during staging, and answers taken as instructions | `CAP-02`, `SEC-02`, `RUN-01` | Not yet numbered: #349 numbers them with their tests | M4, connections ([#349](https://github.com/suredo/Tessera/issues/349), [ADR 0015](../decisions/adr/0015-person-connections.md)) |
 | The trusted CLIs | Prompts that carry untrusted text | File tools, web tools outside research, a leaked environment, a stage with more tools than it needs | `CLI-03`, `CLI-08`, `SEC-02`, `SEC-04` | TCL-01 to TCL-07 | M2 for Claude Code; M3 for the Codex tool policy ([#266](https://github.com/suredo/Tessera/issues/266), [ADR 0013](../decisions/adr/0013-codex-cli-contract.md)) |
 | Research and engines | Web pages read during research; engine code | Instructions taken from sources; engine checks reaching files, network or processes | `SEC-01`, `SEC-02`, `SIM-02`, `SIM-04` | Not yet numbered | M5 |
 
