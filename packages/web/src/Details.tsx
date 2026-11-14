@@ -339,7 +339,10 @@ export function ToolConnections({
   );
 }
 
-/** What a request through a connection did, in plain words (GEN-12): its verb by method. */
+/**
+ * What a request through a connection asked for, in plain words (GEN-12), by its method: what was
+ * asked, never that it was done, which only the outcome after it says (GEN-08, #365 review).
+ */
 const ACTIONS: Record<ConnectionRequestRecord["method"], MessageKey> = {
   GET: "details.request.read",
   HEAD: "details.request.read",
@@ -368,7 +371,14 @@ export const requestText = (request: ConnectionRequestRecord): string =>
     address: request.address,
     outcome:
       request.outcome.kind === "answered"
-        ? t("details.request.answered", { status: request.outcome.statusCode })
+        ? t(
+            request.outcome.statusCode >= 400
+              ? "details.request.answeredError"
+              : "details.request.answered",
+            {
+              status: request.outcome.statusCode,
+            },
+          )
         : t(REFUSALS[request.outcome.code] ?? "details.request.refused"),
   });
 

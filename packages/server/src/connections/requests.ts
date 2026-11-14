@@ -195,12 +195,18 @@ export async function requestThroughConnection(
 ): Promise<ConnectionAnswer> {
   // A tool being checked sends nothing anywhere, so there is nothing to record (CNX-06).
   if (phase === "staging") return send(store, workspaceId, artifact, phase, request, options);
+  // Where and when, read as it is asked: the person may remove or change the connection while the
+  // service answers, and the record must keep where it went (#365 review).
+  const asked = { address: addressOf(store, request), at: store.now().toISOString() };
   try {
     const answer = await send(store, workspaceId, artifact, phase, request, options);
-    recordRequest(store, workspaceId, request, { kind: "answered", statusCode: answer.statusCode });
+    recordRequest(store, workspaceId, request, asked, {
+      kind: "answered",
+      statusCode: answer.statusCode,
+    });
     return answer;
   } catch (error) {
-    recordRequest(store, workspaceId, request, {
+    recordRequest(store, workspaceId, request, asked, {
       kind: "refused",
       code: error instanceof ConnectionRefusal ? error.code : "failed",
     });
@@ -208,22 +214,47 @@ export async function requestThroughConnection(
   }
 }
 
+/**
+ * The address a request goes to, as the record keeps it: the origin the tool named, or the
+ * connection's first, with the tool's path, before the key is added, cut to the record's limit.
+ * Just the path when the connection isn't there, or can't be read.
+ */
+function addressOf(store: Store, request: ConnectionRequest): string {
+  let origin = request.origin ?? "";
+  if (!request.origin) {
+    try {
+      const found = store.db.get(
+        z.object({ origins: z.string() }),
+        "SELECT origins FROM connections WHERE name = ?",
+        request.connection,
+      );
+      origin = found ? (z.array(z.string()).parse(JSON.parse(found.origins))[0] ?? "") : "";
+    } catch {
+      origin = "";
+    }
+  }
+  return `${origin}${request.path}`.slice(0, CONNECTION_REQUEST_ADDRESS_LIMIT);
+}
+
 /** How many requests through connections a workspace keeps, newest first (A73). */
 export const CONNECTION_REQUESTS_KEPT = 50;
 
+/** Where and when a request was asked, read before it is sent. */
+type Asked = { address: string; at: string };
+
 /**
- * Keeps a request and how it ended: the connection's address the tool asked for (its first when
- * it named none) with the tool's path, before the key is added, cut to the record's limit. Only the
- * newest `CONNECTION_REQUESTS_KEPT` of the workspace stay.
+ * Keeps a request, where and when it was asked, and how it ended. Only the newest
+ * `CONNECTION_REQUESTS_KEPT` of the workspace stay.
  */
 function recordRequest(
   store: Store,
   workspaceId: string,
   request: ConnectionRequest,
+  asked: Asked,
   outcome: ConnectionRequestRecord["outcome"],
 ): void {
   try {
-    keepRequest(store, workspaceId, request, outcome);
+    keepRequest(store, workspaceId, request, asked, outcome);
   } catch {
     // Such as a workspace removed while it asked: the record is lost, never what the tool hears,
     // since a change may already have gone out (DATA-04).
@@ -234,18 +265,9 @@ function keepRequest(
   store: Store,
   workspaceId: string,
   request: ConnectionRequest,
+  { address, at }: Asked,
   outcome: ConnectionRequestRecord["outcome"],
 ): void {
-  const found = store.db.get(
-    z.object({ origins: z.string() }),
-    "SELECT origins FROM connections WHERE name = ?",
-    request.connection,
-  );
-  const origins = found ? z.array(z.string()).parse(JSON.parse(found.origins)) : [];
-  const address = `${request.origin ?? origins[0] ?? ""}${request.path}`.slice(
-    0,
-    CONNECTION_REQUEST_ADDRESS_LIMIT,
-  );
   store.db.transaction(() => {
     store.db.run(
       `INSERT INTO connection_requests
@@ -255,7 +277,7 @@ function keepRequest(
       request.connection,
       request.method,
       address,
-      store.now().toISOString(),
+      at,
       outcome.kind === "answered" ? outcome.statusCode : null,
       outcome.kind === "refused" ? outcome.code : null,
     );

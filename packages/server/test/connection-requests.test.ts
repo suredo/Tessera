@@ -560,4 +560,20 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
     expect(newest[0]!.address).toContain("page=49");
     expect(newest.at(-1)!.address).toContain("page=0");
   });
+
+  it("A73: a request keeps where it went, even when its connection is removed or added again elsewhere while the service answers", async () => {
+    const { folder, ask, id } = await setup();
+    service.seen.length = 0;
+    const slow = ask(get("movies", "/slow"));
+    await vi.waitFor(() => expect(service.seen.map((s) => s.url)).toContain("/slow"));
+    removeConnection(folder, "movies");
+    addConnection(folder, {
+      name: "movies",
+      origins: ["https://replacement.example"],
+      auth: { kind: "none" },
+      key: null,
+    });
+    expect(codeOf(await slow)).toBe("ok");
+    expect(recentRequests(folder, id, 1).map((r) => r.address)).toEqual([`${service.origin}/slow`]);
+  });
 });

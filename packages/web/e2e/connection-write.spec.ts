@@ -150,8 +150,8 @@ test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, t
   ).toBeVisible();
   const lines = requests.getByRole("listitem");
   await expect(lines).toHaveCount(5);
-  const sent = `Sent something to ${origin}/items through lists. It answered 201.`;
-  const waited = `Sent something to ${origin}/items through lists. ${en["details.request.waited"]}`;
+  const sent = `Asked to send something to ${origin}/items through lists. It answered 201.`;
+  const waited = `Asked to send something to ${origin}/items through lists. ${en["details.request.waited"]}`;
   await expect(lines.nth(0)).toContainText(sent);
   await expect(lines.nth(1)).toContainText(waited);
   await expect(lines.nth(4)).toContainText(waited);

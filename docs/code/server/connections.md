@@ -7,7 +7,7 @@ implements: [CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06, CNX-07]
 tests: [../../../packages/server/test/connections.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, connections, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T19:17:56Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T19:29:12Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Keeps the connections the person adds to outside services, as [ADR 0015](../../d
 # Entry points
 
 - `src/connections/connections.ts`: `listConnections` gives every connection, by name, each as the contracts' `Connection`, which says whether it has a key but never carries one. `addConnection` checks a `ConnectionInput` and keeps it, refusing a taken name or more than the contracts' limit of 50, in plain words; `removeConnection` removes one and its key, refusing a name it doesn't know.
-- `src/connections/requests.ts`: `requestThroughConnection` makes a tool's request through a connection, for the tool version it runs and the mount's phase, and gives the contracts' connection answer, or throws a `ConnectionRefusal` with the bridge's code and a plain message. `ConnectionRequestOptions` lowers the time and size limits for a test. Each request of a tool not being checked is recorded, however it ended, in its own table (migration `0019-connection-requests.sql`, [storage](storage.md)): its connection, method, the address the tool asked for before the key is added, cut to 300 characters, when, and the status or refusal code; only the newest `CONNECTION_REQUESTS_KEPT` (50) per workspace stay, and a failure to record never changes what the tool hears (A73). `recentRequests` reads them, newest first, for the [host API](host-api.md)'s details.
+- `src/connections/requests.ts`: `requestThroughConnection` makes a tool's request through a connection, for the tool version it runs and the mount's phase, and gives the contracts' connection answer, or throws a `ConnectionRefusal` with the bridge's code and a plain message. `ConnectionRequestOptions` lowers the time and size limits for a test. Each request of a tool not being checked is recorded, however it ended, in its own table (migration `0019-connection-requests.sql`, [storage](storage.md)): its connection, method, the address the tool asked for before the key is added, cut to 300 characters, and when, both read as it is asked, so removing or changing the connection while the service answers doesn't change where the record says it went, and the status or refusal code; only the newest `CONNECTION_REQUESTS_KEPT` (50) per workspace stay, and a failure to record never changes what the tool hears (A73). `recentRequests` reads them, newest first, for the [host API](host-api.md)'s details.
 - The [host API](host-api.md) answers `connections.list`, `connections.add` and `connections.remove` with them, and the [bridge route](bridge.md) answers a tool's `connection.request` through `requestThroughConnection`. The [contracts](../contracts/package.md) define the shapes in `src/connection.ts`.
 
 # Behavior

@@ -29,7 +29,7 @@ it("A72: a tool with no connections says so", () => {
   expect(render([])).toContain(en["details.connection.none"]);
 });
 
-it("OBS-01 A73: each recent request says when, what and where, through which connection, and how it ended, in plain words", () => {
+it("OBS-01 GEN-08 A73: each recent request says when, what was asked and where, through which connection, and how it ended, in plain words", () => {
   const html = renderToStaticMarkup(
     <ToolConnections
       connections={[{ name: "lists", added: true, writesAllowed: true }]}
@@ -54,10 +54,10 @@ it("OBS-01 A73: each recent request says when, what and where, through which con
   );
   expect(html).toContain(en["details.connectionRequestsHeading"]);
   expect(html).toContain(
-    "Sent something to https://api.example.com/items through lists. It answered 201.",
+    "Asked to send something to https://api.example.com/items through lists. It answered 201.",
   );
   expect(html).toContain(
-    "Deleted something at https://api.example.com/items/1 through lists. It waited for your permission; nothing was sent.",
+    "Asked to delete something at https://api.example.com/items/1 through lists. It waited for your permission; nothing was sent.",
   );
   expect(
     requestText({
@@ -67,7 +67,21 @@ it("OBS-01 A73: each recent request says when, what and where, through which con
       at: "2026-11-14T08:00:00.000Z",
       outcome: { kind: "refused", code: "stale" },
     }),
-  ).toContain("Read https://api.example.com/search through movies. Refused; nothing was sent.");
+  ).toContain(
+    "Asked to read https://api.example.com/search through movies. Refused; nothing was sent.",
+  );
+  // An error answer never reads as done (GEN-08).
+  expect(
+    requestText({
+      connection: "lists",
+      method: "DELETE",
+      address: "https://api.example.com/items/1",
+      at: "2026-11-14T08:00:00.000Z",
+      outcome: { kind: "answered", statusCode: 403 },
+    }),
+  ).toContain(
+    "Asked to delete something at https://api.example.com/items/1 through lists. It answered 403, an error, so it may not have done it.",
+  );
 });
 
 it("A73: with no requests yet, no requests part is shown", () => {
