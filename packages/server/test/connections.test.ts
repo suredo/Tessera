@@ -8,7 +8,8 @@ import {
   type HostActionName,
 } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
-import { exportWorkspace } from "../src/archives/archive.ts";
+import { ARCHIVE_LIMITS, exportWorkspace } from "../src/archives/archive.ts";
+import { readZip } from "../src/archives/zip.ts";
 import { answerHost } from "../src/host/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { createWorkspace } from "../src/workspaces/index.ts";
@@ -78,10 +79,14 @@ describe("connections the person adds (CAP-02, ADR 0015)", () => {
   it("CAP-02: an export never carries a connection's key", async () => {
     const folder = await newFolder();
     ask(folder, "connections.add", { connection: movies });
-    const workspace = createWorkspace(folder, "Films");
-    const archive = Buffer.from(exportWorkspace(folder, workspace.id)).toString("latin1");
-    expect(archive).not.toContain(KEY);
-    expect(archive).not.toContain("api.example.com");
+    const workspace = createWorkspace(folder, "Old science fiction films");
+    // Every entry, unzipped: the archive's entries are compressed, so its raw bytes show nothing.
+    const entries = [...readZip(exportWorkspace(folder, workspace.id), ARCHIVE_LIMITS).values()];
+    const text = entries.map((bytes) => Buffer.from(bytes).toString("utf8")).join(" ");
+    // The search sees what the export holds: the workspace's own title is there.
+    expect(text).toContain("Old science fiction films");
+    expect(text).not.toContain(KEY);
+    expect(text).not.toContain("api.example.com");
     folder.close();
   });
 
