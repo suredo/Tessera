@@ -13,6 +13,7 @@ import { assemblePrompt, type RepairClass } from "../prompts/index.ts";
 import { ProviderError, runStage, type Provider, type Routes } from "../providers/index.ts";
 import type { StageTimeLimits } from "./time-limits.ts";
 import {
+  connectionProblems,
   dataProblems,
   GENERATION_TIME_LIMIT_MS,
   leftOutProblems,
@@ -20,6 +21,7 @@ import {
   plainWordProblems,
   REPAIR_BUDGETS,
   REPAIR_TIME_LIMIT_MS,
+  withConnectionCapability,
   type CreateResult,
 } from "./create.ts";
 
@@ -37,6 +39,11 @@ export type EditInput = {
   timeLimits?: Pick<StageTimeLimits, "edit" | "repair">;
   /** The answer of the discussion the request follows, which the edit is told (GEN-19). */
   conversation?: string;
+  /**
+   * The connections the changed tool may use (A66, A74): those the request gives it, with the ones
+   * it uses now. Only those it uses now when left out.
+   */
+  allowedConnections?: readonly string[];
 };
 export type EditResult = (
   | { kind: "candidate"; artifact: Artifact; summary: string; leftOut?: string[] }
@@ -80,8 +87,22 @@ export function editedCandidate(input: EditInput, answer: Answer): EditResult {
       migrations: [...data.migrations, migration],
     };
   }
+  // Its connections, replaced only with ones the request allows, and the capability in step (A74).
+  const connections =
+    answer.connections?.mode === "replace" ? answer.connections.connections : before.connections;
+  const refused = connectionProblems(
+    connections,
+    input.allowedConnections ?? Object.keys(before.connections),
+  );
+  if (refused.length) return shapeFailure(refused);
   const built = artifactSchema.safeParse({
     ...before,
+    connections,
+    // Only when they change, so an edit that keeps them keeps its declarations exactly (GEN-07).
+    capabilities:
+      answer.connections?.mode === "replace"
+        ? withConnectionCapability(before.capabilities, connections)
+        : before.capabilities,
     data,
     code:
       answer.files.mode === "replace"

@@ -7,7 +7,9 @@ import {
   CHART_LIMITS,
   CHART_TYPES,
   ITEM_LIST_PROFILE,
+  CONNECTION_SAMPLES_LIMIT,
   PROFILE_IDS,
+  REQUEST_CONNECTIONS_LIMIT,
   REVIEW_RUBRIC,
   type Intent,
 } from "@tessera/contracts";
@@ -25,6 +27,8 @@ import {
   partText,
   partVersion,
   PROMPT_BUDGETS,
+  CONNECTIONS_PROMPT_ROOM,
+  promptBudget,
   CONVERSATION_MAX_QUOTED,
   PROMPT_PARTS,
   quoteTag,
@@ -834,5 +838,163 @@ describe("the review stage's prompt (EVAL-03, A27)", () => {
 
   it("GEN-03: a small run stays well within the review's budget", () => {
     expect(assembleReviewPrompt({ ...input, images: [] }).size).toBeLessThan(REVIEW_PROMPT_BUDGET);
+  });
+});
+
+describe("connections in the generation prompt (CAP-02, A66, A74, #349 step 4)", () => {
+  // Three connections, the most a request gives a tool, with typical addresses.
+  const connections = [
+    { name: "movies", origins: ["https://api.themoviedb.org", "https://image.tmdb.org"] },
+    { name: "watch-list", origins: ["https://lists.example.com"] },
+    { name: "home-lights", origins: ["http://192.168.1.20:8080"] },
+  ].slice(0, REQUEST_CONNECTIONS_LIMIT);
+
+  it("A74: the connections part and the quoted connections go only to a request that may use one", () => {
+    const without = assemblePrompt({
+      stage: "create",
+      request: "Find movies by title.",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+    });
+    expect(names(without.parts)).not.toContain("connections");
+    expect(names(without.parts)).not.toContain("connections-quoted");
+    const withThem = assemblePrompt({
+      stage: "create",
+      request: "Find movies by title.",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      connections,
+    });
+    expect(names(withThem.parts)).toContain("connections");
+    expect(names(withThem.parts)).toContain("connections-quoted");
+    // The rules come from the contracts' limits, and the bridge part still leaves the action out.
+    expect(withThem.system).toContain(`1 to ${CONNECTION_SAMPLES_LIMIT} sample answers`);
+    expect(withThem.system).not.toMatch(/"connection\.request"[^]*"capability":"connection"/);
+    // Names and addresses, as data between the markers, never a key.
+    expect(withThem.prompt).toContain(
+      `--- connections ---\n${JSON.stringify(connections)}\n--- end of the connections ---`,
+    );
+    expect(withThem.prompt).not.toMatch(/key|token/i);
+  });
+
+  it("A74: an edit is told the connections its tool uses, with their sample paths but not the answers", () => {
+    const body = "a long made-up answer ".repeat(50);
+    const prompt = assemblePrompt({
+      stage: "edit",
+      request: "Show the poster too",
+      uiMode: "standard",
+      source: shoppingList,
+      intent: intent(),
+      connections: connections.slice(0, 1),
+      editArtifact: {
+        contractVersion: 4,
+        code: shoppingList,
+        data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
+        capabilities: ["connection"],
+        connections: {
+          movies: {
+            samples: { "/search": { statusCode: 200, contentType: "application/json", body } },
+          },
+        },
+        pins: [],
+        ui: { standardVersion: 1, mode: "standard" },
+      },
+    });
+    expect(prompt.prompt).toContain('"connections":{"movies":["/search"]}');
+    expect(prompt.prompt).not.toContain(body);
+  });
+
+  it("GEN-03 A74: with connections, every stage's largest shape stays within its budget and the connections' room", () => {
+    expect(CONNECTIONS_PROMPT_ROOM).toBe(2_000);
+    expect(promptBudget("edit", true)).toBe(PROMPT_BUDGETS.edit + 2_000);
+    expect(promptBudget("edit", false)).toBe(PROMPT_BUDGETS.edit);
+    const LONGEST = `{"last":[{"from":"person","text":"${"x".repeat(CONVERSATION_MAX_QUOTED - 38)}"}]}`;
+    const largest: Record<string, number> = { create: 0, edit: 0, repair: 0 };
+    for (const profile of PROFILE_IDS) {
+      for (const drawsCharts of [false, true]) {
+        const told = { conversation: LONGEST, connections };
+        largest.create = Math.max(
+          largest.create!,
+          assemblePrompt({
+            stage: "create",
+            request: "I need a shopping list I can tick off at the store.",
+            intent: intent({ kind: "create", profile, drawsCharts }),
+            uiMode: "standard",
+            ...told,
+          }).size,
+        );
+        largest.edit = Math.max(
+          largest.edit!,
+          assemblePrompt({
+            stage: "edit",
+            request: "Add a quantity next to each item, and sort them by name",
+            uiMode: "standard",
+            source: shoppingList,
+            intent: intent({ profile, drawsCharts }),
+            ...told,
+          }).size,
+        );
+        largest.repair = Math.max(
+          largest.repair!,
+          assemblePrompt({
+            stage: "repair",
+            request: "Add a quantity next to each item, and sort them by name",
+            uiMode: "standard",
+            source: shoppingList,
+            intent: intent({ profile, drawsCharts }),
+            failure: "static",
+            diagnostics: ['This tool wasn\'t made to use a connection called "bank".'],
+            ...told,
+          }).size,
+        );
+      }
+    }
+    for (const stage of ["create", "edit", "repair"] as const) {
+      expect(largest[stage], `${stage} with connections is ${largest[stage]}`).toBeLessThanOrEqual(
+        promptBudget(stage, true),
+      );
+    }
+  });
+});
+
+describe("connection instructions by stage (#367 review)", () => {
+  const connections = [{ name: "movies", origins: ["https://api.themoviedb.org"] }];
+  const attempt = {
+    outcome: "tool" as const,
+    name: "Movies",
+    summary: "Finds movies.",
+    code: { html: "<p></p>", css: "", js: "" },
+    data: { schema: { type: "object" }, reusableDefaults: {}, initialState: {} },
+    capabilities: ["connection" as const],
+    connections: {
+      movies: {
+        samples: { "/search": { statusCode: 200, contentType: "application/json", body: "{}" } },
+      },
+    },
+    uiMode: "standard" as const,
+  };
+  it("A74: an edit gets how to keep or replace them, a creation's repair how to keep them, creation neither", () => {
+    const create = assemblePrompt({
+      stage: "create",
+      request: "Find movies",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      connections,
+    });
+    expect(names(create.parts)).not.toContain("connections-edit");
+    expect(names(create.parts)).not.toContain("connections-repair");
+    const repair = assemblePrompt({
+      stage: "repair",
+      request: "Find movies",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      connections,
+      failure: "smoke",
+      diagnostics: ["The list stayed empty."],
+      attempt,
+    });
+    expect(names(repair.parts)).toContain("connections-repair");
+    expect(repair.prompt).toContain('"connections":{"movies":["/search"]}');
+    expect(repair.size).toBeLessThanOrEqual(promptBudget("repair", true));
   });
 });

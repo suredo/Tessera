@@ -10,6 +10,11 @@ export const CONNECTIONS_LIMIT = 50;
 export const CONNECTION_ORIGINS_LIMIT = 5;
 /** The longest key a connection keeps, in characters. */
 export const CONNECTION_KEY_LIMIT = 4096;
+/**
+ * How many connections one request may give a tool (A74): the intent stage names at most these,
+ * and the generation prompt quotes them, within the room the owner set for connections.
+ */
+export const REQUEST_CONNECTIONS_LIMIT = 3;
 
 export const connectionNameSchema = z
   .string()

@@ -531,3 +531,46 @@ describe("editing and repair (GEN-09)", () => {
     expect(repair.size, `repair size ${repair.size}`).toBeLessThanOrEqual(PROMPT_BUDGETS.repair);
   });
 });
+
+describe("an edited tool's connections (CAP-02, A66, A74)", () => {
+  const sample = { statusCode: 200, contentType: "application/json", body: "{}" };
+  const uses = (name: string) => ({ [name]: { samples: { "/": sample } } });
+  const withMovies: EditInput = {
+    ...input,
+    artifact: { ...artifact, connections: uses("movies"), capabilities: ["connection"] },
+  };
+
+  it("A74: an edit keeps its connections unless it replaces them, and only with ones the request allows", () => {
+    const kept = editedCandidate(withMovies, { ...quantity });
+    expect(kept.kind === "candidate" && kept.artifact.connections).toEqual(uses("movies"));
+    const replaced = editedCandidate(
+      { ...withMovies, allowedConnections: ["movies", "watch-list"] },
+      { ...quantity, connections: { mode: "replace", connections: uses("watch-list") } },
+    );
+    expect(replaced.kind).toBe("candidate");
+    if (replaced.kind !== "candidate") return;
+    expect(replaced.artifact.connections).toEqual(uses("watch-list"));
+    expect(replaced.artifact.capabilities).toEqual(["connection"]);
+    // Replaced with none: the capability goes with them.
+    const dropped = editedCandidate(withMovies, {
+      ...quantity,
+      connections: { mode: "replace", connections: {} },
+    });
+    expect(dropped.kind === "candidate" && dropped.artifact.capabilities).toEqual([]);
+  });
+
+  it("A66 A74: a connection the request doesn't allow is refused; by default only the ones it uses", () => {
+    expect(
+      editedCandidate(withMovies, {
+        ...quantity,
+        connections: { mode: "replace", connections: uses("bank") },
+      }),
+    ).toEqual({
+      kind: "failed",
+      failure: "schema-shape",
+      findings: [
+        "The tool uses the connection bank, which isn't one the request lists. It may use: movies.",
+      ],
+    });
+  });
+});

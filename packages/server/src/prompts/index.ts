@@ -24,6 +24,8 @@ export {
   manifestForPrompt,
   partText,
   PROMPT_BUDGETS,
+  CONNECTIONS_PROMPT_ROOM,
+  promptBudget,
   PROMPT_PARTS,
   partVersion,
   quoteTag,

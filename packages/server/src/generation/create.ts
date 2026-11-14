@@ -182,18 +182,58 @@ export function dataProblems(
   return shape;
 }
 
-/** Builds a creation only after the shared data checks, artifact validation and static check. */
-export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>): CreateResult {
+/**
+ * What an answer's connections are refused for (A66, A74): any the request doesn't list. In plain
+ * words for repair, naming the ones it may use.
+ */
+export function connectionProblems(
+  connections: Artifact["connections"],
+  allowed: readonly string[],
+): string[] {
+  const may = allowed.length
+    ? ` It may use: ${allowed.join(", ")}.`
+    : " This request gives it no connections.";
+  return Object.keys(connections)
+    .filter((name) => !allowed.includes(name))
+    .map(
+      (name) => `The tool uses the connection ${name}, which isn't one the request lists.${may}`,
+    );
+}
+
+/**
+ * A version's capabilities with "connection" exactly when it uses a connection (A74): the host
+ * keeps the two in step, as an edit can't declare capabilities itself.
+ */
+export const withConnectionCapability = (
+  capabilities: readonly Artifact["capabilities"][number][],
+  connections: Artifact["connections"],
+): Artifact["capabilities"] =>
+  [
+    ...new Set([
+      ...capabilities.filter((each) => each !== "connection"),
+      ...(Object.keys(connections).length > 0 ? (["connection"] as const) : []),
+    ]),
+  ].sort();
+
+/**
+ * Builds a creation only after the shared data checks, artifact validation and static check. Its
+ * connections must be among `allowed`, the ones the request gives the tool (A66); none by default.
+ */
+export function candidateFrom(
+  creation: Extract<Creation, { outcome: "tool" }>,
+  allowed: readonly string[] = [],
+): CreateResult {
   const { schema, reusableDefaults, initialState } = creation.data;
   const startingData = startingDataOf(reusableDefaults, initialState);
   const shape = dataProblems(schema, reusableDefaults, startingData);
+  const connections = creation.connections ?? {};
+  shape.push(...connectionProblems(connections, allowed));
   const built = {
     contractVersion: ARTIFACT_CONTRACT_VERSION,
     code: creation.code,
     data: { schemaVersion: 1, schema, defaults: reusableDefaults, migrations: [] },
-    capabilities: [...new Set(creation.capabilities)].sort(),
-    // A new tool uses no connection until its request may use one (CAP-02, #349).
-    connections: {},
+    capabilities: withConnectionCapability(creation.capabilities, connections),
+    connections,
     pins: [],
     ui: { standardVersion: UI_STANDARD_VERSION, mode: creation.uiMode },
   };
@@ -234,6 +274,8 @@ export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>):
 export type CreateInput = {
   /** The interface part the intent stage decided on: the whole request when nothing is split. */
   request: string;
+  /** The connections the request gives the tool (A66, A74); none when left out. */
+  allowedConnections?: readonly string[];
   intent?: Intent;
   signal?: AbortSignal;
   /** Counts carried across the server checks and browser staging of this request. */
@@ -382,17 +424,24 @@ async function ask(
   if (creation.outcome === "cannot") {
     return { outcome: plainRefusal(creation.reason, input.request) };
   }
+  // A repair that leaves its connections out keeps the failed answer's, samples and all, which its
+  // prompt names by path only (#367 review): before any check, so a repair that fails again
+  // still carries them to the next.
+  const kept =
+    creation.connections === undefined && repair.attempt?.connections
+      ? { ...creation, connections: repair.attempt.connections }
+      : creation;
   // Plain words first: a name like "Capability declaration fix" never becomes a tool (L-36).
   const words = [
-    ...plainWordProblems("The tool's name", creation.name, input.request),
-    ...plainWordProblems("The tool's summary", creation.summary, input.request),
-    ...leftOutProblems(creation.leftOut, input.request),
+    ...plainWordProblems("The tool's name", kept.name, input.request),
+    ...plainWordProblems("The tool's summary", kept.summary, input.request),
+    ...leftOutProblems(kept.leftOut, input.request),
   ];
   if (words.length > 0) {
     return {
       outcome: { kind: "failed", failure: "schema-shape", findings: words },
-      answer: creation,
+      answer: kept,
     };
   }
-  return { outcome: candidateFrom(creation), answer: creation };
+  return { outcome: candidateFrom(kept, input.allowedConnections), answer: kept };
 }

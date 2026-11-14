@@ -6,6 +6,10 @@ import {
   type BridgeCapability,
   CHART_LIMITS,
   CHART_TYPES,
+  CONNECTION_ANSWER_LIMIT_BYTES,
+  CONNECTION_BODY_LIMIT_BYTES,
+  CONNECTION_SAMPLE_LIMIT,
+  CONNECTION_SAMPLES_LIMIT,
   OWN_PART_CAPABILITIES,
   PROFILE_IDS,
   PROFILES,
@@ -40,7 +44,11 @@ export const PROMPT_PARTS = [
   "accessibility",
   "profile",
   "chart",
+  "connections",
+  "connections-edit",
+  "connections-repair",
   "request",
+  "connections-quoted",
   "source",
   "source-style",
   "attempt",
@@ -120,6 +128,17 @@ export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
   edit: 22_000,
   repair: 23_500,
 };
+
+/**
+ * The room a request that may use a connection gets on top of its stage's budget (A74, the
+ * owner's choice of 2026-11-14): the connections part and the connections quoted, about 1,800
+ * characters when set. Every other request keeps the budget above.
+ */
+export const CONNECTIONS_PROMPT_ROOM = 2_000;
+
+/** A stage's budget for a prompt, with the connections' room when it tells any (A74). */
+export const promptBudget = (stage: GenerationStage, withConnections: boolean): number =>
+  PROMPT_BUDGETS[stage] + (withConnections ? CONNECTIONS_PROMPT_ROOM : 0);
 
 const PLACEHOLDER = /\{\{(\w+)\}\}/g;
 
@@ -222,6 +241,12 @@ export const manifestForPrompt = (): string => {
   );
 };
 
+/** A tool's connections as a prompt tells them: each name with its sample paths, not the answers. */
+const samplePaths = (connections: Artifact["connections"]): Record<string, string[]> =>
+  Object.fromEntries(
+    Object.entries(connections).map(([name, use]) => [name, Object.keys(use.samples)]),
+  );
+
 /** The UI standard's variables, one per line, from the one definition of its tokens (VER-06). */
 const tokenLines = () =>
   Object.entries(UI_TOKENS)
@@ -273,6 +298,12 @@ export type PromptInput = {
    * mode: quoted as data, never a reason to change what the person asked for.
    */
   styleNotes?: readonly string[];
+  /**
+   * The connections this tool may use (CAP-02, A66), by name with their addresses, never a key:
+   * the person's own, already chosen for the request. With any, the connections part says how to
+   * reach them and write their sample answers, and they are quoted as data (SEC-02).
+   */
+  connections?: readonly { name: string; origins: readonly string[] }[];
 };
 
 export type AssembledPrompt = {
@@ -363,6 +394,21 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       text: String(CHART_LIMITS.text),
     });
   }
+  // How to reach a connection and write its samples, from the contracts' limits, for a tool that
+  // may use one (CAP-02, A74): only then, so every other prompt keeps its budget.
+  const connections = input.connections?.length ? input.connections : undefined;
+  if (connections) {
+    addSystem("connections", {
+      body: String(CONNECTION_BODY_LIMIT_BYTES / 1024),
+      answer: String(CONNECTION_ANSWER_LIMIT_BYTES / 1024),
+      samples: String(CONNECTION_SAMPLES_LIMIT),
+      sample: String(CONNECTION_SAMPLE_LIMIT),
+    });
+    // An edit keeps them or replaces them all; a creation's repair keeps the failed answer's when
+    // it leaves them out (#367 review). Creation needs neither.
+    if (input.editArtifact) addSystem("connections-edit");
+    else if (stage === "repair" && input.attempt) addSystem("connections-repair");
+  }
   // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
   // every rule its check enforces is stated here (VER-03, VER-04).
   if (input.intent?.profile) addSystem("profile", profileValues(input.intent.profile));
@@ -413,6 +459,12 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
   // (SEC-02), for an edit only (VER-06, A63).
   if (input.styleNotes?.length && stage === "edit")
     addRequest("style-notes", { notes: JSON.stringify(input.styleNotes) });
+  // The connections it may use: names and addresses the host checked, as JSON (SEC-02).
+  if (connections) {
+    addRequest("connections-quoted", {
+      connections: JSON.stringify(connections.map(({ name, origins }) => ({ name, origins }))),
+    });
+  }
   // The core pass's scope, as data: what to build now and what to leave for later (GEN-17).
   if (input.core && creating) {
     addRequest("core", {
@@ -431,6 +483,9 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       declarations: JSON.stringify({
         data,
         capabilities,
+        // The connections it uses, with their sample paths but not the answers, which can be long:
+        // a replace writes them all again (A74).
+        connections: samplePaths(input.editArtifact.connections),
         pins,
         ui,
         requestedChange: {
@@ -457,7 +512,15 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       summary,
       ...code,
       data: JSON.stringify(data, null, 2),
-      settings: JSON.stringify({ capabilities, uiMode }),
+      // Its connections by sample path, not the answers, which can be long: the repair keeps
+      // them by leaving connections out (#367 review).
+      settings: JSON.stringify({
+        capabilities,
+        uiMode,
+        ...(input.attempt.connections
+          ? { connections: samplePaths(input.attempt.connections) }
+          : {}),
+      }),
       tag,
     });
   }

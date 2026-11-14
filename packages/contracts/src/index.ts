@@ -35,6 +35,7 @@ export {
 } from "./chat.ts";
 export {
   CONNECTION_KEY_LIMIT,
+  REQUEST_CONNECTIONS_LIMIT,
   CONNECTION_ORIGINS_LIMIT,
   CONNECTIONS_LIMIT,
   connectionAuthSchema,
