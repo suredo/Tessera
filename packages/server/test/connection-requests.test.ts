@@ -80,6 +80,28 @@ beforeAll(async () => {
       timers.push(setTimeout(() => res.end("late"), 2000));
       return;
     }
+    // A service that writes the key back, as a request inspector or an error quoting its address
+    // would, in each of the ways the host looks for (CNX-04).
+    if (url.pathname.startsWith("/echo")) {
+      const credential =
+        url.searchParams.get("api_key") ?? (req.headers.authorization ?? "").replace("Bearer ", "");
+      const echoes: Record<string, () => void> = {
+        "/echo": () => res.end(JSON.stringify({ url: req.url, headers: req.headers })),
+        "/echo-type": () => (
+          res.setHeader("content-type", `text/plain; token=${credential}`),
+          res.end("ok")
+        ),
+        "/echo-bad-type": () => (
+          res.setHeader("content-type", `application/x-${credential}`),
+          res.end("ok")
+        ),
+        "/echo-upper": () => res.end(`Unknown key ${credential.toUpperCase()}`),
+        "/echo-encoded": () => res.end(`Asked for ${encodeURIComponent(credential)}`),
+        "/echo-base64": () => res.end(Buffer.from(credential).toString("base64")),
+      };
+      res.setHeader("content-type", "text/plain");
+      return (echoes[url.pathname] ?? (() => res.end("no such echo")))();
+    }
     if (url.pathname === "/image") {
       res.setHeader("content-type", "image/png");
       return res.end(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
@@ -222,6 +244,8 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
       [get("movies", "/search\u0000"), "invalid-args"],
       [get("movies", "/search", { headers: { authorization: "Bearer other" } }), "invalid-args"],
       [get("movies", "/search", { headers: { host: "elsewhere" } }), "invalid-args"],
+      // Within the path's limit, but longer than the address may be once written out.
+      [get("movies", `/${"é".repeat(2000)}`), "invalid-args"],
     ];
     for (const [args, code] of refused) {
       expect(codeOf(await ask(args)), JSON.stringify(args)).toBe(code);
@@ -266,6 +290,28 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
         result: { source: { url: `${service.origin}/search?query=a%20b&page=2` } },
       });
       expect(JSON.stringify(replies)).not.toContain(KEY);
+      // A service that writes the key back gets none of its answer through, in either place.
+      for (const connection of ["movies", "listings"]) {
+        for (const echo of [
+          "/echo",
+          "/echo-type",
+          "/echo-bad-type",
+          "/echo-upper",
+          "/echo-encoded",
+          "/echo-base64",
+        ]) {
+          const reply = await ask(get(connection, echo));
+          expect(reply, `${connection} ${echo}`).toMatchObject({
+            ok: false,
+            error: { code: "failed" },
+          });
+          expect(!reply.ok && reply.error.message).toMatch(/repeated the connection's key/);
+          replies.push(reply);
+        }
+      }
+      expect(JSON.stringify(replies).toLowerCase()).not.toContain(KEY.toLowerCase());
+      // An answer that doesn't repeat it still passes.
+      expect(codeOf(await ask(get("movies", "/echo-none")))).toBe("ok");
       // Nothing the data folder keeps but the connection itself holds it: no ledger, no log.
       const tables = folder.db
         .all(

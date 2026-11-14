@@ -48,6 +48,7 @@ export {
   CONNECTION_PATH_LIMIT,
   CONNECTION_READ_METHODS,
   CONNECTION_TIMEOUT_MS,
+  CONNECTION_URL_LIMIT,
   connectionAnswerSchema,
   connectionRequestSchema,
   type Connection,

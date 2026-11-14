@@ -619,7 +619,7 @@
               },
               "url": {
                 "type": "string",
-                "maxLength": 2448,
+                "maxLength": 4096,
                 "description": "The address asked, without the key."
               },
               "receivedAt": {

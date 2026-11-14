@@ -3,6 +3,7 @@ import {
   CONNECTION_ANSWER_LIMIT_BYTES,
   CONNECTION_READ_METHODS,
   CONNECTION_TIMEOUT_MS,
+  CONNECTION_URL_LIMIT,
   connectionAnswerSchema,
   connectionAuthSchema,
   connectionOriginSchema,
@@ -47,6 +48,24 @@ const isText = (type: string) =>
   /^text\//.test(type) ||
   /^application\/(json|xml|javascript|x-www-form-urlencoded)$/.test(type) ||
   /\+(json|xml)$/.test(type);
+
+/**
+ * The ways a service is likely to write a key back, such as an echo of the request or an error
+ * that quotes its address: as sent, URL- and form-encoded, escaped in JSON, and in base64. Compared
+ * without regard to case, since a header's or a type's case may change on the way. A service that
+ * transforms the key otherwise isn't caught: the person chose to trust it with the key.
+ */
+function keyForms(key: string): string[] {
+  const forms = [
+    key,
+    encodeURIComponent(key),
+    new URLSearchParams({ k: key }).toString().slice(2),
+    JSON.stringify(key).slice(1, -1),
+    Buffer.from(key).toString("base64"),
+    Buffer.from(key).toString("base64url"),
+  ];
+  return [...new Set(forms.map((form) => form.toLowerCase()))];
+}
 
 /** Reads a body up to `limit` bytes, or refuses the whole answer. */
 async function readLimited(response: Response, limit: number): Promise<Uint8Array> {
@@ -142,6 +161,12 @@ export async function requestThroughConnection(
   }
   // Where the answer came from, as the tool may see it: before the key is added.
   const source = url.href;
+  if (source.length > CONNECTION_URL_LIMIT) {
+    refuse(
+      "invalid-args",
+      `The address is longer than Tessera sends (${CONNECTION_URL_LIMIT} characters, once written out). ${NOTHING_SENT}`,
+    );
+  }
   const headers: Record<string, string> = { "user-agent": "Tessera" };
   for (const [header, value] of Object.entries(request.headers ?? {})) {
     if (value !== undefined) headers[header] = value;
@@ -183,15 +208,27 @@ export async function requestThroughConnection(
     if (error instanceof ConnectionRefusal) throw error;
     return refuse("failed", signal.aborted ? tooSlow : "The service's answer broke off.");
   }
+  // Nothing the service wrote reaches the tool if it repeats the key (CNX-04): checked before
+  // any message names what the service sent, so a refusal can't carry it either.
+  const forms = key === null ? [] : keyForms(key);
+  const repeatsKey = (text: string) => {
+    const lower = text.toLowerCase();
+    return forms.some((form) => lower.includes(form));
+  };
+  const repeated =
+    "The service's answer repeated the connection's key, so Tessera passed none of it on.";
   const contentType = response.headers.get("content-type")?.slice(0, 200) ?? null;
+  if (contentType !== null && repeatsKey(contentType)) return refuse("failed", repeated);
   const type = (contentType ?? "text/plain").split(";")[0]!.trim().toLowerCase();
   if (bytes.byteLength > 0 && !isText(type)) {
     refuse("failed", `The service answered with ${type}, which tools can't read yet.`);
   }
+  const body = new TextDecoder().decode(bytes);
+  if (repeatsKey(body)) return refuse("failed", repeated);
   const answer = connectionAnswerSchema.safeParse({
     statusCode: response.status,
     contentType,
-    body: new TextDecoder().decode(bytes),
+    body,
     source: { connection: name, url: source, receivedAt: store.now().toISOString() },
   });
   if (!answer.success) return refuse("failed", "The service's answer couldn't be passed on.");

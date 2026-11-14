@@ -120,6 +120,11 @@ export type ConnectionInput = z.infer<typeof connectionInputSchema>;
 
 /** The longest path and query a tool may send through a connection, in characters. */
 export const CONNECTION_PATH_LIMIT = 2048;
+/**
+ * The longest whole address, in characters, as the URL standard writes it: a path's characters
+ * outside ASCII grow when encoded, so the host checks this too before anything is sent.
+ */
+export const CONNECTION_URL_LIMIT = 4096;
 /** The largest body a tool may send with a write, in bytes. */
 export const CONNECTION_BODY_LIMIT_BYTES = 64 * 1024;
 /** The largest answer the host takes from a service, in bytes: a larger one is refused whole. */
@@ -186,10 +191,7 @@ export const connectionAnswerSchema = z
     source: z
       .strictObject({
         connection: connectionNameSchema,
-        url: z
-          .string()
-          .max(CONNECTION_PATH_LIMIT + 400)
-          .describe("The address asked, without the key."),
+        url: z.string().max(CONNECTION_URL_LIMIT).describe("The address asked, without the key."),
         receivedAt: z.iso.datetime().describe("When the host received the answer."),
       })
       .describe("Where the answer came from."),
