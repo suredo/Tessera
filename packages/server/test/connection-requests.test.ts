@@ -24,6 +24,8 @@ import { addWorkspaceVersion, createWorkspace } from "../src/workspaces/index.ts
 
 const KEY = "sk-test-0123456789-never-shown";
 const SLASHED_KEY = 'sk/test+01\\23"456789=never-shown';
+// And one with characters HTML writes with longer names, or with a reference before letters.
+const ODD_KEY = "sk_test|01`23&never-shown";
 
 type Seen = { method: string; url: string; headers: http.IncomingHttpHeaders };
 type Fake = { origin: string; seen: Seen[]; close(): Promise<void> };
@@ -123,6 +125,28 @@ beforeAll(async () => {
               .map((c) => `&#x${c.charCodeAt(0).toString(16).padStart(12, "0")};`)
               .join(""),
           ),
+        // The standard's other names for _, | and `, and &amp with no semicolon before letters,
+        // which HTML reads by the longest valid name.
+        "/echo-html-aliases": () =>
+          res.end(
+            `<p>${credential
+              .replaceAll("&", "&amp")
+              .replaceAll("_", "&UnderBar;")
+              .replaceAll("|", "&VerticalLine;")
+              .replaceAll("`", "&DiacriticalGrave;")}</p>`,
+          ),
+        // The key split across elements, which a page shows whole.
+        "/echo-html-split": () =>
+          res.end(
+            [...credential]
+              .map((c) => `<b>${c.replace("&", "&amp;").replace("<", "&lt;")}</b>`)
+              .join(""),
+          ),
+        // In an attribute, as a link or a form would carry it.
+        "/echo-html-attribute": () =>
+          res.end(
+            `<a title="${credential.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">x</a>`,
+          ),
         "/echo-html-named": () =>
           res.end(
             credential
@@ -164,7 +188,7 @@ afterAll(async () => {
  * movies (a key in a header), listings (a key in the query) and bank, which no tool here names.
  */
 async function setup(
-  uses: string[] = ["movies", "listings", "archive"],
+  uses: string[] = ["movies", "listings", "archive", "odd"],
   capabilities = ["connection"],
 ) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-connection-requests-"));
@@ -182,6 +206,12 @@ async function setup(
   addConnection(folder, { name: "bank", origins: [service.origin], auth, key: KEY });
   // A key with characters JSON and URLs may escape.
   addConnection(folder, { name: "archive", origins: [service.origin], auth, key: SLASHED_KEY });
+  addConnection(folder, {
+    name: "odd",
+    origins: [service.origin],
+    auth: { kind: "query", name: "api_key" },
+    key: ODD_KEY,
+  });
   const tool: Artifact = {
     contractVersion: 3,
     connections: uses,
@@ -331,7 +361,7 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
       expect(JSON.stringify(replies)).not.toContain(KEY);
       // A service that writes the key back gets none of its answer through, in either place, for
       // a plain key and for one with characters JSON and URLs escape.
-      for (const connection of ["movies", "listings", "archive"]) {
+      for (const connection of ["movies", "listings", "archive", "odd"]) {
         for (const echo of [
           "/echo",
           "/echo-type",
@@ -347,6 +377,9 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
           "/echo-html-bare",
           "/echo-html-padded",
           "/echo-html-named",
+          "/echo-html-aliases",
+          "/echo-html-split",
+          "/echo-html-attribute",
         ]) {
           const reply = await ask(get(connection, echo));
           expect(reply, `${connection} ${echo}`).toMatchObject({
@@ -359,6 +392,7 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
       }
       expect(JSON.stringify(replies).toLowerCase()).not.toContain(KEY.toLowerCase());
       expect(JSON.stringify(replies).toLowerCase()).not.toContain(SLASHED_KEY.toLowerCase());
+      expect(JSON.stringify(replies).toLowerCase()).not.toContain(ODD_KEY.toLowerCase());
       // An answer that doesn't repeat it still passes.
       expect(codeOf(await ask(get("movies", "/echo-none")))).toBe("ok");
       // Nothing the data folder keeps but the connection itself holds it: no ledger, no log.

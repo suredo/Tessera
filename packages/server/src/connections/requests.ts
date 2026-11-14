@@ -13,6 +13,7 @@ import {
   type ConnectionAnswer,
   type ConnectionRequest,
 } from "@tessera/contracts";
+import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
 import { z } from "zod";
 import type { Store } from "../workspaces/index.ts";
 
@@ -67,15 +68,6 @@ function keyForms(key: string): string[] {
   return [...new Set(forms.map((form) => form.toLowerCase()))];
 }
 
-const codePoint = (code: number) =>
-  Number.isSafeInteger(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "�";
-
-/** A numeric reference's character: leading zeros don't count, and one past Unicode is U+FFFD. */
-const numeric = (digits: string, radix: number) => {
-  const significant = digits.replace(/^0+/, "") || "0";
-  return significant.length > 8 ? "�" : codePoint(parseInt(significant, radix));
-};
-
 const JSON_ESCAPES: Record<string, string> = {
   '"': '"',
   "\\": "\\",
@@ -96,66 +88,35 @@ const jsonUnescaped = (text: string) =>
     hex !== undefined ? String.fromCharCode(parseInt(hex, 16)) : JSON_ESCAPES[one!]!,
   );
 
-// HTML's named references for the ASCII characters a key may hold; other names stand for letters
-// outside ASCII or for spaces, which no key compared here spells with.
-const HTML_NAMES: Record<string, string> = {
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  excl: "!",
-  num: "#",
-  dollar: "$",
-  percnt: "%",
-  lpar: "(",
-  rpar: ")",
-  ast: "*",
-  midast: "*",
-  plus: "+",
-  comma: ",",
-  period: ".",
-  sol: "/",
-  colon: ":",
-  semi: ";",
-  equals: "=",
-  quest: "?",
-  commat: "@",
-  lsqb: "[",
-  lbrack: "[",
-  bsol: "\\",
-  rsqb: "]",
-  rbrack: "]",
-  hat: "^",
-  lowbar: "_",
-  grave: "`",
-  lcub: "{",
-  lbrace: "{",
-  verbar: "|",
-  vert: "|",
-  rcub: "}",
-  rbrace: "}",
-};
+type Html = DefaultTreeAdapterMap["parentNode"] | DefaultTreeAdapterMap["childNode"];
 
 /**
- * HTML's and XML's character references undone, as the HTML standard reads them: numeric ones in
- * decimal or hexadecimal (either x), with any number of digits and with or without the closing
- * semicolon, and the named ones for ASCII characters, in any case.
+ * What a tool reading the text as HTML gets from it: parsed by parse5, the HTML standard's own
+ * tokenizer, which the static check already uses, so every character reference is decoded by the
+ * standard's complete table and rules (longest valid name, either x, any digits, the semicolon
+ * optional where the standard allows). Its text nodes joined as one text, so a key split across
+ * elements is read whole, then every attribute value. Linear in the text, which is already
+ * bounded (CNX-05); the walk keeps its own stack.
  */
-const htmlUnescaped = (text: string) =>
-  text.replace(
-    /&#[xX]([0-9a-fA-F]+);?|&#([0-9]+);?|&([a-zA-Z]+);?/g,
-    (match, hex?: string, dec?: string, name?: string) => {
-      if (hex !== undefined) return numeric(hex, 16);
-      if (dec !== undefined) return numeric(dec, 10);
-      return HTML_NAMES[name!.toLowerCase()] ?? match;
-    },
-  );
+function htmlUnescaped(text: string): string {
+  const texts: string[] = [];
+  const attributes: string[] = [];
+  const stack: Html[] = [parseFragment(text)];
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+    if ("value" in node && typeof node.value === "string" && node.nodeName === "#text") {
+      texts.push(node.value);
+    }
+    if ("attrs" in node) attributes.push(...node.attrs.map((attr) => attr.value));
+    if ("content" in node) stack.push(node.content);
+    if ("childNodes" in node) stack.push(...[...node.childNodes].reverse());
+  }
+  return [texts.join(""), ...attributes].join("\n");
+}
 
 /**
- * The ways a reader may decode what a service wrote before a tool sees it: as written, its JSON
- * escapes undone, its character references undone, and both, in either order. Each pass is linear
- * in the text, which is already bounded (CNX-05).
+ * The ways a reader may decode what a service wrote before a tool sees it: as written, as JSON
+ * escapes undone, as read as HTML, and both, in either order.
  */
 const readings = (text: string) => {
   const json = jsonUnescaped(text);
