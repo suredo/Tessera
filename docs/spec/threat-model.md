@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T09:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T13:12:23Z }
 ---
 # Threat model and boundary checks
 
@@ -40,7 +40,7 @@ A check that passes shows that the attempt it describes failed, in the browsers 
 | Assets | Bytes a tool, a person or an archive hands over | Files that aren't the image types they claim, oversize files, reads outside the asset store, paths reaching a tool, cross-workspace reads | `DATA-11`, `DATA-09` | AST-01 to AST-06 | M1, the asset store ([#49](https://github.com/suredo/Tessera/issues/49)) |
 | Imports | An archive file | Writing outside the import's own folder, oversize or bomb archives, malformed or newer formats, hash mismatches, executable content, overwriting existing work | `DATA-05`, `SEC-01` | IMP-01 to IMP-07 | M1, export and import ([#48](https://github.com/suredo/Tessera/issues/48)); assets in archives with [#49](https://github.com/suredo/Tessera/issues/49) |
 | The local server | Web pages and other local processes | Requests from foreign `Host` headers and other origins | `SEC-03`, `PLAT-02` | Its own tests | M1, the launcher and server ([#54](https://github.com/suredo/Tessera/issues/54)) |
-| Connections to outside services | A tool's requests through a connection; the service's answers | Requests through a connection the tool wasn't built for (A66), requests to addresses outside the connection (another host, a redirect elsewhere, a path that escapes), the key reaching a tool, a prompt, the ledger, the logs or an export, a write the person didn't allow (a first write unconfirmed, or after the permission was taken back), any request to the service during staging, and answers taken as instructions | `CAP-02`, `SEC-02`, `RUN-01` | Not yet numbered: #349 numbers them with their tests | M4, connections ([#349](https://github.com/suredo/Tessera/issues/349), [ADR 0015](../decisions/adr/0015-person-connections.md)) |
+| Connections to outside services | A tool's requests through a connection; the service's answers | Requests through a connection the tool wasn't built for (A66), requests to addresses outside the connection (another host, a redirect elsewhere, a path that escapes), the key reaching a tool, a prompt, the ledger, the logs or an export, a write the person didn't allow (a first write unconfirmed, or after the permission was taken back), any request to the service during staging, and answers taken as instructions | `CAP-02`, `SEC-02`, `RUN-01` | CNX-01 to CNX-06; the first write's confirmation and staging's made-up answers come with #349 step 3 | M4, connections ([#349](https://github.com/suredo/Tessera/issues/349), [ADR 0015](../decisions/adr/0015-person-connections.md)) |
 | The trusted CLIs | Prompts that carry untrusted text | File tools, web tools outside research, a leaked environment, a stage with more tools than it needs | `CLI-03`, `CLI-08`, `SEC-02`, `SEC-04` | TCL-01 to TCL-07 | M2 for Claude Code; M3 for the Codex tool policy ([#266](https://github.com/suredo/Tessera/issues/266), [ADR 0013](../decisions/adr/0013-codex-cli-contract.md)) |
 | Research and engines | Web pages read during research; engine code | Instructions taken from sources; engine checks reaching files, network or processes | `SEC-01`, `SEC-02`, `SIM-02`, `SIM-04` | Not yet numbered | M5 |
 
@@ -114,7 +114,20 @@ Run against the bridge's message handling, and through a hostile test tool in th
 | BRG-04 | A batch of changes planned against a record revision that has since changed | The whole batch is refused with a plain message, and none of its changes apply; a separate batch touching other records still succeeds (`DATA-02`). |
 | BRG-05 | A call carrying an earlier instance's or another tool's identity | Refused or ignored (`RUN-04`). |
 | BRG-06 | A data write before the tool is active, from the staging panel | Refused with an explanatory error (`GEN-06`). Only while a behavior check drives the candidate (`VER-03`, the owner's decision on #273) do its writes go somewhere: to a throwaway copy of its synthetic data in the host page's memory, changed by the same patch engine as saved data, which never reaches the server, the disk or the person's data and goes with the panel. |
-| BRG-07 | Arguments naming a file path, a URL, or another workspace's record or asset | Refused; no reply ever contains a file path. |
+| BRG-07 | Arguments naming a file path, a URL, or another workspace's record or asset | Refused; no reply ever contains a file path. The one path a tool gives is a connection request's, under one of the connection's own origins, which the host resolves and checks (`CNX-02`). |
+
+## Connection checks
+
+Run against the server's side of the bridge, which makes every request through a connection, with local fake services on loopback: the one a connection reaches, and another that nothing may reach ([#349](https://github.com/suredo/Tessera/issues/349), [ADR 0015](../decisions/adr/0015-person-connections.md)). They run in the [connections](../code/server/connections.md) tests, through the [bridge route](../code/server/bridge.md); the host page's refusals of `CNX-06` run against `serveBridge` in the [runtime package](../code/runtime/package.md), and the path's shape against the bridge contract in the [contracts package](../code/contracts/package.md). The first write's confirmation, and staging's made-up answers in place of `CNX-06`'s refusal, are numbered with #349 step 3; answers quoted to a model as data (`SEC-02`), with step 4.
+
+| ID | The tool sends | Expected result |
+| --- | --- | --- |
+| CNX-01 | A request through a connection its version doesn't name, or one that isn't there | Refused before anything is sent (A66). |
+| CNX-02 | A request aimed outside the connection: another origin, a whole address, a path without its leading `/` or with `//`, `\`, `#`, spaces or control characters, a header other than `accept`, `accept-language` and `content-type` | Refused before anything is sent; a path's dot segments stay on the connection's own origin. |
+| CNX-03 | A request the service answers with a redirect | Refused; nothing reaches the address it points to. |
+| CNX-04 | Anything, while looking for the key: every reply, success or refusal, from services that write it back (echoed, in the content type, upper-cased, URL-encoded, in base64, in any mix of JSON escapes, in HTML or XML character references wherever they stand, in a page as a parser shows it, split elements and attributes included), every other table of the data folder, the console | The key reaches only the service, in its header or after the tool's query; the answer's source gives the address without it, and an answer that repeats it is refused whole. |
+| CNX-05 | A request whose answer is too large (announced or not), too slow, or not text | Refused whole, with a plain message; none of the answer is passed on. |
+| CNX-06 | A request from a tool being checked (the staging phase, a rehearsal), a write, or a read with a body | Refused before anything is sent: until #349 step 3, only reads (GET, HEAD) go out, from a tool running in its workspace, while it starts too. |
 
 ## Import checks
 

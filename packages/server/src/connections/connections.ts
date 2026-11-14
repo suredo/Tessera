@@ -13,8 +13,8 @@ import type { Store } from "../workspaces/index.ts";
 
 // Connections to outside services that the person adds (CAP-02, ADR 0015). Each names a service,
 // the origins it may reach and how its key is sent. The key is written here and read by nothing
-// in this module: a connection as listed says only whether it has one. The request path (#349's
-// next step) is the only reader, and sends it only to the connection's own origins.
+// in this module: a connection as listed says only whether it has one. The request path
+// (requests.ts) is the only reader, and sends it only to the connection's own origins.
 
 const row = z.object({
   name: z.string(),

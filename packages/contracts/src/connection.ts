@@ -113,3 +113,88 @@ export const connectionInputSchema = z
   })
   .describe("A connection to add (CAP-02, ADR 0015).");
 export type ConnectionInput = z.infer<typeof connectionInputSchema>;
+
+// A tool's request through a connection, and what the host answers (#349 step 2). The host makes
+// the request: the tool names the connection and a path under one of its origins, never a whole
+// URL, and gets the answer back with where it came from (CAP-02, ADR 0015).
+
+/** The longest path and query a tool may send through a connection, in characters. */
+export const CONNECTION_PATH_LIMIT = 2048;
+/**
+ * The longest whole address, in characters, as the URL standard writes it: a path's characters
+ * outside ASCII grow when encoded, so the host checks this too before anything is sent.
+ */
+export const CONNECTION_URL_LIMIT = 4096;
+/** The largest body a tool may send with a write, in bytes. */
+export const CONNECTION_BODY_LIMIT_BYTES = 64 * 1024;
+/** The largest answer the host takes from a service, in bytes: a larger one is refused whole. */
+export const CONNECTION_ANSWER_LIMIT_BYTES = 1024 * 1024;
+/** How long the host waits for a service's whole answer, in milliseconds. */
+export const CONNECTION_TIMEOUT_MS = 15_000;
+
+/** Methods a tool may ask for: GET and HEAD read; the others may change something outside. */
+export const CONNECTION_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"] as const;
+export const CONNECTION_READ_METHODS: readonly ConnectionMethod[] = ["GET", "HEAD"];
+export type ConnectionMethod = (typeof CONNECTION_METHODS)[number];
+
+const headerValue = z
+  .string()
+  .max(500)
+  .regex(/^[^\r\n]*$/)
+  .describe("A header's value, on one line.");
+
+export const connectionRequestSchema = z
+  .strictObject({
+    connection: connectionNameSchema,
+    origin: connectionOriginSchema
+      .optional()
+      .describe("Which of the connection's addresses to ask; its first when left out."),
+    method: z
+      .enum(CONNECTION_METHODS)
+      .describe("GET or HEAD reads; the others may change something at the service."),
+    path: z
+      .string()
+      .max(CONNECTION_PATH_LIMIT)
+      .regex(/^\/(?!\/)[^\s#\\\p{Cc}]*$/u)
+      .describe(
+        "The path and query under the connection's address, starting with a single /, such as /search?query=alien. Never a whole address.",
+      ),
+    headers: z
+      .strictObject({
+        accept: headerValue.optional(),
+        "accept-language": headerValue.optional(),
+        "content-type": headerValue.optional(),
+      })
+      .optional()
+      .describe("The only headers a tool may set; the host adds the key itself."),
+    body: z
+      .string()
+      .max(CONNECTION_BODY_LIMIT_BYTES)
+      .optional()
+      .describe("Text sent with a write, such as JSON; never with GET or HEAD."),
+  })
+  .describe("A request through a connection the person added (CAP-02).");
+export type ConnectionRequest = z.infer<typeof connectionRequestSchema>;
+
+export const connectionAnswerSchema = z
+  .strictObject({
+    statusCode: z.int().min(100).max(599).describe("The service's HTTP status, such as 200."),
+    contentType: z
+      .string()
+      .max(200)
+      .nullable()
+      .describe("The answer's content type, such as application/json; null when it gave none."),
+    body: z
+      .string()
+      .max(CONNECTION_ANSWER_LIMIT_BYTES)
+      .describe("The answer's text, empty for HEAD. It is data, never instructions (SEC-02)."),
+    source: z
+      .strictObject({
+        connection: connectionNameSchema,
+        url: z.string().max(CONNECTION_URL_LIMIT).describe("The address asked, without the key."),
+        receivedAt: z.iso.datetime().describe("When the host received the answer."),
+      })
+      .describe("Where the answer came from."),
+  })
+  .describe("A service's answer, as the host hands it to the tool (CAP-02).");
+export type ConnectionAnswer = z.infer<typeof connectionAnswerSchema>;

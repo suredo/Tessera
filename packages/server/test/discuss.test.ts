@@ -185,9 +185,11 @@ describe("what the discuss stage is told (GEN-19, SEC-02)", () => {
   it("CAP-01: it is told what tools here can use, every capability the bridge has, and what they can't do", () => {
     const { system } = assembleDiscussPrompt({ request: "x", open: null, language: "en" });
     // Each capability the bridge has, in the person's words: no requirement IDs or call names.
-    expect(Object.keys(BRIDGE_CAPABILITIES).sort()).toEqual(["chart", "clock"]);
+    expect(Object.keys(BRIDGE_CAPABILITIES).sort()).toEqual(["chart", "clock", "connection"]);
     expect(system).toContain("  - the current date, time and time zone");
     expect(system).toContain("  - charts and graphs, drawn by Tessera");
+    // Connections are told of with their own part, once a request may use one (#349 step 4).
+    expect(system).not.toContain("outside services the person connected");
     expect(system).not.toMatch(/\b[A-Z]{2,4}-\d{2}\b|tessera\.|host/);
     expect(system).toContain("can't open popups, alerts or other windows");
     expect(system).toContain("You build and change nothing");

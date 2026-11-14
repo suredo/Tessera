@@ -264,6 +264,9 @@ importers:
       ajv:
         specifier: 8.20.0
         version: 8.20.0
+      entities:
+        specifier: 8.1.0
+        version: 8.1.0
       eslint-scope:
         specifier: 9.1.2
         version: 9.1.2

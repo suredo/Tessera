@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { ASSET_LIMIT_BYTES, ASSET_TYPES, assetIdSchema } from "./asset.ts";
+import {
+  CONNECTION_BODY_LIMIT_BYTES,
+  connectionAnswerSchema,
+  connectionRequestSchema,
+} from "./connection.ts";
 import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
 import { patchBatchSchema, recordIdSchema, TOOL_DATA_LIMIT_BYTES } from "./patch.ts";
 
@@ -14,8 +19,17 @@ export const BRIDGE_MANIFEST_VERSION = 1;
 export const BRIDGE_CAPABILITIES = {
   clock: "The current date, time and time zone, from the host's clock (RUN-07).",
   chart: "Charts the host draws from a spec, with tessera.chart (CAP-04, ADR 0014).",
+  connection:
+    "Requests to the outside services the person connected, by name, made by the host (CAP-02, ADR 0015).",
 } as const;
 export type BridgeCapability = keyof typeof BRIDGE_CAPABILITIES;
+
+/**
+ * Capabilities the general prompt doesn't tell of: each gets its own prompt part, only for a
+ * request that may use it (connections, #349 step 4), so the bridge part and the discuss stage
+ * leave it and its actions out. The manifest file and the checks still hold them.
+ */
+export const OWN_PART_CAPABILITIES: readonly BridgeCapability[] = ["connection"];
 
 /**
  * Where a mount stands. A tool is `starting` until the host has given it its data, and `staging`
@@ -45,7 +59,9 @@ type ActionDefinition = {
 };
 
 // No action takes a file path, a URL or a workspace: a tool reaches only its own data, so there is
-// nothing to name another's with (BRG-07). Arguments are strict objects, so extra fields are refused.
+// nothing to name another's with (BRG-07). The one path is a connection request's, under one of the
+// connection's own origins, which the host resolves and checks (CNX-02). Arguments are strict
+// objects, so extra fields are refused.
 export const BRIDGE_ACTIONS = {
   "data.read": {
     description: "Reads the tool's data, with the revision count of each record.",
@@ -138,6 +154,32 @@ export const BRIDGE_ACTIONS = {
       },
     ],
   },
+  "connection.request": {
+    description:
+      "Asks an outside service through a connection the person added, by its name, with a path under its address. The host sends the request and its key, and answers with the service's reply and where it came from. Only the connections the tool was built for (CAP-02, A66); GET and HEAD read.",
+    capability: "connection",
+    // A connection's writes change nothing of the person's data here; they wait for the person's
+    // permission instead (ADR 0015, #349 step 3), and until then the host refuses them.
+    writes: false,
+    args: connectionRequestSchema,
+    result: connectionAnswerSchema,
+    maxArgsBytes: CONNECTION_BODY_LIMIT_BYTES + 8 * 1024,
+    examples: [
+      {
+        args: { connection: "movies", method: "GET", path: "/search/movie?query=alien" },
+        result: {
+          statusCode: 200,
+          contentType: "application/json",
+          body: '{"results":[{"title":"Alien","year":1979}]}',
+          source: {
+            connection: "movies",
+            url: "https://api.example.com/search/movie?query=alien",
+            receivedAt: "2026-11-14T10:00:00.000Z",
+          },
+        },
+      },
+    ],
+  },
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
 
@@ -195,6 +237,7 @@ export const BRIDGE_ERROR_CODES = [
   "unknown-action",
   "undeclared-capability",
   "not-active",
+  "not-allowed",
   "invalid-args",
   "stale",
   "failed",

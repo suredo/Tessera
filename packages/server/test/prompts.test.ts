@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   bridgeManifest,
+  OWN_PART_CAPABILITIES,
   CHART_LIMITS,
   CHART_TYPES,
   ITEM_LIST_PROFILE,
@@ -162,7 +163,14 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     );
     expect(quoted.methodUsage).toBe(original.methodUsage);
     const ajv = new Ajv({ strict: false });
-    for (const [index, action] of original.actions.entries()) {
+    // A capability with its own part is left out with its actions (#349); the rest keep their order.
+    const told = original.actions.filter(
+      (action) =>
+        !(OWN_PART_CAPABILITIES as readonly (string | null)[]).includes(action.capability),
+    );
+    expect(told.map((action) => action.name)).toEqual(quoted.actions.map((action) => action.name));
+    expect(quoted.capabilities.map((capability) => capability.name)).toEqual(["clock", "chart"]);
+    for (const [index, action] of told.entries()) {
       const compact = quoted.actions[index]!;
       expect({ ...compact, args: null, result: null }).toEqual({
         ...action,

@@ -86,15 +86,49 @@ describe("the bridge manifest (CON-03, CAP-01)", () => {
 
   it("has no argument that could name a file, a URL or a workspace (BRG-07)", () => {
     const names: string[] = [];
-    const walk = (node: unknown): void => {
-      if (Array.isArray(node)) return node.forEach(walk);
+    const walk = (action: string, node: unknown): void => {
+      if (Array.isArray(node)) return node.forEach((each) => walk(action, each));
       if (typeof node !== "object" || node === null) return;
       const properties = (node as { properties?: Record<string, unknown> }).properties ?? {};
-      names.push(...Object.keys(properties));
-      Object.values(node).forEach(walk);
+      names.push(...Object.keys(properties).map((key) => `${action}: ${key}`));
+      Object.values(node).forEach((each) => walk(action, each));
     };
-    manifest.actions.forEach((action) => walk(action.args));
-    expect(names.filter((n) => /path|file|url|uri|href|workspace|folder|dir/i.test(n))).toEqual([]);
+    manifest.actions.forEach((action) => walk(action.name, action.args));
+    // The one exception: a connection request's path, under one of the connection's own origins,
+    // which the host resolves and checks (CNX-02). It can't name a file or a whole address.
+    expect(
+      names.filter((n) => /path|file|url|uri|href|workspace|folder|dir|origin/i.test(n)),
+    ).toEqual(["connection.request: origin", "connection.request: path"]);
+  });
+
+  it("CNX-02: a connection request's path is a path under the connection, never a whole address", () => {
+    const args = BRIDGE_ACTIONS["connection.request"].args;
+    const request = (path: string) => ({ connection: "movies", method: "GET", path });
+    for (const path of ["/", "/search?query=alien&page=2", "/a/%2e%2e/b", "/films/été"]) {
+      expect(args.safeParse(request(path)).success, path).toBe(true);
+    }
+    for (const path of [
+      "",
+      "search",
+      "//elsewhere.example/x",
+      "https://elsewhere.example/x",
+      "/\\elsewhere",
+      "/x#part",
+      "/a b",
+      "/x\n",
+      "/x\u0000",
+      `/${"x".repeat(2048)}`,
+    ]) {
+      expect(args.safeParse(request(path)).success, JSON.stringify(path)).toBe(false);
+    }
+    // Only the headers a tool may set: the host sets the key, the host and everything else.
+    expect(
+      args.safeParse({ ...request("/"), headers: { accept: "application/json" } }).success,
+    ).toBe(true);
+    for (const header of ["authorization", "cookie", "host", "x-api-key"]) {
+      const headers = { [header]: "x" };
+      expect(args.safeParse({ ...request("/"), headers }).success, header).toBe(false);
+    }
   });
 });
 

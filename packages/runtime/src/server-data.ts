@@ -34,5 +34,8 @@ export function serverData(
     patch: (_batch, context) => ask(context) as ReturnType<DataHandlers["patch"]>,
     // The server checks the image is one the workspace's data names (AST-04).
     asset: (_args, context) => ask(context) as ReturnType<NonNullable<DataHandlers["asset"]>>,
+    // The server makes the request, through the connections the tool's version names (CAP-02).
+    connection: (_args, context) =>
+      ask(context) as ReturnType<NonNullable<DataHandlers["connection"]>>,
   };
 }

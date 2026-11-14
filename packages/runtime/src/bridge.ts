@@ -1,5 +1,6 @@
 import {
   BRIDGE_ACTIONS,
+  CONNECTION_READ_METHODS,
   checkBridgeCall,
   type BridgeActionName,
   type BridgeArgs,
@@ -14,7 +15,8 @@ import type { MountedTool } from "./host.ts";
 // manifest (CON-03) with the one shared check, runs the action, and replies. It keeps the mount's
 // phase: a tool may write only once the person has interacted with its page (GEN-06), and a tool
 // in the staging panel never may, except to a behavior check's throwaway copy of its synthetic
-// data (BRG-06). It answers the host clock itself (RUN-07).
+// data (BRG-06). It answers the host clock itself (RUN-07). A request through a connection goes to
+// the server, which makes it (CAP-02); in the staging panel, none goes anywhere (CNX-06).
 
 /** Where the host's date and time come from; tests pass their own, so "the next day" is set. */
 export type HostClock = {
@@ -80,6 +82,11 @@ export type DataHandlers = {
     args: BridgeArgs<"asset.read">,
     context: DataCallContext,
   ): Promise<BridgeResult<"asset.read">>;
+  /** A request through a connection (CAP-02); without it, the host reaches no outside service. */
+  connection?(
+    args: BridgeArgs<"connection.request">,
+    context: DataCallContext,
+  ): Promise<BridgeResult<"connection.request">>;
 };
 
 export type BridgeOptions = {
@@ -136,6 +143,29 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
         ? options.data.asset(args, context)
         : Promise.reject(new BridgeError("failed", "The host can't show images here.")),
     "clock.now": () => Promise.resolve(clockReading(clock.now(), clock.timeZone())),
+    "connection.request": (args, context) => {
+      // A check never reaches the real service (ADR 0015, point 5): recorded answers come with
+      // #349 step 3, so until then a candidate's request is refused, and nothing is sent.
+      if (options.staging || options.rehearsal) {
+        return Promise.reject(
+          new BridgeError(
+            "not-allowed",
+            "A tool being checked doesn't reach outside services. Nothing was sent.",
+          ),
+        );
+      }
+      if (!CONNECTION_READ_METHODS.includes(args.method)) {
+        return Promise.reject(
+          new BridgeError(
+            "not-allowed",
+            "Tessera doesn't send changes through a connection yet, only reads (GET, HEAD). Nothing was sent.",
+          ),
+        );
+      }
+      return options.data.connection
+        ? options.data.connection(args, context)
+        : Promise.reject(new BridgeError("failed", "The host can't reach outside services here."));
+    },
   };
 
   const reply = (message: BridgeReply) => {

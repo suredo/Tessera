@@ -59,12 +59,12 @@ async function workspaceWith(capabilities: string[] = [], schema: Artifact["data
   saveWorkspaceData(folder, id, tasks, 0);
   let calls = 0;
   // Every call here has a request ID, so every one gets a reply.
-  const ask = (
+  const ask = async (
     action: string,
     args: unknown = {},
     phase: BridgeDataRequest["phase"] = "active",
-  ): BridgeReply => {
-    const reply = answerDataCall(folder, {
+  ): Promise<BridgeReply> => {
+    const reply = await answerDataCall(folder, {
       workspaceId: id,
       phase,
       call: { requestId: `r${(calls += 1)}`, action, args },
@@ -84,7 +84,7 @@ const done = (id: string, revisionCount: number) => ({
 describe("answering a tool's data call on the server (RUN-04)", () => {
   it("reads the saved data with each record's revision", async () => {
     const { folder, ask } = await workspaceWith();
-    expect(ask("data.read")).toEqual({
+    expect(await ask("data.read")).toEqual({
       requestId: "r1",
       ok: true,
       result: { data: tasks, revisions: { tasks: { "t-1": 1, "t-2": 1 } } },
@@ -95,13 +95,16 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
   it("GEN-06: refuses a write unless the host page says the tool is active, and saves one that is", async () => {
     const { folder, id, ask } = await workspaceWith();
     for (const phase of ["starting", "staging"] as const) {
-      expect(ask("data.patch", done("t-1", 1), phase)).toMatchObject({
+      expect(await ask("data.patch", done("t-1", 1), phase)).toMatchObject({
         ok: false,
         error: { code: "not-active" },
       });
     }
     expect(readWorkspaceData(folder, id).revisions).toEqual({ tasks: { "t-1": 1, "t-2": 1 } });
-    expect(ask("data.patch", done("t-1", 1))).toMatchObject({ ok: true, result: { addedIds: [] } });
+    expect(await ask("data.patch", done("t-1", 1))).toMatchObject({
+      ok: true,
+      result: { addedIds: [] },
+    });
     expect(readWorkspaceData(folder, id).revisions["tasks"]).toEqual({ "t-1": 2, "t-2": 1 });
     folder.close();
   });
@@ -109,9 +112,9 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
   it("BRG-04: refuses a batch planned against an older revision whole; another record's batch applies", async () => {
     const { folder, id, ask } = await workspaceWith();
     // Someone else changes t-1 first.
-    expect(ask("data.patch", done("t-1", 1)).ok).toBe(true);
+    expect((await ask("data.patch", done("t-1", 1))).ok).toBe(true);
     const before = getWorkspace(folder, id);
-    const stale = ask("data.patch", {
+    const stale = await ask("data.patch", {
       operations: [
         { op: "add", collection: "tasks", record: { title: "Should not appear" } },
         {
@@ -128,7 +131,7 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
       /^Nothing was changed: .*newer edit is kept/,
     );
     expect(getWorkspace(folder, id)).toEqual(before);
-    expect(ask("data.patch", done("t-2", 1)).ok).toBe(true);
+    expect((await ask("data.patch", done("t-2", 1))).ok).toBe(true);
     expect(titles(folder, id)).toEqual(["Buy milk", "Call the bank"]);
     folder.close();
   });
@@ -138,11 +141,11 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
     const add = (collection: string, title: string) => ({
       operations: [{ op: "add", collection, record: { title } }],
     });
-    const noList = ask("data.patch", add("notes", "No such list"));
+    const noList = await ask("data.patch", add("notes", "No such list"));
     expect(noList).toMatchObject({ ok: false, error: { code: "invalid-args" } });
     expect(!noList.ok && noList.error.message).toMatch(/^Nothing was changed/);
     // Within the call's limit, but over the data's once added (DATA-06).
-    expect(ask("data.patch", add("tasks", "x".repeat(262_000)))).toMatchObject({
+    expect(await ask("data.patch", add("tasks", "x".repeat(262_000)))).toMatchObject({
       ok: false,
       error: { code: "too-large" },
     });
@@ -170,7 +173,7 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
     };
     const { folder, id, ask } = await workspaceWith([], shape);
     const before = getWorkspace(folder, id);
-    const misfit = ask("data.patch", {
+    const misfit = await ask("data.patch", {
       operations: [
         { op: "replace", collection: "tasks", id: "t-1", revisionCount: 1, fields: { title: 42 } },
       ],
@@ -183,13 +186,16 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
       },
     });
     // An added record missing a field the shape requires is refused too.
-    const missing = ask("data.patch", {
+    const missing = await ask("data.patch", {
       operations: [{ op: "add", collection: "tasks", record: { title: "No done flag" } }],
     });
     expect(missing).toMatchObject({ ok: false, error: { code: "invalid-args" } });
     expect(getWorkspace(folder, id)).toEqual(before);
     // A change that fits is saved as before.
-    expect(ask("data.patch", done("t-1", 1))).toMatchObject({ ok: true, result: { addedIds: [] } });
+    expect(await ask("data.patch", done("t-1", 1))).toMatchObject({
+      ok: true,
+      result: { addedIds: [] },
+    });
     expect(readWorkspaceData(folder, id).data["tasks"]).toMatchObject([
       { id: "t-1", done: true },
       {},
@@ -201,7 +207,7 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
     const folder = await openDataFolder(newFolder());
     const { id } = createWorkspace(folder, "Errands");
     saveWorkspaceData(folder, id, tasks, 0);
-    const reply = answerDataCall(folder, {
+    const reply = await answerDataCall(folder, {
       workspaceId: id,
       phase: "active",
       call: { requestId: "r1", action: "data.patch", args: done("t-1", 1) },
@@ -213,11 +219,13 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
 
   it("checks the capabilities the stored tool version declares, never the browser's word (CAP-01)", async () => {
     const without = await workspaceWith([]);
-    expect(without.ask("clock.now")).toMatchObject({ error: { code: "undeclared-capability" } });
+    expect(await without.ask("clock.now")).toMatchObject({
+      error: { code: "undeclared-capability" },
+    });
     without.folder.close();
     // Declared, the call passes the check; the clock is the host page's to answer, not the server's.
     const declared = await workspaceWith(["clock"]);
-    expect(declared.ask("clock.now")).toMatchObject({
+    expect(await declared.ask("clock.now")).toMatchObject({
       ok: false,
       error: { code: "failed", message: 'The server doesn\'t answer "clock.now"; the host does.' },
     });
@@ -226,12 +234,12 @@ describe("answering a tool's data call on the server (RUN-04)", () => {
 
   it("refuses the shared check's refusals, and calls for a workspace in the trash, changing nothing", async () => {
     const { folder, id, ask } = await workspaceWith();
-    expect(ask("fs.read")).toMatchObject({ error: { code: "unknown-action" } });
-    expect(ask("data.read", { path: "C:/Users/me/tessera.db" })).toMatchObject({
+    expect(await ask("fs.read")).toMatchObject({ error: { code: "unknown-action" } });
+    expect(await ask("data.read", { path: "C:/Users/me/tessera.db" })).toMatchObject({
       error: { code: "invalid-args" },
     });
     deleteWorkspace(folder, id);
-    const gone = ask("data.patch", done("t-1", 1));
+    const gone = await ask("data.patch", done("t-1", 1));
     expect(gone).toMatchObject({ ok: false, error: { code: "failed" } });
     expect(JSON.stringify(gone)).not.toMatch(/[A-Za-z]:[\\/]|tessera\.db/);
     folder.close();
@@ -289,7 +297,7 @@ describe("handing a tool an image (DATA-11, AST-03 to AST-05)", () => {
     const stored = await storeAsset(folder, new Uint8Array(png));
     if (!stored.ok) throw new Error(stored.message);
     saveWorkspaceData(folder, id, { ...tasks, cover: stored.asset.id }, 1);
-    const reply = ask("asset.read", { id: stored.asset.id }, "starting");
+    const reply = await ask("asset.read", { id: stored.asset.id }, "starting");
     expect(reply).toMatchObject({ ok: true });
     const result = (reply as { result: Record<string, string> }).result;
     expect(Object.keys(result).sort()).toEqual(["bytesBase64", "type"]);
@@ -309,7 +317,7 @@ describe("handing a tool an image (DATA-11, AST-03 to AST-05)", () => {
     const stored = await storeAsset(folder, new Uint8Array(jpeg));
     if (!stored.ok) throw new Error(stored.message);
     saveWorkspaceData(folder, other, { photos: [{ id: "p-1", asset: stored.asset.id }] }, 0);
-    expect(ask("asset.read", { id: stored.asset.id })).toEqual({
+    expect(await ask("asset.read", { id: stored.asset.id })).toEqual({
       requestId: expect.any(String) as string,
       ok: false,
       error: { code: "invalid-args", message: "That image isn't one this tool's data names." },
@@ -320,7 +328,7 @@ describe("handing a tool an image (DATA-11, AST-03 to AST-05)", () => {
   it("AST-03: refuses an ID that isn't a SHA-256 before anything is read", async () => {
     const { folder, ask } = await workspaceWith();
     for (const id of ["../tessera.db", "C:/Windows/win.ini", "A".repeat(64), "photo.png"]) {
-      expect(ask("asset.read", { id })).toMatchObject({
+      expect(await ask("asset.read", { id })).toMatchObject({
         ok: false,
         error: { code: "invalid-args" },
       });

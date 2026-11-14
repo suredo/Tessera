@@ -63,6 +63,7 @@
                 "unknown-action",
                 "undeclared-capability",
                 "not-active",
+                "not-allowed",
                 "invalid-args",
                 "stale",
                 "failed"
