@@ -4,7 +4,7 @@ title: "M4: First release, v0.1"
 description: "Useful-immediately generation, more profiles, files and data providers, and the v0.1 acceptance run."
 tags: [roadmap, first-release]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T04:00:00Z }
 ---
 # M4: First release, v0.1 (size L, live budget about 140 calls)
 
@@ -12,10 +12,10 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T23:00:00Z }
 
 | Deliverable | Requirements |
 | --- | --- |
-| First task: decide the outside data source for the movie finder (D11, A42) | CAP-02 |
+| First task: decide the outside data source for the movie finder (D11, A42): decided on 2026-11-14, connections the person adds ([ADR 0015](../decisions/adr/0015-person-connections.md)) | CAP-02 |
 | "Useful immediately" generation guidance and checks (stated data, sensible defaults, labelled examples, no past-dated defaults) | UX-01, GEN-05 |
 | Three more profiles: items over time (T4), editing with files in/out (T14), and search results with selection (T7). Recurring chores combine item-list and time rules | VER-03, VER-05 |
-| Files in and out through the asset store (for the image editor, T14); the first data provider for T7, with result images delivered as assets and videos opened on their own site; sources chosen at the start of M4 (D11) | CAP-02, CAP-03, DATA-11 |
+| Files in and out through the asset store (for the image editor, T14); connections to outside services for T7, which the person adds (ADR 0015), with images delivered as assets and videos opened on their own site | CAP-02, CAP-03, DATA-11 |
 | Details view complete (source, versions, checks, ledger, diagnostics) | UX-06, APP-09, OBS-01 |
 | Metrics report from the ledger | OBS-03 |
 | Discussing without building: a question or an idea gets a plain answer, and nothing is built until asked (A59) | GEN-19, GEN-01 |

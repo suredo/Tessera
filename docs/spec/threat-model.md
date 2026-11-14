@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T23:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T04:00:00Z }
 ---
 # Threat model and boundary checks
 
@@ -26,7 +26,7 @@ A check that passes shows that the attempt it describes failed, in the browsers 
 | Generated code: tool HTML, CSS and JavaScript, and later migrations and engines | A model wrote it, possibly steered by text it read (`SEC-02`); it may be wrong or hostile. |
 | Imported archives | They may come from someone else, or be edited by hand. Their tool code is generated code. |
 | Web pages the person visits | They can send requests to loopback addresses and rebind DNS names (`SEC-03`). |
-| Research sources and outside data (M5, `CAP-02`) | Their text may try to instruct a model (`SEC-02`). |
+| Research sources (M5) and connections to outside services (M4, `CAP-02`, ADR 0015) | Their text may try to instruct a model (`SEC-02`). A tool could try to send the person's data out, or write to a service unasked: the host makes every request, only to a connection's addresses, keeps its key, confirms a tool's first write through it, and in staging answers without reaching the service. |
 
 **Trusted, and out of scope:** the person, their Windows account and anything running under it, the browser (Chrome or Edge, `RUN-06`) and its sandbox, Node, the signed-in CLIs and the model providers behind them, and the pinned dependencies (supply chain review is M6's audit). Malware on the machine, a hostile browser extension and physical access are not defended against. Data at rest is not encrypted.
 
