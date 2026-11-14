@@ -1,5 +1,6 @@
-import type { RuntimeState, ToolRuntime } from "@tessera/runtime";
-import { serveBridge, serverData } from "@tessera/runtime";
+import type { BridgeArgs } from "@tessera/contracts";
+import type { DataHandlers, RuntimeState, ToolRuntime } from "@tessera/runtime";
+import { BridgeError, serveBridge, serverData } from "@tessera/runtime";
 import { ask } from "./host-api.ts";
 
 // Starting the open workspace's tool, and remembering how the person left it (RUN-02, UX-07).
@@ -15,7 +16,74 @@ const defaults: StartDeps = { ask, serveBridge, serverData };
 export type StartOptions = {
   /** Called after each change the tool saved to its data, so the history can show it (APP-05). */
   onWrite?: () => void;
+  /**
+   * Asks the person whether the tool may change things through a connection, the first time it
+   * tries (ADR 0015 point 4, A70); resolves true if they allow it. Without it, nothing is allowed.
+   */
+  askToWrite?: (question: WriteQuestion) => Promise<boolean>;
 };
+
+/** What the person is asked before a tool's first change through a connection (A70). */
+export type WriteQuestion = {
+  /** The tool's name. */
+  tool: string;
+  connection: string;
+  method: BridgeArgs<"connection.request">["method"];
+  /** Where it goes: the connection's address and the tool's path, never the key. */
+  address: string;
+  /** The text it sends, if any. */
+  body: string | null;
+};
+
+const DECLINED = "The person didn't allow this change. Nothing was sent.";
+
+/**
+ * The connection handler with the person's permission asked for (A70): a change the server refuses
+ * as needing it is put to the person, once per connection at a time, and on their leave allowed
+ * for this workspace and sent again; otherwise the tool hears it wasn't allowed. Nothing else is
+ * asked or retried, and the server stays the one that decides (CNX-07).
+ */
+export function withPermission(
+  connection: NonNullable<DataHandlers["connection"]>,
+  workspaceId: string,
+  tool: string,
+  askToWrite: StartOptions["askToWrite"],
+  deps: Pick<StartDeps, "ask">,
+): NonNullable<DataHandlers["connection"]> {
+  // One question per connection at a time: changes that wait on it share its answer.
+  const asking = new Map<string, Promise<boolean>>();
+  const decide = async (args: BridgeArgs<"connection.request">): Promise<boolean> => {
+    if (!askToWrite) return false;
+    const { connections } = await deps.ask("connections.list", {});
+    const found = connections.find((c) => c.name === args.connection);
+    if (!found) return false;
+    const origin = args.origin ?? found.origins[0]!;
+    const allowed = await askToWrite({
+      tool,
+      connection: args.connection,
+      method: args.method,
+      address: `${origin}${args.path}`,
+      body: args.body ?? null,
+    });
+    if (allowed)
+      await deps.ask("connections.allowWrites", { workspaceId, connection: args.connection });
+    return allowed;
+  };
+  return async (args, context) => {
+    try {
+      return await connection(args, context);
+    } catch (error) {
+      if (!(error instanceof BridgeError) || error.code !== "needs-permission") throw error;
+      let answer = asking.get(args.connection);
+      if (!answer) {
+        answer = decide(args).finally(() => asking.delete(args.connection));
+        asking.set(args.connection, answer);
+      }
+      if (!(await answer)) throw new BridgeError("not-allowed", DECLINED);
+      return connection(args, context);
+    }
+  };
+}
 
 /**
  * Starts the tool through `open` (a first start or a restore) and serves it the bridge with what
@@ -28,10 +96,10 @@ export async function startTool(
   workspaceId: string,
   open: (runtime: ToolRuntime) => ReturnType<ToolRuntime["open"]>,
   signal: AbortSignal,
-  { onWrite }: StartOptions = {},
+  { onWrite, askToWrite }: StartOptions = {},
   deps: StartDeps = defaults,
 ): Promise<boolean> {
-  const { capabilities } = await deps.ask("workspaces.open", { id: workspaceId });
+  const { workspace, capabilities } = await deps.ask("workspaces.open", { id: workspaceId });
   if (signal.aborted) return false;
   const tool = await open(runtime);
   if (signal.aborted) return false;
@@ -45,6 +113,17 @@ export async function startTool(
         onWrite?.();
         return result;
       },
+      ...(data.connection
+        ? {
+            connection: withPermission(
+              (args, context) => data.connection!(args, context),
+              workspaceId,
+              workspace.title,
+              askToWrite,
+              deps,
+            ),
+          }
+        : {}),
     },
   });
   return true;

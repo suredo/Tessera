@@ -2,7 +2,13 @@ import type { Workspace } from "@tessera/contracts";
 import { createRuntime, type ToolRuntime } from "@tessera/runtime";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { t } from "./i18n/translate.ts";
-import { rememberedState, rememberState, startTool } from "./tool-start.ts";
+import {
+  rememberedState,
+  rememberState,
+  startTool,
+  type WriteQuestion as Question,
+} from "./tool-start.ts";
+import { WriteQuestion } from "./WriteQuestion.tsx";
 
 // The tool panel (APP-01): the open workspace's tool, running in the sandbox through the runtime,
 // with its data served by the server's bridge route (RUN-04). Exactly one tool runs: opening
@@ -40,6 +46,24 @@ export function ToolPanel({ workspace, onDataChanged, expanded = false, onExpand
     left?.mode === "minimized" ? "minimized" : left?.mode === "stopped" ? "stopped" : "starting",
   );
   const [fullScreen, setFullScreen] = useState(false);
+  // The question before a tool's first change through a connection, while it waits (A70).
+  const [question, setQuestion] = useState<Question | null>(null);
+  const answering = useRef<((allowed: boolean) => void) | null>(null);
+  const answer = (allowed: boolean) => {
+    const resolve = answering.current;
+    answering.current = null;
+    setQuestion(null);
+    resolve?.(allowed);
+  };
+  const askToWrite = (asked: Question) =>
+    new Promise<boolean>((resolve) => {
+      // A question still open is answered no: only the latest one is shown.
+      answering.current?.(false);
+      answering.current = resolve;
+      setQuestion(asked);
+    });
+  // A panel that goes, or a new tool, leaves no question open: it is answered no.
+  useEffect(() => () => answering.current?.(false), [id]);
 
   // Starts the tool through `open`, until the panel goes or another start replaces this one.
   const start = (current: ToolRuntime, open: Parameters<typeof startTool>[2]) => {
@@ -48,6 +72,7 @@ export function ToolPanel({ workspace, onDataChanged, expanded = false, onExpand
     starting.current = controller;
     startTool(current, id, open, controller.signal, {
       onWrite: () => dataChanged.current?.(),
+      askToWrite,
     }).then(
       (running) => {
         if (running) setMode("running");
@@ -96,6 +121,7 @@ export function ToolPanel({ workspace, onDataChanged, expanded = false, onExpand
       // A stable hook for the scenario runner and tests (VER-03): titles repeat, IDs don't.
       data-workspace-id={id}
     >
+      {question && <WriteQuestion question={question} onAnswer={answer} />}
       <div className="tool-controls">
         {hasTool && mode === "running" && (
           <button
