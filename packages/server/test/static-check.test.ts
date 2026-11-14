@@ -750,3 +750,69 @@ describe("names the page may reach through paths the tracking doesn't follow sta
     ).toEqual([]);
   });
 });
+
+describe("a tool asks only for the connections its version names (A66, CNX-01, #349 step 4)", () => {
+  const caps = ["connection"];
+  const call = (request: string) => `tessera.call("connection.request", ${request});`;
+  const messages = (js: string, connections: string[]) =>
+    checkJs(js, caps, connections).map((f) => f.message);
+
+  it("CNX-01: a request through one of its connections, its name written out, passes", () => {
+    expect(
+      messages(call('{ connection: "movies", method: "GET", path: "/search" }'), ["movies"]),
+    ).toEqual([]);
+    expect(
+      messages(call('{ "connection": `movies`, method: "GET", path: "/x" }'), ["movies"]),
+    ).toEqual([]);
+    expect(
+      staticCheck(
+        {
+          html: "<p>x</p>",
+          css: "",
+          js: call('{ connection: "movies", method: "GET", path: "/" }'),
+        },
+        caps,
+        ["movies"],
+      ).ok,
+    ).toBe(true);
+  });
+
+  it("CNX-01: another connection is refused before the tool runs, naming the ones it may use", () => {
+    expect(
+      messages(call('{ connection: "bank", method: "GET", path: "/" }'), ["movies", "lists"]),
+    ).toEqual([
+      'This tool wasn\'t made to use a connection called "bank". Use one of: movies, lists.',
+    ]);
+    expect(messages(call('{ connection: "bank", method: "GET", path: "/" }'), [])).toEqual([
+      'This tool wasn\'t made to use a connection called "bank". This tool uses no connections.',
+    ]);
+    // Two names: JavaScript keeps the last, so each is checked.
+    expect(
+      messages(call('{ connection: "movies", connection: "bank", method: "GET", path: "/" }'), [
+        "movies",
+      ]),
+    ).toHaveLength(1);
+  });
+
+  it("CNX-01: a name the check can't read, or a request it can't see whole, is refused", () => {
+    for (const request of [
+      "request",
+      '{ ...base, connection: "movies" }',
+      '{ connection: name, method: "GET", path: "/" }',
+      '{ connection: `mo${"vies"}`, method: "GET", path: "/" }',
+      '{ ["connection"]: "movies", method: "GET", path: "/" }',
+      '{ method: "GET", path: "/" }',
+    ]) {
+      // Its own finding; a spread may also meet the page-copy rule (ADR 0009).
+      expect(
+        messages(call(request), ["movies"]).filter((m) => /connection/.test(m)),
+        request,
+      ).toHaveLength(1);
+    }
+    expect(messages('tessera.call("connection.request");', ["movies"])).toHaveLength(1);
+  });
+
+  it("CNX-01: other actions are unchanged", () => {
+    expect(checkJs('tessera.call("clock.now");', ["clock"], [])).toEqual([]);
+  });
+});

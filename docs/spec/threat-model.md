@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T17:29:04Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T19:57:44Z }
 ---
 # Threat model and boundary checks
 
@@ -122,7 +122,7 @@ Run against the server's side of the bridge, which makes every request through a
 
 | ID | The tool sends | Expected result |
 | --- | --- | --- |
-| CNX-01 | A request through a connection its version doesn't name, or one that isn't there | Refused before anything is sent (A66). |
+| CNX-01 | A request through a connection its version doesn't name, or one that isn't there | Refused before anything is sent (A66); in the tool's code, a request through a connection its version doesn't name, or whose name isn't written out, fails the static check before the tool runs. |
 | CNX-02 | A request aimed outside the connection: another origin, a whole address, a path without its leading `/` or with `//`, `\`, `#`, spaces or control characters, a header other than `accept`, `accept-language` and `content-type` | Refused before anything is sent; a path's dot segments stay on the connection's own origin. |
 | CNX-03 | A request the service answers with a redirect | Refused; nothing reaches the address it points to. |
 | CNX-04 | Anything, while looking for the key: every reply, success or refusal, from services that write it back (echoed, in the content type, upper-cased, URL-encoded, in base64, in any mix of JSON escapes, in HTML or XML character references wherever they stand, in a page as a parser shows it, split elements and attributes included), every other table of the data folder, the console | The key reaches only the service, in its header or after the tool's query; the answer's source gives the address without it, and an answer that repeats it is refused whole. |

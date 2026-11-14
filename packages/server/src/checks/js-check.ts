@@ -983,6 +983,7 @@ export function checkJs(
   js: string,
   checkHtml: (html: string) => { message: string }[],
   capabilities: readonly string[] = [],
+  connections: readonly string[] = [],
 ): JsFinding[] {
   let program: AnyNode;
   try {
@@ -1362,6 +1363,49 @@ export function checkJs(
         node,
         `The bridge action "${action}" needs the "${capability}" capability. Declare it or remove this call.`,
       );
+      return;
+    }
+    if (action === "connection.request") checkConnection(node, args[1]);
+  };
+
+  // A tool reaches only the connections its version names (A66, CNX-01): the name is fixed text in
+  // the call's own object, so the check sees it before the tool runs, and nothing spread or
+  // computed can put another in its place. The host refuses any other at run time too.
+  const checkConnection = (node: AnyNode, request: AnyNode | undefined) => {
+    const named = connections.length
+      ? ` Use one of: ${connections.join(", ")}.`
+      : " This tool uses no connections.";
+    const properties =
+      request?.type === "ObjectExpression" ? (request["properties"] as AnyNode[]) : null;
+    if (!properties || properties.some((p) => p.type !== "Property" || p["computed"])) {
+      found(
+        node,
+        `Write the request as an object in the call itself, with its connection's name as fixed text: tessera.call("connection.request", { connection: "name", method: "GET", path: "/..." }). Don't spread or compute its properties.`,
+      );
+      return;
+    }
+    // Not computed, so each key is a name or a literal; every "connection" is checked, since the
+    // last of two is the one JavaScript keeps.
+    const keyOf = (p: AnyNode) => {
+      const key = p["key"] as AnyNode;
+      return key.type === "Identifier" ? (key["name"] as string) : String(key["value"]);
+    };
+    const naming = properties.filter((p) => keyOf(p) === "connection");
+    if (naming.length === 0) {
+      found(node, `Name the connection, as connection: "name".` + named);
+      return;
+    }
+    for (const property of naming) {
+      const name = fixedText(property["value"] as AnyNode);
+      if (name === undefined) {
+        found(
+          node,
+          `Write the connection's name as fixed text, as connection: "name", so it can be checked before the tool runs.` +
+            named,
+        );
+      } else if (!connections.includes(name)) {
+        found(node, `This tool wasn't made to use a connection called "${name}".` + named);
+      }
     }
   };
 

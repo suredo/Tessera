@@ -122,7 +122,11 @@ export function editedCandidate(input: EditInput, answer: Answer): EditResult {
       findings: ["A style edit must keep HTML and JavaScript identical."],
     };
   }
-  const checked = staticCheck(artifact.code, artifact.capabilities);
+  const checked = staticCheck(
+    artifact.code,
+    artifact.capabilities,
+    Object.keys(artifact.connections),
+  );
   if (!checked.ok)
     return {
       kind: "failed",

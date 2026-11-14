@@ -48,8 +48,10 @@ const FORBIDDEN_ATTRIBUTES = new Set([
 export function staticCheck(
   code: Artifact["code"],
   capabilities: Artifact["capabilities"],
+  /** The names of the connections the version uses (A66): a tool may ask for no other. */
+  connections: readonly string[] = [],
 ): StaticCheckResult {
-  const findings = [...checkHtml(code.html), ...checkJs(code.js, capabilities)];
+  const findings = [...checkHtml(code.html), ...checkJs(code.js, capabilities, connections)];
   return findings.length === 0 ? { ok: true } : { ok: false, findings };
 }
 
@@ -111,6 +113,13 @@ function bodyContext() {
 const isLocalLink = (href: string) => href.trim() === "" || href.trim().startsWith("#");
 
 /** JavaScript findings: see js-check.ts. Fixed HTML the script writes is checked as HTML is. */
-export function checkJs(js: string, capabilities: Artifact["capabilities"] = []): StaticFinding[] {
-  return checkScript(js, checkHtml, capabilities).map((finding) => ({ part: "js", ...finding }));
+export function checkJs(
+  js: string,
+  capabilities: Artifact["capabilities"] = [],
+  connections: readonly string[] = [],
+): StaticFinding[] {
+  return checkScript(js, checkHtml, capabilities, connections).map((finding) => ({
+    part: "js",
+    ...finding,
+  }));
 }
