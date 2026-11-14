@@ -46,7 +46,13 @@ import {
 import { loadVersion } from "../versions/index.ts";
 import { RequestLedger } from "../ledger/index.ts";
 import { addToChat, listChat } from "../chat/index.ts";
-import { addConnection, listConnections, removeConnection } from "../connections/index.ts";
+import {
+  addConnection,
+  allowWrites,
+  listConnections,
+  removeConnection,
+  takeBackWrites,
+} from "../connections/index.ts";
 
 // The host app's API (APP-03 to APP-08): one route, HOST_ROUTE, answering every action the
 // contracts list, each with its arguments checked before it runs and its result checked before it
@@ -115,6 +121,14 @@ const run: {
   "connections.add": (store, { connection }) => ({ connection: addConnection(store, connection) }),
   "connections.remove": (store, { name }) => {
     removeConnection(store, name);
+    return {};
+  },
+  "connections.allowWrites": (store, { workspaceId, connection }) => {
+    allowWrites(store, workspaceId, connection);
+    return {};
+  },
+  "connections.takeBackWrites": (store, { workspaceId, connection }) => {
+    takeBackWrites(store, workspaceId, connection);
     return {};
   },
   "chat.add": (store, { workspaceId, messages }) => ({

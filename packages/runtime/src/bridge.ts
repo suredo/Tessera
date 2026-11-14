@@ -1,6 +1,5 @@
 import {
   BRIDGE_ACTIONS,
-  CONNECTION_READ_METHODS,
   checkBridgeCall,
   type Artifact,
   type BridgeActionName,
@@ -191,14 +190,6 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
       // write, gets the sample answer its version carries (A69), and nothing is sent (CNX-06).
       if (options.staging || options.rehearsal) {
         return Promise.resolve(sampleAnswer(options.samples ?? {}, args, clock.now()));
-      }
-      if (!CONNECTION_READ_METHODS.includes(args.method)) {
-        return Promise.reject(
-          new BridgeError(
-            "not-allowed",
-            "Tessera doesn't send changes through a connection yet, only reads (GET, HEAD). Nothing was sent.",
-          ),
-        );
       }
       return options.data.connection
         ? options.data.connection(args, context)

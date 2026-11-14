@@ -12,7 +12,13 @@ import {
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { answerDataCall } from "../src/bridge/index.ts";
-import { addConnection } from "../src/connections/index.ts";
+import {
+  addConnection,
+  allowWrites,
+  removeConnection,
+  takeBackWrites,
+  writesAllowed,
+} from "../src/connections/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { saveVersion } from "../src/versions/index.ts";
 import { addWorkspaceVersion, createWorkspace } from "../src/workspaces/index.ts";
@@ -27,7 +33,7 @@ const SLASHED_KEY = 'sk/test+01\\23"456789=never-shown';
 // And one with characters HTML writes with longer names, or with a reference before letters.
 const ODD_KEY = "sk_test|01`23&never-shown";
 
-type Seen = { method: string; url: string; headers: http.IncomingHttpHeaders };
+type Seen = { method: string; url: string; headers: http.IncomingHttpHeaders; body: string };
 type Fake = { origin: string; seen: Seen[]; close(): Promise<void> };
 
 /** A fake service on loopback that records every request it receives. */
@@ -36,8 +42,13 @@ async function fakeService(
 ): Promise<Fake> {
   const seen: Seen[] = [];
   const server = http.createServer((req, res) => {
-    seen.push({ method: req.method ?? "", url: req.url ?? "", headers: req.headers });
-    answer(req, res);
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => {
+      const body = Buffer.concat(chunks).toString("utf8");
+      seen.push({ method: req.method ?? "", url: req.url ?? "", headers: req.headers, body });
+      answer(req, res);
+    });
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as AddressInfo;
@@ -257,7 +268,7 @@ async function setup(
     if (!reply) throw new Error("A call with a request ID got no reply.");
     return reply;
   };
-  return { folder, ask };
+  return { folder, ask, id };
 }
 
 const get = (connection: string, requestPath: string, extra: Record<string, unknown> = {}) => ({
@@ -452,17 +463,69 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
     );
   });
 
-  it("CNX-06: a tool being checked, a write, or a read with a body sends nothing", async () => {
+  it("CNX-06: a request from a tool being checked that reaches the server, or a read with a body, sends nothing", async () => {
     const { ask } = await setup();
-    expect(await ask(get("movies", "/search"), "staging")).toMatchObject({
-      ok: false,
-      error: { code: "not-allowed" },
-    });
-    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
-      const write = await ask({ connection: "movies", method, path: "/search", body: "{}" });
-      expect(write, method).toMatchObject({ ok: false, error: { code: "not-allowed" } });
+    for (const method of ["GET", "POST"]) {
+      const checked = await ask({ connection: "movies", method, path: "/search" }, "staging");
+      expect(checked, method).toMatchObject({ ok: false, error: { code: "not-allowed" } });
     }
     expect(codeOf(await ask(get("movies", "/search", { body: "{}" })))).toBe("invalid-args");
     expect(service.seen).toEqual([]);
+  });
+
+  it("CNX-07: a change goes out only once the tool is active and the person allowed it, for that workspace and connection", async () => {
+    const { folder, ask, id } = await setup();
+    const post = {
+      connection: "movies",
+      method: "POST",
+      path: "/search",
+      headers: { "content-type": "application/json" },
+      body: '{"title":"Alien"}',
+    };
+    // While the tool starts, a change waits for the person, as a data write does (GEN-06).
+    expect(codeOf(await ask(post, "starting"))).toBe("not-active");
+    // Active, but not allowed: refused with the code the host page answers by asking (A70).
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      const write = await ask({ ...post, method });
+      expect(write, method).toMatchObject({ ok: false, error: { code: "needs-permission" } });
+      expect(!write.ok && write.error.message).toMatch(/hasn't allowed this tool/);
+    }
+    expect(service.seen).toEqual([]);
+
+    // Allowed: the change goes out with its body and type, and the key the host adds.
+    allowWrites(folder, id, "movies");
+    expect(writesAllowed(folder, id, "movies")).toBe(true);
+    expect(await ask(post)).toMatchObject({ ok: true, result: { statusCode: 200 } });
+    expect(service.seen).toHaveLength(1);
+    expect(service.seen[0]).toMatchObject({
+      method: "POST",
+      url: "/search",
+      body: '{"title":"Alien"}',
+      headers: { "content-type": "application/json", authorization: `Bearer ${KEY}` },
+    });
+    // Only that connection, and only that workspace's tool.
+    expect(codeOf(await ask({ ...post, connection: "listings" }))).toBe("needs-permission");
+    const other = createWorkspace(folder, "Another tool");
+    expect(writesAllowed(folder, other.id, "movies")).toBe(false);
+
+    // Taken back: the next change asks again, and nothing more is sent.
+    takeBackWrites(folder, id, "movies");
+    expect(codeOf(await ask(post))).toBe("needs-permission");
+    // Removing the connection removes its permission; added again, it starts with none.
+    allowWrites(folder, id, "movies");
+    removeConnection(folder, "movies");
+    addConnection(folder, {
+      name: "movies",
+      origins: [service.origin],
+      auth: { kind: "header", name: "Authorization", prefix: "Bearer " },
+      key: KEY,
+    });
+    expect(writesAllowed(folder, id, "movies")).toBe(false);
+    expect(service.seen).toHaveLength(1);
+    // Allowing needs a workspace and a connection that exist.
+    expect(() => allowWrites(folder, id, "weather")).toThrow(/no connection called weather/);
+    expect(() => allowWrites(folder, "00000000-0000-4000-8000-000000000009", "movies")).toThrow(
+      /gone or in the trash/,
+    );
   });
 });

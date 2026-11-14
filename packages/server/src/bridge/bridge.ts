@@ -130,6 +130,7 @@ export async function answerDataCall(
       try {
         const answer = await requestThroughConnection(
           store,
+          workspace.id,
           artifact,
           request.phase,
           args as BridgeArgs<"connection.request">,
