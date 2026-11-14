@@ -409,7 +409,10 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     // An edit keeps them or replaces them all; a creation's repair keeps the failed answer's when
     // it leaves them out (#367 review). Creation needs neither.
     if (input.editArtifact) addSystem("connections-edit");
-    else if (stage === "repair" && input.attempt) addSystem("connections-repair");
+    // A repair keeps the failed answer's connections when it leaves them out: a creation's, or an
+    // edit's that replaced them (#367, #368 reviews).
+    if (stage === "repair" && (input.attempt || input.editAttempt?.connections?.mode === "replace"))
+      addSystem("connections-repair");
   }
   // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
   // every rule its check enforces is stated here (VER-03, VER-04).
@@ -501,10 +504,21 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     // A look-only edit's failed answer is quoted as its style alone, whatever mode it came in, so
     // no repair path brings the JavaScript back into the prompt (GEN-14).
     const attempt = input.editAttempt;
-    const scoped =
+    const styled =
       input.intent?.lookOnly && attempt.files.mode === "replace"
         ? { ...attempt, files: { mode: "style" as const, css: attempt.files.code.css } }
         : attempt;
+    // Its replaced connections by sample path, never the answers, which can be long (#368 review).
+    const scoped =
+      styled.connections?.mode === "replace"
+        ? {
+            ...styled,
+            connections: {
+              mode: "replace",
+              connections: samplePaths(styled.connections.connections),
+            },
+          }
+        : styled;
     addRequest("edit-attempt", { attempt: JSON.stringify(scoped) });
   }
   if (stage === "repair" && input.attempt) {

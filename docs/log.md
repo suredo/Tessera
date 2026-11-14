@@ -2,6 +2,8 @@
 
 ## 2026-11-14
 
+* **Fixed**: An edit's repair is told the connections the failed edit added by sample path, never the answers, and keeps them, samples and all, when it leaves them out, so its prompt stays within its budget ([#368](https://github.com/suredo/Tessera/pull/368) review, A74, `GEN-03`) ([prompts](code/server/prompts.md), [generation](code/server/generation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T21:23:20Z.
+
 * **New**: A request may use the person's connections ([#349](https://github.com/suredo/Tessera/issues/349) step 4, A74, `CAP-02`): the intent stage is told up to 20 of their names and chooses the ones the finished tool reaches, at most 3, and no longer calls unsupported what a listed connection makes possible (its budget 10,900, the owner's choice). The host gives the tool only the chosen ones the person has, with the ones it already uses; creation, edit and their repairs are told them and keep only those. Tested through the pipeline with scripted answers; no model was called ([intent](code/server/intent.md), [prompts](code/server/prompts.md), [generation](code/server/generation.md), [contracts](code/contracts/package.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T21:10:31Z.
 
 * **Fixed**: A creation's repair keeps the failed answer's connections and sample answers when it leaves them out, told them by path; the edit's and the repair's connection instructions are prompt parts of their own ([#367](https://github.com/suredo/Tessera/pull/367) review, A69, `ENG-16`) ([prompts](code/server/prompts.md), [generation](code/server/generation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T20:39:56Z.

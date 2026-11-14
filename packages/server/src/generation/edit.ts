@@ -230,7 +230,13 @@ export async function editTool(
       if (response.value.outcome === "cannot")
         result = plainRefusal(response.value.reason, input.request);
       else {
-        attempt = response.value;
+        // A repair that leaves its connections out keeps the failed attempt's replacement, samples
+        // and all, which its prompt names by path only (#368 review).
+        const failed = repair?.attempt?.connections;
+        attempt =
+          response.value.connections === undefined && failed?.mode === "replace"
+            ? { ...response.value, connections: failed }
+            : response.value;
         // The summary the person reads is in plain words too (GEN-12).
         const words = [
           ...plainWordProblems("The change's summary", attempt.summary, input.request),

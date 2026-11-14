@@ -1,12 +1,18 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DEFAULT_ROUTES, type Creation, type Intent } from "@tessera/contracts";
+import {
+  CONNECTION_SAMPLE_LIMIT,
+  DEFAULT_ROUTES,
+  type Creation,
+  type Intent,
+} from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { addConnection } from "../src/connections/index.ts";
 import { generate } from "../src/generation/index.ts";
 import { repairSmoke, type SmokeRepairContext } from "../src/generation/smoke.ts";
 import { toolConnections } from "../src/generation/tool-connections.ts";
+import { promptBudget } from "../src/prompts/index.ts";
 import { createScriptedProvider, type Provider, type StageSpec } from "../src/providers/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { loadVersion } from "../src/versions/index.ts";
@@ -227,6 +233,100 @@ describe("a request that may use a connection (CAP-02, A66, A74)", () => {
       expect.arrayContaining(["connections", "connections-repair"]),
     );
     expect(repair.calls[0]!.prompt).toContain('"connections":{"movies":["/search"]}');
+    folder.close();
+  });
+});
+
+describe("an edit's smoke repair (A74, #368 review)", () => {
+  it("A74 GEN-03: it is told the edit's new connections by path, keeps their samples, and stays within budget", async () => {
+    const folder = await folderWithMovies();
+    // A tool with no connections, active.
+    const first = scripted(
+      { stage: "intent", value: intent({ kind: "create" }) },
+      {
+        stage: "create",
+        value: finder("movies", {
+          code: { html: '<p id="text">Hi</p>', css: "", js: "" },
+          connections: {},
+        }),
+      },
+    );
+    const made = await generate(folder, first.provider, DEFAULT_ROUTES, { request: "A page" });
+    if (made.kind !== "candidate") throw new Error("Expected a candidate");
+    const { activateVersion } = await import("../src/workspaces/index.ts");
+    expect(activateVersion(folder, made.workspaceId, made.hash, made.expectedDataRevision).ok).toBe(
+      true,
+    );
+    // An edit that adds movies, with two samples as long as a sample may be.
+    const long = (path: string) => ({
+      statusCode: 200,
+      contentType: "text/plain",
+      body: `${path} ${"x".repeat(CONNECTION_SAMPLE_LIMIT - path.length - 1)}`,
+    });
+    const movies = {
+      movies: { samples: { "/search": long("/search"), "/details": long("/details") } },
+    };
+    let context: SmokeRepairContext | undefined;
+    const second = scripted(
+      { stage: "intent", value: intent({ kind: "edit", connections: ["movies"] }) },
+      {
+        stage: "edit",
+        value: {
+          outcome: "edit",
+          summary: "Finds movies.",
+          files: {
+            mode: "replace",
+            code: { html: '<p id="text">Movies</p>', css: "", js: js("movies") },
+          },
+          connections: { mode: "replace", connections: movies },
+          data: { mode: "unchanged" },
+        },
+      },
+    );
+    const edited = await generate(
+      folder,
+      second.provider,
+      DEFAULT_ROUTES,
+      { request: "Find movies", workspaceId: made.workspaceId },
+      undefined,
+      (c) => {
+        context = c;
+      },
+    );
+    if (edited.kind !== "candidate" || !context) throw new Error("Expected a candidate");
+    // The repair leaves connections out.
+    const repair = scripted({
+      stage: "repair",
+      value: {
+        outcome: "edit",
+        summary: "Finds movies.",
+        files: {
+          mode: "replace",
+          code: { html: '<p id="text">Films</p>', css: "", js: js("movies") },
+        },
+        data: { mode: "unchanged" },
+      },
+    });
+    const repaired = await repairSmoke(
+      folder,
+      repair.provider,
+      DEFAULT_ROUTES,
+      {
+        workspaceId: edited.workspaceId,
+        hash: edited.hash,
+        findings: ["Nothing showed."],
+        failure: "smoke",
+      },
+      context,
+    );
+    expect(repaired).toMatchObject({ kind: "candidate", connections: movies });
+    const call = repair.calls[0]!;
+    expect(`${call.system}${call.prompt}`).not.toContain("x".repeat(100));
+    expect(call.prompt).toContain('"connections":{"movies":["/details","/search"]}');
+    expect(partsOf(call)).toContain("connections-repair");
+    expect(call.system.length + call.prompt.length).toBeLessThanOrEqual(
+      promptBudget("repair", true),
+    );
     folder.close();
   });
 });
