@@ -32,10 +32,12 @@ async function setup() {
   const built = candidateFrom(editFixture);
   if (built.kind !== "candidate") throw new Error("Expected fixture candidate");
   const workspace = createWorkspace(store, editFixture.name, { data: built.startingData });
-  const hash = saveVersion(store.db, built.artifact);
+  // A version that names a connection, so an edit is seen to keep it (A66).
+  const artifact = { ...built.artifact, connections: ["home-lights", "movies"] };
+  const hash = saveVersion(store.db, artifact);
   const active = activateVersion(store, workspace.id, hash, workspace.dataRevision);
   if (!active.ok) throw new Error("Expected fixture activation");
-  return { store, workspace: active.workspace, hash, artifact: built.artifact };
+  return { store, workspace: active.workspace, hash, artifact };
 }
 const intent = (overrides: Partial<Intent> = {}): Intent =>
   ({
@@ -218,6 +220,7 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
         data: { schemaVersion: 2 },
         ui: artifact.ui,
         capabilities: artifact.capabilities,
+        connections: ["home-lights", "movies"],
         pins: artifact.pins,
       },
     });

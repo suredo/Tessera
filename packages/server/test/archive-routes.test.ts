@@ -30,7 +30,8 @@ const newFolder = async () => {
 };
 
 const tool: Artifact = {
-  contractVersion: 2,
+  contractVersion: 3,
+  connections: [],
   code: { html: "<p>Errands</p>", css: "", js: "" },
   data: {
     schemaVersion: 1,

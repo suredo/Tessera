@@ -4,7 +4,7 @@
   "properties": {
     "contractVersion": {
       "type": "number",
-      "const": 2
+      "const": 3
     },
     "code": {
       "type": "object",
@@ -351,6 +351,17 @@
       },
       "description": "The host capabilities the tool declares (CAP-01)."
     },
+    "connections": {
+      "maxItems": 50,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{0,39}$",
+        "description": "The connection's name, how a tool asks for it: lowercase letters, digits and hyphens, starting with a letter, at most 40 characters, such as movies or home-lights."
+      },
+      "uniqueItems": true,
+      "description": "The connections to outside services this version may use, by name (CAP-02, A66). A call through any other is refused."
+    },
     "pins": {
       "type": "array",
       "items": {
@@ -403,6 +414,7 @@
     "code",
     "data",
     "capabilities",
+    "connections",
     "pins",
     "ui"
   ],

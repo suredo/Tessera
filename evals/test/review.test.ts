@@ -38,7 +38,8 @@ const PNG = Buffer.from(
   "base64",
 );
 const tool: Artifact = {
-  contractVersion: 2,
+  contractVersion: 3,
+  connections: [],
   code: { html: '<form data-hook="form">Party RSVP</form>', css: "", js: "// the form" },
   // A list of rules, as T10's planner keeps, for a data change to act on.
   data: {
