@@ -14,7 +14,7 @@ import { assemblePrompt, CONVERSATION_MAX_QUOTED, PROMPT_BUDGETS } from "../src/
 const code = (css: string) => ({ html: "<p>x</p>", css, js: "" });
 
 describe("where a tool's look differs from the UI standard (VER-06, A63)", () => {
-  it("VER-06: notes shadows, gradients, glass, fixed or sticky positions, its own fonts and colours, once per place", () => {
+  it("VER-06 UX-04: notes shadows, gradients, glass, fixed or sticky positions, its own fonts and colours, once per place", () => {
     const notes = styleNotes(
       code(`.card { box-shadow: 0 1px 2px #0003; box-shadow: 0 2px 4px #0003; }
 .hero { background: linear-gradient(#fff, #eee); }
