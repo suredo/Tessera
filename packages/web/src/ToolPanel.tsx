@@ -22,20 +22,30 @@ type Props = {
   workspace: Workspace;
   /** Called after each change the tool saved to its data. */
   onDataChanged?: () => void;
+  /** Called once the person allowed the tool's changes through a connection (A72). */
+  onAllowed?: () => void;
   /** Whether the tool takes the chat's place too; the app lays it out. */
   expanded?: boolean;
   /** Expands the tool, or puts it back beside the chat; none where there is no chat beside it. */
   onExpand?: (expanded: boolean) => void;
 };
 
-export function ToolPanel({ workspace, onDataChanged, expanded = false, onExpand }: Props) {
+export function ToolPanel({
+  workspace,
+  onDataChanged,
+  onAllowed,
+  expanded = false,
+  onExpand,
+}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const runtime = useRef<ToolRuntime | null>(null);
   const starting = useRef<AbortController | null>(null);
-  // The latest callback, for a tool started earlier to reach.
+  // The latest callbacks, for a tool started earlier to reach.
   const dataChanged = useRef(onDataChanged);
+  const allowed = useRef(onAllowed);
   useEffect(() => {
     dataChanged.current = onDataChanged;
+    allowed.current = onAllowed;
   });
   const name = workspace.title;
   const id = workspace.id;
@@ -73,6 +83,7 @@ export function ToolPanel({ workspace, onDataChanged, expanded = false, onExpand
     startTool(current, id, open, controller.signal, {
       onWrite: () => dataChanged.current?.(),
       askToWrite,
+      onAllowed: () => allowed.current?.(),
     }).then(
       (running) => {
         if (running) setMode("running");

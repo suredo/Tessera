@@ -4,7 +4,7 @@ title: "ADR 0015. Outside services through connections the person adds"
 description: "Decides D11 (CAP-02, A65): no vetted sources; the person adds a connection to any service, a tool uses one by name through the host, reads run freely, a tool's first write through a connection is confirmed, and checks never reach the real service."
 tags: [decisions, capabilities, outside-data, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T18:11:37Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T18:41:41Z }
 ---
 # ADR 0015. Outside services through connections the person adds
 
@@ -35,6 +35,7 @@ The comparison put to the owner, for the movie finder: the **Internet Archive** 
    **Sample answers carried by the tool** (A69, the owner's choice of 2026-11-14). A tool's version carries, for each connection it uses, a few sample answers by path, written with the tool, and in staging a request gets the sample whose path matches it best. Checks then see realistic data: a movie finder's list renders, and its behavior check means something.
 6. **What comes back is data, never instructions** (`SEC-02`). Wherever it is quoted to a model, it is quoted as data. Images in an answer that the tool shows are fetched by the host and handed over as assets (`DATA-11`); a page or video opens in a new browser tab through the host, after the person clicks, as before.
 7. **The details view shows each tool's connections, its permission to write, and its recent requests** (where, when, read or write, the outcome), never the key (`OBS-01`).
+   **Beside the checks** (A72, chosen by Claude Code on 2026-11-14, for the owner's review at the end of M4): each connection by name, with what the tool may do through it in plain words, Take back beside an allowed permission, and a connection the person no longer has said as not added.
 
 ## Consequences
 

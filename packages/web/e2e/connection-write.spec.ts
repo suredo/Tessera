@@ -90,7 +90,7 @@ async function clickAdd(page: Page) {
   return { id, title };
 }
 
-test("CNX-07: on Allow, the permission is kept and the change is sent; the next one doesn't ask", async ({
+test("CNX-07 A72: on Allow, the permission is kept and the change is sent, the next one doesn't ask, and taken back in the details it asks again", async ({
   page,
 }) => {
   seen.length = 0;
@@ -102,16 +102,45 @@ test("CNX-07: on Allow, the permission is kept and the change is sent; the next 
   await expect(asked).toContainText('{"title":"Alien"}');
   expect(seen).toEqual([]);
 
+  // The details, open while it asks, say the tool asks first (A72).
+  await page.getByRole("button", { name: en["details.show"] }).click();
+  const details = page.getByRole("region", { name: en["details.heading"] });
+  const entry = details.getByRole("listitem").filter({ hasText: "lists:" });
+  const takeBack = entry.getByRole("button", {
+    name: "Take back its permission to change things through lists",
+  });
+  await expect(entry).toContainText(en["details.connection.asks"]);
+  await expect(takeBack).toHaveCount(0);
+
   await asked.getByRole("button", { name: en["write.allow"], exact: true }).click();
   await expect(tool(page).locator("#text")).toHaveText("Sent 201");
   await expect(asked).toBeHidden();
   expect(seen).toEqual([{ method: "POST", url: "/items", body: '{"title":"Alien"}' }]);
   expect(writesAllowed(app.folder, id, "lists")).toBe(true);
+  // The open details show the permission at once, with its Take back (#364 review).
+  await expect(entry).toContainText(en["details.connection.allowed"]);
+  await expect(takeBack).toBeVisible();
 
   // Allowed: the next change goes straight through.
   await tool(page).getByRole("button", { name: "Add Alien" }).click();
   await expect.poll(() => seen.length).toBe(2);
   await expect(question(page)).toBeHidden();
+
+  // Taken back, the next change asks again.
+  await takeBack.click();
+  const takenBack = details.getByText("Its next change through lists will ask you first.");
+  await expect(takenBack).toBeVisible();
+  await expect(entry).toContainText(en["details.connection.asks"]);
+  expect(writesAllowed(app.folder, id, "lists")).toBe(false);
+  await tool(page).getByRole("button", { name: "Add Alien" }).click();
+  await expect(question(page)).toBeVisible();
+  expect(seen).toHaveLength(2);
+
+  // Allowed again: the details say so, and no longer that it will ask.
+  await question(page).getByRole("button", { name: en["write.allow"], exact: true }).click();
+  await expect.poll(() => seen.length).toBe(3);
+  await expect(entry).toContainText(en["details.connection.allowed"]);
+  await expect(takenBack).toBeHidden();
 });
 
 test("CNX-07: on Don't allow, nothing is sent or kept, and the tool hears it wasn't allowed", async ({

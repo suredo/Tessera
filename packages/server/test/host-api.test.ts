@@ -123,6 +123,7 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     expect(ask(folder, "details.get", { workspaceId: workspace.id })).toEqual({
       source: null,
       capabilities: [],
+      connections: [],
       checks: [],
       profile: null,
       styleNotes: [],
@@ -156,6 +157,7 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     expect(ask(folder, "details.get", { workspaceId: null })).toEqual({
       source: null,
       capabilities: [],
+      connections: [],
       checks: [],
       profile: null,
       styleNotes: [],
@@ -175,6 +177,44 @@ describe("the host app's API (APP-03 to APP-08)", () => {
       ok: false,
       error: { code: "refused", message: "The workspace is in the trash; restore it first." },
     });
+    folder.close();
+  });
+
+  it("CNX-07 A72: the details give the tool's connections by name, whether each is added, and whether its changes are allowed", async () => {
+    const folder = await newFolder();
+    const { workspace } = ask(folder, "workspaces.create", { title: "Movies" });
+    const uses = saveVersion(folder.db, {
+      ...tool,
+      capabilities: ["connection"],
+      connections: { movies: { samples: {} }, lists: { samples: {} }, gone: { samples: {} } },
+    });
+    expect(activateVersion(folder, workspace.id, uses, 0).ok).toBe(true);
+    for (const name of ["movies", "lists"]) {
+      ask(folder, "connections.add", {
+        connection: {
+          name,
+          origins: ["https://api.example.com"],
+          auth: { kind: "none" },
+          key: null,
+        },
+      });
+    }
+    ask(folder, "connections.allowWrites", { workspaceId: workspace.id, connection: "lists" });
+    expect(ask(folder, "details.get", { workspaceId: workspace.id }).connections).toEqual([
+      { name: "gone", added: false, writesAllowed: false },
+      { name: "lists", added: true, writesAllowed: true },
+      { name: "movies", added: true, writesAllowed: false },
+    ]);
+    ask(folder, "connections.takeBackWrites", { workspaceId: workspace.id, connection: "lists" });
+    expect(
+      ask(folder, "details.get", { workspaceId: workspace.id }).connections.find(
+        (each) => each.name === "lists",
+      ),
+    ).toEqual({ name: "lists", added: true, writesAllowed: false });
+    // Nothing about a connection's key is in the details.
+    expect(JSON.stringify(ask(folder, "details.get", { workspaceId: workspace.id }))).not.toMatch(
+      /key|origin/i,
+    );
     folder.close();
   });
 

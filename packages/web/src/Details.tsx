@@ -123,6 +123,22 @@ export function Details({ workspace, changes }: Props) {
   const [details, setDetails] = useState<Details | null>(null);
   const [message, setMessage] = useState("");
   const [chats, setChats] = useState<Chats>({});
+  // What taking back a permission did, said under the connections, and a reload after it. It is
+  // kept with the changes it was said at, so once anything else changes, such as the person
+  // allowing that connection again, it is no longer shown (#364 review).
+  const [said, setSaid] = useState<{ text: string; at: number } | null>(null);
+  const [reloads, setReloads] = useState(0);
+  const takeBack = async (connection: string) => {
+    if (id === null) return;
+    try {
+      await ask("connections.takeBackWrites", { workspaceId: id, connection });
+      setSaid({ text: t("details.connection.takenBack", { connection }), at: changes });
+    } catch (error) {
+      setSaid({ text: t("app.problem", { message: problemText(error) }), at: changes });
+    }
+    setReloads((n) => n + 1);
+  };
+  const saidNow = said && said.at === changes ? said.text : "";
 
   useEffect(() => {
     if (!open) return;
@@ -140,7 +156,7 @@ export function Details({ workspace, changes }: Props) {
     return () => {
       current = false;
     };
-  }, [open, id, workspace?.currentVersion, workspace?.dataRevision, changes]);
+  }, [open, id, workspace?.currentVersion, workspace?.dataRevision, changes, reloads]);
 
   // The chats the requests were told from (A62), read so their messages can be shown; one that
   // can't be read shows as no longer kept.
@@ -181,7 +197,15 @@ export function Details({ workspace, changes }: Props) {
       {open && (
         <div id="details-body">
           <p role="status">{message || (details ? "" : t("details.loading"))}</p>
-          {details && <Body details={details} chats={chats} hasWorkspace={id !== null} />}
+          {details && (
+            <Body
+              details={details}
+              chats={chats}
+              hasWorkspace={id !== null}
+              said={saidNow}
+              onTakeBack={takeBack}
+            />
+          )}
         </div>
       )}
     </section>
@@ -192,10 +216,14 @@ function Body({
   details,
   chats,
   hasWorkspace,
+  said = "",
+  onTakeBack = () => Promise.resolve(),
 }: {
   details: Details;
   chats: Chats;
   hasWorkspace: boolean;
+  said?: string;
+  onTakeBack?: (connection: string) => Promise<void>;
 }) {
   return (
     <>
@@ -208,6 +236,9 @@ function Body({
       <h3>{t("details.unattachedHeading")}</h3>
       <Requests requests={details.unattached} chats={chats} empty={t("details.noUnattached")} />
       {hasWorkspace && details.source !== null && <Checks details={details} />}
+      {hasWorkspace && details.source !== null && (
+        <ToolConnections connections={details.connections} said={said} onTakeBack={onTakeBack} />
+      )}
       {hasWorkspace && (
         <>
           <h3>{t("details.sourceHeading")}</h3>
@@ -233,6 +264,57 @@ function Body({
           )}
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * The connections the tool was made to use (ADR 0015 point 7, A72): each by name, never a key, with
+ * what it may do through it in plain words: reads freely and asks before its first change; changes
+ * without asking, with Take back; or that the person no longer has that connection. Exported for its
+ * test.
+ */
+export function ToolConnections({
+  connections,
+  said = "",
+  onTakeBack,
+}: {
+  connections: Details["connections"];
+  said?: string;
+  onTakeBack: (connection: string) => Promise<void>;
+}) {
+  return (
+    <>
+      <h3>{t("details.connectionsHeading")}</h3>
+      {connections.length === 0 ? (
+        <p>{t("details.connection.none")}</p>
+      ) : (
+        <ul className="details-connections">
+          {connections.map((each) => (
+            <li key={each.name}>
+              <strong>{each.name}</strong>:{" "}
+              {!each.added
+                ? t("details.connection.missing")
+                : each.writesAllowed
+                  ? t("details.connection.allowed")
+                  : t("details.connection.asks")}
+              {each.writesAllowed && (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    aria-label={t("details.connection.takeBackLabel", { connection: each.name })}
+                    onClick={() => void onTakeBack(each.name)}
+                  >
+                    {t("details.connection.takeBack")}
+                  </button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      <p role="status">{said}</p>
     </>
   );
 }
