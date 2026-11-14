@@ -216,6 +216,20 @@ export const HOST_ACTIONS = {
     args: z.strictObject({ name: connectionNameSchema }),
     result: z.strictObject({}),
   },
+  "connections.allowWrites": {
+    args: z
+      .strictObject({ workspaceId: id, connection: connectionNameSchema })
+      .describe(
+        "The person allows the workspace's tool to change things through the connection (ADR 0015, A70).",
+      ),
+    result: z.strictObject({}),
+  },
+  "connections.takeBackWrites": {
+    args: z
+      .strictObject({ workspaceId: id, connection: connectionNameSchema })
+      .describe("The person takes that permission back; the next change asks again."),
+    result: z.strictObject({}),
+  },
   "versions.list": {
     args: z.strictObject({ workspaceId: id }),
     result: z.strictObject({ versions: z.array(workspaceVersionSchema) }),

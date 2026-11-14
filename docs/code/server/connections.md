@@ -3,11 +3,11 @@ type: Code Module
 title: "Connections"
 description: "Connections to outside services that the person adds (CAP-02, ADR 0015): kept in the data folder with their keys, which no listing, reply or export carries, and the request path, which sends a tool's read only through the connections its version names, only to their origins, with the key added by the host (CNX-01 to CNX-06)."
 resource: ../../../packages/server/src/connections/
-implements: [CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06]
+implements: [CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06, CNX-07]
 tests: [../../../packages/server/test/connections.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, connections, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T16:24:13Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T17:00:30Z }
 ---
 
 # Purpose
@@ -30,7 +30,8 @@ Keeps the connections the person adds to outside services, as [ADR 0015](../../d
 - **A redirect is never followed** (`CNX-03`): it is refused, so neither the request nor its key goes anywhere else. Not Modified isn't a redirect.
 - **The key goes to the service and nowhere else** (`CNX-04`). It is added last, in its header or after the tool's query, which stays exactly as written; a tool that sends the key's query parameter itself is refused. The answer says where it came from (the connection, the address without the key, and when it arrived). No refusal passes on an error's own words, which could name the address and the key with it. A service may write the key back, as a request inspector or an error quoting its address would: an answer whose content type or text repeats it, as sent, URL- or form-encoded, escaped in JSON, or in base64; and as a tool would read it: with every JSON escape undone in one pass, as a JSON parser does, or with every HTML or XML character reference undone wherever it stands, whatever markup is around it, by the standard's complete table (`entities`, parse5's own decoder), or as a page shows it, parsed by parse5 with scripting off, with text split across elements joined and attribute values read too, or JSON's escapes and the references both, in either order; in any case, is refused whole, before any message names what the service sent. The tests look for the key in every reply, from services that echo it in each of those ways, in every other table of the data folder and in the console.
 - **An answer is limited** (`CNX-05`): 1 MB, counted as it is read, and 15 seconds for the whole of it; past either, or in a type that isn't text (an image, for now), it is refused whole. A service's own error, such as a 404, is an answer for the tool to read.
-- **Until #349 step 3c, only reads, and never from a check** (`CNX-06`). GET and HEAD go out; any other method is refused as `not-allowed` before anything is sent. A tool being checked gets its version's sample answers from the host page and never calls this route (A69, the [runtime](../runtime/package.md)); a request in the staging phase that reaches it anyway is refused, a second wall. A read with a body is `invalid-args`. A read runs freely while the tool starts too (ADR 0015, point 3).
+- **Never from a check** (`CNX-06`). A tool being checked gets its version's sample answers from the host page and never calls this route (A69, the [runtime](../runtime/package.md)); a request in the staging phase that reaches it anyway is refused, a second wall. A read with a body is `invalid-args`. A read runs freely while the tool starts too (ADR 0015, point 3).
+- **A change goes out only as the person allowed** (`CNX-07`, ADR 0015 point 4). A POST, PUT, PATCH or DELETE waits until the tool is active (`not-active`, as a data write, `GEN-06`), then needs the person's permission for that workspace and connection, kept in `connection_permissions` (migration `0018-connection-permissions.sql`, [storage](storage.md)). Without it the change is refused as `needs-permission` before anything is sent, which the host page answers by asking the person (A70, #349 step 3c). `allowWrites` keeps a permission and `takeBackWrites` takes it back, each refusing a workspace or connection that isn't there, and a workspace in the trash, so no stale request leaves a permission that applies once the tool is restored; `writesAllowed` reads it. A workspace's or connection's removal removes its permissions, so a connection added again under the same name starts with none. Allowed, a change goes out with its body and its `content-type`, and the key added as for a read.
 
 # Pitfalls
 
@@ -44,6 +45,6 @@ Keeps the connections the person adds to outside services, as [ADR 0015](../../d
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `connections.ts`: `listConnections`, `addConnection`, `removeConnection`
-- `index.ts`: `addConnection`, `listConnections`, `removeConnection`, `ConnectionRefusal`, `requestThroughConnection`, `ConnectionRequestOptions` (type), `Connection` (type), `ConnectionInput` (type)
+- `connections.ts`: `listConnections`, `addConnection`, `removeConnection`, `writesAllowed`, `allowWrites`, `takeBackWrites`
+- `index.ts`: `addConnection`, `allowWrites`, `listConnections`, `removeConnection`, `takeBackWrites`, `writesAllowed`, `ConnectionRefusal`, `requestThroughConnection`, `ConnectionRequestOptions` (type), `Connection` (type), `ConnectionInput` (type)
 - `requests.ts`: `ConnectionRequestOptions` (type), `ConnectionRefusal`, `requestThroughConnection`

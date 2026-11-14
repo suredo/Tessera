@@ -281,13 +281,12 @@ describe("requests through a connection (CAP-02)", () => {
     expect(bare.asked).toEqual([]);
   });
 
-  it("CNX-06: outside checks, a write still asks nothing of the server, until the person's permission comes (step 3c)", async () => {
+  it("CNX-07: outside checks, a change goes to the server, which decides whether the person allowed it", async () => {
     const { call, asked, interact } = withConnection();
     interact();
-    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
-      expect(code(await call("connection.request", { ...read, method }))).toBe("not-allowed");
-    }
-    expect(asked).toEqual([]);
+    const write = { ...read, method: "POST", body: "{}" };
+    expect(code(await call("connection.request", write))).toBe("ok");
+    expect(asked).toEqual([write]);
   });
 
   it("refuses plainly where the host reaches no outside service", async () => {

@@ -238,6 +238,7 @@ export const BRIDGE_ERROR_CODES = [
   "undeclared-capability",
   "not-active",
   "not-allowed",
+  "needs-permission",
   "invalid-args",
   "stale",
   "failed",

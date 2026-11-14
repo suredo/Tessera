@@ -17,14 +17,17 @@ import { decodeHTML } from "entities";
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
 import { z } from "zod";
 import type { Store } from "../workspaces/index.ts";
+import { writesAllowed } from "./connections.ts";
 
 // A tool's request through a connection, made by the host (CAP-02, ADR 0015). The tool names the
 // connection and a path; the host checks that the tool's version names that connection (CNX-01),
 // builds the address on one of its origins and nothing else (CNX-02), adds the key (CNX-04),
 // refuses a redirect (CNX-03), limits the answer's size and time (CNX-05), and hands it back with
 // where it came from. This is the only reader of a connection's key: it goes to the service and
-// nowhere else, so no refusal, answer or error message carries it. Until #349 step 3, a request
-// from a tool being checked and any write are refused before anything is sent (CNX-06).
+// nowhere else, so no refusal, answer or error message carries it. A tool being checked gets its
+// samples from the host page and never comes here; one that does is refused (CNX-06). A change
+// goes out only once the tool is active and the person allowed it through that connection, for
+// that workspace (CNX-07).
 
 /** Limits a test may lower, so a slow or large answer doesn't take the real limit to show. */
 export type ConnectionRequestOptions = { timeoutMs?: number; answerLimitBytes?: number };
@@ -171,14 +174,16 @@ async function readLimited(response: Response, limit: number): Promise<Uint8Arra
 }
 
 /**
- * Makes a tool's request through a connection, for the tool version `artifact`, in `phase`, and
- * returns the service's answer with where it came from. Refuses with a `ConnectionRefusal`, before
- * anything is sent, a connection the version doesn't name, an origin or address outside the
- * connection, a write, and any request from a tool being checked; and refuses a redirect or an
- * answer too large, too slow or not text.
+ * Makes a tool's request through a connection, for the workspace and tool version `artifact` it
+ * runs, in `phase`, and returns the service's answer with where it came from. Refuses with a
+ * `ConnectionRefusal`, before anything is sent, a connection the version doesn't name, an origin or
+ * address outside the connection, a change before the tool is active or without the person's
+ * permission (`needs-permission`), and any request from a tool being checked; and refuses a
+ * redirect or an answer too large, too slow or not text.
  */
 export async function requestThroughConnection(
   store: Store,
+  workspaceId: string,
   artifact: Artifact,
   phase: BridgePhase,
   request: ConnectionRequest,
@@ -194,14 +199,16 @@ export async function requestThroughConnection(
       `This tool wasn't built to use the connection ${name}. Using it takes an edit. ${NOTHING_SENT}`,
     );
   }
-  if (!CONNECTION_READ_METHODS.includes(request.method)) {
-    refuse(
-      "not-allowed",
-      `Tessera doesn't send changes through a connection yet, only reads (GET, HEAD). ${NOTHING_SENT}`,
-    );
-  }
-  if (request.body !== undefined) {
+  const reads = CONNECTION_READ_METHODS.includes(request.method);
+  if (reads && request.body !== undefined) {
     refuse("invalid-args", `A read (GET, HEAD) sends no body. ${NOTHING_SENT}`);
+  }
+  // A change waits for the person, as a data write does (GEN-06): never while the tool starts.
+  if (!reads && phase !== "active") {
+    refuse(
+      "not-active",
+      `A change through ${name} waits until the person uses the tool. ${NOTHING_SENT} Change things only in answer to what the person does.`,
+    );
   }
   const found = store.db.get(
     row,
@@ -212,6 +219,14 @@ export async function requestThroughConnection(
     return refuse(
       "failed",
       `There is no connection called ${name}. The person can add it in Tessera's settings.`,
+    );
+  }
+  // The person's permission, kept per workspace and connection (ADR 0015 point 4, CNX-07): until
+  // they allow it, a change is refused with a code the host page answers by asking them (A70).
+  if (!reads && !writesAllowed(store, workspaceId, name)) {
+    refuse(
+      "needs-permission",
+      `The person hasn't allowed this tool to change things through ${name}. ${NOTHING_SENT}`,
     );
   }
   const origins = z.array(connectionOriginSchema).parse(JSON.parse(found.origins));
@@ -257,7 +272,13 @@ export async function requestThroughConnection(
   const tooSlow = `The service didn't answer within ${Math.round(timeoutMs / 1000)} seconds.`;
   let response: Response;
   try {
-    response = await fetch(url, { method: request.method, headers, redirect: "manual", signal });
+    response = await fetch(url, {
+      method: request.method,
+      headers,
+      body: request.body,
+      redirect: "manual",
+      signal,
+    });
   } catch {
     // The error's own words may name the address, and the key with it: never passed on.
     return refuse("failed", signal.aborted ? tooSlow : "Tessera couldn't reach the service.");

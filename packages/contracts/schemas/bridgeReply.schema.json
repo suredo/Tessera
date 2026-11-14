@@ -64,6 +64,7 @@
                 "undeclared-capability",
                 "not-active",
                 "not-allowed",
+                "needs-permission",
                 "invalid-args",
                 "stale",
                 "failed"

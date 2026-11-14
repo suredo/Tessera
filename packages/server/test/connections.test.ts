@@ -13,6 +13,8 @@ import { readZip } from "../src/archives/zip.ts";
 import { answerHost } from "../src/host/index.ts";
 import { openDataFolder, type DataFolder } from "../src/storage/index.ts";
 import { createWorkspace } from "../src/workspaces/index.ts";
+import { writesAllowed } from "../src/connections/index.ts";
+import { deleteWorkspace } from "../src/trash/index.ts";
 
 // Connections to outside services that the person adds (CAP-02, ADR 0015), through the host API:
 // a connection names a service, the origins it may reach and how its key is sent; the key is kept
@@ -87,6 +89,55 @@ describe("connections the person adds (CAP-02, ADR 0015)", () => {
     expect(text).toContain("Old science fiction films");
     expect(text).not.toContain(KEY);
     expect(text).not.toContain("api.example.com");
+    folder.close();
+  });
+
+  it("CNX-07: the host app allows a tool's changes through a connection and takes them back; a tool can't name another workspace's", async () => {
+    const folder = await newFolder();
+    ask(folder, "connections.add", { connection: movies });
+    const { id } = createWorkspace(folder, "Movie finder");
+    expect(
+      ask(folder, "connections.allowWrites", { workspaceId: id, connection: "movies" }),
+    ).toEqual({});
+    expect(writesAllowed(folder, id, "movies")).toBe(true);
+    ask(folder, "connections.takeBackWrites", { workspaceId: id, connection: "movies" });
+    expect(writesAllowed(folder, id, "movies")).toBe(false);
+    // Refused plainly for a connection or a workspace that isn't there.
+    const unknown = refusal(folder, "connections.allowWrites", {
+      workspaceId: id,
+      connection: "weather",
+    });
+    expect(unknown).toMatchObject({
+      ok: false,
+      error: { message: "There is no connection called weather." },
+    });
+    const gone = refusal(folder, "connections.allowWrites", {
+      workspaceId: "00000000-0000-4000-8000-000000000009",
+      connection: "movies",
+    });
+    expect(gone).toMatchObject({
+      ok: false,
+      error: { message: "That tool is gone or in the trash." },
+    });
+    // Taking back is refused the same way, never a silent success.
+    for (const args of [
+      { workspaceId: id, connection: "weather" },
+      { workspaceId: "00000000-0000-4000-8000-000000000009", connection: "movies" },
+    ]) {
+      const reply = refusal(folder, "connections.takeBackWrites", args);
+      expect(reply, JSON.stringify(args)).toMatchObject({ ok: false });
+    }
+    // A tool in the trash can't be given a permission that would apply once it's restored.
+    deleteWorkspace(folder, id);
+    const trashed = refusal(folder, "connections.allowWrites", {
+      workspaceId: id,
+      connection: "movies",
+    });
+    expect(trashed).toMatchObject({
+      ok: false,
+      error: { message: "That tool is gone or in the trash." },
+    });
+    expect(writesAllowed(folder, id, "movies")).toBe(false);
     folder.close();
   });
 
