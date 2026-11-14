@@ -23,7 +23,7 @@ import { addWorkspaceVersion, createWorkspace } from "../src/workspaces/index.ts
 // Every data folder is a new temporary one (ENG-19).
 
 const KEY = "sk-test-0123456789-never-shown";
-const SLASHED_KEY = "sk/test+0123456789=never-shown";
+const SLASHED_KEY = 'sk/test+01\\23"456789=never-shown';
 
 type Seen = { method: string; url: string; headers: http.IncomingHttpHeaders };
 type Fake = { origin: string; seen: Seen[]; close(): Promise<void> };
@@ -108,6 +108,29 @@ beforeAll(async () => {
         "/echo-entities": () =>
           res.end(
             `<p>${[...credential].map((c) => `&#x${c.charCodeAt(0).toString(16)};`).join("")}</p>`,
+          ),
+        // JSON's own escaping of \ and ", mixed with \/ and \u: JSON.parse still gives the key.
+        "/echo-json-mixed": () =>
+          res.end(JSON.stringify({ credential }).replaceAll("/", "\\/").replace("s", "\\u0073")),
+        // References as the HTML standard also reads them.
+        "/echo-html-upper": () =>
+          res.end([...credential].map((c) => `&#X${c.charCodeAt(0).toString(16)};`).join("")),
+        "/echo-html-bare": () =>
+          res.end([...credential].map((c) => `&#${c.charCodeAt(0)}`).join("")),
+        "/echo-html-padded": () =>
+          res.end(
+            [...credential]
+              .map((c) => `&#x${c.charCodeAt(0).toString(16).padStart(12, "0")};`)
+              .join(""),
+          ),
+        "/echo-html-named": () =>
+          res.end(
+            credential
+              .replaceAll("\\", "&bsol;")
+              .replaceAll('"', "&QUOT;")
+              .replaceAll("/", "&sol;")
+              .replaceAll("+", "&plus;")
+              .replaceAll("=", "&equals;"),
           ),
       };
       res.setHeader("content-type", "text/plain");
@@ -319,6 +342,11 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
           "/echo-json-slash",
           "/echo-json-unicode",
           "/echo-entities",
+          "/echo-json-mixed",
+          "/echo-html-upper",
+          "/echo-html-bare",
+          "/echo-html-padded",
+          "/echo-html-named",
         ]) {
           const reply = await ask(get(connection, echo));
           expect(reply, `${connection} ${echo}`).toMatchObject({

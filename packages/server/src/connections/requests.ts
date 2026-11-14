@@ -67,19 +67,101 @@ function keyForms(key: string): string[] {
   return [...new Set(forms.map((form) => form.toLowerCase()))];
 }
 
+const codePoint = (code: number) =>
+  Number.isSafeInteger(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "�";
+
+/** A numeric reference's character: leading zeros don't count, and one past Unicode is U+FFFD. */
+const numeric = (digits: string, radix: number) => {
+  const significant = digits.replace(/^0+/, "") || "0";
+  return significant.length > 8 ? "�" : codePoint(parseInt(significant, radix));
+};
+
+const JSON_ESCAPES: Record<string, string> = {
+  '"': '"',
+  "\\": "\\",
+  "/": "/",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+};
+
 /**
- * The text with the escapes a reader undoes for free decoded once: JSON's `\uXXXX` and `\/`, and
- * HTML's and XML's numeric character references. Linear in the text, which is already bounded.
+ * Every JSON string escape undone, in one pass from left to right, as a JSON parser reads them,
+ * so mixed escapes (`\\` before `"`) decode as the tool's JSON.parse would.
  */
-function unescaped(text: string): string {
-  const char = (code: number) =>
-    Number.isInteger(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "";
-  return text
-    .replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex: string) => char(parseInt(hex, 16)))
-    .replace(/\\\//g, "/")
-    .replace(/&#x([0-9a-fA-F]{1,6});/g, (_m, hex: string) => char(parseInt(hex, 16)))
-    .replace(/&#([0-9]{1,7});/g, (_m, dec: string) => char(parseInt(dec, 10)));
-}
+const jsonUnescaped = (text: string) =>
+  text.replace(/\\(?:u([0-9a-fA-F]{4})|(["\\/bfnrt]))/g, (_m, hex?: string, one?: string) =>
+    hex !== undefined ? String.fromCharCode(parseInt(hex, 16)) : JSON_ESCAPES[one!]!,
+  );
+
+// HTML's named references for the ASCII characters a key may hold; other names stand for letters
+// outside ASCII or for spaces, which no key compared here spells with.
+const HTML_NAMES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  excl: "!",
+  num: "#",
+  dollar: "$",
+  percnt: "%",
+  lpar: "(",
+  rpar: ")",
+  ast: "*",
+  midast: "*",
+  plus: "+",
+  comma: ",",
+  period: ".",
+  sol: "/",
+  colon: ":",
+  semi: ";",
+  equals: "=",
+  quest: "?",
+  commat: "@",
+  lsqb: "[",
+  lbrack: "[",
+  bsol: "\\",
+  rsqb: "]",
+  rbrack: "]",
+  hat: "^",
+  lowbar: "_",
+  grave: "`",
+  lcub: "{",
+  lbrace: "{",
+  verbar: "|",
+  vert: "|",
+  rcub: "}",
+  rbrace: "}",
+};
+
+/**
+ * HTML's and XML's character references undone, as the HTML standard reads them: numeric ones in
+ * decimal or hexadecimal (either x), with any number of digits and with or without the closing
+ * semicolon, and the named ones for ASCII characters, in any case.
+ */
+const htmlUnescaped = (text: string) =>
+  text.replace(
+    /&#[xX]([0-9a-fA-F]+);?|&#([0-9]+);?|&([a-zA-Z]+);?/g,
+    (match, hex?: string, dec?: string, name?: string) => {
+      if (hex !== undefined) return numeric(hex, 16);
+      if (dec !== undefined) return numeric(dec, 10);
+      return HTML_NAMES[name!.toLowerCase()] ?? match;
+    },
+  );
+
+/**
+ * The ways a reader may decode what a service wrote before a tool sees it: as written, its JSON
+ * escapes undone, its character references undone, and both, in either order. Each pass is linear
+ * in the text, which is already bounded (CNX-05).
+ */
+const readings = (text: string) => {
+  const json = jsonUnescaped(text);
+  const html = htmlUnescaped(text);
+  return [text, json, html, htmlUnescaped(json), jsonUnescaped(html)];
+};
 
 /** Reads a body up to `limit` bytes, or refuses the whole answer. */
 async function readLimited(response: Response, limit: number): Promise<Uint8Array> {
@@ -226,7 +308,7 @@ export async function requestThroughConnection(
   // any message names what the service sent, so a refusal can't carry it either.
   const forms = key === null ? [] : keyForms(key);
   const repeatsKey = (text: string) =>
-    [text, unescaped(text)].some((each) => {
+    readings(text).some((each) => {
       const lower = each.toLowerCase();
       return forms.some((form) => lower.includes(form));
     });
