@@ -667,3 +667,36 @@ describe("a created tool's connections (CAP-02, A66, A74)", () => {
     });
   });
 });
+
+describe("a creation's repair keeps its connections (A69, A74, #367 review)", () => {
+  it("GEN-09 A69: a repair that leaves connections out keeps the failed answer's, told only their sample paths", async () => {
+    const body = '{"results":["a made-up answer only the samples hold"]}';
+    const movies = {
+      movies: {
+        samples: { "/search": { statusCode: 200, contentType: "application/json", body } },
+      },
+    };
+    const calls = (name: string) =>
+      `tessera.call("connection.request", { connection: "${name}", method: "GET", path: "/search" });`;
+    const code = (name: string) => ({ ...tool().code, js: calls(name) });
+    const { provider, calls: asked } = answering(
+      {
+        kind: "value",
+        stage: "create",
+        value: tool({ code: code("bank"), connections: movies, capabilities: ["connection"] }),
+      },
+      { kind: "value", stage: "repair", value: tool({ code: code("movies") }) },
+    );
+    const result = await createTool(provider, DEFAULT_ROUTES, {
+      request: "Find movies",
+      allowedConnections: ["movies"],
+    });
+    expect(result).toMatchObject({ kind: "candidate", repairs: 1 });
+    if (result.kind !== "candidate") return;
+    expect(result.artifact.connections).toEqual(movies);
+    expect(result.artifact.capabilities).toEqual(["connection"]);
+    // The repair was told the attempt's connections by path, never the answers.
+    expect(asked[1]!.prompt).toContain('"connections":{"movies":["/search"]}');
+    expect(asked[1]!.prompt).not.toContain("a made-up answer only the samples hold");
+  });
+});

@@ -274,6 +274,8 @@ export function candidateFrom(
 export type CreateInput = {
   /** The interface part the intent stage decided on: the whole request when nothing is split. */
   request: string;
+  /** The connections the request gives the tool (A66, A74); none when left out. */
+  allowedConnections?: readonly string[];
   intent?: Intent;
   signal?: AbortSignal;
   /** Counts carried across the server checks and browser staging of this request. */
@@ -434,5 +436,11 @@ async function ask(
       answer: creation,
     };
   }
-  return { outcome: candidateFrom(creation), answer: creation };
+  // A repair that leaves its connections out keeps the failed answer's, samples and all, which its
+  // prompt names by path only (#367 review).
+  const kept =
+    creation.outcome === "tool" && creation.connections === undefined && repair.attempt?.connections
+      ? { ...creation, connections: repair.attempt.connections }
+      : creation;
+  return { outcome: candidateFrom(kept, input.allowedConnections), answer: kept };
 }

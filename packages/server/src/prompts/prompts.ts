@@ -45,6 +45,8 @@ export const PROMPT_PARTS = [
   "profile",
   "chart",
   "connections",
+  "connections-edit",
+  "connections-repair",
   "request",
   "connections-quoted",
   "source",
@@ -239,6 +241,12 @@ export const manifestForPrompt = (): string => {
   );
 };
 
+/** A tool's connections as a prompt tells them: each name with its sample paths, not the answers. */
+const samplePaths = (connections: Artifact["connections"]): Record<string, string[]> =>
+  Object.fromEntries(
+    Object.entries(connections).map(([name, use]) => [name, Object.keys(use.samples)]),
+  );
+
 /** The UI standard's variables, one per line, from the one definition of its tokens (VER-06). */
 const tokenLines = () =>
   Object.entries(UI_TOKENS)
@@ -395,11 +403,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       answer: String(CONNECTION_ANSWER_LIMIT_BYTES / 1024),
       samples: String(CONNECTION_SAMPLES_LIMIT),
       sample: String(CONNECTION_SAMPLE_LIMIT),
-      // An edit keeps them, or replaces them all; creation's prompt needs none of this.
-      edit: input.editArtifact
-        ? ' In an edit, connections is { "mode": "unchanged" }, or { "mode": "replace", "connections": ... } with every connection the changed tool uses, samples and all.'
-        : "",
     });
+    // An edit keeps them or replaces them all; a creation's repair keeps the failed answer's when
+    // it leaves them out (#367 review). Creation needs neither.
+    if (input.editArtifact) addSystem("connections-edit");
+    else if (stage === "repair" && input.attempt) addSystem("connections-repair");
   }
   // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
   // every rule its check enforces is stated here (VER-03, VER-04).
@@ -477,12 +485,7 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
         capabilities,
         // The connections it uses, with their sample paths but not the answers, which can be long:
         // a replace writes them all again (A74).
-        connections: Object.fromEntries(
-          Object.entries(input.editArtifact.connections).map(([name, use]) => [
-            name,
-            Object.keys(use.samples),
-          ]),
-        ),
+        connections: samplePaths(input.editArtifact.connections),
         pins,
         ui,
         requestedChange: {
@@ -509,7 +512,15 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       summary,
       ...code,
       data: JSON.stringify(data, null, 2),
-      settings: JSON.stringify({ capabilities, uiMode }),
+      // Its connections by sample path, not the answers, which can be long: the repair keeps
+      // them by leaving connections out (#367 review).
+      settings: JSON.stringify({
+        capabilities,
+        uiMode,
+        ...(input.attempt.connections
+          ? { connections: samplePaths(input.attempt.connections) }
+          : {}),
+      }),
       tag,
     });
   }

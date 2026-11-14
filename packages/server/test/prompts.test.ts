@@ -956,3 +956,45 @@ describe("connections in the generation prompt (CAP-02, A66, A74, #349 step 4)",
     }
   });
 });
+
+describe("connection instructions by stage (#367 review)", () => {
+  const connections = [{ name: "movies", origins: ["https://api.themoviedb.org"] }];
+  const attempt = {
+    outcome: "tool" as const,
+    name: "Movies",
+    summary: "Finds movies.",
+    code: { html: "<p></p>", css: "", js: "" },
+    data: { schema: { type: "object" }, reusableDefaults: {}, initialState: {} },
+    capabilities: ["connection" as const],
+    connections: {
+      movies: {
+        samples: { "/search": { statusCode: 200, contentType: "application/json", body: "{}" } },
+      },
+    },
+    uiMode: "standard" as const,
+  };
+  it("A74: an edit gets how to keep or replace them, a creation's repair how to keep them, creation neither", () => {
+    const create = assemblePrompt({
+      stage: "create",
+      request: "Find movies",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      connections,
+    });
+    expect(names(create.parts)).not.toContain("connections-edit");
+    expect(names(create.parts)).not.toContain("connections-repair");
+    const repair = assemblePrompt({
+      stage: "repair",
+      request: "Find movies",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      connections,
+      failure: "smoke",
+      diagnostics: ["The list stayed empty."],
+      attempt,
+    });
+    expect(names(repair.parts)).toContain("connections-repair");
+    expect(repair.prompt).toContain('"connections":{"movies":["/search"]}');
+    expect(repair.size).toBeLessThanOrEqual(promptBudget("repair", true));
+  });
+});
