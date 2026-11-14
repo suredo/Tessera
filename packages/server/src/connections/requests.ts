@@ -67,6 +67,20 @@ function keyForms(key: string): string[] {
   return [...new Set(forms.map((form) => form.toLowerCase()))];
 }
 
+/**
+ * The text with the escapes a reader undoes for free decoded once: JSON's `\uXXXX` and `\/`, and
+ * HTML's and XML's numeric character references. Linear in the text, which is already bounded.
+ */
+function unescaped(text: string): string {
+  const char = (code: number) =>
+    Number.isInteger(code) && code >= 0 && code <= 0x10ffff ? String.fromCodePoint(code) : "";
+  return text
+    .replace(/\\u([0-9a-fA-F]{4})/g, (_m, hex: string) => char(parseInt(hex, 16)))
+    .replace(/\\\//g, "/")
+    .replace(/&#x([0-9a-fA-F]{1,6});/g, (_m, hex: string) => char(parseInt(hex, 16)))
+    .replace(/&#([0-9]{1,7});/g, (_m, dec: string) => char(parseInt(dec, 10)));
+}
+
 /** Reads a body up to `limit` bytes, or refuses the whole answer. */
 async function readLimited(response: Response, limit: number): Promise<Uint8Array> {
   const declared = Number(response.headers.get("content-length") ?? "");
@@ -211,10 +225,11 @@ export async function requestThroughConnection(
   // Nothing the service wrote reaches the tool if it repeats the key (CNX-04): checked before
   // any message names what the service sent, so a refusal can't carry it either.
   const forms = key === null ? [] : keyForms(key);
-  const repeatsKey = (text: string) => {
-    const lower = text.toLowerCase();
-    return forms.some((form) => lower.includes(form));
-  };
+  const repeatsKey = (text: string) =>
+    [text, unescaped(text)].some((each) => {
+      const lower = each.toLowerCase();
+      return forms.some((form) => lower.includes(form));
+    });
   const repeated =
     "The service's answer repeated the connection's key, so Tessera passed none of it on.";
   const contentType = response.headers.get("content-type")?.slice(0, 200) ?? null;

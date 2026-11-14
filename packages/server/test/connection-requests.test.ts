@@ -23,6 +23,7 @@ import { addWorkspaceVersion, createWorkspace } from "../src/workspaces/index.ts
 // Every data folder is a new temporary one (ENG-19).
 
 const KEY = "sk-test-0123456789-never-shown";
+const SLASHED_KEY = "sk/test+0123456789=never-shown";
 
 type Seen = { method: string; url: string; headers: http.IncomingHttpHeaders };
 type Fake = { origin: string; seen: Seen[]; close(): Promise<void> };
@@ -98,6 +99,16 @@ beforeAll(async () => {
         "/echo-upper": () => res.end(`Unknown key ${credential.toUpperCase()}`),
         "/echo-encoded": () => res.end(`Asked for ${encodeURIComponent(credential)}`),
         "/echo-base64": () => res.end(Buffer.from(credential).toString("base64")),
+        // Spellings JSON allows, which a tool's JSON.parse undoes.
+        "/echo-json-slash": () => res.end(`{"credential":"${credential.replaceAll("/", "\\/")}"}`),
+        "/echo-json-unicode": () =>
+          res.end(
+            `{"credential":"${[...credential].map((c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`).join("")}"}`,
+          ),
+        "/echo-entities": () =>
+          res.end(
+            `<p>${[...credential].map((c) => `&#x${c.charCodeAt(0).toString(16)};`).join("")}</p>`,
+          ),
       };
       res.setHeader("content-type", "text/plain");
       return (echoes[url.pathname] ?? (() => res.end("no such echo")))();
@@ -129,7 +140,10 @@ afterAll(async () => {
  * A workspace running a tool built for the connections `uses`, in a data folder holding three:
  * movies (a key in a header), listings (a key in the query) and bank, which no tool here names.
  */
-async function setup(uses: string[] = ["movies", "listings"], capabilities = ["connection"]) {
+async function setup(
+  uses: string[] = ["movies", "listings", "archive"],
+  capabilities = ["connection"],
+) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-connection-requests-"));
   temps.push(dir);
   const folder = await openDataFolder(dir);
@@ -143,6 +157,8 @@ async function setup(uses: string[] = ["movies", "listings"], capabilities = ["c
     key: KEY,
   });
   addConnection(folder, { name: "bank", origins: [service.origin], auth, key: KEY });
+  // A key with characters JSON and URLs may escape.
+  addConnection(folder, { name: "archive", origins: [service.origin], auth, key: SLASHED_KEY });
   const tool: Artifact = {
     contractVersion: 3,
     connections: uses,
@@ -290,8 +306,9 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
         result: { source: { url: `${service.origin}/search?query=a%20b&page=2` } },
       });
       expect(JSON.stringify(replies)).not.toContain(KEY);
-      // A service that writes the key back gets none of its answer through, in either place.
-      for (const connection of ["movies", "listings"]) {
+      // A service that writes the key back gets none of its answer through, in either place, for
+      // a plain key and for one with characters JSON and URLs escape.
+      for (const connection of ["movies", "listings", "archive"]) {
         for (const echo of [
           "/echo",
           "/echo-type",
@@ -299,6 +316,9 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
           "/echo-upper",
           "/echo-encoded",
           "/echo-base64",
+          "/echo-json-slash",
+          "/echo-json-unicode",
+          "/echo-entities",
         ]) {
           const reply = await ask(get(connection, echo));
           expect(reply, `${connection} ${echo}`).toMatchObject({
@@ -310,6 +330,7 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
         }
       }
       expect(JSON.stringify(replies).toLowerCase()).not.toContain(KEY.toLowerCase());
+      expect(JSON.stringify(replies).toLowerCase()).not.toContain(SLASHED_KEY.toLowerCase());
       // An answer that doesn't repeat it still passes.
       expect(codeOf(await ask(get("movies", "/echo-none")))).toBe("ok");
       // Nothing the data folder keeps but the connection itself holds it: no ledger, no log.
