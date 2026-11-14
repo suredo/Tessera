@@ -74,6 +74,12 @@ export function canonicalJson(value: unknown): string {
 }
 
 type RawArtifact = Record<string, unknown>;
+
+// What version 3 accepted as a tool's connections: names, each once, at most the limit.
+const CONTRACT_3_CONNECTIONS = z
+  .array(connectionNameSchema)
+  .max(CONNECTIONS_LIMIT)
+  .refine((list) => new Set(list).size === list.length);
 /** Upgrades an artifact from contract version N (the key) to N + 1. */
 export type ArtifactUpgrades = Readonly<Record<number, (artifact: RawArtifact) => RawArtifact>>;
 
@@ -89,13 +95,13 @@ export const ARTIFACT_UPGRADES: ArtifactUpgrades = {
     data: { ...(artifact["data"] as RawArtifact), migrations: [] },
   }),
   2: (artifact) => ({ ...artifact, contractVersion: 3, connections: [] }),
+  // Only a list version 3 itself accepted becomes a map: anything else makes the version
+  // incompatible, never repaired (CON-04).
   3: (artifact) => ({
     ...artifact,
     contractVersion: 4,
     connections: Object.fromEntries(
-      (Array.isArray(artifact["connections"]) ? (artifact["connections"] as unknown[]) : []).map(
-        (name) => [name, { samples: {} }],
-      ),
+      CONTRACT_3_CONNECTIONS.parse(artifact["connections"]).map((name) => [name, { samples: {} }]),
     ),
   }),
 };
@@ -135,7 +141,12 @@ export function readArtifact(
     if (!upgrade) {
       return { kind: "incompatible", reason: `There is no way to upgrade it from contract ${v}.` };
     }
-    raw = upgrade(raw);
+    // An upgrade meets whatever was stored: one that can't make sense of it must not throw.
+    try {
+      raw = upgrade(raw);
+    } catch {
+      return { kind: "incompatible", reason: `It can't be upgraded from contract ${v}.` };
+    }
   }
   const checked = schema.safeParse(raw);
   if (!checked.success) {

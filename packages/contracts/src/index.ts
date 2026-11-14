@@ -52,7 +52,7 @@ export {
   connectionAnswerSchema,
   connectionRequestSchema,
   CONNECTION_SAMPLES_LIMIT,
-  CONNECTION_SAMPLE_LIMIT_BYTES,
+  CONNECTION_SAMPLE_LIMIT,
   connectionSampleSchema,
   connectionUseSchema,
   type ConnectionSample,

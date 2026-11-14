@@ -48,6 +48,12 @@ describe("artifact contract (CON-04, DATA-04)", () => {
       sampleArtifact,
       { ...sampleArtifact, connections: uses(50) },
       { ...sampleArtifact, connections: uses(1, tenSamples) },
+      {
+        ...sampleArtifact,
+        connections: uses(1, {
+          "/s": { statusCode: 200, contentType: null, body: "é".repeat(16 * 1024) },
+        }),
+      },
     ]) {
       expect(artifactSchema.safeParse(sample).success).toBe(true);
       expect(validateWithJsonSchema(sample)).toBe(true);
@@ -90,6 +96,17 @@ describe("artifact contract (CON-04, DATA-04)", () => {
           movies: {
             samples: {
               "/s": { statusCode: 200, contentType: null, body: "x".repeat(16 * 1024 + 1) },
+            },
+          },
+        },
+      },
+      // The limit is in characters, whatever their bytes, so both checks count it alike.
+      {
+        ...sampleArtifact,
+        connections: {
+          movies: {
+            samples: {
+              "/s": { statusCode: 200, contentType: null, body: "é".repeat(16 * 1024 + 1) },
             },
           },
         },
@@ -217,6 +234,19 @@ describe("reading a stored tool version (CON-04)", () => {
       },
       upgradedFromVersion: 3,
     });
+    // A list version 3 itself refused stays refused: never repaired into a map, never thrown on.
+    for (const connections of [
+      undefined,
+      {},
+      [null],
+      ["movies", "movies"],
+      Array.from({ length: 51 }, () => "movies"),
+      [{ toString: "bad" }],
+      ["Movies"],
+    ]) {
+      const reading = readArtifact({ ...rest, contractVersion: 3, connections });
+      expect(reading.kind, JSON.stringify(connections)).toBe("incompatible");
+    }
   });
 
   it("upgrades an older version step by step, or says it can't", () => {

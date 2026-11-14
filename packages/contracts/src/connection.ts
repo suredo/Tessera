@@ -205,8 +205,11 @@ export type ConnectionAnswer = z.infer<typeof connectionAnswerSchema>;
 
 /** How many sample answers a tool may carry for one connection. */
 export const CONNECTION_SAMPLES_LIMIT = 10;
-/** The longest sample answer's text, in bytes. */
-export const CONNECTION_SAMPLE_LIMIT_BYTES = 16 * 1024;
+/**
+ * The longest sample answer's text, in characters: a limit zod and the JSON Schema both check,
+ * which a limit in bytes couldn't be (CON-01).
+ */
+export const CONNECTION_SAMPLE_LIMIT = 16 * 1024;
 
 const samplePathSchema = z
   .string()
@@ -222,7 +225,7 @@ export const connectionSampleSchema = z
     contentType: connectionAnswerSchema.shape.contentType,
     body: z
       .string()
-      .max(CONNECTION_SAMPLE_LIMIT_BYTES)
+      .max(CONNECTION_SAMPLE_LIMIT)
       .describe("The answer's text, as the service would send it, with made-up content."),
   })
   .describe("A made-up answer a check gets in place of the service's (A69).");
