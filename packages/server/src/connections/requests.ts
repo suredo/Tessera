@@ -13,6 +13,7 @@ import {
   type ConnectionAnswer,
   type ConnectionRequest,
 } from "@tessera/contracts";
+import { decodeHTML } from "entities";
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
 import { z } from "zod";
 import type { Store } from "../workspaces/index.ts";
@@ -91,37 +92,49 @@ const jsonUnescaped = (text: string) =>
 type Html = DefaultTreeAdapterMap["parentNode"] | DefaultTreeAdapterMap["childNode"];
 
 /**
- * What a tool reading the text as HTML gets from it: parsed by parse5, the HTML standard's own
- * tokenizer, which the static check already uses, so every character reference is decoded by the
- * standard's complete table and rules (longest valid name, either x, any digits, the semicolon
- * optional where the standard allows). Its text nodes joined as one text, so a key split across
- * elements is read whole, then every attribute value. Linear in the text, which is already
- * bounded (CNX-05); the walk keeps its own stack.
+ * What a tool reading the text as a page gets from it: parsed by parse5, the HTML standard's own
+ * tokenizer, which the static check already uses, with scripting off as a page's parser has it,
+ * so `noscript` is read as text. Its text nodes joined as one text, so a key split across elements
+ * is read whole, then every attribute value. The walk keeps its own stack and pushes each node
+ * alone, so a wide tree costs no more than a deep one.
  */
-function htmlUnescaped(text: string): string {
+function pageText(text: string): string {
   const texts: string[] = [];
   const attributes: string[] = [];
-  const stack: Html[] = [parseFragment(text)];
+  const stack: Html[] = [parseFragment(text, { scriptingEnabled: false })];
   while (stack.length > 0) {
     const node = stack.pop()!;
     if ("value" in node && typeof node.value === "string" && node.nodeName === "#text") {
       texts.push(node.value);
     }
-    if ("attrs" in node) attributes.push(...node.attrs.map((attr) => attr.value));
+    if ("attrs" in node) for (const attr of node.attrs) attributes.push(attr.value);
     if ("content" in node) stack.push(node.content);
-    if ("childNodes" in node) stack.push(...[...node.childNodes].reverse());
+    if ("childNodes" in node) {
+      for (let i = node.childNodes.length - 1; i >= 0; i--) stack.push(node.childNodes[i]!);
+    }
   }
   return [texts.join(""), ...attributes].join("\n");
 }
 
 /**
- * The ways a reader may decode what a service wrote before a tool sees it: as written, as JSON
- * escapes undone, as read as HTML, and both, in either order.
+ * The ways a reader may decode what a service wrote before a tool sees it: as written; with every
+ * JSON escape undone; with every HTML or XML character reference undone wherever it stands,
+ * whatever markup is around it, by the standard's complete table (`entities`, parse5's own
+ * decoder); as a page shows it; and those after JSON's, and JSON's after them. Each is linear in
+ * the text, which is already bounded (CNX-05).
  */
 const readings = (text: string) => {
   const json = jsonUnescaped(text);
-  const html = htmlUnescaped(text);
-  return [text, json, html, htmlUnescaped(json), jsonUnescaped(html)];
+  const references = decodeHTML(text);
+  return [
+    text,
+    json,
+    references,
+    decodeHTML(json),
+    jsonUnescaped(references),
+    pageText(text),
+    pageText(json),
+  ];
 };
 
 /** Reads a body up to `limit` bytes, or refuses the whole answer. */

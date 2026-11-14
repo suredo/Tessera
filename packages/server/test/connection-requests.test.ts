@@ -73,6 +73,11 @@ beforeAll(async () => {
       res.setHeader("content-type", "text/plain");
       return res.end("x".repeat(4096));
     }
+    if (url.pathname === "/wide") {
+      // A wide page within the answer's limit, with no key in it.
+      res.setHeader("content-type", "text/html");
+      return res.end(`<div>${"<i></i>".repeat(140_000)}</div>`);
+    }
     if (url.pathname === "/big-unannounced") {
       // No length up front: the host counts as it reads.
       res.setHeader("content-type", "text/plain");
@@ -147,6 +152,17 @@ beforeAll(async () => {
           res.end(
             `<a title="${credential.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">x</a>`,
           ),
+        // References inside markup a page or an XML reader treats differently from plain text.
+        "/echo-noscript": () =>
+          res.end(
+            `<noscript>${[...credential].map((c) => `&#${c.charCodeAt(0)};`).join("")}</noscript>`,
+          ),
+        "/echo-xml-script": () => {
+          res.setHeader("content-type", "application/xml");
+          res.end(
+            `<r><script>${[...credential].map((c) => `&#${c.charCodeAt(0)};`).join("")}</script></r>`,
+          );
+        },
         "/echo-html-named": () =>
           res.end(
             credential
@@ -380,6 +396,8 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
           "/echo-html-aliases",
           "/echo-html-split",
           "/echo-html-attribute",
+          "/echo-noscript",
+          "/echo-xml-script",
         ]) {
           const reply = await ask(get(connection, echo));
           expect(reply, `${connection} ${echo}`).toMatchObject({
@@ -426,6 +444,8 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
     const image = await ask(get("movies", "/image"));
     expect(image).toMatchObject({ ok: false, error: { code: "failed" } });
     expect(!image.ok && image.error.message).toMatch(/image\/png/);
+    // A wide page within the limit is read whole, however many elements sit side by side.
+    expect(codeOf(await ask(get("movies", "/wide")))).toBe("ok");
     // Within the limit, the same answer passes.
     expect(codeOf(await ask(get("movies", "/big"), "active", { answerLimitBytes: 4096 }))).toBe(
       "ok",
