@@ -36,8 +36,11 @@ const withoutConnections = (): Record<string, unknown> => {
 
 describe("artifact contract (CON-04, DATA-04)", () => {
   it("accepts a tool version in zod and in its JSON Schema alike", () => {
-    expect(artifactSchema.safeParse(sampleArtifact).success).toBe(true);
-    expect(validateWithJsonSchema(sampleArtifact)).toBe(true);
+    const fifty = Array.from({ length: 50 }, (_, i) => `c-${i}`);
+    for (const sample of [sampleArtifact, { ...sampleArtifact, connections: fifty }]) {
+      expect(artifactSchema.safeParse(sample).success).toBe(true);
+      expect(validateWithJsonSchema(sample)).toBe(true);
+    }
   });
 
   it("refuses the same broken versions in zod and in its JSON Schema (CON-01)", () => {
@@ -49,6 +52,7 @@ describe("artifact contract (CON-04, DATA-04)", () => {
       { ...sampleArtifact, connections: ["movies", "movies"] },
       { ...sampleArtifact, connections: ["Movies"] },
       { ...sampleArtifact, connections: undefined },
+      { ...sampleArtifact, connections: Array.from({ length: 51 }, (_, i) => `c-${i}`) },
       { ...sampleArtifact, capabilities: ["Clock"] },
       { ...sampleArtifact, pins: [{ id: "crowd", version: 0 }] },
     ];
