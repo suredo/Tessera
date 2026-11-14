@@ -810,6 +810,16 @@ describe("a tool asks only for the connections its version names (A66, CNX-01, #
       ).toHaveLength(1);
     }
     expect(messages('tessera.call("connection.request");', ["movies"])).toHaveLength(1);
+    // Each says which connections the tool may use, or that it uses none (#366 review).
+    for (const request of ["request", '{ ...base, connection: "movies" }', '{ method: "GET" }']) {
+      const own = (connections: string[]) =>
+        messages(call(request), connections).filter((m) => /connection/.test(m));
+      expect(own(["movies", "lists"])[0], request).toMatch(/Use one of: movies, lists\.$/);
+      expect(own([])[0], request).toMatch(/This tool uses no connections\.$/);
+    }
+    expect(messages('tessera.call("connection.request");', [])[0]).toMatch(
+      /This tool uses no connections\.$/,
+    );
   });
 
   it("CNX-01: other actions are unchanged", () => {

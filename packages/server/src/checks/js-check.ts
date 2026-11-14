@@ -1380,7 +1380,8 @@ export function checkJs(
     if (!properties || properties.some((p) => p.type !== "Property" || p["computed"])) {
       found(
         node,
-        `Write the request as an object in the call itself, with its connection's name as fixed text: tessera.call("connection.request", { connection: "name", method: "GET", path: "/..." }). Don't spread or compute its properties.`,
+        `Write the request as an object in the call itself, with its connection's name as fixed text: tessera.call("connection.request", { connection: "name", method: "GET", path: "/..." }). Don't spread or compute its properties.` +
+          named,
       );
       return;
     }

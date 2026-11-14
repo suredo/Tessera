@@ -2,6 +2,8 @@
 
 ## 2026-11-14
 
+* **Fixed**: Every static-check finding about a connection request names the connections the tool may use, or says it uses none; the generation and archive docs say the check gets the version's connections ([#366](https://github.com/suredo/Tessera/pull/366) review, `CNX-01`) ([checks](code/server/checks.md), [generation](code/server/generation.md), [archives](code/server/archives.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T20:08:03Z.
+
 * **New**: The static check refuses a tool whose code asks for a connection its version doesn't name, or whose name it can't read: a request is an object in the call, with no spread or computed key, and its connection's name written out (A66, `CNX-01`, [#349](https://github.com/suredo/Tessera/issues/349) step 4). Create, edit and import pass the version's connections ([checks](code/server/checks.md), [connections](code/server/connections.md), [threat model](spec/threat-model.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T19:57:44Z.
 
 * **Fixed**: A recorded request keeps where it went when its connection is removed or added again elsewhere while the service answers, and the details say what a request asked for, never that it was done; an error answer says so ([#365](https://github.com/suredo/Tessera/pull/365) review, A73, `GEN-08`) ([connections](code/server/connections.md), [web](code/web/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T19:29:12Z.
