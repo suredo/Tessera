@@ -21,7 +21,8 @@ const newDatabase = () => {
 const count = z.object({ n: z.number() });
 
 const artifact: Artifact = {
-  contractVersion: 2,
+  contractVersion: 3,
+  connections: [],
   code: { html: "<ul></ul>", css: "", js: "" },
   data: { schemaVersion: 1, schema: { type: "object" }, defaults: { items: [] }, migrations: [] },
   capabilities: [],

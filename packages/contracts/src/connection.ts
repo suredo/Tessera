@@ -76,6 +76,8 @@ const origins = z
   .min(1)
   .max(CONNECTION_ORIGINS_LIMIT)
   .refine((list) => new Set(list).size === list.length, "Each address is listed once.")
+  // The same rule for the JSON Schema, which a refine doesn't reach (CON-01).
+  .meta({ uniqueItems: true })
   .describe("The origins the connection may reach, each once.");
 
 /** A connection as the host shows it: never its key, only whether it has one. */

@@ -113,7 +113,8 @@ load();`,
 }
 
 const tool = (code: Artifact["code"], data: Partial<Artifact["data"]> = {}): Artifact => ({
-  contractVersion: 2,
+  contractVersion: 3,
+  connections: [],
   code,
   data: {
     schemaVersion: 1,

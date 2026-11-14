@@ -56,7 +56,8 @@ const version = (
   html: string,
   data: Partial<Artifact["data"]> & Pick<Artifact["data"], "schemaVersion" | "schema">,
 ): Artifact => ({
-  contractVersion: 2,
+  contractVersion: 3,
+  connections: [],
   code: { html, css: "", js: "" },
   data: { defaults: {}, migrations: [], ...data },
   capabilities: [],

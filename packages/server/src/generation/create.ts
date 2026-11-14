@@ -192,6 +192,8 @@ export function candidateFrom(creation: Extract<Creation, { outcome: "tool" }>):
     code: creation.code,
     data: { schemaVersion: 1, schema, defaults: reusableDefaults, migrations: [] },
     capabilities: [...new Set(creation.capabilities)].sort(),
+    // A new tool uses no connection until its request may use one (CAP-02, #349).
+    connections: [],
     pins: [],
     ui: { standardVersion: UI_STANDARD_VERSION, mode: creation.uiMode },
   };

@@ -113,7 +113,8 @@ describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
       name: "Shopping list",
       summary: "A list to tick off at the store.",
       artifact: {
-        contractVersion: 2,
+        contractVersion: 3,
+        connections: [],
         data: { schemaVersion: 1, schema: listSchema, migrations: [] },
         capabilities: ["clock"],
         pins: [],

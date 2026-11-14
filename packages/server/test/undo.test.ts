@@ -150,7 +150,8 @@ describe("data undo (DATA-04)", () => {
     const folder = await newFolder();
     const { id } = createWorkspace(folder, "Errands");
     const version = (required: string[]): Artifact => ({
-      contractVersion: 2,
+      contractVersion: 3,
+      connections: [],
       code: { html: "", css: "", js: "" },
       data: {
         schemaVersion: 1,

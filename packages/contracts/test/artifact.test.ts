@@ -13,7 +13,8 @@ import {
 const validateWithJsonSchema = new Ajv({ strict: true }).compile(toJsonSchema("artifact"));
 
 export const sampleArtifact: Artifact = {
-  contractVersion: 2,
+  contractVersion: 3,
+  connections: [],
   code: { html: "<ul id='items'></ul>", css: "ul { margin: 0; }", js: "console.log('hi');" },
   data: {
     schemaVersion: 1,
@@ -24,6 +25,13 @@ export const sampleArtifact: Artifact = {
   capabilities: ["clock"],
   pins: [],
   ui: { standardVersion: 1, mode: "standard" },
+};
+
+// The sample as an earlier contract stored it, before tools named their connections.
+const withoutConnections = (): Record<string, unknown> => {
+  const copy: Record<string, unknown> = { ...sampleArtifact };
+  delete copy["connections"];
+  return copy;
 };
 
 describe("artifact contract (CON-04, DATA-04)", () => {
@@ -37,7 +45,10 @@ describe("artifact contract (CON-04, DATA-04)", () => {
       { ...sampleArtifact, code: { html: "", css: "" } },
       { ...sampleArtifact, ui: { standardVersion: 1, mode: "legacy" } },
       { ...sampleArtifact, extra: true },
-      { ...sampleArtifact, contractVersion: 3 },
+      { ...sampleArtifact, contractVersion: 4 },
+      { ...sampleArtifact, connections: ["movies", "movies"] },
+      { ...sampleArtifact, connections: ["Movies"] },
+      { ...sampleArtifact, connections: undefined },
       { ...sampleArtifact, capabilities: ["Clock"] },
       { ...sampleArtifact, pins: [{ id: "crowd", version: 0 }] },
     ];
@@ -59,7 +70,8 @@ describe("artifact contract (CON-04, DATA-04)", () => {
         migrations: [],
       },
       code: { js: "console.log('hi');", css: "ul { margin: 0; }", html: "<ul id='items'></ul>" },
-      contractVersion: 2,
+      contractVersion: 3,
+      connections: [],
     };
     expect(canonicalJson(reordered)).toBe(canonicalJson(sampleArtifact));
     expect(canonicalJson({ b: [2, 1], a: { d: null, c: "x" }, skipped: undefined })).toBe(
@@ -116,11 +128,8 @@ describe("reading a stored tool version (CON-04)", () => {
 
   it("upgrades a stored contract 1 version: it declared no migrations (DATA-03)", () => {
     const { schemaVersion, schema, defaults } = sampleArtifact.data;
-    const storedV1 = {
-      ...sampleArtifact,
-      contractVersion: 1,
-      data: { schemaVersion, schema, defaults },
-    };
+    const rest = withoutConnections();
+    const storedV1 = { ...rest, contractVersion: 1, data: { schemaVersion, schema, defaults } };
     expect(readArtifact(storedV1)).toEqual({
       kind: "ok",
       artifact: sampleArtifact,
@@ -128,25 +137,37 @@ describe("reading a stored tool version (CON-04)", () => {
     });
   });
 
+  it("CON-04: upgrades a stored contract 2 version: it used no connections (A66)", () => {
+    const rest = withoutConnections();
+    expect(readArtifact({ ...rest, contractVersion: 2 })).toEqual({
+      kind: "ok",
+      artifact: sampleArtifact,
+      upgradedFromVersion: 2,
+    });
+    // An upgrade gives none, whatever the stored version held beside its contract.
+    const reading = readArtifact({ ...rest, contractVersion: 2, connections: ["bank"] });
+    expect(reading.kind === "ok" && reading.artifact.connections).toEqual([]);
+  });
+
   it("upgrades an older version step by step, or says it can't", () => {
-    // A made-up contract 3 that renamed `ui` to `look`, to exercise the upgrade path.
-    const v3 = artifactSchema
+    // A made-up contract 4 that renamed `ui` to `look`, to exercise the upgrade path.
+    const v4 = artifactSchema
       .omit({ ui: true, contractVersion: true })
-      .extend({ contractVersion: z.literal(3), look: artifactSchema.shape.ui });
+      .extend({ contractVersion: z.literal(4), look: artifactSchema.shape.ui });
     const upgrades = {
-      2: ({ ui, ...rest }: Record<string, unknown>) => ({ ...rest, contractVersion: 3, look: ui }),
+      3: ({ ui, ...rest }: Record<string, unknown>) => ({ ...rest, contractVersion: 4, look: ui }),
     };
     const reading = readArtifact(sampleArtifact, {
-      current: 3,
+      current: 4,
       upgrades,
-      schema: v3 as unknown as z.ZodType<Artifact>,
+      schema: v4 as unknown as z.ZodType<Artifact>,
     });
-    expect(reading).toMatchObject({ kind: "ok", upgradedFromVersion: 2 });
+    expect(reading).toMatchObject({ kind: "ok", upgradedFromVersion: 3 });
     expect(reading.kind === "ok" && "look" in reading.artifact).toBe(true);
 
-    expect(readArtifact(sampleArtifact, { current: 3, upgrades: {} })).toEqual({
+    expect(readArtifact(sampleArtifact, { current: 4, upgrades: {} })).toEqual({
       kind: "incompatible",
-      reason: "There is no way to upgrade it from contract 2.",
+      reason: "There is no way to upgrade it from contract 3.",
     });
   });
 });

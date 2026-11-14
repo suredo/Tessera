@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONNECTIONS_LIMIT, connectionNameSchema } from "./connection.ts";
 import { jsonObjectSchema } from "./json.ts";
 import { migrationSchema } from "./migration.ts";
 
@@ -7,7 +8,7 @@ import { migrationSchema } from "./migration.ts";
 // the library refer to it; they are not part of it.
 
 /** The artifact contract's current version. Raise it with an upgrade in ARTIFACT_UPGRADES. */
-export const ARTIFACT_CONTRACT_VERSION = 2;
+export const ARTIFACT_CONTRACT_VERSION = 3;
 
 export const UI_MODES = ["standard", "custom"] as const;
 
@@ -35,6 +36,14 @@ export const artifactSchema = z
     capabilities: z
       .array(z.string().regex(/^[a-z][a-z0-9.-]*$/))
       .describe("The host capabilities the tool declares (CAP-01)."),
+    connections: z
+      .array(connectionNameSchema)
+      .max(CONNECTIONS_LIMIT)
+      .refine((list) => new Set(list).size === list.length, "Each connection is named once.")
+      .meta({ uniqueItems: true })
+      .describe(
+        "The connections to outside services this version may use, by name (CAP-02, A66). A call through any other is refused.",
+      ),
     pins: z
       .array(z.strictObject({ id: z.string().min(1), version: z.int().min(1) }))
       .describe("The exact dependency versions it was built against, such as engines (DATA-04)."),
@@ -64,13 +73,17 @@ type RawArtifact = Record<string, unknown>;
 /** Upgrades an artifact from contract version N (the key) to N + 1. */
 export type ArtifactUpgrades = Readonly<Record<number, (artifact: RawArtifact) => RawArtifact>>;
 
-/** Version 2 adds the data's migrations: a version 1 tool declared none. */
+/**
+ * Version 2 adds the data's migrations: a version 1 tool declared none. Version 3 adds the
+ * connections a tool may use (A66): every earlier tool used none.
+ */
 export const ARTIFACT_UPGRADES: ArtifactUpgrades = {
   1: (artifact) => ({
     ...artifact,
     contractVersion: 2,
     data: { ...(artifact["data"] as RawArtifact), migrations: [] },
   }),
+  2: (artifact) => ({ ...artifact, contractVersion: 3, connections: [] }),
 };
 
 /** A stored artifact, read back: current, upgraded to current, or plainly incompatible. */
