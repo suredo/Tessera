@@ -67,6 +67,10 @@ export {
   type ConnectionRequest,
 } from "./connection.ts";
 export {
+  CONNECTION_REQUEST_ADDRESS_LIMIT,
+  connectionRequestRecordSchema,
+  DETAILS_CONNECTION_REQUESTS,
+  type ConnectionRequestRecord,
   HOST_ACTIONS,
   HOST_ERROR_CODES,
   HOST_REQUEST_LIMIT_BYTES,

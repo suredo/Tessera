@@ -271,7 +271,7 @@ export function App() {
   const [settledRequests, setSettledRequests] = useState(0);
   // Moved on when the person allows a tool's changes through a connection, so open details show
   // the permission and its Take back at once (A72).
-  const [allowedWrites, setAllowedWrites] = useState(0);
+  const [connectionUses, setConnectionUses] = useState(0);
 
   const refresh = async () => {
     const [list, library, deleted] = await Promise.all([
@@ -709,7 +709,7 @@ export function App() {
                   key={`${current.id}:${reloads}`}
                   workspace={current}
                   onDataChanged={() => setToolChanges((n) => n + 1)}
-                  onAllowed={() => setAllowedWrites((n) => n + 1)}
+                  onConnectionUsed={() => setConnectionUses((n) => n + 1)}
                   expanded={toolExpanded}
                   onExpand={chatPane ? setExpanded : undefined}
                 />
@@ -739,7 +739,7 @@ export function App() {
               <Details
                 key={`details-${current.id}`}
                 workspace={current}
-                changes={toolChanges + settledRequests + allowedWrites}
+                changes={toolChanges + settledRequests + connectionUses}
               />
             )}
           </main>

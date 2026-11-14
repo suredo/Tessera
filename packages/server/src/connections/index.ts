@@ -10,7 +10,9 @@ export {
 } from "./connections.ts";
 export {
   ConnectionRefusal,
+  recentRequests,
   requestThroughConnection,
+  CONNECTION_REQUESTS_KEPT,
   type ConnectionRequestOptions,
 } from "./requests.ts";
 export type { Connection, ConnectionInput } from "@tessera/contracts";

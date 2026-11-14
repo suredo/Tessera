@@ -130,11 +130,19 @@ describe("CNX-07: a tool's first change through a connection asks the person (A7
   it("asks where and what, and on Allow keeps the permission and sends the change again", async () => {
     const { deps, asked, sent, connection } = host();
     const askToWrite = vi.fn(() => Promise.resolve(true));
-    const onAllowed = vi.fn();
-    const handler = withPermission(connection, "w1", "Movie finder", askToWrite, deps, onAllowed);
+    const onConnectionUsed = vi.fn();
+    const handler = withPermission(
+      connection,
+      "w1",
+      "Movie finder",
+      askToWrite,
+      deps,
+      onConnectionUsed,
+    );
     await expect(handler(post, context)).resolves.toEqual(answer);
-    // Said once the permission is kept, so an open details view shows it (A72).
-    expect(onAllowed).toHaveBeenCalledOnce();
+    // Said once the permission is kept, so open details show it (A72), and once the change
+    // settles, so they show the request (A73).
+    expect(onConnectionUsed).toHaveBeenCalledTimes(2);
     expect(askToWrite).toHaveBeenCalledWith({
       tool: "Movie finder",
       connection: "movies",

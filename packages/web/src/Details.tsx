@@ -1,6 +1,8 @@
 import {
   PROFILES,
+  type BridgeErrorCode,
   type ChatMessage,
+  type ConnectionRequestRecord,
   type GenerateAnswer,
   type HostResult,
   type LedgerCall,
@@ -237,7 +239,12 @@ function Body({
       <Requests requests={details.unattached} chats={chats} empty={t("details.noUnattached")} />
       {hasWorkspace && details.source !== null && <Checks details={details} />}
       {hasWorkspace && details.source !== null && (
-        <ToolConnections connections={details.connections} said={said} onTakeBack={onTakeBack} />
+        <ToolConnections
+          connections={details.connections}
+          requests={details.connectionRequests}
+          said={said}
+          onTakeBack={onTakeBack}
+        />
       )}
       {hasWorkspace && (
         <>
@@ -276,10 +283,13 @@ function Body({
  */
 export function ToolConnections({
   connections,
+  requests = [],
   said = "",
   onTakeBack,
 }: {
   connections: Details["connections"];
+  /** Its newest requests through them, newest first (A73). */
+  requests?: readonly ConnectionRequestRecord[];
   said?: string;
   onTakeBack: (connection: string) => Promise<void>;
 }) {
@@ -315,9 +325,52 @@ export function ToolConnections({
         </ul>
       )}
       <p role="status">{said}</p>
+      {requests.length > 0 && (
+        <>
+          <h4>{t("details.connectionRequestsHeading")}</h4>
+          <ul className="details-connection-requests">
+            {requests.map((request, index) => (
+              <li key={`${request.at}:${index}`}>{requestText(request)}</li>
+            ))}
+          </ul>
+        </>
+      )}
     </>
   );
 }
+
+/** What a request through a connection did, in plain words (GEN-12): its verb by method. */
+const ACTIONS: Record<ConnectionRequestRecord["method"], MessageKey> = {
+  GET: "details.request.read",
+  HEAD: "details.request.read",
+  POST: "details.request.send",
+  PUT: "details.request.change",
+  PATCH: "details.request.change",
+  DELETE: "details.request.delete",
+};
+
+/** How a request ended, in plain words; a refusal the host has no words for is said generally. */
+const REFUSALS: Partial<Record<BridgeErrorCode, MessageKey>> = {
+  "needs-permission": "details.request.waited",
+  "not-allowed": "details.request.notAllowed",
+  "not-active": "details.request.notActive",
+  "invalid-args": "details.request.invalid",
+  "too-large": "details.request.tooLarge",
+  failed: "details.request.failed",
+};
+
+/** One recorded request in a line: when, through which connection, what and where, how it ended. */
+export const requestText = (request: ConnectionRequestRecord): string =>
+  t("details.request.line", {
+    at: at(request.at),
+    connection: request.connection,
+    action: t(ACTIONS[request.method]),
+    address: request.address,
+    outcome:
+      request.outcome.kind === "answered"
+        ? t("details.request.answered", { status: request.outcome.statusCode })
+        : t(REFUSALS[request.outcome.code] ?? "details.request.refused"),
+  });
 
 /**
  * What a profile's behavior check checks, in plain words for the person (GEN-12, UX-05): one line

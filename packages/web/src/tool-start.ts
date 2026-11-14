@@ -21,8 +21,11 @@ export type StartOptions = {
    * tries (ADR 0015 point 4, A70); resolves true if they allow it. Without it, nothing is allowed.
    */
   askToWrite?: (question: WriteQuestion) => Promise<boolean>;
-  /** Called once a permission the person gave is kept, so the details view can show it (A72). */
-  onAllowed?: () => void;
+  /**
+   * Called once a permission the person gave is kept, and after each request through a connection
+   * settles, so open details show the permission and the request (A72, A73).
+   */
+  onConnectionUsed?: () => void;
 };
 
 /** What the person is asked before a tool's first change through a connection (A70). */
@@ -51,7 +54,7 @@ export function withPermission(
   tool: string,
   askToWrite: StartOptions["askToWrite"],
   deps: Pick<StartDeps, "ask">,
-  onAllowed?: StartOptions["onAllowed"],
+  onConnectionUsed?: StartOptions["onConnectionUsed"],
 ): NonNullable<DataHandlers["connection"]> {
   // One question per connection at a time: changes that wait on it share its answer.
   const asking = new Map<string, Promise<boolean>>();
@@ -70,11 +73,11 @@ export function withPermission(
     });
     if (allowed) {
       await deps.ask("connections.allowWrites", { workspaceId, connection: args.connection });
-      onAllowed?.();
+      onConnectionUsed?.();
     }
     return allowed;
   };
-  return async (args, context) => {
+  const request: NonNullable<DataHandlers["connection"]> = async (args, context) => {
     try {
       return await connection(args, context);
     } catch (error) {
@@ -88,6 +91,8 @@ export function withPermission(
       return connection(args, context);
     }
   };
+  // Each request settled, however it ended, is in the server's record for the details (A73).
+  return (args, context) => request(args, context).finally(() => onConnectionUsed?.());
 }
 
 /**
@@ -101,7 +106,7 @@ export async function startTool(
   workspaceId: string,
   open: (runtime: ToolRuntime) => ReturnType<ToolRuntime["open"]>,
   signal: AbortSignal,
-  { onWrite, askToWrite, onAllowed }: StartOptions = {},
+  { onWrite, askToWrite, onConnectionUsed }: StartOptions = {},
   deps: StartDeps = defaults,
 ): Promise<boolean> {
   const { workspace, capabilities } = await deps.ask("workspaces.open", { id: workspaceId });
@@ -126,7 +131,7 @@ export async function startTool(
               workspace.title,
               askToWrite,
               deps,
-              onAllowed,
+              onConnectionUsed,
             ),
           }
         : {}),

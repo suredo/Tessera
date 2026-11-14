@@ -3,15 +3,18 @@ import {
   CONNECTION_ANSWER_LIMIT_BYTES,
   CONNECTION_READ_METHODS,
   CONNECTION_TIMEOUT_MS,
+  CONNECTION_REQUEST_ADDRESS_LIMIT,
   CONNECTION_URL_LIMIT,
   connectionAnswerSchema,
   connectionAuthSchema,
   connectionOriginSchema,
+  connectionRequestRecordSchema,
   type Artifact,
   type BridgeErrorCode,
   type BridgePhase,
   type ConnectionAnswer,
   type ConnectionRequest,
+  type ConnectionRequestRecord,
 } from "@tessera/contracts";
 import { decodeHTML } from "entities";
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
@@ -179,7 +182,8 @@ async function readLimited(response: Response, limit: number): Promise<Uint8Arra
  * `ConnectionRefusal`, before anything is sent, a connection the version doesn't name, an origin or
  * address outside the connection, a change before the tool is active or without the person's
  * permission (`needs-permission`), and any request from a tool being checked; and refuses a
- * redirect or an answer too large, too slow or not text.
+ * redirect or an answer too large, too slow or not text. Each request of a tool not being checked
+ * is recorded with how it ended, for the details view, never with the key (A73).
  */
 export async function requestThroughConnection(
   store: Store,
@@ -188,6 +192,126 @@ export async function requestThroughConnection(
   phase: BridgePhase,
   request: ConnectionRequest,
   options: ConnectionRequestOptions = {},
+): Promise<ConnectionAnswer> {
+  // A tool being checked sends nothing anywhere, so there is nothing to record (CNX-06).
+  if (phase === "staging") return send(store, workspaceId, artifact, phase, request, options);
+  try {
+    const answer = await send(store, workspaceId, artifact, phase, request, options);
+    recordRequest(store, workspaceId, request, { kind: "answered", statusCode: answer.statusCode });
+    return answer;
+  } catch (error) {
+    recordRequest(store, workspaceId, request, {
+      kind: "refused",
+      code: error instanceof ConnectionRefusal ? error.code : "failed",
+    });
+    throw error;
+  }
+}
+
+/** How many requests through connections a workspace keeps, newest first (A73). */
+export const CONNECTION_REQUESTS_KEPT = 50;
+
+/**
+ * Keeps a request and how it ended: the connection's address the tool asked for (its first when
+ * it named none) with the tool's path, before the key is added, cut to the record's limit. Only the
+ * newest `CONNECTION_REQUESTS_KEPT` of the workspace stay.
+ */
+function recordRequest(
+  store: Store,
+  workspaceId: string,
+  request: ConnectionRequest,
+  outcome: ConnectionRequestRecord["outcome"],
+): void {
+  try {
+    keepRequest(store, workspaceId, request, outcome);
+  } catch {
+    // Such as a workspace removed while it asked: the record is lost, never what the tool hears,
+    // since a change may already have gone out (DATA-04).
+  }
+}
+
+function keepRequest(
+  store: Store,
+  workspaceId: string,
+  request: ConnectionRequest,
+  outcome: ConnectionRequestRecord["outcome"],
+): void {
+  const found = store.db.get(
+    z.object({ origins: z.string() }),
+    "SELECT origins FROM connections WHERE name = ?",
+    request.connection,
+  );
+  const origins = found ? z.array(z.string()).parse(JSON.parse(found.origins)) : [];
+  const address = `${request.origin ?? origins[0] ?? ""}${request.path}`.slice(
+    0,
+    CONNECTION_REQUEST_ADDRESS_LIMIT,
+  );
+  store.db.transaction(() => {
+    store.db.run(
+      `INSERT INTO connection_requests
+         (workspace_id, connection, method, address, at, status_code, refusal)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      workspaceId,
+      request.connection,
+      request.method,
+      address,
+      store.now().toISOString(),
+      outcome.kind === "answered" ? outcome.statusCode : null,
+      outcome.kind === "refused" ? outcome.code : null,
+    );
+    store.db.run(
+      `DELETE FROM connection_requests WHERE workspace_id = ? AND id NOT IN
+         (SELECT id FROM connection_requests WHERE workspace_id = ? ORDER BY id DESC LIMIT ?)`,
+      workspaceId,
+      workspaceId,
+      CONNECTION_REQUESTS_KEPT,
+    );
+  });
+}
+
+/** The workspace's newest requests through connections, newest first, at most `limit` (A73). */
+export function recentRequests(
+  store: Store,
+  workspaceId: string,
+  limit: number,
+): ConnectionRequestRecord[] {
+  return store.db
+    .all(
+      z.object({
+        connection: z.string(),
+        method: z.string(),
+        address: z.string(),
+        at: z.string(),
+        status_code: z.number().nullable(),
+        refusal: z.string().nullable(),
+      }),
+      `SELECT connection, method, address, at, status_code, refusal FROM connection_requests
+       WHERE workspace_id = ? ORDER BY id DESC LIMIT ?`,
+      workspaceId,
+      limit,
+    )
+    .map((row) =>
+      connectionRequestRecordSchema.parse({
+        connection: row.connection,
+        method: row.method,
+        address: row.address,
+        at: row.at,
+        outcome:
+          row.status_code !== null
+            ? { kind: "answered", statusCode: row.status_code }
+            : { kind: "refused", code: row.refusal },
+      }),
+    );
+}
+
+/** The request itself, as `requestThroughConnection` describes it, without the record. */
+async function send(
+  store: Store,
+  workspaceId: string,
+  artifact: Artifact,
+  phase: BridgePhase,
+  request: ConnectionRequest,
+  options: ConnectionRequestOptions,
 ): Promise<ConnectionAnswer> {
   const name = request.connection;
   if (phase === "staging") {

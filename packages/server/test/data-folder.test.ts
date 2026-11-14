@@ -14,7 +14,12 @@ import {
   syncedFolderOf,
 } from "../src/storage/index.ts";
 import { listChat, searchChat } from "../src/chat/index.ts";
-import { allowWrites, listConnections, writesAllowed } from "../src/connections/index.ts";
+import {
+  allowWrites,
+  listConnections,
+  recentRequests,
+  writesAllowed,
+} from "../src/connections/index.ts";
 import { RequestLedger } from "../src/ledger/index.ts";
 import { listTrash, restoreSavedTool } from "../src/trash/index.ts";
 import { loadVersion } from "../src/versions/index.ts";
@@ -232,7 +237,7 @@ describe("migrating real data (ENG-18)", () => {
   it("ENG-18, CAP-02: a schema-16 database migrates with its requests' told kept, and no connections", async () => {
     const root = folderFromFixture("schema-16.sql");
     const folder = await openDataFolder(root);
-    expect(folder.migrated).toEqual([17, 18]);
+    expect(folder.migrated).toEqual([17, 18, 19]);
     expect(backups(root)).toHaveLength(1);
     const [request] = new RequestLedger(folder).unattached();
     expect(request).toMatchObject({ told: { workspaceId: null, numbers: [1] } });
@@ -246,7 +251,7 @@ describe("migrating real data (ENG-18)", () => {
   it("ENG-18, CAP-02: a schema-17 database migrates with its connection kept, and no permission to write yet", async () => {
     const root = folderFromFixture("schema-17.sql");
     const folder = await openDataFolder(root);
-    expect(folder.migrated).toEqual([18]);
+    expect(folder.migrated).toEqual([18, 19]);
     expect(backups(root)).toHaveLength(1);
     expect(listConnections(folder).map((c) => [c.name, c.hasKey])).toEqual([["movies", true]]);
     const garden = "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4";
@@ -257,6 +262,20 @@ describe("migrating real data (ENG-18)", () => {
     const reopened = await openDataFolder(root);
     expect(reopened.migrated).toEqual([]);
     expect(writesAllowed(reopened, garden, "movies")).toBe(true);
+    reopened.close();
+  });
+
+  it("ENG-18, CAP-02: a schema-18 database migrates with its permission kept, and no requests recorded yet", async () => {
+    const root = folderFromFixture("schema-18.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated).toEqual([19]);
+    expect(backups(root)).toHaveLength(1);
+    const garden = "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4";
+    expect(writesAllowed(folder, garden, "movies")).toBe(true);
+    expect(recentRequests(folder, garden, 20)).toEqual([]);
+    folder.close();
+    const reopened = await openDataFolder(root);
+    expect(reopened.migrated).toEqual([]);
     reopened.close();
   });
 
