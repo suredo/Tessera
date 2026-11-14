@@ -16,6 +16,7 @@ import {
   assembleIntentPrompt,
   fillPart,
   INTENT_PROMPT_BUDGET,
+  INTENT_CONNECTIONS_LISTED,
   intentProposalSize,
   profilesForIntent,
   partText,
@@ -121,7 +122,8 @@ describe("what the intent stage is told (GEN-01, GEN-02)", () => {
         "--- open tool ---\n" +
         '{"name":"Shopping list","lists":{"items":["title","quantity","done"]}}\n' +
         "--- end of the open tool ---\n\n" +
-        "The person has no saved tools.\n\nThe request:\nAdd cheese",
+        "The person has no saved tools.\n\n" +
+        "The person has added no connections to outside services.\n\nThe request:\nAdd cheese",
     );
     expect(assembleIntentPrompt({ request: "x", open: null }).prompt).toContain(
       partText("intent-none"),
@@ -182,6 +184,7 @@ describe("what the intent stage is told (GEN-01, GEN-02)", () => {
       "intent",
       "intent-open",
       "intent-no-saved",
+      "intent-no-connections",
       "intent-request",
     ]);
   });
@@ -254,9 +257,23 @@ describe("finding saved tools by asking (GEN-18)", () => {
       { ...BUDGET, description: "x".repeat(CATALOGUE_MAX_CHARACTERS - empty) },
     ]);
     expect(JSON.stringify(atCap).length).toBe(CATALOGUE_MAX_CHARACTERS);
+    // With the person's connections too: as many names as the prompt lists, each as long as a
+    // name can be (A74).
+    const connections = Array.from(
+      { length: INTENT_CONNECTIONS_LISTED },
+      (_, i) => `c${String(i).padStart(2, "0")}-${"x".repeat(36)}`,
+    );
+    expect(connections.every((name) => name.length === 40)).toBe(true);
     for (const f of requests) {
       const { size } = assembleIntentPrompt({ ...inputOf(f), saved: atCap, retry: true });
       expect(size, f.id).toBeLessThanOrEqual(INTENT_PROMPT_BUDGET);
+      const listed = assembleIntentPrompt({
+        ...inputOf(f),
+        saved: atCap,
+        retry: true,
+        connections,
+      });
+      expect(listed.size, `${f.id} with connections`).toBeLessThanOrEqual(INTENT_PROMPT_BUDGET);
     }
   });
 });
@@ -561,5 +578,26 @@ describe("a question or an idea is conversation, never built (GEN-19)", () => {
     expect(system).toContain("- discuss: a question or idea about a tool");
     expect(system).toContain('("can you make it blue?") is that change');
     expect(system).toContain(`or a question of fact ("what was Brazil's GDP?")`);
+  });
+});
+
+describe("the person's connections, as the intent stage is told them (CAP-02, A74)", () => {
+  it("A74: their names are quoted as data, at most twenty; with none, it says so", () => {
+    const names = Array.from({ length: 25 }, (_, i) => `service-${i}`);
+    const prompt = assembleIntentPrompt({ request: "Find movies", open: null, connections: names });
+    expect(prompt.prompt).toContain(
+      `--- connections ---\n${JSON.stringify(names.slice(0, INTENT_CONNECTIONS_LISTED))}\n--- end of the connections ---`,
+    );
+    expect(prompt.prompt).not.toContain("service-20");
+    expect(prompt.parts.map((p) => p.split("@")[0])).toContain("intent-connections");
+    expect(assembleIntentPrompt({ request: "x", open: null, connections: [] }).prompt).toContain(
+      partText("intent-no-connections").trim(),
+    );
+  });
+
+  it("A74: the rules name the field, and a connection can make a request supported", () => {
+    const { system } = assembleIntentPrompt({ request: "x", open: null });
+    expect(system).toContain("- connections: the connections listed");
+    expect(system).toMatch(/no connection listed reaches a service that could do it/);
   });
 });

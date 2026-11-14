@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { connectionNameSchema, REQUEST_CONNECTIONS_LIMIT } from "./connection.ts";
 import { profileIdSchema } from "./profiles.ts";
 
 // The intent stage's answer (GEN-01): what a request asks for, so the host can route it. Drafted
@@ -68,6 +69,14 @@ const common = {
     .default(false)
     .describe(
       "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
+    ),
+  // Absent in answers recorded before connections existed, which read as none.
+  connections: z
+    .array(connectionNameSchema)
+    .max(REQUEST_CONNECTIONS_LIMIT)
+    .default([])
+    .describe(
+      "The person's connections, only from those listed, that the tool reaches once the request is done, by name; [] when none (CAP-02, A74).",
     ),
 };
 

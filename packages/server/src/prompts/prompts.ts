@@ -74,6 +74,8 @@ export const PROMPT_PARTS = [
   "intent-no-records",
   "intent-saved",
   "intent-no-saved",
+  "intent-connections",
+  "intent-no-connections",
   "intent-retry",
   "intent-proposal",
   "intent-conversation",
@@ -550,9 +552,13 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
  * The intent stage's budget, like the generation stages' (GEN-03): its largest shape, a second ask in a
  * tool with its lists and a catalogue of saved tools filled to its cap (GEN-18): at most 9,184
  * characters over the fixtures' requests when raised from 8,900, which that shape could pass (the
- * owner's choice, 2026-11-11).
+ * owner's choice, 2026-11-11). Raised to 10,900 for the person's connections, the rule for them and
+ * up to `INTENT_CONNECTIONS_LISTED` of their names (A74, the owner's choice of 2026-11-14).
  */
-export const INTENT_PROMPT_BUDGET = 9_400;
+export const INTENT_PROMPT_BUDGET = 10_900;
+
+/** How many of the person's connections the intent stage is told of, by name (A74). */
+export const INTENT_CONNECTIONS_LISTED = 20;
 
 /** Includes the actual entries: oversized contexts are refused before spending a call. */
 export const DATA_PROMPT_BUDGET = 12_000;
@@ -627,6 +633,11 @@ export function assembleIntentPrompt(input: {
   proposal?: string;
   /** The conversation before the request, as `requestConversation` quotes it (A62); told only while no review waits. */
   conversation?: string;
+  /**
+   * The names of the person's connections (CAP-02, A74), at most `INTENT_CONNECTIONS_LISTED`,
+   * already chosen; none when left out or empty.
+   */
+  connections?: readonly string[];
   retry?: boolean;
 }): AssembledPrompt {
   const used: string[] = [];
@@ -657,7 +668,18 @@ export function assembleIntentPrompt(input: {
     : input.conversation
       ? `${open}${conversationPart(input.conversation, use)}`
       : open;
-  let prompt = use("intent-request", { open: context, saved, request: input.request });
+  // The connections' names: checked names of the person's, quoted as JSON all the same (SEC-02).
+  const connections = input.connections?.length
+    ? use("intent-connections", {
+        names: JSON.stringify(input.connections.slice(0, INTENT_CONNECTIONS_LISTED)),
+      })
+    : use("intent-no-connections");
+  let prompt = use("intent-request", {
+    open: context,
+    saved,
+    connections,
+    request: input.request,
+  });
   if (input.retry) prompt += `\n\n${use("intent-retry")}`;
   return { system, prompt, parts: used, size: system.length + prompt.length };
 }

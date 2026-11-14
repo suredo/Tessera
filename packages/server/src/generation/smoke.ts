@@ -7,6 +7,7 @@ import type { Provider, Routes } from "../providers/index.ts";
 import { loadVersion, saveVersion } from "../versions/index.ts";
 import { getWorkspace, type Store } from "../workspaces/index.ts";
 import { createTool } from "./create.ts";
+import { toolConnections } from "./tool-connections.ts";
 import { editTool } from "./edit.ts";
 import type { TwoPassPlan } from "./two-pass.ts";
 import { DEFAULT_STAGE_TIME_LIMITS, type StageTimeLimits } from "./time-limits.ts";
@@ -62,11 +63,20 @@ export async function repairSmoke(
   const workspace = getWorkspace(store, input.workspaceId);
   if (context.baseVersion && (original?.kind !== "ok" || !workspace?.data))
     return failed(["The original tool couldn't be read."]);
+  // The connections the request gave the tool, worked out again from its intent (A66, A74): an
+  // edit's from the original's, and the failed candidate's own connections go into its attempt.
+  const given = toolConnections(
+    store,
+    context.intent,
+    original?.kind === "ok" ? original.artifact.connections : {},
+  );
   const repaired =
     context.baseVersion && original?.kind === "ok" && workspace?.data
       ? await editTool(provider, routes, {
           request: context.request,
           intent: context.intent,
+          allowedConnections: given.allowed,
+          connections: given.quoted,
           signal,
           repairUsage: context.repairUsage,
           timeLimits: limits,
@@ -82,6 +92,10 @@ export async function repairSmoke(
               files: context.intent?.lookOnly
                 ? { mode: "style", css: artifact.code.css }
                 : { mode: "replace", code: artifact.code },
+              connections:
+                canonicalJson(artifact.connections) === canonicalJson(original.artifact.connections)
+                  ? { mode: "unchanged" }
+                  : { mode: "replace", connections: artifact.connections },
               data:
                 canonicalJson(artifact.data) === canonicalJson(original.artifact.data)
                   ? { mode: "unchanged" }
@@ -97,6 +111,8 @@ export async function repairSmoke(
       : await createTool(provider, routes, {
           request: context.request,
           intent: context.intent,
+          allowedConnections: given.allowed,
+          connections: given.quoted,
           signal,
           repairUsage: context.repairUsage,
           timeLimits: limits,
@@ -121,6 +137,9 @@ export async function repairSmoke(
                 artifact.capabilities,
               ),
               uiMode: artifact.ui.mode,
+              ...(Object.keys(artifact.connections).length
+                ? { connections: artifact.connections }
+                : {}),
             },
           },
         });

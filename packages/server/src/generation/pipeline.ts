@@ -21,6 +21,7 @@ import { generateEdit } from "./edit-pipeline.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
 import { changeData, type OfferData } from "./data-action.ts";
 import { twoPassPlan, type TwoPassOptions } from "./two-pass.ts";
+import { connectionNames, toolConnections } from "./tool-connections.ts";
 import { DEFAULT_STAGE_TIME_LIMITS, type StageTimeLimits } from "./time-limits.ts";
 
 // A request, carried out as far as the server goes (GEN-01, GEN-04): the intent stage decides
@@ -77,6 +78,8 @@ export async function generate(
       saved: recentSavedTools(store),
       ...(waiting ? { proposal: waiting } : {}),
       ...(conversation ? { conversation } : {}),
+      // The person's connections by name, for the stage to choose from (A74).
+      connections: connectionNames(store),
       signal,
       timeLimitMs: limits.intent,
     });
@@ -216,9 +219,13 @@ export async function generate(
       return { kind: "failed", failure: "provider", message: error.message, findings: [] };
     }
   }
+  // The connections the request gives the new tool: the host's choice from the intent (A66, A74).
+  const given = toolConnections(store, decision.intent);
   const created = await createTool(provider, routes, {
     request: decision.interfacePart,
     intent: decision.intent,
+    allowedConnections: given.allowed,
+    connections: given.quoted,
     signal,
     repairUsage,
     ...(plan ? { core: plan } : {}),

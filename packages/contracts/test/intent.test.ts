@@ -17,6 +17,7 @@ const base = {
   features: [{ name: "guest list", request: "a table of my guests" }],
   profile: null,
   drawsCharts: false,
+  connections: [],
 };
 const withoutFeatures: Record<string, unknown> = { kind: "create", ...base };
 delete withoutFeatures["features"];
@@ -35,6 +36,11 @@ const valid: Record<string, unknown> = {
   },
   "a behavior statement": { ...base, kind: "edit", interfacePart: null, behaviorChange: true },
   "a tool that draws charts (CAP-04)": { kind: "create", ...base, drawsCharts: true },
+  "a tool that reaches two connections (A74)": {
+    kind: "create",
+    ...base,
+    connections: ["movies", "watch-list"],
+  },
   "a tool that fits a verification profile (VER-03)": {
     ...base,
     kind: "create",
@@ -53,6 +59,12 @@ const invalid: Record<string, unknown> = {
   "null where a value is required": { ...base, kind: "create", language: null },
   "an empty feature name": { ...base, kind: "create", features: [{ name: "", request: "x" }] },
   "a profile that isn't in the registry (VER-03)": { ...base, kind: "create", profile: "chess" },
+  "more connections than a request gives a tool (A74)": {
+    ...base,
+    kind: "create",
+    connections: ["a", "b", "c", "d"],
+  },
+  "a connection name that isn't one (A74)": { ...base, kind: "create", connections: ["My Bank"] },
 };
 
 describe("intent contract", () => {

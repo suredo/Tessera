@@ -18,6 +18,7 @@ export {
   profilesForIntent,
   fixedPart,
   INTENT_PROMPT_BUDGET,
+  INTENT_CONNECTIONS_LISTED,
   intentProposalSize,
   intentConversationSize,
   CONVERSATION_MAX_QUOTED,
