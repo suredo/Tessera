@@ -1,5 +1,6 @@
 import { styleNotes } from "../checks/index.ts";
 import {
+  DETAILS_CONNECTION_REQUESTS,
   HOST_ACTIONS,
   HOST_REQUEST_LIMIT_BYTES,
   HOST_ROUTE,
@@ -51,6 +52,7 @@ import {
   addConnection,
   allowWrites,
   listConnections,
+  recentRequests,
   removeConnection,
   takeBackWrites,
   writesAllowed,
@@ -108,6 +110,7 @@ const run: {
         source: null,
         capabilities: [],
         connections: [],
+        connectionRequests: [],
         styleNotes: [],
         checks: [],
         profile: null,
@@ -126,6 +129,8 @@ const run: {
       // The connections its version was made to use, by name, with whether the person still has
       // each and allowed its changes through it (ADR 0015 point 7, A72); never a key.
       connections: connectionsOf(store, workspaceId, artifact),
+      // Its newest requests through them, whatever version made them (A73); never a key.
+      connectionRequests: recentRequests(store, workspaceId, DETAILS_CONNECTION_REQUESTS),
       // Where its look differs from the standard, read from its code, never stored (VER-06, A63).
       styleNotes: artifact ? styleNotes(artifact.code, artifact.ui.mode) : [],
       checks: current?.checks ?? [],

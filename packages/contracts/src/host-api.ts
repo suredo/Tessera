@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { chatEntrySchema, chatMessageSchema } from "./chat.ts";
-import { connectionInputSchema, connectionNameSchema, connectionSchema } from "./connection.ts";
+import { BRIDGE_ERROR_CODES } from "./bridge.ts";
+import {
+  CONNECTION_METHODS,
+  connectionInputSchema,
+  connectionNameSchema,
+  connectionSchema,
+} from "./connection.ts";
 import { jsonValueSchema } from "./json.ts";
 import { ledgerRequestSchema } from "./ledger.ts";
 import { trashEntrySchema, trashSchema } from "./trash.ts";
@@ -21,6 +27,33 @@ import {
 export const HOST_ROUTE = "/api/host";
 
 const id = z.uuid();
+
+/** The longest address a recorded request keeps, and how many the details give (A73). */
+export const CONNECTION_REQUEST_ADDRESS_LIMIT = 300;
+export const DETAILS_CONNECTION_REQUESTS = 20;
+
+/**
+ * A tool's request through a connection, as the host recorded it (ADR 0015 point 7, A73): where,
+ * when, read or write by its method, and how it ended. Never the key: the address is the one the
+ * tool asked for, before the host adds it.
+ */
+export const connectionRequestRecordSchema = z
+  .strictObject({
+    connection: connectionNameSchema,
+    method: z.enum(CONNECTION_METHODS),
+    address: z
+      .string()
+      .max(CONNECTION_REQUEST_ADDRESS_LIMIT)
+      .describe("The connection's address and the tool's path, without the key, cut short."),
+    at: z.iso.datetime(),
+    outcome: z.discriminatedUnion("kind", [
+      z.strictObject({ kind: z.literal("answered"), statusCode: z.int().min(100).max(599) }),
+      z.strictObject({ kind: z.literal("refused"), code: z.enum(BRIDGE_ERROR_CODES) }),
+    ]),
+  })
+  .describe("A request through a connection, newest first in the details (OBS-01).");
+export type ConnectionRequestRecord = z.infer<typeof connectionRequestRecordSchema>;
+
 const title = workspaceSchema.shape.title;
 const name = savedToolSchema.shape.name;
 const dataRevision = workspaceSchema.shape.dataRevision;
@@ -165,6 +198,12 @@ export const HOST_ACTIONS = {
           )
           .describe(
             "The connections the current tool was made to use, by name, never a key; none without a tool (ADR 0015 point 7, A72).",
+          ),
+        connectionRequests: z
+          .array(connectionRequestRecordSchema)
+          .max(DETAILS_CONNECTION_REQUESTS)
+          .describe(
+            "The workspace's newest requests through connections first, never a key (ADR 0015 point 7, A73).",
           ),
         styleNotes: z
           .array(z.string())

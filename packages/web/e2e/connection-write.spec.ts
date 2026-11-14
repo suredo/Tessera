@@ -90,7 +90,7 @@ async function clickAdd(page: Page) {
   return { id, title };
 }
 
-test("CNX-07 A72: on Allow, the permission is kept and the change is sent, the next one doesn't ask, and taken back in the details it asks again", async ({
+test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, the next one doesn't ask, taken back in the details it asks again, and the details list each request", async ({
   page,
 }) => {
   seen.length = 0;
@@ -141,6 +141,21 @@ test("CNX-07 A72: on Allow, the permission is kept and the change is sent, the n
   await expect.poll(() => seen.length).toBe(3);
   await expect(entry).toContainText(en["details.connection.allowed"]);
   await expect(takenBack).toBeHidden();
+
+  // The open details list each request as it settles, newest first, with no key (A73): two
+  // waits for the person, and three changes sent.
+  const requests = details.locator(".details-connection-requests");
+  await expect(
+    details.getByRole("heading", { name: en["details.connectionRequestsHeading"] }),
+  ).toBeVisible();
+  const lines = requests.getByRole("listitem");
+  await expect(lines).toHaveCount(5);
+  const sent = `Asked to send something to ${origin}/items through lists. It answered 201.`;
+  const waited = `Asked to send something to ${origin}/items through lists. ${en["details.request.waited"]}`;
+  await expect(lines.nth(0)).toContainText(sent);
+  await expect(lines.nth(1)).toContainText(waited);
+  await expect(lines.nth(4)).toContainText(waited);
+  expect(await requests.textContent()).not.toContain("Bearer");
 });
 
 test("CNX-07: on Don't allow, nothing is sent or kept, and the tool hears it wasn't allowed", async ({

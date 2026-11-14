@@ -15,6 +15,8 @@ import { answerDataCall } from "../src/bridge/index.ts";
 import {
   addConnection,
   allowWrites,
+  CONNECTION_REQUESTS_KEPT,
+  recentRequests,
   removeConnection,
   takeBackWrites,
   writesAllowed,
@@ -527,5 +529,51 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
     expect(() => allowWrites(folder, "00000000-0000-4000-8000-000000000009", "movies")).toThrow(
       /gone or in the trash/,
     );
+  });
+
+  it("CNX-07 A73: each request of a running tool is kept with how it ended, never the key, the newest 50, and none of a tool being checked", async () => {
+    const { folder, ask, id } = await setup();
+    expect(codeOf(await ask(get("movies", "/search?q=alien")))).toBe("ok");
+    const write = { connection: "movies", method: "POST", path: "/search", body: "{}" };
+    expect(codeOf(await ask(write))).toBe("needs-permission");
+    expect(codeOf(await ask(get("bank", "/accounts")))).toBe("not-allowed");
+    expect(codeOf(await ask(get("listings", "/search")))).toBe("ok");
+    // A tool being checked sends nothing, so nothing is kept.
+    await ask(get("movies", "/search"), "staging");
+    const kept = recentRequests(folder, id, 20);
+    expect(kept.map((r) => [r.connection, r.method, r.address, r.outcome])).toEqual([
+      ["listings", "GET", `${service.origin}/search`, { kind: "answered", statusCode: 200 }],
+      ["bank", "GET", `${service.origin}/accounts`, { kind: "refused", code: "not-allowed" }],
+      ["movies", "POST", `${service.origin}/search`, { kind: "refused", code: "needs-permission" }],
+      ["movies", "GET", `${service.origin}/search?q=alien`, { kind: "answered", statusCode: 200 }],
+    ]);
+    // The query key the host adds to listings' requests is never kept.
+    expect(JSON.stringify(kept)).not.toContain(KEY);
+    expect(JSON.stringify(kept)).not.toContain("api_key");
+    // Only the newest are kept, and a long address is cut short.
+    for (let n = 0; n < CONNECTION_REQUESTS_KEPT; n += 1) {
+      await ask(get("movies", `/search?page=${n}&${"x".repeat(400)}`));
+    }
+    const newest = recentRequests(folder, id, 100);
+    expect(newest).toHaveLength(CONNECTION_REQUESTS_KEPT);
+    expect(newest[0]!.address).toHaveLength(300);
+    expect(newest[0]!.address).toContain("page=49");
+    expect(newest.at(-1)!.address).toContain("page=0");
+  });
+
+  it("A73: a request keeps where it went, even when its connection is removed or added again elsewhere while the service answers", async () => {
+    const { folder, ask, id } = await setup();
+    service.seen.length = 0;
+    const slow = ask(get("movies", "/slow"));
+    await vi.waitFor(() => expect(service.seen.map((s) => s.url)).toContain("/slow"));
+    removeConnection(folder, "movies");
+    addConnection(folder, {
+      name: "movies",
+      origins: ["https://replacement.example"],
+      auth: { kind: "none" },
+      key: null,
+    });
+    expect(codeOf(await slow)).toBe("ok");
+    expect(recentRequests(folder, id, 1).map((r) => r.address)).toEqual([`${service.origin}/slow`]);
   });
 });
