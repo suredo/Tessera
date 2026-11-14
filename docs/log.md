@@ -2,6 +2,8 @@
 
 ## 2026-11-14
 
+* **Fixed**: Open details show a permission the person just gave, with its Take back, without reopening, and drop the "will ask you first" line once anything changes ([#364](https://github.com/suredo/Tessera/pull/364) review, A72). The contracts doc says what `details.get` gives for connections ([web](code/web/package.md), [contracts](code/contracts/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T18:53:41Z.
+
 * **New**: The details view shows the connections a tool was made to use ([#349](https://github.com/suredo/Tessera/issues/349) step 4, A72, `CNX-07`): each by name, never a key, with whether it reads freely and asks before its first change, or its changes go through without asking, with Take back, or the person no longer has it. Taking a permission back makes the next change ask again, tested end to end in Chrome. The host API's `details.get` gives them ([web](code/web/package.md), [host API](code/server/host-api.md), [ADR 0015](decisions/adr/0015-person-connections.md), [decision log](decisions/decision-log.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T18:41:41Z.
 
 * **Fixed**: The connections form refuses an address whose path the URL parser would have quietly dropped, such as `/v3/..`; it checks header and parameter names with the contracts' own schemas, now exported; and a request's outcome is said in the notice while the connections take the first-run screen's place ([#363](https://github.com/suredo/Tessera/pull/363) review) ([web](code/web/package.md), [contracts](code/contracts/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T18:27:03Z.

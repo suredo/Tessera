@@ -123,19 +123,22 @@ export function Details({ workspace, changes }: Props) {
   const [details, setDetails] = useState<Details | null>(null);
   const [message, setMessage] = useState("");
   const [chats, setChats] = useState<Chats>({});
-  // What taking back a permission did, said under the connections; and a reload after it.
-  const [said, setSaid] = useState("");
+  // What taking back a permission did, said under the connections, and a reload after it. It is
+  // kept with the changes it was said at, so once anything else changes, such as the person
+  // allowing that connection again, it is no longer shown (#364 review).
+  const [said, setSaid] = useState<{ text: string; at: number } | null>(null);
   const [reloads, setReloads] = useState(0);
   const takeBack = async (connection: string) => {
     if (id === null) return;
     try {
       await ask("connections.takeBackWrites", { workspaceId: id, connection });
-      setSaid(t("details.connection.takenBack", { connection }));
+      setSaid({ text: t("details.connection.takenBack", { connection }), at: changes });
     } catch (error) {
-      setSaid(t("app.problem", { message: problemText(error) }));
+      setSaid({ text: t("app.problem", { message: problemText(error) }), at: changes });
     }
     setReloads((n) => n + 1);
   };
+  const saidNow = said && said.at === changes ? said.text : "";
 
   useEffect(() => {
     if (!open) return;
@@ -199,7 +202,7 @@ export function Details({ workspace, changes }: Props) {
               details={details}
               chats={chats}
               hasWorkspace={id !== null}
-              said={said}
+              said={saidNow}
               onTakeBack={takeBack}
             />
           )}
