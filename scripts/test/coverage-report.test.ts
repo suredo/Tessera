@@ -59,7 +59,7 @@ describe("coverage report (ENG-17)", () => {
     });
   });
 
-  it("never counts work due in a later milestone as resolved, even when verified", () => {
+  it("ENG-28: takes each milestone from the roadmap, and never counts work due in a later one as resolved, even when verified", () => {
     const c = collect(repo(base), "M0");
     expect(c.requirements.find((r) => r.id === "AREA-03")).toMatchObject({
       status: "verified",

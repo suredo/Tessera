@@ -2,6 +2,8 @@
 
 ## 2026-11-14
 
+* **Fixed**: The coverage report counts against M4 (`ENG-17`): `pnpm coverage` was still set to M2 through M2's and M3's sign-offs, so it never reported M4's deliverables that nothing had built yet (`CAP-02`, `CAP-03`, `UX-01`, `OBS-03`). `UX-04` and `ENG-28` are now verified, as tests of their code docs name them ([coverage report](code/scripts/coverage-report.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T03:00:00Z.
+
 * **Changed**: The acceptance check's passing case is out of quarantine, to be diagnosed in place (L-102, [#337](https://github.com/suredo/Tessera/issues/337), the owner's choice). It had failed twice on CI, each time as a run's first test with the staging panel still off-screen; an experiment on CI's Windows machines ran 120 cold starts, 60 with the panel off-screen and 60 inside the window, and none failed, so the cause isn't established. A frame left without its width now says how long it really waited, how many times it drew meanwhile and whether its page was visible, so the next failure tells why ([runtime](code/runtime/package.md), [lessons](lessons/tessera-issues.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T01:30:00Z.
 
 ## 2026-11-13
