@@ -99,18 +99,28 @@ export function writesAllowed(store: Store, workspaceId: string, name: string): 
 }
 
 /**
- * Keeps the person's permission for the workspace's tool to change things through `name`,
- * refused if there is no such workspace or connection. Allowing again keeps the first time.
+ * A permission's workspace and connection, both there: a workspace in the trash is refused too, so
+ * no stale request leaves a permission that would apply once the tool is restored.
  */
-export function allowWrites(store: Store, workspaceId: string, name: string): void {
+function checkTarget(store: Store, workspaceId: string, name: string): void {
   const exists = (sql: string, value: string) =>
     (store.db.get(z.object({ n: z.number() }), sql, value)?.n ?? 0) > 0;
-  if (!exists("SELECT COUNT(*) AS n FROM workspaces WHERE id = ?", workspaceId)) {
+  if (
+    !exists("SELECT COUNT(*) AS n FROM workspaces WHERE id = ? AND deleted_at IS NULL", workspaceId)
+  ) {
     throw new Error("That tool is gone or in the trash.");
   }
   if (!exists("SELECT COUNT(*) AS n FROM connections WHERE name = ?", name)) {
     throw new Error(`There is no connection called ${name}.`);
   }
+}
+
+/**
+ * Keeps the person's permission for the workspace's tool to change things through `name`,
+ * refused if there is no such workspace or connection. Allowing again keeps the first time.
+ */
+export function allowWrites(store: Store, workspaceId: string, name: string): void {
+  checkTarget(store, workspaceId, name);
   store.db.run(
     "INSERT OR IGNORE INTO connection_permissions (workspace_id, connection, allowed_at) VALUES (?, ?, ?)",
     workspaceId,
@@ -119,8 +129,12 @@ export function allowWrites(store: Store, workspaceId: string, name: string): vo
   );
 }
 
-/** Takes the permission back: the tool's next change through `name` asks the person again. */
+/**
+ * Takes the permission back: the tool's next change through `name` asks the person again. Refused,
+ * like allowing, for a workspace or connection that isn't there.
+ */
 export function takeBackWrites(store: Store, workspaceId: string, name: string): void {
+  checkTarget(store, workspaceId, name);
   store.db.run(
     "DELETE FROM connection_permissions WHERE workspace_id = ? AND connection = ?",
     workspaceId,
