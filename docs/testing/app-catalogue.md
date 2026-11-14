@@ -4,7 +4,7 @@ title: "Test application catalogue"
 description: "The test apps (simple, medium, advanced), platform scenarios and later modularity scenarios."
 tags: [testing, app-catalogue]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T04:00:00Z }
 ---
 # Test application catalogue
 
@@ -37,8 +37,8 @@ These have no app of their own. They test Tessera around the tools.
 
 | ID | App | Opening request (example) | Exercises | Profile | Needs |
 | --- | --- | --- | --- | --- | --- |
-| T7 | Movie and video finder | "Find old science-fiction films I can watch and let me keep a watchlist." | Searching an outside source, filter and sort, compare, watchlist, thumbnails delivered as assets, opening a video on its own site | Search results with selection | `CAP-02` data provider (source decided at the start of M4, D11); `DATA-11` assets |
-| T8 | Article finder | "Find recent articles about sleep and memory and let me save the ones I want to read." | Search, save, tag, reading notes | Search results with selection | `CAP-02` (source decided with D11) |
+| T7 | Movie and video finder | "Find old science-fiction films I can watch and let me keep a watchlist." | Searching an outside source, filter and sort, compare, watchlist, thumbnails delivered as assets, opening a video on its own site | Search results with selection | `CAP-02` connection the person adds (ADR 0015); `DATA-11` assets |
+| T8 | Article finder | "Find recent articles about sleep and memory and let me save the ones I want to read." | Search, save, tag, reading notes | Search results with selection | `CAP-02`, a connection the person adds (ADR 0015) |
 | T9 | Research board | "Research whether standing desks help with back pain and show me the sources and what they say." | Cited findings, comparing sources, honest limits | Cited findings | `CAP-02` plus the research stage (M5) |
 | T10 | Study planner (PT variant too) | "My exam is in two weeks. Help me organize topics; I study evenings, never Fridays. Later I'll paste notes to make flashcards." | Rules enforced, notes to cards, mixed requests, next day | Scheduling with rules, notes to cards | `RUN-07` clock |
 | T11 | Tutor bookings | "A booking sheet for my tutoring: Monday to Thursday 2–7 pm, one-hour sessions, never double-booked." | Conflicts, "move João to Thursday 4 pm" when that slot is taken | Scheduling with rules | `RUN-07` clock |

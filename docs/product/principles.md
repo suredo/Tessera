@@ -4,7 +4,7 @@ title: "Principles"
 description: "The seven rules every design choice follows, from \"the model proposes, the host decides\" to local-first privacy."
 tags: [product, principles]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T04:00:00Z }
 ---
 # Principles
 
@@ -18,4 +18,4 @@ These come straight from what went wrong and right in the POC.
 | P4 | **Structured over guessed** | Intent comes from a structured model answer that the host checks, not from keyword matching. Keyword rules may only act as tested safety nets, never as the main decision. |
 | P5 | **Testable by design** | Generated tools that match a verification profile expose stable hooks, so the host can test them even though their design changes every time. |
 | P6 | **Nothing invisible** | Every model call, failure reason and check result is recorded. The person sees plain words; the details view shows everything. |
-| P7 | **Local-first and private** | Persistent data stays locally. Model calls send the task context needed by their stage through the signed-in CLI; that context can include user-provided data. Data-provider requests send only the explicitly requested search terms/filters (`CAP-02`). Neither path silently forwards unrelated workspace contents. Asset content, such as a photo, is sent to a model only when a stage needs it and the person is told (`DATA-11`). |
+| P7 | **Local-first and private** | Persistent data stays locally. Model calls send the task context needed by their stage through the signed-in CLI; that context can include user-provided data. A request through a connection the person added sends only what the tool's request says, to that connection's addresses (`CAP-02`). Neither path silently forwards unrelated workspace contents. Asset content, such as a photo, is sent to a model only when a stage needs it and the person is told (`DATA-11`). |

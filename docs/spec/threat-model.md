@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-09T23:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T05:00:00Z }
 ---
 # Threat model and boundary checks
 
@@ -16,7 +16,7 @@ A check that passes shows that the attempt it describes failed, in the browsers 
 
 - **The person's data:** workspaces, versions, tool data, assets and the trash in the user data folder (`PLAT-04`), and their integrity: nothing changes except through the host's checked paths (`DATA-02`, `DATA-10`).
 - **The machine:** files outside the data folder, other processes, the network, and the CLI sign-ins (`CLI-08`).
-- **What leaves the machine:** nothing a tool holds reaches the network, and nothing reaches a model except what a stage sends on purpose (`SEC-02`, `DATA-11`).
+- **What leaves the machine:** a tool reaches the network only through a connection the person added, by the host, to that connection's addresses, with its first write confirmed (`CAP-02`, [ADR 0015](../decisions/adr/0015-person-connections.md)); what a tool sends there is the person's to allow, so it is never promised to stay local. Nothing else a tool holds reaches the network, and nothing reaches a model except what a stage sends on purpose (`SEC-02`, `DATA-11`).
 - **The host itself:** one tool can't read or change another tool's data, the host's interface, or its versions.
 
 ## Who is untrusted
@@ -26,7 +26,7 @@ A check that passes shows that the attempt it describes failed, in the browsers 
 | Generated code: tool HTML, CSS and JavaScript, and later migrations and engines | A model wrote it, possibly steered by text it read (`SEC-02`); it may be wrong or hostile. |
 | Imported archives | They may come from someone else, or be edited by hand. Their tool code is generated code. |
 | Web pages the person visits | They can send requests to loopback addresses and rebind DNS names (`SEC-03`). |
-| Research sources and outside data (M5, `CAP-02`) | Their text may try to instruct a model (`SEC-02`). |
+| Research sources (M5) and connections to outside services (M4, `CAP-02`, ADR 0015) | Their text may try to instruct a model (`SEC-02`). A tool could try to send the person's data out, or write to a service unasked: the host makes every request, only to a connection's addresses, keeps its key, confirms a tool's first write through it, and in staging answers without reaching the service. |
 
 **Trusted, and out of scope:** the person, their Windows account and anything running under it, the browser (Chrome or Edge, `RUN-06`) and its sandbox, Node, the signed-in CLIs and the model providers behind them, and the pinned dependencies (supply chain review is M6's audit). Malware on the machine, a hostile browser extension and physical access are not defended against. Data at rest is not encrypted.
 
@@ -40,6 +40,7 @@ A check that passes shows that the attempt it describes failed, in the browsers 
 | Assets | Bytes a tool, a person or an archive hands over | Files that aren't the image types they claim, oversize files, reads outside the asset store, paths reaching a tool, cross-workspace reads | `DATA-11`, `DATA-09` | AST-01 to AST-06 | M1, the asset store ([#49](https://github.com/suredo/Tessera/issues/49)) |
 | Imports | An archive file | Writing outside the import's own folder, oversize or bomb archives, malformed or newer formats, hash mismatches, executable content, overwriting existing work | `DATA-05`, `SEC-01` | IMP-01 to IMP-07 | M1, export and import ([#48](https://github.com/suredo/Tessera/issues/48)); assets in archives with [#49](https://github.com/suredo/Tessera/issues/49) |
 | The local server | Web pages and other local processes | Requests from foreign `Host` headers and other origins | `SEC-03`, `PLAT-02` | Its own tests | M1, the launcher and server ([#54](https://github.com/suredo/Tessera/issues/54)) |
+| Connections to outside services | A tool's requests through a connection; the service's answers | Requests to addresses outside the connection (another host, a redirect elsewhere, a path that escapes), the key reaching a tool, a prompt, the ledger, the logs or an export, a write the person didn't allow (a first write unconfirmed, or after the permission was taken back), any request to the service during staging, and answers taken as instructions | `CAP-02`, `SEC-02`, `RUN-01` | Not yet numbered: #349 numbers them with their tests | M4, connections ([#349](https://github.com/suredo/Tessera/issues/349), [ADR 0015](../decisions/adr/0015-person-connections.md)) |
 | The trusted CLIs | Prompts that carry untrusted text | File tools, web tools outside research, a leaked environment, a stage with more tools than it needs | `CLI-03`, `CLI-08`, `SEC-02`, `SEC-04` | TCL-01 to TCL-07 | M2 for Claude Code; M3 for the Codex tool policy ([#266](https://github.com/suredo/Tessera/issues/266), [ADR 0013](../decisions/adr/0013-codex-cli-contract.md)) |
 | Research and engines | Web pages read during research; engine code | Instructions taken from sources; engine checks reaching files, network or processes | `SEC-01`, `SEC-02`, `SIM-02`, `SIM-04` | Not yet numbered | M5 |
 
@@ -56,7 +57,7 @@ Its limits, which stay open after M1:
 - **Data a tool may write is still its data.** A tool can store what the person types in its own data, through declared bridge calls. That stays on the machine, but it can reach a model later as tool data, where `SEC-02` treats it as quoted data.
 - **Executable migrations are disabled.** M1 accepts declarative migrations only. `SEC-01` requires a separate, negatively tested execution boundary before any generated migration code runs; none is chosen in M1. Enabling them needs an ADR from the owner naming the mechanism, with its own negative checks, first.
 - **Imports check structure, not intent.** An imported tool is generated code from an unknown author: it is stored and runs only in the sandbox, with the same checks, never in the server. Its data is checked against its schema and limits, not judged.
-- **Not covered in M1:** the CLIs' tool policy (M2, M3), outside data providers (`CAP-02`), files offered to save (`CAP-03`), vetted libraries injected into the sandbox (`CAP-04`; from M3 the pinned Chart.js, [ADR 0014](../decisions/adr/0014-chart-library.md), which runs inside the tool's sandbox with the tool's own privileges and makes no requests, so it widens nothing a tool could already do, though its code is reviewed only as a pinned, widely used library), engines and research (M5), and the broader audit, including dependencies (M6).
+- **Not covered in M1:** the CLIs' tool policy (M2, M3), connections to outside services (`CAP-02`, M4), files offered to save (`CAP-03`), vetted libraries injected into the sandbox (`CAP-04`; from M3 the pinned Chart.js, [ADR 0014](../decisions/adr/0014-chart-library.md), which runs inside the tool's sandbox with the tool's own privileges and makes no requests, so it widens nothing a tool could already do, though its code is reviewed only as a pinned, widely used library), engines and research (M5), and the broader audit, including dependencies (M6).
 
 ## How the checks run
 
