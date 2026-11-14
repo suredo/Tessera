@@ -2,6 +2,7 @@ import {
   BRIDGE_ACTIONS,
   CONNECTION_READ_METHODS,
   checkBridgeCall,
+  type Artifact,
   type BridgeActionName,
   type BridgeArgs,
   type BridgeErrorCode,
@@ -65,6 +66,43 @@ export class BridgeError extends Error {
 }
 
 /**
+ * What a candidate's request through a connection gets while it is checked (A69, CNX-06): the
+ * sample its version carries whose path is the longest one the request's path starts with, or a
+ * plain 404 when none does. Only a connection the version names answers (A66), as outside checks.
+ */
+export function sampleAnswer(
+  samples: Artifact["connections"],
+  request: BridgeArgs<"connection.request">,
+  now: number,
+): BridgeResult<"connection.request"> {
+  const name = request.connection;
+  if (!Object.hasOwn(samples, name)) {
+    throw new BridgeError(
+      "not-allowed",
+      `This tool wasn't built to use the connection ${name}. Using it takes an edit. Nothing was sent.`,
+    );
+  }
+  const path = request.path.split("?")[0]!;
+  const best = Object.keys(samples[name]!.samples)
+    .filter((prefix) => path.startsWith(prefix))
+    .sort((a, b) => b.length - a.length)[0];
+  const sample = best === undefined ? undefined : samples[name]!.samples[best];
+  const source = {
+    connection: name,
+    url: `sample:${request.path}`,
+    receivedAt: new Date(now).toISOString(),
+  };
+  return sample
+    ? { ...sample, source }
+    : {
+        statusCode: 404,
+        contentType: "text/plain",
+        body: "This tool has no sample answer for that path, so a check gets none.",
+        source,
+      };
+}
+
+/**
  * What a data handler is told beside the arguments: where the mount stood when the call was
  * checked, and the call exactly as the tool made it, so the server can check it again (RUN-04).
  */
@@ -102,6 +140,11 @@ export type BridgeOptions = {
    * (BRG-06). Whoever passes it passes those handlers.
    */
   rehearsal?: boolean;
+  /**
+   * The connections the candidate's version uses, with their sample answers: what its requests
+   * get in the staging panel and its rehearsals, in place of the service's (A69).
+   */
+  samples?: Artifact["connections"];
 };
 
 export type ServedBridge = {
@@ -144,15 +187,10 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
         : Promise.reject(new BridgeError("failed", "The host can't show images here.")),
     "clock.now": () => Promise.resolve(clockReading(clock.now(), clock.timeZone())),
     "connection.request": (args, context) => {
-      // A check never reaches the real service (ADR 0015, point 5): recorded answers come with
-      // #349 step 3, so until then a candidate's request is refused, and nothing is sent.
+      // A check never reaches the real service (ADR 0015, point 5): a candidate's request, read or
+      // write, gets the sample answer its version carries (A69), and nothing is sent (CNX-06).
       if (options.staging || options.rehearsal) {
-        return Promise.reject(
-          new BridgeError(
-            "not-allowed",
-            "A tool being checked doesn't reach outside services. Nothing was sent.",
-          ),
-        );
+        return Promise.resolve(sampleAnswer(options.samples ?? {}, args, clock.now()));
       }
       if (!CONNECTION_READ_METHODS.includes(args.method)) {
         return Promise.reject(

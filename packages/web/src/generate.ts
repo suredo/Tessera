@@ -260,6 +260,7 @@ async function stageRequest(
         mountId: reply.mountId,
         hash: reply.hash,
         capabilities: reply.capabilities,
+        connections: reply.connections,
         syntheticData: reply.syntheticData,
       },
       workspaceId: reply.workspaceId,

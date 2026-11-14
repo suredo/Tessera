@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T13:12:23Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T16:24:13Z }
 ---
 # Threat model and boundary checks
 
@@ -118,7 +118,7 @@ Run against the bridge's message handling, and through a hostile test tool in th
 
 ## Connection checks
 
-Run against the server's side of the bridge, which makes every request through a connection, with local fake services on loopback: the one a connection reaches, and another that nothing may reach ([#349](https://github.com/suredo/Tessera/issues/349), [ADR 0015](../decisions/adr/0015-person-connections.md)). They run in the [connections](../code/server/connections.md) tests, through the [bridge route](../code/server/bridge.md); the host page's refusals of `CNX-06` run against `serveBridge` in the [runtime package](../code/runtime/package.md), and the path's shape against the bridge contract in the [contracts package](../code/contracts/package.md). The first write's confirmation, and staging's made-up answers in place of `CNX-06`'s refusal, are numbered with #349 step 3; answers quoted to a model as data (`SEC-02`), with step 4.
+Run against the server's side of the bridge, which makes every request through a connection, with local fake services on loopback: the one a connection reaches, and another that nothing may reach ([#349](https://github.com/suredo/Tessera/issues/349), [ADR 0015](../decisions/adr/0015-person-connections.md)). They run in the [connections](../code/server/connections.md) tests, through the [bridge route](../code/server/bridge.md); the host page's side of `CNX-06` runs against `serveBridge`, and in Chrome through the staging panel (`packages/web/e2e/staging.spec.ts`), in the [runtime package](../code/runtime/package.md), and the path's shape against the bridge contract in the [contracts package](../code/contracts/package.md). The first write's confirmation is numbered with #349 step 3c; answers quoted to a model as data (`SEC-02`), with step 4.
 
 | ID | The tool sends | Expected result |
 | --- | --- | --- |
@@ -127,7 +127,7 @@ Run against the server's side of the bridge, which makes every request through a
 | CNX-03 | A request the service answers with a redirect | Refused; nothing reaches the address it points to. |
 | CNX-04 | Anything, while looking for the key: every reply, success or refusal, from services that write it back (echoed, in the content type, upper-cased, URL-encoded, in base64, in any mix of JSON escapes, in HTML or XML character references wherever they stand, in a page as a parser shows it, split elements and attributes included), every other table of the data folder, the console | The key reaches only the service, in its header or after the tool's query; the answer's source gives the address without it, and an answer that repeats it is refused whole. |
 | CNX-05 | A request whose answer is too large (announced or not), too slow, or not text | Refused whole, with a plain message; none of the answer is passed on. |
-| CNX-06 | A request from a tool being checked (the staging phase, a rehearsal), a write, or a read with a body | Refused before anything is sent: until #349 step 3, only reads (GET, HEAD) go out, from a tool running in its workspace, while it starts too. |
+| CNX-06 | A request from a tool being checked (the staging panel, a rehearsal), read or write; outside checks, a write or a read with a body | A tool being checked gets the sample answer its version carries for that path, or a plain 404, from the host page itself: nothing reaches the server or the service (A69); a connection its version doesn't name stays refused. Outside checks, until the permission to write (#349 step 3c), only reads (GET, HEAD) go out, from a tool running in its workspace, while it starts too. |
 
 ## Import checks
 

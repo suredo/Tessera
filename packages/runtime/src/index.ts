@@ -4,6 +4,7 @@ export const packageName = "@tessera/runtime";
 export {
   BridgeError,
   clockReading,
+  sampleAnswer,
   serveBridge,
   systemClock,
   type BridgeOptions,

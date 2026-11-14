@@ -229,17 +229,59 @@ describe("requests through a connection (CAP-02)", () => {
     expect(asked).toEqual([read]);
   });
 
-  it("CNX-06: a tool being checked, or a write, asks nothing of the server", async () => {
+  const samples = {
+    movies: {
+      samples: {
+        "/search": { statusCode: 200, contentType: "application/json", body: '["Alien"]' },
+        "/search/movie": { statusCode: 200, contentType: "application/json", body: '["Heat"]' },
+      },
+    },
+  };
+
+  it("CNX-06: a tool being checked gets its sample answers, reads and writes alike, and asks nothing of the server", async () => {
     for (const options of [{ staging: true }, { rehearsal: true }]) {
-      const { call, asked, interact } = withConnection(options);
+      const { call, asked, interact } = withConnection({ ...options, samples });
       interact();
-      const reply = await call("connection.request", read);
-      expect(reply, JSON.stringify(options)).toMatchObject({
-        ok: false,
-        error: { code: "not-allowed" },
+      const at = JSON.stringify(options);
+      // The longest sample path the request's path starts with, its query aside.
+      expect(
+        await call("connection.request", { ...read, path: "/search/movie?query=alien" }),
+        at,
+      ).toMatchObject({
+        ok: true,
+        result: {
+          statusCode: 200,
+          body: '["Heat"]',
+          source: { connection: "movies", url: "sample:/search/movie?query=alien" },
+        },
       });
-      expect(asked).toEqual([]);
+      expect(await call("connection.request", { ...read, path: "/search?q=x" }), at).toMatchObject({
+        ok: true,
+        result: { body: '["Alien"]' },
+      });
+      // A write is answered the same way: nothing goes out, so nothing needs the person's leave.
+      expect(
+        await call("connection.request", { ...read, method: "POST", path: "/search", body: "{}" }),
+        at,
+      ).toMatchObject({ ok: true, result: { body: '["Alien"]' } });
+      // No sample for the path: a plain 404, for the tool to cope with.
+      expect(await call("connection.request", { ...read, path: "/people" }), at).toMatchObject({
+        ok: true,
+        result: { statusCode: 404, contentType: "text/plain" },
+      });
+      // A connection the version doesn't name is refused, as outside checks (A66).
+      expect(code(await call("connection.request", { ...read, connection: "bank" })), at).toBe(
+        "not-allowed",
+      );
+      expect(asked, at).toEqual([]);
     }
+    // Without samples, every connection is one the version doesn't name.
+    const bare = withConnection({ staging: true });
+    expect(code(await bare.call("connection.request", read))).toBe("not-allowed");
+    expect(bare.asked).toEqual([]);
+  });
+
+  it("CNX-06: outside checks, a write still asks nothing of the server, until the person's permission comes (step 3c)", async () => {
     const { call, asked, interact } = withConnection();
     interact();
     for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {

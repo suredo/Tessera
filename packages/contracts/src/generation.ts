@@ -2,7 +2,7 @@ import { z } from "zod";
 import { acceptanceChecksSchema } from "./acceptance.ts";
 import { discussionSchema } from "./intent.ts";
 import { STAGES } from "./provider.ts";
-import { UI_MODES } from "./artifact.ts";
+import { artifactSchema, UI_MODES } from "./artifact.ts";
 import { BRIDGE_CAPABILITIES } from "./bridge.ts";
 import { jsonObjectSchema } from "./json.ts";
 import { versionHashSchema } from "./workspace.ts";
@@ -299,6 +299,11 @@ export const generateReplySchema = z
       hash: z.string().regex(/^[0-9a-f]{64}$/),
       mountId: z.string().min(1).describe("Where the candidate is served for staging (RUN-03)."),
       capabilities: z.array(z.string()),
+      connections: artifactSchema.shape.connections
+        .default({})
+        .describe(
+          "The connections its version uses, with the sample answers staging gives in place of the service's (A69).",
+        ),
       syntheticData: jsonObjectSchema.describe("What staging runs it against: its defaults."),
       profile: profileIdSchema
         .nullable()
