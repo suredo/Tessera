@@ -252,6 +252,19 @@ button.primary {
 .data-review dt {
   white-space: pre-wrap;
 }
+/* The question before a tool's first change through a connection (A70): the host's, set apart. */
+.write-question {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  padding: 0.75rem 1rem;
+}
+.write-question .write-text {
+  white-space: pre-wrap;
+  max-height: 12rem;
+  overflow: auto;
+}
 .tool-frame {
   border: 1px solid var(--ui-divider);
   border-radius: var(--ui-radius-panel);

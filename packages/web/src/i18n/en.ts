@@ -370,6 +370,19 @@ export const en = {
   "tool.fullScreen": "Full screen",
   "tool.leaveFullScreen": "Leave full screen",
   "tool.stopped": "{name} stopped because it stopped answering.",
+  "write.label": "A tool wants to change something outside Tessera",
+  "write.heading.send": "{tool} wants to send something through {connection}",
+  "write.heading.change": "{tool} wants to change something through {connection}",
+  "write.heading.delete": "{tool} wants to delete something through {connection}",
+  "write.where": "It goes to {address}",
+  "write.what": "It sends this:",
+  "write.nothingSent": "It sends no text with it.",
+  "write.emptyText": "It sends an empty text.",
+  "write.showAll": "Show all {count} lines",
+  "write.later":
+    "If you allow it, its later changes through {connection} won't ask again. Tessera can't undo a change made outside it.",
+  "write.allow": "Allow",
+  "write.dontAllow": "Don't allow",
 } as const;
 
 export type MessageKey = keyof typeof en;
