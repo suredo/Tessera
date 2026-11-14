@@ -191,3 +191,67 @@ describe("the host clock (RUN-07)", () => {
     expect(clockReading(winter, "Europe/Lisbon")).toMatchObject({ utcOffsetMinutes: 0 });
   });
 });
+
+describe("requests through a connection (CAP-02)", () => {
+  const read = { connection: "movies", method: "GET", path: "/search?query=alien" };
+  const answer = {
+    statusCode: 200,
+    contentType: "application/json",
+    body: "[]",
+    source: {
+      connection: "movies",
+      url: "https://api.example.com/search?query=alien",
+      receivedAt: "2026-11-14T10:00:00.000Z",
+    },
+  };
+  // A host page whose server answers every connection request, recording what it was asked.
+  const withConnection = (options: Partial<BridgeOptions> = {}) => {
+    const asked: unknown[] = [];
+    const fake = served({
+      capabilities: ["connection"],
+      ...options,
+      data: {
+        read: () => Promise.resolve({ data: {}, revisions: {} }),
+        patch: () => Promise.resolve({ addedIds: [] }),
+        connection: (args) => {
+          asked.push(args);
+          return Promise.resolve(answer);
+        },
+        ...options.data,
+      },
+    });
+    return { ...fake, asked };
+  };
+
+  it("CAP-02: passes a read to the server while the tool starts, and its answer back", async () => {
+    const { call, asked } = withConnection();
+    expect(await call("connection.request", read)).toMatchObject({ ok: true, result: answer });
+    expect(asked).toEqual([read]);
+  });
+
+  it("CNX-06: a tool being checked, or a write, asks nothing of the server", async () => {
+    for (const options of [{ staging: true }, { rehearsal: true }]) {
+      const { call, asked, interact } = withConnection(options);
+      interact();
+      const reply = await call("connection.request", read);
+      expect(reply, JSON.stringify(options)).toMatchObject({
+        ok: false,
+        error: { code: "not-allowed" },
+      });
+      expect(asked).toEqual([]);
+    }
+    const { call, asked, interact } = withConnection();
+    interact();
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      expect(code(await call("connection.request", { ...read, method }))).toBe("not-allowed");
+    }
+    expect(asked).toEqual([]);
+  });
+
+  it("refuses plainly where the host reaches no outside service", async () => {
+    const { call } = served({ capabilities: ["connection"] });
+    const reply = await call("connection.request", read);
+    expect(reply).toMatchObject({ ok: false, error: { code: "failed" } });
+    expect(reply?.ok === false && reply.error.message).toMatch(/can't reach outside services/);
+  });
+});

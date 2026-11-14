@@ -6,6 +6,7 @@ import {
   type BridgeCapability,
   CHART_LIMITS,
   CHART_TYPES,
+  OWN_PART_CAPABILITIES,
   PROFILE_IDS,
   PROFILES,
   REVIEW_RUBRIC,
@@ -200,13 +201,20 @@ function plainSchema(value: unknown): unknown {
   );
 }
 
-/** The bridge manifest (CON-03) as the bridge part quotes it: compact JSON, without the noise. */
+/**
+ * The bridge manifest (CON-03) as the bridge part quotes it: compact JSON, without the noise, and
+ * without the capabilities that have their own part, nor their actions (the edit budget, #349).
+ */
 export const manifestForPrompt = (): string => {
   const manifest = bridgeManifest();
+  const ownPart = (name: string | null) =>
+    name !== null && (OWN_PART_CAPABILITIES as readonly string[]).includes(name);
   // The host's page-isolation metadata is not an instruction to the model.
   return JSON.stringify(
     plainSchema({
       ...manifest,
+      capabilities: manifest.capabilities.filter((capability) => !ownPart(capability.name)),
+      actions: manifest.actions.filter((action) => !ownPart(action.capability)),
       methods: Object.fromEntries(
         Object.entries(manifest.methods).map(([name, method]) => [name, method.argument]),
       ),
@@ -779,10 +787,13 @@ export const DISCUSS_PROMPT_BUDGET = 2_350;
 const CAPABILITY_WORDS = {
   clock: "the current date, time and time zone",
   chart: "charts and graphs, drawn by Tessera",
+  connection: "outside services the person connected",
 } as const satisfies Record<BridgeCapability, string>;
+// A capability with its own prompt part is told of only with that part (#349 step 4).
 const capabilityLines = () =>
-  Object.values(CAPABILITY_WORDS)
-    .map((words) => `  - ${words}`)
+  Object.entries(CAPABILITY_WORDS)
+    .filter(([name]) => !OWN_PART_CAPABILITIES.includes(name as BridgeCapability))
+    .map(([, words]) => `  - ${words}`)
     .join("\n");
 
 /**

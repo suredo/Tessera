@@ -5,11 +5,17 @@ import {
   BRIDGE_ROUTE,
   bridgeDataRequestSchema,
   checkBridgeCall,
+  type BridgeArgs,
   type BridgeDataRequest,
   type BridgeErrorCode,
   type BridgeReply,
 } from "@tessera/contracts";
 import { readAssetNow, workspaceAssets, type AssetStore } from "../assets/index.ts";
+import {
+  ConnectionRefusal,
+  requestThroughConnection,
+  type ConnectionRequestOptions,
+} from "../connections/index.ts";
 import { checkToolData } from "../data-shape/index.ts";
 import { json, readJson, text, type Handler } from "../http/index.ts";
 import type { PatchRefusal } from "../patches/index.ts";
@@ -25,7 +31,8 @@ import {
 // server checks each one again with the shared check before it reads or changes saved data. The
 // capabilities come from the workspace's stored tool version, never from the browser. Only the
 // phase comes from the host page: the person's first interaction is something only the browser
-// sees (the owner's decision on #46). Revisions are checked against the saved ones (BRG-04).
+// sees (the owner's decision on #46). Revisions are checked against the saved ones (BRG-04). A
+// request through a connection is made here, only through those the stored version names (CNX-01).
 
 // Instances are the browser's: the port of each mount is bound to its own (BRG-05).
 const SERVER_INSTANCE = "server";
@@ -57,10 +64,11 @@ function currentArtifact(store: Store, hash: string | null): Artifact | undefine
  * against the saved data and revisions (DATA-02, BRG-04). Nothing is changed by a refused call.
  * Returns the reply to send, or null when the call carries no usable request ID to answer.
  */
-export function answerDataCall(
+export async function answerDataCall(
   store: Store & AssetStore,
   request: BridgeDataRequest,
-): BridgeReply | null {
+  options: { connections?: ConnectionRequestOptions } = {},
+): Promise<BridgeReply | null> {
   const workspace = getWorkspace(store, request.workspaceId);
   const artifact = workspace ? currentArtifact(store, workspace.currentVersion) : undefined;
   const checked = checkBridgeCall(SERVER_INSTANCE, request.call, {
@@ -115,6 +123,25 @@ export function answerDataCall(
       if (!result.success) return refusal(requestId, "failed", FAILED);
       return { requestId, ok: true, result: result.data };
     }
+    if (action === "connection.request") {
+      // Only through the connections the version the tool runs names (A66): without a usable
+      // version there are none, so nothing is sent.
+      if (!artifact) return refusal(requestId, "failed", FAILED);
+      try {
+        const answer = await requestThroughConnection(
+          store,
+          artifact,
+          request.phase,
+          args as BridgeArgs<"connection.request">,
+          options.connections,
+        );
+        return { requestId, ok: true, result: answer };
+      } catch (error) {
+        if (error instanceof ConnectionRefusal)
+          return refusal(requestId, error.code, error.message);
+        throw error;
+      }
+    }
     return refusal(requestId, "failed", `The server doesn't answer "${action}"; the host does.`);
   } catch {
     // Such as a busy database: nothing of the server, such as a path, reaches the tool.
@@ -123,7 +150,10 @@ export function answerDataCall(
 }
 
 /** The bridge's route for the local server, answering from `store`. */
-export function bridgeRoutes(store: Store & AssetStore): Record<string, Handler> {
+export function bridgeRoutes(
+  store: Store & AssetStore,
+  options: { connections?: ConnectionRequestOptions } = {},
+): Record<string, Handler> {
   // A call within the bridge's own limit, with room for the workspace and the phase.
   const limitBytes = BRIDGE_REQUEST_LIMIT_BYTES + 1024;
   return {
@@ -137,7 +167,7 @@ export function bridgeRoutes(store: Store & AssetStore): Record<string, Handler>
       if (!request?.success) {
         return text(res, 400, "Send a workspace, a phase and the tool's call, as JSON.");
       }
-      const reply = answerDataCall(store, request.data);
+      const reply = await answerDataCall(store, request.data, options);
       if (reply === null) return text(res, 400, "The call has no request ID to answer.");
       json(res, reply);
     },
