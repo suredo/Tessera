@@ -34,6 +34,19 @@ export {
   type ChatSpeaker,
 } from "./chat.ts";
 export {
+  CONNECTION_KEY_LIMIT,
+  CONNECTION_ORIGINS_LIMIT,
+  CONNECTIONS_LIMIT,
+  connectionAuthSchema,
+  connectionInputSchema,
+  connectionNameSchema,
+  connectionOriginSchema,
+  connectionSchema,
+  type Connection,
+  type ConnectionAuth,
+  type ConnectionInput,
+} from "./connection.ts";
+export {
   HOST_ACTIONS,
   HOST_ERROR_CODES,
   HOST_REQUEST_LIMIT_BYTES,

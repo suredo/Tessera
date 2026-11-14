@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { chatEntrySchema, chatMessageSchema } from "./chat.ts";
+import { connectionInputSchema, connectionNameSchema, connectionSchema } from "./connection.ts";
 import { jsonValueSchema } from "./json.ts";
 import { ledgerRequestSchema } from "./ledger.ts";
 import { trashEntrySchema, trashSchema } from "./trash.ts";
@@ -198,6 +199,22 @@ export const HOST_ACTIONS = {
         .describe("A turn: the person's request, Tessera's reply, or both, in that order."),
     }),
     result: z.strictObject({ messages: z.array(chatMessageSchema).describe("As kept.") }),
+  },
+  // Connections to outside services that the person adds (CAP-02, ADR 0015). A result never
+  // carries a key, only whether one is kept.
+  "connections.list": {
+    args: z.strictObject({}),
+    result: z.strictObject({
+      connections: z.array(connectionSchema).describe("Every connection, by name."),
+    }),
+  },
+  "connections.add": {
+    args: z.strictObject({ connection: connectionInputSchema }),
+    result: z.strictObject({ connection: connectionSchema.describe("As kept, without its key.") }),
+  },
+  "connections.remove": {
+    args: z.strictObject({ name: connectionNameSchema }),
+    result: z.strictObject({}),
   },
   "versions.list": {
     args: z.strictObject({ workspaceId: id }),
