@@ -6,6 +6,7 @@ import type { Provider, Routes } from "../providers/index.ts";
 import { loadVersion, saveVersion } from "../versions/index.ts";
 import { getWorkspace, noteOf, type Store } from "../workspaces/index.ts";
 import { editTool } from "./edit.ts";
+import { toolConnections } from "./tool-connections.ts";
 import type { SmokeRepairContext } from "./smoke.ts";
 import { DEFAULT_STAGE_TIME_LIMITS, type StageTimeLimits } from "./time-limits.ts";
 
@@ -44,10 +45,14 @@ export async function generateEdit(
   );
   intent = { ...intent, profile: kept.success ? kept.data : null };
   const data = baseline.data;
+  // The ones it uses, and those the request gives it (A66, A74).
+  const given = toolConnections(store, intent, original.artifact.connections);
   const edit = () =>
     editTool(provider, routes, {
       request,
       intent,
+      allowedConnections: given.allowed,
+      connections: given.quoted,
       ...(conversation ? { conversation } : {}),
       artifact: original.artifact,
       data,

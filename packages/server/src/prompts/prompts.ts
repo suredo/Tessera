@@ -74,6 +74,8 @@ export const PROMPT_PARTS = [
   "intent-no-records",
   "intent-saved",
   "intent-no-saved",
+  "intent-connections",
+  "intent-no-connections",
   "intent-retry",
   "intent-proposal",
   "intent-conversation",
@@ -407,7 +409,10 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     // An edit keeps them or replaces them all; a creation's repair keeps the failed answer's when
     // it leaves them out (#367 review). Creation needs neither.
     if (input.editArtifact) addSystem("connections-edit");
-    else if (stage === "repair" && input.attempt) addSystem("connections-repair");
+    // A repair keeps the failed answer's connections when it leaves them out: a creation's, or an
+    // edit's that replaced them (#367, #368 reviews).
+    if (stage === "repair" && (input.attempt || input.editAttempt?.connections?.mode === "replace"))
+      addSystem("connections-repair");
   }
   // A verification profile's hooks and rules, from its one definition, when the tool will fit it:
   // every rule its check enforces is stated here (VER-03, VER-04).
@@ -499,10 +504,21 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     // A look-only edit's failed answer is quoted as its style alone, whatever mode it came in, so
     // no repair path brings the JavaScript back into the prompt (GEN-14).
     const attempt = input.editAttempt;
-    const scoped =
+    const styled =
       input.intent?.lookOnly && attempt.files.mode === "replace"
         ? { ...attempt, files: { mode: "style" as const, css: attempt.files.code.css } }
         : attempt;
+    // Its replaced connections by sample path, never the answers, which can be long (#368 review).
+    const scoped =
+      styled.connections?.mode === "replace"
+        ? {
+            ...styled,
+            connections: {
+              mode: "replace",
+              connections: samplePaths(styled.connections.connections),
+            },
+          }
+        : styled;
     addRequest("edit-attempt", { attempt: JSON.stringify(scoped) });
   }
   if (stage === "repair" && input.attempt) {
@@ -550,9 +566,13 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
  * The intent stage's budget, like the generation stages' (GEN-03): its largest shape, a second ask in a
  * tool with its lists and a catalogue of saved tools filled to its cap (GEN-18): at most 9,184
  * characters over the fixtures' requests when raised from 8,900, which that shape could pass (the
- * owner's choice, 2026-11-11).
+ * owner's choice, 2026-11-11). Raised to 10,900 for the person's connections, the rule for them and
+ * up to `INTENT_CONNECTIONS_LISTED` of their names (A74, the owner's choice of 2026-11-14).
  */
-export const INTENT_PROMPT_BUDGET = 9_400;
+export const INTENT_PROMPT_BUDGET = 10_900;
+
+/** How many of the person's connections the intent stage is told of, by name (A74). */
+export const INTENT_CONNECTIONS_LISTED = 20;
 
 /** Includes the actual entries: oversized contexts are refused before spending a call. */
 export const DATA_PROMPT_BUDGET = 12_000;
@@ -627,6 +647,11 @@ export function assembleIntentPrompt(input: {
   proposal?: string;
   /** The conversation before the request, as `requestConversation` quotes it (A62); told only while no review waits. */
   conversation?: string;
+  /**
+   * The names of the person's connections (CAP-02, A74), at most `INTENT_CONNECTIONS_LISTED`,
+   * already chosen; none when left out or empty.
+   */
+  connections?: readonly string[];
   retry?: boolean;
 }): AssembledPrompt {
   const used: string[] = [];
@@ -657,7 +682,18 @@ export function assembleIntentPrompt(input: {
     : input.conversation
       ? `${open}${conversationPart(input.conversation, use)}`
       : open;
-  let prompt = use("intent-request", { open: context, saved, request: input.request });
+  // The connections' names: checked names of the person's, quoted as JSON all the same (SEC-02).
+  const connections = input.connections?.length
+    ? use("intent-connections", {
+        names: JSON.stringify(input.connections.slice(0, INTENT_CONNECTIONS_LISTED)),
+      })
+    : use("intent-no-connections");
+  let prompt = use("intent-request", {
+    open: context,
+    saved,
+    connections,
+    request: input.request,
+  });
   if (input.retry) prompt += `\n\n${use("intent-retry")}`;
   return { system, prompt, parts: used, size: system.length + prompt.length };
 }

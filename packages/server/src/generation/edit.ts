@@ -44,6 +44,8 @@ export type EditInput = {
    * it uses now. Only those it uses now when left out.
    */
   allowedConnections?: readonly string[];
+  /** Those it may use that the person has, with their addresses, for the prompt (A74). */
+  connections?: readonly { name: string; origins: readonly string[] }[];
 };
 export type EditResult = (
   | { kind: "candidate"; artifact: Artifact; summary: string; leftOut?: string[] }
@@ -200,6 +202,7 @@ export async function editTool(
       source: input.artifact.code,
       editArtifact: input.artifact,
       ...(input.conversation ? { conversation: input.conversation } : {}),
+      ...(input.connections?.length ? { connections: input.connections } : {}),
       // Where the tool's look differs from the standard now, for the edit to bring back where the
       // person said nothing (VER-06, A63).
       styleNotes: styleNotes(input.artifact.code, input.artifact.ui.mode),
@@ -227,7 +230,13 @@ export async function editTool(
       if (response.value.outcome === "cannot")
         result = plainRefusal(response.value.reason, input.request);
       else {
-        attempt = response.value;
+        // A repair that leaves its connections out keeps the failed attempt's replacement, samples
+        // and all, which its prompt names by path only (#368 review).
+        const failed = repair?.attempt?.connections;
+        attempt =
+          response.value.connections === undefined && failed?.mode === "replace"
+            ? { ...response.value, connections: failed }
+            : response.value;
         // The summary the person reads is in plain words too (GEN-12).
         const words = [
           ...plainWordProblems("The change's summary", attempt.summary, input.request),

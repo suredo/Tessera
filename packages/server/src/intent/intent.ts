@@ -116,6 +116,8 @@ export type IntentInput = {
    * (GEN-19); told only while no review waits.
    */
   conversation?: string;
+  /** The names of the person's connections, by name, for the stage to choose from (A74). */
+  connections?: readonly string[];
   signal?: AbortSignal;
   /** How long the call may take; `INTENT_TIME_LIMIT_MS` unless configured (GEN-11). */
   timeLimitMs?: number;
@@ -152,6 +154,7 @@ export async function decideIntent(
       saved,
       ...(input.proposal ? { proposal: input.proposal } : {}),
       ...(conversation ? { conversation } : {}),
+      ...(input.connections ? { connections: input.connections } : {}),
       retry,
     });
     const result = await runStage(provider, routes, {

@@ -103,6 +103,17 @@
           "default": false,
           "description": "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
           "type": "boolean"
+        },
+        "connections": {
+          "default": [],
+          "description": "The person's connections, only from those listed, that the tool reaches once the request is done, by name; [] when none (CAP-02, A74).",
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,39}$",
+            "description": "The connection's name, how a tool asks for it: lowercase letters, digits and hyphens, starting with a letter, at most 40 characters, such as movies or home-lights."
+          }
         }
       },
       "required": [
@@ -116,7 +127,8 @@
         "language",
         "features",
         "profile",
-        "drawsCharts"
+        "drawsCharts",
+        "connections"
       ],
       "additionalProperties": false
     },
@@ -228,6 +240,17 @@
           "default": false,
           "description": "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
           "type": "boolean"
+        },
+        "connections": {
+          "default": [],
+          "description": "The person's connections, only from those listed, that the tool reaches once the request is done, by name; [] when none (CAP-02, A74).",
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,39}$",
+            "description": "The connection's name, how a tool asks for it: lowercase letters, digits and hyphens, starting with a letter, at most 40 characters, such as movies or home-lights."
+          }
         }
       },
       "required": [
@@ -240,7 +263,8 @@
         "language",
         "features",
         "profile",
-        "drawsCharts"
+        "drawsCharts",
+        "connections"
       ],
       "additionalProperties": false
     }

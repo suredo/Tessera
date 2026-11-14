@@ -276,6 +276,8 @@ export type CreateInput = {
   request: string;
   /** The connections the request gives the tool (A66, A74); none when left out. */
   allowedConnections?: readonly string[];
+  /** Those of them the person has, with their addresses, for the prompt (A74). */
+  connections?: readonly { name: string; origins: readonly string[] }[];
   intent?: Intent;
   signal?: AbortSignal;
   /** Counts carried across the server checks and browser staging of this request. */
@@ -392,6 +394,7 @@ async function ask(
     ...(input.core ? { core: input.core } : {}),
     ...(input.acceptance ? { acceptance: input.acceptance } : {}),
     ...(input.conversation ? { conversation: input.conversation } : {}),
+    ...(input.connections?.length ? { connections: input.connections } : {}),
     ...repair,
   });
   let creation: Creation;
