@@ -118,6 +118,13 @@ export function EmptyState({
   );
 }
 
+/**
+ * The sections shown in place of the first-run screen when there are no workspaces: its chat is
+ * not on screen there, so a reply is said in the notice. One list for both, so they can't drift.
+ */
+const outsideChat = (view: string) =>
+  view === "trash" || view === "status" || view === "connections";
+
 /** How long a request waits for the turn before it to be kept in the chat, at most (A62). */
 const KEEP_WAIT_MS = 3_000;
 
@@ -187,7 +194,7 @@ export function App() {
   // An expanded tool takes the chat's place, so its chat is not on screen then.
   const chatShown: string | null | undefined =
     workspaces?.length === 0
-      ? view === "trash" || view === "status"
+      ? outsideChat(view)
         ? undefined
         : null
       : view === "workspaces" && !toolExpanded
@@ -565,7 +572,7 @@ export function App() {
       </main>
     );
   }
-  if (workspaces.length === 0 && view !== "trash" && view !== "status" && view !== "connections") {
+  if (workspaces.length === 0 && !outsideChat(view)) {
     const inTrash = (trash?.entries.length ?? 0) > 0;
     return (
       <EmptyState

@@ -71,6 +71,13 @@ it("CAP-02 GEN-12: each refusal says what to fix, in plain words", () => {
     "https://api.example.com?x=1",
     "ftp://files.example.com",
     "https://someone@api.example.com",
+    // Paths the URL parser would remove before anyone saw them (#363 review).
+    "https://api.example.com/v3/..",
+    "https://api.example.com/%2e",
+    "https://api.example.com/.",
+    "https://api.example.com//",
+    "https://api.example.com\\v3",
+    "https://api.example.com/#",
   ]) {
     expect(problem({ addresses: [address] })).toContain(address);
   }

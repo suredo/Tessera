@@ -1,8 +1,10 @@
 import {
   CONNECTION_KEY_LIMIT,
   CONNECTION_ORIGINS_LIMIT,
+  connectionFieldNameSchema,
   connectionNameSchema,
   connectionOriginSchema,
+  connectionPrefixSchema,
   type Connection,
   type ConnectionInput,
 } from "@tessera/contracts";
@@ -40,18 +42,21 @@ export const emptyFields = (): ConnectionFields => ({
   key: "",
 });
 
-const FIELD_NAME = /^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,100}$/;
-
 /**
  * An address as the host keeps it: its origin, with a lone trailing slash allowed; else null. A
- * name and password in it are refused, not dropped: a key belongs in the key field.
+ * path, query, fragment, or name and password in it is refused, not dropped. The path is read as
+ * typed, since parsing it first would quietly remove dot segments such as /v3/.. (#363 review).
  */
 function origin(typed: string): string | null {
   const value = typed.trim();
+  const scheme = /^[A-Za-z][A-Za-z0-9+.-]*:\/\//.exec(value);
+  if (!scheme) return null;
+  const rest = value.slice(scheme[0].length);
+  const end = rest.search(/[/\\?#]/);
+  if (end !== -1 && rest.slice(end) !== "/") return null;
   try {
     const url = new URL(value);
     if (url.username || url.password) return null;
-    if (url.pathname !== "/" || url.search || url.hash) return null;
     return connectionOriginSchema.safeParse(url.origin).success ? url.origin : null;
   } catch {
     return null;
@@ -83,8 +88,10 @@ export function readFields(
   }
   if (fields.keyWay === "header") {
     const headerName = fields.headerName.trim();
-    if (!FIELD_NAME.test(headerName)) return { ok: false, problem: t("connections.badHeader") };
-    if (fields.headerPrefix.length > 40 || /[\r\n]/.test(fields.headerPrefix)) {
+    if (!connectionFieldNameSchema.safeParse(headerName).success) {
+      return { ok: false, problem: t("connections.badHeader") };
+    }
+    if (!connectionPrefixSchema.safeParse(fields.headerPrefix).success) {
       return { ok: false, problem: t("connections.badPrefix") };
     }
     return {
@@ -98,7 +105,9 @@ export function readFields(
     };
   }
   const queryName = fields.queryName.trim();
-  if (!FIELD_NAME.test(queryName)) return { ok: false, problem: t("connections.badParameter") };
+  if (!connectionFieldNameSchema.safeParse(queryName).success) {
+    return { ok: false, problem: t("connections.badParameter") };
+  }
   return { ok: true, input: { name, origins, auth: { kind: "query", name: queryName }, key } };
 }
 

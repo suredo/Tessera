@@ -20,8 +20,14 @@ const intent = {
   language: "en",
   features: [],
 };
-for (const phase of ["create", "repair"] as const) {
-  test(`CLI-06 GEN-08 APP-11: keyboard cancel during ${phase} survives navigation and prevents activation`, async ({
+// The status screen, and the connections, which also show in place of the first screen (#363).
+const runs = [
+  { phase: "create", screen: "status" },
+  { phase: "repair", screen: "status" },
+  { phase: "create", screen: "connections" },
+] as const;
+for (const { phase, screen } of runs) {
+  test(`CLI-06 GEN-08 APP-11: keyboard cancel during ${phase} survives navigation to ${screen} and prevents activation`, async ({
     page,
   }) => {
     const calls: string[] = [];
@@ -59,12 +65,16 @@ for (const phase of ["create", "repair"] as const) {
       await page.getByRole("button", { name: en["request.send"] }).click();
       // Reaching repair needs a first staging and smoke check, slower under parallel browsers.
       await expect.poll(() => calls.includes(phase), { timeout: 30_000 }).toBe(true);
-      await page.getByRole("button", { name: en["setup.openStatus"] }).click();
+      await page
+        .getByRole("button", {
+          name: screen === "status" ? en["setup.openStatus"] : en["home.connections"],
+        })
+        .click();
       const cancel = page.getByRole("button", { name: en["request.cancel"] });
       await expect(cancel).toBeVisible();
       await cancel.focus();
       await page.keyboard.press("Enter");
-      // On the status screen the chat is out of sight, so the reply is in the notice.
+      // On that screen the chat is out of sight, so the reply is in the notice.
       await expect(page.getByText(/The request was stopped\./)).toBeVisible();
       await expect(cancel).toHaveCount(0);
       expect(listWorkspaces(host.folder).every((w) => w.currentVersion === null)).toBe(true);

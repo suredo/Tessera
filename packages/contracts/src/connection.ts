@@ -45,10 +45,17 @@ export const connectionOriginSchema = z
   );
 
 /** A header or query parameter name: a token, as HTTP defines one. */
-const fieldName = z
+export const connectionFieldNameSchema = z
   .string()
   .regex(/^[A-Za-z0-9!#$%&'*+.^_`|~-]{1,100}$/)
   .describe("A header or query parameter name.");
+
+/** What goes before the key in its header, such as "Bearer ". */
+export const connectionPrefixSchema = z
+  .string()
+  .max(40)
+  .regex(/^[^\r\n]*$/)
+  .describe("Put before the key, such as 'Bearer '; empty for the key alone.");
 
 export const connectionAuthSchema = z
   .discriminatedUnion("kind", [
@@ -56,16 +63,12 @@ export const connectionAuthSchema = z
     z
       .strictObject({
         kind: z.literal("header"),
-        name: fieldName,
-        prefix: z
-          .string()
-          .max(40)
-          .regex(/^[^\r\n]*$/)
-          .describe("Put before the key, such as 'Bearer '; empty for the key alone."),
+        name: connectionFieldNameSchema,
+        prefix: connectionPrefixSchema,
       })
       .describe("The key goes in a request header, as Authorization: Bearer <key>."),
     z
-      .strictObject({ kind: z.literal("query"), name: fieldName })
+      .strictObject({ kind: z.literal("query"), name: connectionFieldNameSchema })
       .describe("The key goes in a query parameter, as ?api_key=<key>."),
   ])
   .describe("How the host sends the connection's key with each request.");
