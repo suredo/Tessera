@@ -4,6 +4,7 @@ import {
   HOST_REQUEST_LIMIT_BYTES,
   HOST_ROUTE,
   hostRequestSchema,
+  type Artifact,
   type HostActionName,
   type HostArgs,
   type HostReply,
@@ -52,6 +53,7 @@ import {
   listConnections,
   removeConnection,
   takeBackWrites,
+  writesAllowed,
 } from "../connections/index.ts";
 
 // The host app's API (APP-03 to APP-08): one route, HOST_ROUTE, answering every action the
@@ -61,6 +63,19 @@ import {
 const FAILED = "Tessera couldn't do that. Nothing was changed.";
 /** How many of a workspace's newest requests the details view shows. */
 const DETAILS_REQUESTS = 20;
+
+/** A tool's connections, by name, as the details view shows them (ADR 0015 point 7, A72). */
+function connectionsOf(store: Store, workspaceId: string, artifact: Artifact | undefined) {
+  if (!artifact) return [];
+  const added = new Set(listConnections(store).map((each) => each.name));
+  return Object.keys(artifact.connections)
+    .sort()
+    .map((name) => ({
+      name,
+      added: added.has(name),
+      writesAllowed: added.has(name) && writesAllowed(store, workspaceId, name),
+    }));
+}
 
 // One handler per action in the contract: TypeScript refuses this object if one is missing.
 const run: {
@@ -92,6 +107,7 @@ const run: {
       return {
         source: null,
         capabilities: [],
+        connections: [],
         styleNotes: [],
         checks: [],
         profile: null,
@@ -107,6 +123,9 @@ const run: {
     return {
       source: artifact ? artifact.code : null,
       capabilities: artifact ? artifact.capabilities : [],
+      // The connections its version was made to use, by name, with whether the person still has
+      // each and allowed its changes through it (ADR 0015 point 7, A72); never a key.
+      connections: connectionsOf(store, workspaceId, artifact),
       // Where its look differs from the standard, read from its code, never stored (VER-06, A63).
       styleNotes: artifact ? styleNotes(artifact.code, artifact.ui.mode) : [],
       checks: current?.checks ?? [],

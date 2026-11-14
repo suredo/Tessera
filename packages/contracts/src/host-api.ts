@@ -149,6 +149,23 @@ export const HOST_ACTIONS = {
           .nullable()
           .describe("The current tool's code; none without a tool or a workspace."),
         capabilities: z.array(z.string()).describe("What the current tool declares (CAP-01)."),
+        connections: z
+          .array(
+            z.strictObject({
+              name: connectionNameSchema,
+              added: z
+                .boolean()
+                .describe("Whether the person has a connection of that name; false once removed."),
+              writesAllowed: z
+                .boolean()
+                .describe(
+                  "Whether the person allowed this tool's changes through it (ADR 0015 point 4, A70).",
+                ),
+            }),
+          )
+          .describe(
+            "The connections the current tool was made to use, by name, never a key; none without a tool (ADR 0015 point 7, A72).",
+          ),
         styleNotes: z
           .array(z.string())
           .describe(
