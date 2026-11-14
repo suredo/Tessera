@@ -155,10 +155,12 @@ const PASSED = {
   message: "Passed the checks: start true, request true.",
 };
 
-// Quarantined (ENG-20, #337): on CI, the first test on a cold browser saw the tool's frame with no
-// size after five seconds. The staging panel now lies inside the window, a mitigation; the cause
-// isn't established, so this stays quarantined until it is, before M4 closes.
-test.fixme("VER-09: a tool that does what its request's checks say passes them, capitals and spaces aside", async ({
+// Out of quarantine, to be diagnosed in place (#337, the owner's choice): twice on CI, as the first
+// test of a run with the staging panel still off-screen, the tool's frame had no size after five
+// seconds, and 120 cold starts on CI's machines didn't repeat it. The panel now lies inside the
+// window; if it fails again, its reason says how long the frame waited, whether it drew, and
+// whether its page was visible.
+test("VER-09: a tool that does what its request's checks say passes them, capitals and spaces aside", async ({
   page,
 }) => {
   expect(await check(page, "none")).toEqual(PASSED);

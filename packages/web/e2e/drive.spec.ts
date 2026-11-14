@@ -242,8 +242,9 @@ test("VER-03, L-91: a check that can't see the tool, its frame still without a s
   expect(report.steps).toEqual([
     {
       ok: false,
-      problem:
-        "Tessera couldn't see the tool: its frame still had no size after 5 seconds. This is Tessera's problem, not the tool's.",
+      problem: expect.stringMatching(
+        /^Tessera couldn't see the tool: its frame still had no size after 5 seconds \(it waited \d+\.\d s, the frame drew \d+ times, and its page was (visible|hidden)\)\. This is Tessera's problem, not the tool's\.$/,
+      ),
     },
   ]);
 });
