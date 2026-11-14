@@ -2,6 +2,8 @@
 
 ## 2026-11-14
 
+* **Fixed**: A sample answer's limit is 16,384 characters, which zod and the JSON Schema both check, rather than bytes, which the JSON Schema can't; and a stored contract 3 version whose connections that contract refused is incompatible, never repaired into a map, while any upgrade that throws gives an incompatible reading ([#359](https://github.com/suredo/Tessera/pull/359) review, `CON-01`, `CON-04`) ([contracts](code/contracts/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T16:01:18Z.
+
 * **Decided**: A69 and A70, the owner's choices for [#349](https://github.com/suredo/Tessera/issues/349) step 3: while a tool is checked, a connection answers with sample answers its version carries; and a tool's first write through a connection asks where it goes and what it sends, with the text. The artifact's contract is version 4: a version's connections are a map from each name to its sample answers, and a version 3 tool's get none ([decision log](decisions/decision-log.md), [ADR 0015](decisions/adr/0015-person-connections.md), [contracts](code/contracts/package.md), [tool versions](code/server/versions.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T15:42:38Z.
 
 * **Decided**: A67 and A68, the owner's choices for #358 ([decision log](decisions/decision-log.md)): looking for a connection's key in a service's answer is a defence, not a guarantee, with its limit documented; and a connection request's path, under the connection's own origins, is the one exception to `BRG-07`. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T13:54:59Z.
