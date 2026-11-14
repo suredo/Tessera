@@ -4,7 +4,7 @@ title: "ADR 0015. Outside services through connections the person adds"
 description: "Decides D11 (CAP-02, A65): no vetted sources; the person adds a connection to any service, a tool uses one by name through the host, reads run freely, a tool's first write through a connection is confirmed, and checks never reach the real service."
 tags: [decisions, capabilities, outside-data, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T15:42:01Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T18:11:37Z }
 ---
 # ADR 0015. Outside services through connections the person adds
 
@@ -26,6 +26,7 @@ The comparison put to the owner, for the movie finder: the **Internet Archive** 
 ## Decision
 
 1. **The person adds connections.** In Tessera's settings, a connection names a service, the addresses it may reach (a host such as `api.example.com`, with its scheme), and, if the service needs one, a key or token and how it is sent. Tessera chooses no sources: any service the person names can be one. Keys are stored by the host, never in a tool or its data, and never sent to a model.
+   **A section of its own** (A71, the owner's choice of 2026-11-14): Connections, beside the trash and the status, and from the first-run screen. The form asks whether the service needs a key, in three plain choices, a header first as Authorization: Bearer, and keeps the key in a hidden field; the list shows each connection's addresses and how its key is sent, never the key; removing one is confirmed.
 2. **A tool uses a connection by name,** as it uses the clock or the chart helper: it declares the capability, and calls a bridge action with the connection's name, a path under its addresses, and the request. The host makes the request, adds the key, and returns the answer with where it came from. Generated code still never fetches anything itself, and the sandbox is unchanged (`RUN-01`).
    **Only the connections it was built for** (A66, the owner's choice of 2026-11-14). The names of the connections a tool uses are part of its version, recorded when it is created or edited to use them, and the checks confirm it uses no other before the person sees it. A call through any other connection is refused, so a weather tool can never read through the person's bank connection, or carry what it holds there. Using another connection takes an edit, which the person sees.
 3. **Reads run freely.** A request that only reads (GET, HEAD) runs without asking.

@@ -1,7 +1,14 @@
-import type { SavedTool, SetupReport, Trash as TrashList, Workspace } from "@tessera/contracts";
+import type {
+  Connection,
+  SavedTool,
+  SetupReport,
+  Trash as TrashList,
+  Workspace,
+} from "@tessera/contracts";
 import { useEffect, useRef, useState } from "react";
 import { exportArchive, importArchive, saveFile } from "./archives.ts";
 import { Chat } from "./Chat.tsx";
+import { Connections } from "./Connections.tsx";
 import { useChat, type ShownMessage } from "./chat.ts";
 import { ask, HostError, problemText } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
@@ -35,6 +42,8 @@ import { Workspaces } from "./Workspaces.tsx";
 type EmptyProps = {
   notice?: string;
   onTrash?: () => void;
+  /** Opens the connections, which can be added before any tool (CAP-02). */
+  onConnections?: () => void;
   /** Imports a file, such as work brought from another computer (APP-06). */
   onImport?: (file: File) => Promise<void>;
   /** The setup check, and opening the status screen (PLAT-03, APP-07). */
@@ -58,6 +67,7 @@ type EmptyProps = {
 export function EmptyState({
   notice = "",
   onTrash,
+  onConnections,
   onImport,
   setup = null,
   setupProblem = "",
@@ -87,6 +97,11 @@ export function EmptyState({
       {onTrash && (
         <button type="button" onClick={onTrash}>
           {t("home.trash")}
+        </button>
+      )}
+      {onConnections && (
+        <button type="button" onClick={onConnections}>
+          {t("home.connections")}
         </button>
       )}
       {onImport && <ImportFile onImport={onImport} />}
@@ -143,7 +158,11 @@ export function App() {
   const [notice, setNotice] = useState("");
   // The open workspace's chat, and what was said with none open (APP-01, APP-03).
   const chat = useChat(openId);
-  const [view, showView] = useState<"workspaces" | "library" | "trash" | "status">("workspaces");
+  const [view, showView] = useState<"workspaces" | "library" | "trash" | "status" | "connections">(
+    "workspaces",
+  );
+  // The connections, loaded each time their section opens (CAP-02); null until they are.
+  const [connections, setConnections] = useState<Connection[] | null>(null);
   // The tool taking the chat's place too (APP-01); only an open tool can, and only beside a chat.
   const [expanded, setExpanded] = useState(false);
   // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
@@ -192,6 +211,8 @@ export function App() {
   const setView = (next: typeof view) => {
     movingOn();
     showView(next);
+    // The connections are loaded each time their section opens; adding and removing reload them.
+    if (next === "connections") void loadConnections();
   };
   const tellReply = (text: string, target: string | null) => {
     setNotice(text);
@@ -256,6 +277,13 @@ export function App() {
     return ordered;
   };
   const report = (error: unknown) => setNotice(t("app.problem", { message: problemText(error) }));
+  const loadConnections = async () => {
+    try {
+      setConnections((await ask("connections.list", {})).connections);
+    } catch (error) {
+      report(error);
+    }
+  };
   // Why the first load of the lists failed, "" while none has; trying again moves `opening` on.
   const [openProblem, setOpenProblem] = useState("");
   const [opening, setOpening] = useState(0);
@@ -537,12 +565,13 @@ export function App() {
       </main>
     );
   }
-  if (workspaces.length === 0 && view !== "trash" && view !== "status") {
+  if (workspaces.length === 0 && view !== "trash" && view !== "status" && view !== "connections") {
     const inTrash = (trash?.entries.length ?? 0) > 0;
     return (
       <EmptyState
         notice={shownNotice}
         onTrash={inTrash ? () => setView("trash") : undefined}
+        onConnections={() => setView("connections")}
         onImport={importFile}
         setup={setup}
         setupProblem={setupProblem}
@@ -605,6 +634,13 @@ export function App() {
             onClick={() => setView("status")}
           >
             {t("nav.status")}
+          </button>
+          <button
+            type="button"
+            aria-current={view === "connections" ? "page" : undefined}
+            onClick={() => setView("connections")}
+          >
+            {t("nav.connections")}
           </button>
         </nav>
         {view !== "status" && (
@@ -711,6 +747,35 @@ export function App() {
             }}
             onProbe={() => runProbe()}
             onChoose={(provider) => newestSetup(() => chooseProvider(provider))}
+          />
+        </main>
+      ) : view === "connections" ? (
+        <main>
+          <Connections
+            connections={connections}
+            onAdd={async (connection) => {
+              try {
+                await ask("connections.add", { connection });
+                setNotice(t("connections.addedNotice", { name: connection.name }));
+                await loadConnections();
+                return true;
+              } catch (error) {
+                // Such as a name already taken: the server says so in plain words.
+                if (error instanceof HostError) setNotice(error.message);
+                else report(error);
+                return false;
+              }
+            }}
+            onRemove={async (name) => {
+              try {
+                await ask("connections.remove", { name });
+                setNotice(t("connections.removed", { name }));
+              } catch (error) {
+                if (error instanceof HostError) setNotice(error.message);
+                else report(error);
+              }
+              await loadConnections();
+            }}
           />
         </main>
       ) : view === "trash" ? (

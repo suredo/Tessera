@@ -547,3 +547,102 @@ button.primary {
 .version-summary {
   margin: var(--ui-space-1) 0 0;
 }
+
+/* The connections the person adds (CAP-02, A71): a list like the trash's, then the add form. */
+.connections {
+  max-width: 48rem;
+}
+.connections > ul {
+  list-style: none;
+  margin: var(--ui-space-4) 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.connection {
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  padding: var(--ui-space-3);
+  background: var(--ui-surface);
+}
+.connection h3 {
+  font-size: var(--ui-size-section);
+  font-weight: 600;
+  margin: 0;
+}
+.connection .detail,
+.connection-form .detail {
+  margin: var(--ui-space-1) 0 0;
+  font-size: var(--ui-size-secondary);
+  color: var(--ui-text-secondary);
+  overflow-wrap: anywhere;
+}
+.connection ul.detail {
+  list-style: none;
+  padding: 0;
+}
+.connection > button,
+.connection .confirm {
+  margin-top: var(--ui-space-2);
+}
+.connection .confirm {
+  padding: var(--ui-space-3);
+  border: 1px solid var(--ui-accent);
+  border-radius: var(--ui-radius-panel);
+}
+.connection .confirm p {
+  margin: 0 0 var(--ui-space-2);
+}
+.connection-form {
+  display: grid;
+  gap: var(--ui-space-2);
+  justify-items: start;
+  padding: var(--ui-space-3);
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+}
+.connection-form h3 {
+  font-size: var(--ui-size-section);
+  margin: 0;
+}
+.connection-form fieldset {
+  display: grid;
+  gap: var(--ui-space-2);
+  justify-items: start;
+  margin: 0;
+  padding: var(--ui-space-2) var(--ui-space-3) var(--ui-space-3);
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+.connection-form input:not([type="radio"]) {
+  width: 100%;
+  max-width: 24rem;
+  box-sizing: border-box;
+}
+.connection-address {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+  width: 100%;
+}
+.connection-address input:not([type="radio"]) {
+  flex: 1 1 12rem;
+}
+.connection-way {
+  display: grid;
+  gap: var(--ui-space-1);
+  width: 100%;
+  padding-left: var(--ui-space-4);
+  box-sizing: border-box;
+}
+.connection-form .problem:empty {
+  display: none;
+}
+.connection-form .problem {
+  margin: 0;
+  font-weight: 600;
+}

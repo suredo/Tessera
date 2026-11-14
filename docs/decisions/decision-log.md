@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A70), with its choice and reasons."
+description: "Every decision made so far (A1–A71), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T15:33:45Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T18:11:37Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -85,6 +85,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A68 | The bridge's one path | **A connection request names a path, and optionally an origin, under one of the connection's own origins: the one exception to `BRG-07`, which the host resolves and checks (`CNX-02`)** | Approved by the owner on 2026-11-14 for #358. ADR 0015 decided that a tool asks by "a path under its addresses"; the structural test names exactly those two arguments, so any other that looks like a path, a URL or a workspace is still refused. |
 | A69 | What a connection answers while a tool is checked | **Sample answers the tool's version carries: for each connection, a few by path, written with the tool; in staging a request gets the sample whose path matches it best, and never reaches the service** | Chosen by the owner on 2026-11-14 for #349 step 3: checks then see realistic data, so a tool's list renders and its behavior check means something. The other options were one fixed empty answer for every request, and answers recorded from the person's own use, which a new tool doesn't have. The artifact's contract carries them (`CON-04`). Amends [ADR 0015](adr/0015-person-connections.md), point 5. |
 | A70 | What the first-write question shows | **Where and what, with the text: the connection's name, the action in plain words, the address without the key, and the text it sends, cut to a few lines with a way to see it all; Allow or Don't allow, and allowing covers the tool's later changes through that connection** | Chosen by the owner on 2026-11-14 for #349 step 3, as ADR 0015 asks the person be told what a change sends. The other options were where and what without the text, and asking every time, which A65 had already declined. Amends [ADR 0015](adr/0015-person-connections.md), point 4. |
+| A71 | Where the person adds connections, and how the form asks how a key is sent | **A Connections section of its own in the host's sections, beside the trash and the status, also reached from the first-run screen; the add form asks "Does this service need a key?" with three plain choices (no key, in a header, in the address), a header chosen at first as Authorization: Bearer, and the key in a hidden field; removing one is confirmed, since its key goes with it** | Chosen by the owner on 2026-11-14 for #349 step 4, as ADR 0015 point 1 left the settings' design open. A section named for what it holds is easier to find than a general Settings section, and a header with Bearer is how most services take a key. The other options were a Settings section with connections inside it, and a form that starts with no key and shows the ways only once a key is asked for. Amends [ADR 0015](adr/0015-person-connections.md), point 1. |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2
