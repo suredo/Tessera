@@ -1,6 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { seedSamples } from "../../../scripts/seed.ts";
+import { addConnection, listConnections } from "../../server/src/connections/index.ts";
 import { saveVersion } from "../../server/src/versions/index.ts";
 import {
   activateVersion,
@@ -190,6 +191,36 @@ test("APP-11: the trash and emptying it have no violations, and nothing moves", 
   await check(page);
   await page.getByRole("button", { name: en["trash.emptyNow"] }).click();
   await expect(page.getByRole("group", { name: en["trash.confirmHeading"] })).toBeVisible();
+  await check(page);
+});
+
+test("APP-11 CAP-02: the connections, adding one and removing one have no violations, and nothing moves", async ({
+  page,
+}) => {
+  if (!listConnections(app.folder).some((each) => each.name === "movies")) {
+    addConnection(app.folder, {
+      name: "movies",
+      origins: ["https://api.example.com"],
+      auth: { kind: "header", name: "Authorization", prefix: "Bearer " },
+      key: "not-a-real-key",
+    });
+  }
+  await opened(page, "Garden notes");
+  await section(page, en["nav.connections"]);
+  await expect(page.getByRole("heading", { name: "movies" })).toBeVisible();
+  await check(page);
+  await page.getByRole("button", { name: en["connections.addOne"] }).click();
+  // Each way of sending a key shows its own fields; each is checked.
+  const form = page.getByRole("form", { name: en["connections.addHeading"] });
+  await form.getByRole("button", { name: en["connections.anotherAddress"] }).click();
+  await check(page);
+  await form.getByLabel(en["connections.wayQuery"], { exact: true }).check();
+  await form.getByRole("button", { name: en["connections.add"], exact: true }).click();
+  await expect(form.getByRole("alert")).toHaveText(en["connections.badName"]);
+  await check(page);
+  await form.getByRole("button", { name: en["connections.cancel"] }).click();
+  await page.getByRole("button", { name: "Remove movies" }).click();
+  await expect(page.getByText("Its key goes with it")).toBeVisible();
   await check(page);
 });
 

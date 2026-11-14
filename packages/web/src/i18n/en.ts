@@ -98,6 +98,7 @@ export const en = {
   "request.activationUnknown":
     "Tessera couldn't confirm whether the tool was put in place. Check the workspace before asking again.",
   "home.trash": "Open the trash",
+  "home.connections": "Open connections",
   "workspaces.heading": "Workspaces",
   "workspaces.lastUsed": "Last used {when}",
   "workspaces.saved": "Saved",
@@ -122,6 +123,7 @@ export const en = {
   "nav.library": "My tools",
   "nav.trash": "Trash",
   "nav.status": "Status",
+  "nav.connections": "Connections",
   "setup.heading": "Status",
   "setup.checking": "Checking what Tessera needs…",
   "setup.unreadable": "Tessera couldn't check its setup. Check again, or reload the page.",
@@ -383,6 +385,56 @@ export const en = {
     "If you allow it, its later changes through {connection} won't ask again. Tessera can't undo a change made outside it.",
   "write.allow": "Allow",
   "write.dontAllow": "Don't allow",
+  "connections.heading": "Connections",
+  "connections.intro":
+    "Services your tools can reach. A tool reaches only the connections it was made to use, and Tessera keeps each key on this computer, never in a tool.",
+  "connections.none": "No connections yet.",
+  "connections.addressesOf": "Addresses of {name}",
+  "connections.noKey": "No key",
+  "connections.keyMissing": "Its key is missing",
+  "connections.keyInHeader": "Key kept, sent in the {header} header",
+  "connections.keyInAddress": "Key kept, sent in the address as {parameter}",
+  "connections.added": "Added {date}",
+  "connections.remove": "Remove",
+  "connections.removeLabel": "Remove {name}",
+  "connections.confirmRemove":
+    "Remove {name}? Its key goes with it, and tools that use it can no longer reach the service.",
+  "connections.removed": "{name} is removed.",
+  "connections.addOne": "Add a connection",
+  "connections.addHeading": "Add a connection",
+  "connections.name": "Name",
+  "connections.nameHint":
+    "How tools ask for it: lowercase letters, digits and hyphens, starting with a letter, such as movies.",
+  "connections.addresses": "Addresses",
+  "connections.addressHint":
+    "Where the service answers, without a path, such as https://api.example.com.",
+  "connections.addressLabel": "Address {number}",
+  "connections.addressPlaceholder": "https://api.example.com",
+  "connections.removeAddress": "Remove",
+  "connections.removeAddressLabel": "Remove address {number}",
+  "connections.anotherAddress": "Add another address",
+  "connections.keyQuestion": "Does this service need a key?",
+  "connections.wayNone": "No key",
+  "connections.wayHeader": "Yes, in a header",
+  "connections.wayQuery": "Yes, in the address",
+  "connections.headerName": "Header name",
+  "connections.headerPrefix": "Before the key",
+  "connections.queryName": "Parameter name",
+  "connections.key": "Key",
+  "connections.keyHint":
+    "Kept on this computer. Tessera never shows it again, and never gives it to a tool or an AI.",
+  "connections.add": "Add",
+  "connections.cancel": "Cancel",
+  "connections.addedNotice": "{name} is added.",
+  "connections.badName":
+    "Give a name of lowercase letters, digits and hyphens that starts with a letter, at most 40 characters.",
+  "connections.noAddress": "Give at least one address.",
+  "connections.badAddress":
+    "{address} isn't an address Tessera can use. Give one like https://api.example.com, without a path.",
+  "connections.badKey": "Give the key, on one line.",
+  "connections.badHeader": "Give the header's name, such as Authorization.",
+  "connections.badPrefix": "What goes before the key is at most 40 characters, on one line.",
+  "connections.badParameter": "Give the parameter's name, such as api_key.",
 } as const;
 
 export type MessageKey = keyof typeof en;
