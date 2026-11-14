@@ -13,8 +13,8 @@ import {
 const validateWithJsonSchema = new Ajv({ strict: true }).compile(toJsonSchema("artifact"));
 
 export const sampleArtifact: Artifact = {
-  contractVersion: 3,
-  connections: [],
+  contractVersion: 4,
+  connections: {},
   code: { html: "<ul id='items'></ul>", css: "ul { margin: 0; }", js: "console.log('hi');" },
   data: {
     schemaVersion: 1,
@@ -36,8 +36,19 @@ const withoutConnections = (): Record<string, unknown> => {
 
 describe("artifact contract (CON-04, DATA-04)", () => {
   it("accepts a tool version in zod and in its JSON Schema alike", () => {
-    const fifty = Array.from({ length: 50 }, (_, i) => `c-${i}`);
-    for (const sample of [sampleArtifact, { ...sampleArtifact, connections: fifty }]) {
+    const uses = (count: number, samples = {}) =>
+      Object.fromEntries(Array.from({ length: count }, (_, i) => [`c-${i}`, { samples }]));
+    const tenSamples = Object.fromEntries(
+      Array.from({ length: 10 }, (_, i) => [
+        `/p${i}`,
+        { statusCode: 200, contentType: null, body: "" },
+      ]),
+    );
+    for (const sample of [
+      sampleArtifact,
+      { ...sampleArtifact, connections: uses(50) },
+      { ...sampleArtifact, connections: uses(1, tenSamples) },
+    ]) {
       expect(artifactSchema.safeParse(sample).success).toBe(true);
       expect(validateWithJsonSchema(sample)).toBe(true);
     }
@@ -48,11 +59,54 @@ describe("artifact contract (CON-04, DATA-04)", () => {
       { ...sampleArtifact, code: { html: "", css: "" } },
       { ...sampleArtifact, ui: { standardVersion: 1, mode: "legacy" } },
       { ...sampleArtifact, extra: true },
-      { ...sampleArtifact, contractVersion: 4 },
-      { ...sampleArtifact, connections: ["movies", "movies"] },
-      { ...sampleArtifact, connections: ["Movies"] },
+      { ...sampleArtifact, contractVersion: 5 },
+      { ...sampleArtifact, connections: ["movies"] },
+      { ...sampleArtifact, connections: { Movies: { samples: {} } } },
+      { ...sampleArtifact, connections: { movies: {} } },
+      { ...sampleArtifact, connections: { movies: { samples: {}, extra: 1 } } },
       { ...sampleArtifact, connections: undefined },
-      { ...sampleArtifact, connections: Array.from({ length: 51 }, (_, i) => `c-${i}`) },
+      {
+        ...sampleArtifact,
+        connections: Object.fromEntries(
+          Array.from({ length: 51 }, (_, i) => [`c-${i}`, { samples: {} }]),
+        ),
+      },
+      // A sample's path is a path without a query, its answer a status, a type and a text.
+      ...["search", "/search?q=1", "//elsewhere", "/a b"].map((p) => ({
+        ...sampleArtifact,
+        connections: {
+          movies: { samples: { [p]: { statusCode: 200, contentType: null, body: "" } } },
+        },
+      })),
+      {
+        ...sampleArtifact,
+        connections: {
+          movies: { samples: { "/s": { statusCode: 99, contentType: null, body: "" } } },
+        },
+      },
+      {
+        ...sampleArtifact,
+        connections: {
+          movies: {
+            samples: {
+              "/s": { statusCode: 200, contentType: null, body: "x".repeat(16 * 1024 + 1) },
+            },
+          },
+        },
+      },
+      {
+        ...sampleArtifact,
+        connections: {
+          movies: {
+            samples: Object.fromEntries(
+              Array.from({ length: 11 }, (_, i) => [
+                `/p${i}`,
+                { statusCode: 200, contentType: null, body: "" },
+              ]),
+            ),
+          },
+        },
+      },
       { ...sampleArtifact, capabilities: ["Clock"] },
       { ...sampleArtifact, pins: [{ id: "crowd", version: 0 }] },
     ];
@@ -74,8 +128,8 @@ describe("artifact contract (CON-04, DATA-04)", () => {
         migrations: [],
       },
       code: { js: "console.log('hi');", css: "ul { margin: 0; }", html: "<ul id='items'></ul>" },
-      contractVersion: 3,
-      connections: [],
+      contractVersion: 4,
+      connections: {},
     };
     expect(canonicalJson(reordered)).toBe(canonicalJson(sampleArtifact));
     expect(canonicalJson({ b: [2, 1], a: { d: null, c: "x" }, skipped: undefined })).toBe(
@@ -150,28 +204,40 @@ describe("reading a stored tool version (CON-04)", () => {
     });
     // An upgrade gives none, whatever the stored version held beside its contract.
     const reading = readArtifact({ ...rest, contractVersion: 2, connections: ["bank"] });
-    expect(reading.kind === "ok" && reading.artifact.connections).toEqual([]);
+    expect(reading.kind === "ok" && reading.artifact.connections).toEqual({});
+  });
+
+  it("CON-04: upgrades a stored contract 3 version: each connection it named, with no samples (A69)", () => {
+    const rest = withoutConnections();
+    expect(readArtifact({ ...rest, contractVersion: 3, connections: ["movies", "bank"] })).toEqual({
+      kind: "ok",
+      artifact: {
+        ...sampleArtifact,
+        connections: { movies: { samples: {} }, bank: { samples: {} } },
+      },
+      upgradedFromVersion: 3,
+    });
   });
 
   it("upgrades an older version step by step, or says it can't", () => {
-    // A made-up contract 4 that renamed `ui` to `look`, to exercise the upgrade path.
-    const v4 = artifactSchema
+    // A made-up contract 5 that renamed `ui` to `look`, to exercise the upgrade path.
+    const v5 = artifactSchema
       .omit({ ui: true, contractVersion: true })
-      .extend({ contractVersion: z.literal(4), look: artifactSchema.shape.ui });
+      .extend({ contractVersion: z.literal(5), look: artifactSchema.shape.ui });
     const upgrades = {
-      3: ({ ui, ...rest }: Record<string, unknown>) => ({ ...rest, contractVersion: 4, look: ui }),
+      4: ({ ui, ...rest }: Record<string, unknown>) => ({ ...rest, contractVersion: 5, look: ui }),
     };
     const reading = readArtifact(sampleArtifact, {
-      current: 4,
+      current: 5,
       upgrades,
-      schema: v4 as unknown as z.ZodType<Artifact>,
+      schema: v5 as unknown as z.ZodType<Artifact>,
     });
-    expect(reading).toMatchObject({ kind: "ok", upgradedFromVersion: 3 });
+    expect(reading).toMatchObject({ kind: "ok", upgradedFromVersion: 4 });
     expect(reading.kind === "ok" && "look" in reading.artifact).toBe(true);
 
-    expect(readArtifact(sampleArtifact, { current: 4, upgrades: {} })).toEqual({
+    expect(readArtifact(sampleArtifact, { current: 5, upgrades: {} })).toEqual({
       kind: "incompatible",
-      reason: "There is no way to upgrade it from contract 3.",
+      reason: "There is no way to upgrade it from contract 4.",
     });
   });
 });

@@ -58,8 +58,8 @@ async function workspaceShowing(image: string) {
   if (!stored.ok) throw new Error(stored.message);
   const { id } = createWorkspace(folder, "Gallery");
   const version = saveVersion(folder.db, {
-    contractVersion: 3,
-    connections: [],
+    contractVersion: 4,
+    connections: {},
     code: gallery,
     data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
     capabilities: [],

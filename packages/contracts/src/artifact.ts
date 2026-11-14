@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { CONNECTIONS_LIMIT, connectionNameSchema } from "./connection.ts";
-import { jsonObjectSchema } from "./json.ts";
+import { CONNECTIONS_LIMIT, connectionNameSchema, connectionUseSchema } from "./connection.ts";
+import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
 import { migrationSchema } from "./migration.ts";
 
 // A tool version, the artifact (CON-04, DATA-04): everything that has to change together when a
@@ -8,7 +8,7 @@ import { migrationSchema } from "./migration.ts";
 // the library refer to it; they are not part of it.
 
 /** The artifact contract's current version. Raise it with an upgrade in ARTIFACT_UPGRADES. */
-export const ARTIFACT_CONTRACT_VERSION = 3;
+export const ARTIFACT_CONTRACT_VERSION = 4;
 
 export const UI_MODES = ["standard", "custom"] as const;
 
@@ -36,14 +36,18 @@ export const artifactSchema = z
     capabilities: z
       .array(z.string().regex(/^[a-z][a-z0-9.-]*$/))
       .describe("The host capabilities the tool declares (CAP-01)."),
-    connections: z
-      .array(connectionNameSchema)
-      .max(CONNECTIONS_LIMIT)
-      .refine((list) => new Set(list).size === list.length, "Each connection is named once.")
-      .meta({ uniqueItems: true })
-      .describe(
-        "The connections to outside services this version may use, by name (CAP-02, A66). A call through any other is refused.",
-      ),
+    connections: refusingReservedKey(
+      z
+        .record(connectionNameSchema, connectionUseSchema)
+        .refine(
+          (uses) => Object.keys(uses).length <= CONNECTIONS_LIMIT,
+          `At most ${CONNECTIONS_LIMIT} connections.`,
+        )
+        // The same limit for the JSON Schema, which a refine doesn't reach (CON-01).
+        .meta({ maxProperties: CONNECTIONS_LIMIT }),
+    ).describe(
+      "The connections to outside services this version may use, by name, each once, with the sample answers checks get (CAP-02, A66, A69). A call through any other is refused.",
+    ),
     pins: z
       .array(z.strictObject({ id: z.string().min(1), version: z.int().min(1) }))
       .describe("The exact dependency versions it was built against, such as engines (DATA-04)."),
@@ -75,7 +79,8 @@ export type ArtifactUpgrades = Readonly<Record<number, (artifact: RawArtifact) =
 
 /**
  * Version 2 adds the data's migrations: a version 1 tool declared none. Version 3 adds the
- * connections a tool may use (A66): every earlier tool used none.
+ * connections a tool may use (A66): every earlier tool used none. Version 4 gives each its sample
+ * answers (A69): a version 3 tool's connections get none, so a check's request finds no sample.
  */
 export const ARTIFACT_UPGRADES: ArtifactUpgrades = {
   1: (artifact) => ({
@@ -84,6 +89,15 @@ export const ARTIFACT_UPGRADES: ArtifactUpgrades = {
     data: { ...(artifact["data"] as RawArtifact), migrations: [] },
   }),
   2: (artifact) => ({ ...artifact, contractVersion: 3, connections: [] }),
+  3: (artifact) => ({
+    ...artifact,
+    contractVersion: 4,
+    connections: Object.fromEntries(
+      (Array.isArray(artifact["connections"]) ? (artifact["connections"] as unknown[]) : []).map(
+        (name) => [name, { samples: {} }],
+      ),
+    ),
+  }),
 };
 
 /** A stored artifact, read back: current, upgraded to current, or plainly incompatible. */

@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A68), with its choice and reasons."
+description: "Every decision made so far (A1–A70), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T13:54:59Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T15:33:45Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -83,6 +83,8 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A66 | Which connections a tool may use | **Only those it was built for: their names are part of its version, recorded when it is created or edited to use them and confirmed by the checks; any other is refused** | Chosen by the owner on 2026-11-14, before #349's request path: with any connection open to every tool, a weather tool could read through the person's bank connection, and put what it holds in that request. Using another connection takes an edit, which the person sees. The other options were any connection for any tool, and asking on a tool's first read. Amends [ADR 0015](adr/0015-person-connections.md). |
 | A67 | A service that writes a connection's key back | **Looking for the key in an answer is a defence, not a guarantee: an answer that repeats it, as written or as a JSON, HTML or XML reader would decode it, is refused whole, and the limit is documented** | Chosen by the owner on 2026-11-14, after five review rounds of #358 each found another way a service could write the key so a tool reads it back, and each was closed. Scanning can't rule out every disguise; what a tool could do with a key is bounded by A66, since it reaches only its own connections, though the key could reach its data and from there an export or a prompt ([connections](../code/server/connections.md)). The other options were hardening further, round by round, and a design that makes a leaked key matter less, which can follow. |
 | A68 | The bridge's one path | **A connection request names a path, and optionally an origin, under one of the connection's own origins: the one exception to `BRG-07`, which the host resolves and checks (`CNX-02`)** | Approved by the owner on 2026-11-14 for #358. ADR 0015 decided that a tool asks by "a path under its addresses"; the structural test names exactly those two arguments, so any other that looks like a path, a URL or a workspace is still refused. |
+| A69 | What a connection answers while a tool is checked | **Sample answers the tool's version carries: for each connection, a few by path, written with the tool; in staging a request gets the sample whose path matches it best, and never reaches the service** | Chosen by the owner on 2026-11-14 for #349 step 3: checks then see realistic data, so a tool's list renders and its behavior check means something. The other options were one fixed empty answer for every request, and answers recorded from the person's own use, which a new tool doesn't have. The artifact's contract carries them (`CON-04`). Amends [ADR 0015](adr/0015-person-connections.md), point 5. |
+| A70 | What the first-write question shows | **Where and what, with the text: the connection's name, the action in plain words, the address without the key, and the text it sends, cut to a few lines with a way to see it all; Allow or Don't allow, and allowing covers the tool's later changes through that connection** | Chosen by the owner on 2026-11-14 for #349 step 3, as ADR 0015 asks the person be told what a change sends. The other options were where and what without the text, and asking every time, which A65 had already declined. Amends [ADR 0015](adr/0015-person-connections.md), point 4. |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2

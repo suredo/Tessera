@@ -59,8 +59,8 @@ const toV2: Migration = {
   operations: [{ op: "renameField", collection: "tasks", from: "name", to: "title" }],
 };
 const version = (html: string, data: Partial<Artifact["data"]>): Artifact => ({
-  contractVersion: 3,
-  connections: [],
+  contractVersion: 4,
+  connections: {},
   code: { html, css: "", js: "" },
   data: {
     schemaVersion: 1,

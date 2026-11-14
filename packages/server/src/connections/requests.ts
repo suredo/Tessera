@@ -188,7 +188,7 @@ export async function requestThroughConnection(
   if (phase === "staging") {
     refuse("not-allowed", `A tool being checked doesn't reach outside services. ${NOTHING_SENT}`);
   }
-  if (!artifact.connections.includes(name)) {
+  if (!Object.hasOwn(artifact.connections, name)) {
     refuse(
       "not-allowed",
       `This tool wasn't built to use the connection ${name}. Using it takes an edit. ${NOTHING_SENT}`,
