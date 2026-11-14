@@ -634,3 +634,36 @@ describe("repair by failure class (GEN-09)", () => {
     });
   });
 });
+
+describe("a created tool's connections (CAP-02, A66, A74)", () => {
+  const sample = { statusCode: 200, contentType: "application/json", body: '{"results":[]}' };
+  const movies = { movies: { samples: { "/search": sample } } };
+
+  it("A66 A74: a creation keeps the connections the request allows, with the capability in step", () => {
+    const result = candidateFrom(tool({ connections: movies, capabilities: [] }), ["movies"]);
+    expect(result.kind).toBe("candidate");
+    if (result.kind !== "candidate") return;
+    expect(result.artifact.connections).toEqual(movies);
+    expect(result.artifact.capabilities).toEqual(["connection"]);
+    // Without connections, no connection capability, whatever the answer declared.
+    const none = candidateFrom(tool({ capabilities: ["connection", "clock"] }));
+    expect(none.kind === "candidate" && none.artifact.capabilities).toEqual(["clock"]);
+  });
+
+  it("A66 A74: a connection the request doesn't list is refused, naming the ones it may use", () => {
+    expect(candidateFrom(tool({ connections: movies }), ["watch-list"])).toMatchObject({
+      kind: "failed",
+      failure: "schema-shape",
+      findings: [
+        "The tool uses the connection movies, which isn't one the request lists. It may use: watch-list.",
+      ],
+    });
+    // With none allowed, any is refused: the default until the request may use one.
+    expect(candidateFrom(tool({ connections: movies }))).toMatchObject({
+      kind: "failed",
+      findings: [
+        "The tool uses the connection movies, which isn't one the request lists. This request gives it no connections.",
+      ],
+    });
+  });
+});

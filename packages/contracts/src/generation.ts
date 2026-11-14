@@ -35,6 +35,9 @@ const leftOut = z
     "The parts of the request this tool doesn't do because no tool here can, such as reaching the internet or playing videos, each in plain words for the person. Never a part another tool here could do, or one the person says comes later. Left out when the tool does all of it.",
   );
 
+/** The connections a tool uses, as its version keeps them: one definition with the artifact (P3). */
+const toolConnections = artifactSchema.shape.connections;
+
 export const creationSchema = z
   .discriminatedUnion("outcome", [
     z.strictObject({
@@ -65,6 +68,11 @@ export const creationSchema = z
       capabilities: z
         .array(z.enum(capabilities))
         .describe("The host capabilities the tool needs, only those it uses (CAP-01)."),
+      connections: toolConnections
+        .optional()
+        .describe(
+          "Each connection the tool uses, only from those the request lists, with the sample answers its checks get; left out when it uses none (CAP-02, A66, A69).",
+        ),
       uiMode: z
         .enum(UI_MODES)
         .describe(
@@ -101,6 +109,15 @@ export const editSchema = z.discriminatedUnion("outcome", [
         ),
       z.strictObject({ mode: z.literal("replace"), code }),
     ]),
+    connections: z
+      .discriminatedUnion("mode", [
+        z.strictObject({ mode: z.literal("unchanged") }),
+        z.strictObject({ mode: z.literal("replace"), connections: toolConnections }),
+      ])
+      .optional()
+      .describe(
+        "The connections the changed tool uses, only from those the request lists, each with its sample answers; unchanged, or left out, keeps them as they are (CAP-02, A66, A69).",
+      ),
     data: z.discriminatedUnion("mode", [
       z.strictObject({ mode: z.literal("unchanged") }),
       z.strictObject({
