@@ -7,7 +7,7 @@ implements: [CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06]
 tests: [../../../packages/server/test/connections.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, connections, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T13:12:23Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T16:24:13Z }
 ---
 
 # Purpose
@@ -30,7 +30,7 @@ Keeps the connections the person adds to outside services, as [ADR 0015](../../d
 - **A redirect is never followed** (`CNX-03`): it is refused, so neither the request nor its key goes anywhere else. Not Modified isn't a redirect.
 - **The key goes to the service and nowhere else** (`CNX-04`). It is added last, in its header or after the tool's query, which stays exactly as written; a tool that sends the key's query parameter itself is refused. The answer says where it came from (the connection, the address without the key, and when it arrived). No refusal passes on an error's own words, which could name the address and the key with it. A service may write the key back, as a request inspector or an error quoting its address would: an answer whose content type or text repeats it, as sent, URL- or form-encoded, escaped in JSON, or in base64; and as a tool would read it: with every JSON escape undone in one pass, as a JSON parser does, or with every HTML or XML character reference undone wherever it stands, whatever markup is around it, by the standard's complete table (`entities`, parse5's own decoder), or as a page shows it, parsed by parse5 with scripting off, with text split across elements joined and attribute values read too, or JSON's escapes and the references both, in either order; in any case, is refused whole, before any message names what the service sent. The tests look for the key in every reply, from services that echo it in each of those ways, in every other table of the data folder and in the console.
 - **An answer is limited** (`CNX-05`): 1 MB, counted as it is read, and 15 seconds for the whole of it; past either, or in a type that isn't text (an image, for now), it is refused whole. A service's own error, such as a 404, is an answer for the tool to read.
-- **Until #349 step 3, only reads, and never from a check** (`CNX-06`). GET and HEAD go out; any other method, and any request in the staging phase, is refused as `not-allowed` before anything is sent. A read with a body is `invalid-args`. A read runs freely while the tool starts too (ADR 0015, point 3).
+- **Until #349 step 3c, only reads, and never from a check** (`CNX-06`). GET and HEAD go out; any other method is refused as `not-allowed` before anything is sent. A tool being checked gets its version's sample answers from the host page and never calls this route (A69, the [runtime](../runtime/package.md)); a request in the staging phase that reaches it anyway is refused, a second wall. A read with a body is `invalid-args`. A read runs freely while the tool starts too (ADR 0015, point 3).
 
 # Pitfalls
 

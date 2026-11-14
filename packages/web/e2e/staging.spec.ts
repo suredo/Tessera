@@ -30,6 +30,13 @@ tessera.call("data.read").then((read) => tessera.send({ read }));
 tessera.call("data.patch", { operations: [{ op: "add", collection: "tasks", record: { title: "x" } }] })
   .then(() => tessera.send({ wrote: true }), (e) => tessera.send({ wrote: false, code: e.code }));`,
   },
+  // A candidate that asks a connection as it starts, and reports what it got (A69).
+  connected: {
+    html: "<p>Movies</p>",
+    css: "",
+    js: `tessera.call("connection.request", { connection: "movies", method: "GET", path: "/search?query=alien" })
+  .then((answer) => tessera.send({ answer }), (e) => tessera.send({ refused: e.code }));`,
+  },
 };
 
 const taskSchema = (field: string) =>
@@ -191,6 +198,62 @@ test("RUN-03: in the panel, the candidate sees only synthetic data and can't sav
     wrote: false,
     code: "not-active",
   });
+});
+
+test("CNX-06: in the panel, a candidate's request gets its version's sample answer, and nothing leaves the page", async ({
+  page,
+}) => {
+  const { id, candidate } = newWorkspace();
+  await page.goto(`${host.url}/`);
+  await ready(page, "stageCandidate");
+  host.reset();
+  const seen = await page.evaluate(
+    async ({ workspaceId, hash, synthetic }) => {
+      const w = window as unknown as TestWindow;
+      let got: unknown;
+      const hears = {
+        name: "records what the candidate's request got",
+        run: ({ tool }: { tool: { onMessage(listen: (m: unknown) => void): () => void } }) =>
+          new Promise((resolve) => {
+            tool.onMessage((m) => {
+              got = m;
+              resolve({ ok: true });
+            });
+          }),
+      };
+      await w.stageCandidate({
+        candidate: {
+          mountId: "connected",
+          hash,
+          capabilities: ["connection"],
+          syntheticData: synthetic,
+          connections: {
+            movies: {
+              samples: {
+                "/search": { statusCode: 200, contentType: "application/json", body: '["Alien"]' },
+              },
+            },
+          },
+        },
+        workspaceId,
+        expectedDataRevision: 1,
+        activationToken: "00000000-0000-4000-8000-000000000001",
+        // The stub fails, so nothing is activated: only what the request got matters here.
+        checks: [hears, w.stubCheck({ ok: false, reason: "only looking" })],
+      });
+      return got;
+    },
+    { workspaceId: id, hash: candidate, synthetic },
+  );
+  expect(seen).toMatchObject({
+    answer: {
+      statusCode: 200,
+      body: '["Alien"]',
+      source: { connection: "movies", url: "sample:/search?query=alien" },
+    },
+  });
+  // The answer came from the page itself: the server's bridge route was never asked.
+  expect(host.hostRequests.filter((r) => r.includes("/api/bridge"))).toEqual([]);
 });
 
 test("RUN-03: a failed check activates nothing; the previous version and the person's data stay", async ({

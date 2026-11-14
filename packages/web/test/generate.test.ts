@@ -15,6 +15,7 @@ const candidate: GenerateReply = {
   hash: "a".repeat(64),
   mountId: `v-${"a".repeat(64)}`,
   capabilities: [],
+  connections: {},
   syntheticData: { items: [] },
   profile: null,
   acceptance: null,

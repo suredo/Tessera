@@ -265,6 +265,7 @@ export async function generate(
     hash,
     mountId: candidateMount(hash),
     capabilities: created.artifact.capabilities,
+    connections: created.artifact.connections,
     syntheticData: created.artifact.data.defaults,
     profile: decision.intent.profile ?? null,
     acceptance: acceptance ?? null,

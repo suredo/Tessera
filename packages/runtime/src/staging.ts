@@ -3,6 +3,7 @@ import {
   createDataState,
   recordOfKey,
   type ActivationRefusal,
+  type Artifact,
   type BridgeErrorCode,
   type BridgeResult,
   type DataState,
@@ -32,6 +33,11 @@ export type Candidate = {
   capabilities: readonly string[];
   /** What it runs against in the panel: its reusable defaults, never the person's data. */
   syntheticData: Record<string, JsonValue>;
+  /**
+   * The connections its version uses, with the sample answers its requests get in the panel, in
+   * place of the service's (A69); none when left out.
+   */
+  connections?: Artifact["connections"];
 };
 
 export type StagingOptions = {
@@ -205,6 +211,7 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       const serve = (next: MountedTool, data: DataHandlers | undefined) =>
         serveBridge(next, {
           capabilities: candidate.capabilities,
+          samples: candidate.connections ?? {},
           ...(data
             ? { data, rehearsal: true }
             : { data: syntheticData(candidate.syntheticData), staging: true }),

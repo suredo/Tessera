@@ -13,6 +13,7 @@ const candidate: Extract<GenerateReply, { kind: "candidate" }> = {
   hash: "a".repeat(64),
   mountId: "test",
   capabilities: [],
+  connections: {},
   syntheticData: {},
   profile: null,
   acceptance: null,

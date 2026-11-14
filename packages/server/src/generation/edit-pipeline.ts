@@ -97,6 +97,7 @@ export async function generateEdit(
     hash,
     mountId: candidateMount(hash),
     capabilities: result.artifact.capabilities,
+    connections: result.artifact.connections,
     syntheticData: result.artifact.data.defaults,
     profile: intent?.profile ?? null,
     // Checks from the request are for a new tool only, in the experiment (VER-09).

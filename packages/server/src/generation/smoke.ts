@@ -160,6 +160,7 @@ export async function repairSmoke(
     hash,
     mountId: candidateMount(hash),
     capabilities: repaired.artifact.capabilities,
+    connections: repaired.artifact.connections,
     syntheticData: repaired.artifact.data.defaults,
     name: context.reply.name,
     summary: repaired.summary,
