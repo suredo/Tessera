@@ -1002,3 +1002,23 @@ describe("connection instructions by stage (#367 review)", () => {
     expect(repair.size).toBeLessThanOrEqual(promptBudget("repair", true));
   });
 });
+
+describe("images through a connection, in the connections part (A75)", () => {
+  it("A75: a request given a connection is told how to show an image its answers name; others aren't", () => {
+    const told = assemblePrompt({
+      stage: "create",
+      request: "Find movies with their posters",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+      connections: [{ name: "movies", origins: ["https://api.themoviedb.org"] }],
+    });
+    expect(told.system).toContain("tessera.connectionImageUrl({ connection:");
+    const untold = assemblePrompt({
+      stage: "create",
+      request: "A list",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+    });
+    expect(`${untold.system}${untold.prompt}`).not.toContain("connectionImageUrl");
+  });
+});
