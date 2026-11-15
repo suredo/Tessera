@@ -2,6 +2,8 @@
 
 ## 2026-11-15
 
+* **New**: The items-over-time profile ([#351](https://github.com/suredo/Tessera/issues/351), A79, `VER-03`, `RUN-07`): items marked done day by day with their streaks, as a habit tracker. Its check comes back on later days with the host's clock moved by calendar days, expecting a streak of 1, then 2, then 1 after a day missed, and the same opened again; a working tracker passes and each broken one fails with its rule. The intent's budget rises to 11,500, within the room the owner allowed ([runtime](code/runtime/package.md), [contracts](code/contracts/package.md), [prompts](code/server/prompts.md), [decision log](decisions/decision-log.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T18:19:53Z.
+
 * **Fixed**: The search-results check tries every result a search shows, not only the first 100, before failing a finder that keeps none ([#373](https://github.com/suredo/Tessera/pull/373) review) ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T17:14:15Z.
 
 * **Fixed**: The search-results profile's first rule now says the tool's sample answers give a result its starting data hasn't kept, and its check fails a finder when no press of keep adds one, so a finder whose keep does nothing fails whatever it started with; the item added is known by its fingerprint and must itself show the title, however many kept items already show it ([#373](https://github.com/suredo/Tessera/pull/373) review, A78, `VER-04`) ([runtime](code/runtime/package.md), [decision log](decisions/decision-log.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T17:03:46Z.

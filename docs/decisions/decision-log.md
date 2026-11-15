@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A78), with its choice and reasons."
+description: "Every decision made so far (A1–A79), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T17:03:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T18:19:53Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -93,6 +93,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A76 | Which pages a tool may open for the person, such as a film's page or its trailer | **Only an address under one of the tool's own connections' origins, as a request's is checked, never with the key, opened by the host page in a new tab with no opener or referrer, and only once the person uses the tool; the browser opens it only right after a click. A video on another site takes a connection for that site, with no key. A tool still can't open a window itself (SBX-10)** | Chosen by the owner on 2026-11-15 for #349 step 5: a tool chooses the address, so it could put the person's data in it, and this way it can go only where the person added a connection. Not chosen: any https address after asking each time, which leaves the person to spot a leak in the address, and any https address after a click, which lets a tool send data anywhere. Amends [ADR 0015](adr/0015-person-connections.md), point 6. |
 | A77 | How much room the prompts may get for connections | **Up to 30,000 characters for a stage's prompt with connections; the room is 4,000 on top of each stage's budget (create 24,000, edit 26,000, repair 27,500), raised from A74's 2,000 for opening pages** | The owner's go-ahead of 2026-11-15, after creation with connections reached 21,957 of 22,000. Every request without connections keeps its budget. Supersedes A74's 2,000. |
 | A78 | What the search-results profile checks | **A search shows at least one result, each with its title, and the tool's sample answers give one its starting data hasn't kept; keeping a result keeps one more, showing its title, and saves it; keeping it again keeps nothing more; opened again, what was kept is as saved. Not the results' content, order, filter or sort** | Chosen by Claude Code on 2026-11-15 for #351, under the owner's go-ahead. A check gets the tool's own sample answers, never the service (A69), so it can't know which results a search should give or in what order: it checks only what holds for any service. Filtering and sorting results stay the tool's, judged by the AI review, as a rule the check can't verify isn't stated (VER-04). |
+| A79 | What the items-over-time profile checks, and the intent's room for M4's profiles | **Adding an item; marking it done today by the host's clock, twice counted once; its streak, the days in a row it was done ending today, read as the first whole number its element shows: 1 the first day, 2 the next, 1 after a day missed; and the same opened again a later day. The check comes back on later days with the host's clock moved by calendar days. The intent's budget rises to 11,500, within the 30,000 the owner allowed (A77)** | Chosen by Claude Code on 2026-11-15 for #351, under the owner's go-ahead: a streak is what T4 asks for, and only a check that comes back on other days can see it. What a streak shows before today's mark, and charts of days, stay the tool's, judged by the AI review. Adding the profile took the intent's largest shape to 10,934 of 10,900; raising it, as the owner allowed, leaves room for the editing-with-files profile still to come. |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2

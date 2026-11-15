@@ -4,6 +4,7 @@ import type { MountEvent } from "../src/host.ts";
 import {
   BridgeError,
   clockReading,
+  daysLater,
   PLACEHOLDER_IMAGE,
   serveBridge,
   type BridgeOptions,
@@ -427,5 +428,37 @@ describe("requests through a connection (CAP-02)", () => {
     const reply = await call("connection.request", read);
     expect(reply).toMatchObject({ ok: false, error: { code: "failed" } });
     expect(reply?.ok === false && reply.error.message).toMatch(/can't reach outside services/);
+  });
+});
+
+describe("the host's clock moved on by days (RUN-07, #351)", () => {
+  const at = (iso: string, timeZone: string) => ({
+    now: () => Date.parse(iso),
+    timeZone: () => timeZone,
+  });
+  const dateOf = (clock: { now(): number; timeZone(): string }) =>
+    clockReading(clock.now(), clock.timeZone()).date;
+
+  it("RUN-07: each day on is the next calendar date, across daylight-saving changes either way", () => {
+    // Lisbon moves to summer time early on 2026-03-29 and back early on 2026-10-25.
+    const spring = at("2026-03-28T00:30:00Z", "Europe/Lisbon");
+    expect([0, 1, 2, 3].map((days) => dateOf(daysLater(spring, days)))).toEqual([
+      "2026-03-28",
+      "2026-03-29",
+      "2026-03-30",
+      "2026-03-31",
+    ]);
+    const autumn = at("2026-10-24T23:30:00+01:00", "Europe/Lisbon");
+    expect([0, 1, 2].map((days) => dateOf(daysLater(autumn, days)))).toEqual([
+      "2026-10-24",
+      "2026-10-25",
+      "2026-10-26",
+    ]);
+    // Near midnight in a zone far from UTC, and across a month's end.
+    const late = at("2026-01-31T14:45:00Z", "Pacific/Auckland");
+    expect(dateOf(late)).toBe("2026-02-01");
+    expect(dateOf(daysLater(late, 1))).toBe("2026-02-02");
+    // Zero days is the clock itself.
+    expect(daysLater(spring, 0)).toBe(spring);
   });
 });
