@@ -1184,7 +1184,9 @@ async function searchResults(context: CheckContext): Promise<CheckOutcome> {
   const showing = async (title: string) => findAll(profile, keeps, tool, "kept", title);
   let kept: List = before;
   let at = -1;
-  for (let index = 0; index < Math.min(results.count, PAGE); index += 1) {
+  // Every result, its title read across every page, so one not kept is found wherever it is
+  // (#373 review); each press is one bounded drive.
+  for (let index = 0; index < titles.texts.length; index += 1) {
     const title = titles.texts[index]!.trim();
     const was = await showing(title);
     if (!Array.isArray(was)) return was;

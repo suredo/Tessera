@@ -108,7 +108,12 @@ const SAMPLES = {
 };
 
 /** Stages a tool behind the smoke check and the search-results check; activation is refused. */
-async function check(page: Page, flaw: Flaw, kept: string[] = []): Promise<Result> {
+async function check(
+  page: Page,
+  flaw: Flaw,
+  kept: string[] = [],
+  samples: typeof SAMPLES = SAMPLES,
+): Promise<Result> {
   await page.goto(host.url);
   await ready(page, "stageCandidate");
   return page.evaluate(
@@ -135,7 +140,7 @@ async function check(page: Page, flaw: Flaw, kept: string[] = []): Promise<Resul
           Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
       });
     },
-    { mountId: flaw, kept, samples: SAMPLES },
+    { mountId: flaw, kept, samples },
   );
 }
 
@@ -235,3 +240,22 @@ for (const [flaw, rule, words] of [
     expect(result.reason).toMatch(words);
   });
 }
+
+test("VER-03: a finder whose one result not kept comes after the first 100 keeps it (#373 review)", async ({
+  page,
+}) => {
+  test.setTimeout(180_000);
+  const titles = Array.from({ length: 101 }, (_, i) => `Movie ${i}`);
+  const samples = {
+    movies: {
+      samples: {
+        "/search": {
+          statusCode: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ results: titles.map((title) => ({ title })) }),
+        },
+      },
+    },
+  };
+  expect(await check(page, "none", titles.slice(0, 100), samples)).toEqual(PASSED);
+});
