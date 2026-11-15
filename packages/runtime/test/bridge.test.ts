@@ -312,6 +312,54 @@ describe("requests through a connection (CAP-02)", () => {
     expect(fetched).toEqual([]);
   });
 
+  it("CNX-09 CNX-06: a tool being checked opens no page, for a connection its version names or any other", async () => {
+    const opened: string[] = [];
+    for (const options of [{ staging: true }, { rehearsal: true }]) {
+      const { call } = withConnection({
+        ...options,
+        samples,
+        openWindow: (url) => opened.push(url),
+      });
+      const at = JSON.stringify(options);
+      expect(await call("link.open", { connection: "movies", path: "/watch" }), at).toMatchObject({
+        ok: true,
+        result: { url: "sample:/watch" },
+      });
+      expect(code(await call("link.open", { connection: "bank", path: "/x" })), at).toBe(
+        "not-allowed",
+      );
+    }
+    expect(opened).toEqual([]);
+  });
+
+  it("CNX-09 A76: outside checks, the server checks the page's address and the host page opens it", async () => {
+    const opened: string[] = [];
+    const asked: unknown[] = [];
+    const { call } = withConnection({
+      openWindow: (url) => opened.push(url),
+      data: {
+        openPage: (args) => {
+          asked.push(args);
+          return Promise.resolve({ url: "https://videos.example.com/watch?v=abc" });
+        },
+      },
+    });
+    const request = { connection: "videos", path: "/watch?v=abc" };
+    expect(await call("link.open", request)).toMatchObject({
+      ok: true,
+      result: { url: "https://videos.example.com/watch?v=abc" },
+    });
+    expect(asked).toEqual([request]);
+    expect(opened).toEqual(["https://videos.example.com/watch?v=abc"]);
+    // A refusal opens nothing.
+    const refused = withConnection({
+      openWindow: (url) => opened.push(url),
+      data: { openPage: () => Promise.reject(new BridgeError("not-allowed", "No.")) },
+    });
+    expect(code(await refused.call("link.open", request))).toBe("not-allowed");
+    expect(opened).toHaveLength(1);
+  });
+
   it("A75: outside checks, an image goes to the server's handler", async () => {
     const image = { ...PLACEHOLDER_IMAGE };
     const asked: unknown[] = [];

@@ -195,6 +195,16 @@ export const connectionImageRequestSchema = connectionRequestSchema
   .pick({ connection: true, origin: true, path: true })
   .describe("An image to show, fetched through a connection the person added (CAP-02, A75).");
 export type ConnectionImageRequest = z.infer<typeof connectionImageRequestSchema>;
+
+/**
+ * A page a tool opens for the person, such as a film's page or its trailer (ADR 0015 point 6,
+ * A76): an address under one of its connections' own origins, the same connection, origin and
+ * path as a request's, opened by the host in a new tab right after a click, never with the key.
+ */
+export const pageRequestSchema = connectionImageRequestSchema.describe(
+  "A page to open in a new tab, under a connection the person added (CAP-02, A76).",
+);
+export type PageRequest = z.infer<typeof pageRequestSchema>;
 export type ConnectionRequest = z.infer<typeof connectionRequestSchema>;
 
 export const connectionAnswerSchema = z

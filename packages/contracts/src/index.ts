@@ -55,6 +55,8 @@ export {
   connectionAnswerSchema,
   connectionRequestSchema,
   connectionImageRequestSchema,
+  pageRequestSchema,
+  type PageRequest,
   CONNECTION_IMAGE_LIMIT_BYTES,
   CONNECTION_SAMPLES_LIMIT,
   CONNECTION_SAMPLE_LIMIT,

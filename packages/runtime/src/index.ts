@@ -6,6 +6,7 @@ export {
   clockReading,
   sampleAnswer,
   placeholderImage,
+  openInNewTab,
   PLACEHOLDER_IMAGE,
   serveBridge,
   systemClock,

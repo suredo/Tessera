@@ -95,7 +95,7 @@ describe("the bridge manifest (CON-03, CAP-01)", () => {
     };
     manifest.actions.forEach((action) => walk(action.name, action.args));
     // The one exception: a path under one of a connection's own origins, which the host resolves
-    // and checks (CNX-02), for a request or an image through it (A75): the same schema, so it
+    // and checks (CNX-02), for a request, an image through it (A75) or a page under it (A76): the same schema, so it
     // can't name a file or a whole address either.
     expect(
       names.filter((n) => /path|file|url|uri|href|workspace|folder|dir|origin/i.test(n)),
@@ -104,11 +104,20 @@ describe("the bridge manifest (CON-03, CAP-01)", () => {
       "connection.request: path",
       "connection.image: origin",
       "connection.image: path",
+      "link.open: origin",
+      "link.open: path",
     ]);
     expect(BRIDGE_ACTIONS["connection.image"].args.shape.path).toBe(
       BRIDGE_ACTIONS["connection.request"].args.shape.path,
     );
     expect(BRIDGE_ACTIONS["connection.image"].args.shape.origin).toBe(
+      BRIDGE_ACTIONS["connection.request"].args.shape.origin,
+    );
+    // A page a tool opens, under a connection's own address, the same way (A76).
+    expect(BRIDGE_ACTIONS["link.open"].args.shape.path).toBe(
+      BRIDGE_ACTIONS["connection.request"].args.shape.path,
+    );
+    expect(BRIDGE_ACTIONS["link.open"].args.shape.origin).toBe(
       BRIDGE_ACTIONS["connection.request"].args.shape.origin,
     );
   });

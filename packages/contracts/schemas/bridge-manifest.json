@@ -18,6 +18,11 @@
       "argument": "request",
       "copiesData": true
     },
+    "openPage": {
+      "action": "link.open",
+      "argument": "request",
+      "copiesData": true
+    },
     "send": {
       "action": null,
       "argument": "message",
@@ -742,6 +747,69 @@
           "result": {
             "type": "image/jpeg",
             "bytesBase64": "/9j/4AAQ"
+          }
+        }
+      ]
+    },
+    {
+      "name": "link.open",
+      "description": "Opens a page for the person in a new tab, such as a film's page or its trailer, under the address of a connection the tool was built for, by a path: only right after the person clicks, and never with the key. Use tessera.openPage(request) (A76).",
+      "capability": "connection",
+      "writes": false,
+      "maxArgsBytes": 3072,
+      "args": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "connection": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,39}$",
+            "description": "The connection's name, how a tool asks for it: lowercase letters, digits and hyphens, starting with a letter, at most 40 characters, such as movies or home-lights."
+          },
+          "origin": {
+            "description": "Which of the connection's addresses to ask; its first when left out.",
+            "type": "string",
+            "maxLength": 300
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^\\/(?!\\/)[^\\s#\\\\\\p{Cc}]*$",
+            "description": "The path and query under the connection's address, starting with a single /, such as /search?query=alien. Never a whole address."
+          }
+        },
+        "required": [
+          "connection",
+          "path"
+        ],
+        "additionalProperties": false,
+        "description": "A page to open in a new tab, under a connection the person added (CAP-02, A76)."
+      },
+      "result": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "maxLength": 4096,
+            "format": "uri",
+            "description": "The page's address as it opened, never with the key."
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false,
+        "description": "The page opened, or the call is refused."
+      },
+      "examples": [
+        {
+          "args": {
+            "connection": "videos",
+            "path": "/watch?v=abc123"
+          },
+          "result": {
+            "url": "https://videos.example.com/watch?v=abc123"
           }
         }
       ]

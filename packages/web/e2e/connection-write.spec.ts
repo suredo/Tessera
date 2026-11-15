@@ -205,3 +205,35 @@ test("A75: a tool shows an image through its connection, fetched by the host, as
   expect(seen).toEqual([{ method: "GET", url: "/poster.png", body: "" }]);
   await expect(question(page)).toBeHidden();
 });
+
+test("CNX-09 A76: a click in a tool opens a page under its connection in a new tab, with no way back to Tessera", async ({
+  page,
+}) => {
+  seen.length = 0;
+  const opener: Artifact = {
+    ...listTool,
+    code: {
+      html: '<button id="watch" type="button">Watch the trailer</button><p id="text">Ready</p>',
+      css: "",
+      js: `document.getElementById("watch").addEventListener("click", () => {
+  tessera.openPage({ connection: "lists", path: "/watch?v=abc" }).then(
+    (opened) => { document.getElementById("text").textContent = "Opened " + opened.url; },
+    (error) => { document.getElementById("text").textContent = "Refused " + error.code; },
+  );
+});`,
+    },
+  };
+  const title = `Trailer ${Math.random().toString(36).slice(2, 7)}`;
+  workspaceWith(app.folder, title, opener);
+  await page.goto(app.url);
+  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
+  const popup = page.context().waitForEvent("page");
+  await tool(page).getByRole("button", { name: "Watch the trailer" }).click();
+  const opened = await popup;
+  await opened.waitForLoadState();
+  expect(opened.url()).toBe(`${origin}/watch?v=abc`);
+  expect(await opened.evaluate(() => window.opener === null)).toBe(true);
+  await expect(tool(page).locator("#text")).toHaveText(`Opened ${origin}/watch?v=abc`);
+  await opened.close();
+});

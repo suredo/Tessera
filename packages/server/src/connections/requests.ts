@@ -17,7 +17,9 @@ import {
   type ConnectionRequest,
   type ConnectionRequestRecord,
   type BridgeResult,
+  type ConnectionAuth,
   type ConnectionImageRequest,
+  type PageRequest,
 } from "@tessera/contracts";
 import { sniffImage } from "../assets/index.ts";
 
@@ -367,18 +369,24 @@ export function recentRequests(
 }
 
 /**
- * The request itself, as `requestThroughConnection` describes it, without the record: read as a
- * text answer, or, for `imageThroughConnection`, as an image.
+ * A request's address, checked as every request's is before anything is sent (CNX-01, CNX-02): a
+ * connection its version names and the person has, one of its origins, a path that stays on it,
+ * within the address limit, and a change only when active and allowed (CNX-07). Gives the address
+ * without the key, with what adding the key needs.
  */
-async function send(
+function resolveAddress(
   store: Store,
   workspaceId: string,
   artifact: Artifact,
   phase: BridgePhase,
   request: ConnectionRequest,
-  options: ConnectionRequestOptions,
-  as: "answer" | "image" = "answer",
-): Promise<{ statusCode: number; answer?: ConnectionAnswer; image?: ConnectionImage }> {
+): {
+  name: string;
+  auth: ConnectionAuth;
+  key: string | null;
+  url: URL;
+  source: string;
+} {
   const name = request.connection;
   if (phase === "staging") {
     refuse("not-allowed", `A tool being checked doesn't reach outside services. ${NOTHING_SENT}`);
@@ -442,11 +450,53 @@ async function send(
       `The address is longer than Tessera sends (${CONNECTION_URL_LIMIT} characters, once written out). ${NOTHING_SENT}`,
     );
   }
+  return { name, auth, key: found.key, url, source };
+}
+
+/**
+ * Opens a page for the person (ADR 0015 point 6, A76, CNX-09): checked as a read's address is,
+ * and given back without the key for the host page to open in a new tab, right after a click.
+ * Nothing is sent to the service; the host page does the opening, the browser the rest.
+ */
+export function pageThroughConnection(
+  store: Store,
+  workspaceId: string,
+  artifact: Artifact,
+  phase: BridgePhase,
+  page: PageRequest,
+): { url: string } {
+  if (phase !== "active") {
+    refuse("not-active", "A page opens only once the person uses the tool, when they click.");
+  }
+  return {
+    url: resolveAddress(store, workspaceId, artifact, phase, { ...page, method: "GET" }).source,
+  };
+}
+
+/**
+ * The request itself, as `requestThroughConnection` describes it, without the record: read as a
+ * text answer, or, for `imageThroughConnection`, as an image.
+ */
+async function send(
+  store: Store,
+  workspaceId: string,
+  artifact: Artifact,
+  phase: BridgePhase,
+  request: ConnectionRequest,
+  options: ConnectionRequestOptions,
+  as: "answer" | "image" = "answer",
+): Promise<{ statusCode: number; answer?: ConnectionAnswer; image?: ConnectionImage }> {
+  const { name, auth, key, url, source } = resolveAddress(
+    store,
+    workspaceId,
+    artifact,
+    phase,
+    request,
+  );
   const headers: Record<string, string> = { "user-agent": "Tessera" };
   for (const [header, value] of Object.entries(request.headers ?? {})) {
     if (value !== undefined) headers[header] = value;
   }
-  const key = found.key;
   // Added after the tool's query, which stays exactly as written.
   if (auth.kind === "query" && key !== null) {
     const param = `${encodeURIComponent(auth.name)}=${encodeURIComponent(key)}`;

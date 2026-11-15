@@ -7,7 +7,7 @@ implements: [RUN-04, CAP-01, GEN-06, BRG-04, DATA-02, AST-04, AST-05]
 tests: [../../../packages/server/test/bridge-routes.test.ts, ../../../packages/server/test/connection-requests.test.ts]
 tags: [code, server, bridge]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T01:23:31Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T14:59:18Z }
 ---
 
 # Purpose
@@ -18,7 +18,7 @@ Answers a tool's data calls from the saved data (`RUN-04`, `DATA-02`). The host 
 
 - `src/bridge/bridge.ts`:
   - `bridgeRoutes` gives the local server its one bridge route, the contracts' `/api/bridge`: a POST whose JSON body is the contracts' bridge data request, the workspace, the mount's phase and the tool's call. It answers with the bridge's reply as JSON. The [launcher](launcher.md) mounts it.
-  - `answerDataCall` checks one call and answers it, asynchronously: `data.read` from the workspace's saved data and revisions, `data.patch` through the [workspaces](workspaces.md) module's patch function, `asset.read` from the [asset store](assets.md), and `connection.request` through the [connections](connections.md) module's request path, and `connection.image` through its image path (A75). Its options, and `bridgeRoutes`', pass that path's limits on, for a test to lower.
+  - `answerDataCall` checks one call and answers it, asynchronously: `data.read` from the workspace's saved data and revisions, `data.patch` through the [workspaces](workspaces.md) module's patch function, `asset.read` from the [asset store](assets.md), and `connection.request` through the [connections](connections.md) module's request path, and `connection.image` through its image path (A75), and `link.open` through its page path, which gives back the address to open (A76). Its options, and `bridgeRoutes`', pass that path's limits on, for a test to lower.
 
 # Invariants
 
