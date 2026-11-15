@@ -9,7 +9,15 @@ import { ready } from "./support/ready.ts";
 // (BRG-06). A good tool passes; each deliberately broken one fails, saying what was expected, what
 // was observed and whose rule it is (VER-07).
 
-type Flaw = "none" | "noResults" | "keepsTwice" | "notSaved" | "otherTitle" | "changesLong";
+type Flaw =
+  | "none"
+  | "noResults"
+  | "keepsTwice"
+  | "notSaved"
+  | "otherTitle"
+  | "changesLong"
+  | "keepsNothing"
+  | "longLabel";
 
 /** A film finder that fits the search-results profile, with `flaw` built in. */
 const finder = (flaw: Flaw): Artifact["code"] => ({
@@ -26,13 +34,15 @@ const showKept = (fresh) => {
     const item = document.createElement("li");
     item.dataset.hook = "kept";
     const changes = flaw === "changesLong" && fresh && state.data.kept.length > 1 && film.title.length > 200;
-    item.textContent = changes ? film.title.replace("original", "WRONG") : film.title;
+    const text = changes ? film.title.replace("original", "WRONG") : film.title;
+    item.textContent = flaw === "longLabel" ? "Plot: " + "x".repeat(200) + " Title: " + text : text;
     return item;
   }));
 };
 const load = (fresh) => tessera.call("data.read").then((read) => { state = read; showKept(fresh === true); });
 load(true);
 const keep = (film) => {
+  if (flaw === "keepsNothing") return;
   // One flaw keeps a film again; one keeps it only on screen; one keeps it under another name.
   if (flaw !== "keepsTwice" && state.data.kept.some((kept) => kept.title === film.title)) return;
   const title = flaw === "otherTitle" ? film.title.toUpperCase() : film.title;
@@ -65,7 +75,16 @@ document.querySelector("[data-hook=search-go]").addEventListener("click", () => 
 });`,
 });
 
-const flaws: Flaw[] = ["none", "noResults", "keepsTwice", "notSaved", "otherTitle", "changesLong"];
+const flaws: Flaw[] = [
+  "none",
+  "noResults",
+  "keepsTwice",
+  "notSaved",
+  "otherTitle",
+  "changesLong",
+  "keepsNothing",
+  "longLabel",
+];
 let host: SandboxHost;
 
 test.beforeAll(async () => {
@@ -142,6 +161,23 @@ test("VER-03: so does one keeping results whose titles are part of others kept (
   page,
 }) => {
   expect(await check(page, "none", ["Aliens", "Heatwave"])).toEqual(PASSED);
+});
+
+test("VER-03: so does one that shows each kept title past what a read shows of it (#373 review)", async ({
+  page,
+}) => {
+  expect(await check(page, "longLabel")).toEqual(PASSED);
+});
+
+test("VER-03, VER-07: a finder whose keep does nothing fails, though it starts with something else kept (#373 review)", async ({
+  page,
+}) => {
+  const result = await check(page, "keepsNothing", ["Unrelated"]);
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toContain("keeps it: one more kept");
+  expect(result.reason).toMatch(
+    /one more kept, showing "Alien", after keeping it; observed still 1 result kept, none showing it/,
+  );
 });
 
 test("VER-03, VER-07: a finder that changes a kept title past what a read shows of it, opened again, fails (#373 review)", async ({

@@ -2,6 +2,8 @@
 
 ## 2026-11-15
 
+* **Fixed**: The search-results check counts a press that adds nothing as right only when that result's title is already kept, so a finder whose keep does nothing fails whatever it started with; and it looks for the kept title in each item's whole text, past what a read shows ([#373](https://github.com/suredo/Tessera/pull/373) review, A78) ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T16:53:44Z.
+
 * **Fixed**: The search-results check finds the result it keeps by pressing keep on each in turn, never by matching titles, so a finder that already keeps every result, or keeps titles part of others, passes; and it compares what was kept by fingerprints, so a change past what a read shows fails ([#373](https://github.com/suredo/Tessera/pull/373) review, A78, `VER-03`) ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T16:43:07Z.
 
 * **New**: The search-results profile ([#351](https://github.com/suredo/Tessera/issues/351), A78, `VER-03`): a search of an outside service whose results the person keeps some of, as films for a watchlist. Its check searches, keeps a result, keeps it again and opens the tool again, its results from the tool's own sample answers, and never judges which results come or their order; a working finder passes it and each broken one fails with its rule. T7's scenario now names it and searches and keeps a film with the tool's own controls ([contracts](code/contracts/package.md), [runtime](code/runtime/package.md), [scenarios](code/evals/scenarios.md), [decision log](decisions/decision-log.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T16:26:27Z.

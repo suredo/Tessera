@@ -1179,9 +1179,16 @@ async function searchResults(context: CheckContext): Promise<CheckOutcome> {
   }
 
   // Keeping: each result in turn until one adds a kept item; one already kept adds nothing.
+  // A result's title is looked for in each kept item's whole text, past what a read shows of it,
+  // by the driver's own find (#373 review).
+  const showing = async (title: string) => findAll(profile, keeps, tool, "kept", title);
   let kept: List = before;
   let at = -1;
+  let shownBefore = 0;
   for (let index = 0; index < Math.min(results.count, PAGE); index += 1) {
+    const title = titles.texts[index]!.trim();
+    const was = await showing(title);
+    if (!Array.isArray(was)) return was;
     const pressed = await drive(profile, keeps, tool, [
       { do: "click", hook: "result-keep", index },
     ]);
@@ -1189,7 +1196,16 @@ async function searchResults(context: CheckContext): Promise<CheckOutcome> {
     const now = await readList(profile, keeps, tool, "kept");
     if (!("texts" in now)) return now;
     if (now.count === kept.count) {
-      // Nothing added: a result already kept, as long as nothing else changed either.
+      // Nothing added: right only for a result already kept, its title shown by a kept item, and
+      // then nothing else may change either; otherwise keeping it failed (#373 review).
+      if (was.length === 0) {
+        return broke(
+          profile,
+          keeps,
+          `one more kept, showing "${title}", after keeping it`,
+          `still ${keptCount(now.count)}, none showing it`,
+        );
+      }
       // Fingerprints decide; the texts say what changed, in words.
       if (changed(kept.digests, now.digests, whole)) {
         return broke(
@@ -1201,6 +1217,7 @@ async function searchResults(context: CheckContext): Promise<CheckOutcome> {
       }
       continue;
     }
+    shownBefore = was.length;
     if (now.count !== kept.count + 1) {
       return broke(
         profile,
@@ -1213,22 +1230,14 @@ async function searchResults(context: CheckContext): Promise<CheckOutcome> {
     at = index;
     break;
   }
-  if (at < 0) {
-    // Nothing kept, though there were results: only right when every result was kept already.
-    if (before.count === 0) {
-      return broke(
-        profile,
-        keeps,
-        `one result kept after pressing result-keep on each of the ${results.count} results`,
-        "none kept",
-      );
-    }
-    return reopenCheck(context, profile, reopens, before, undefined);
-  }
+  // Every result's title was already kept, each press adding nothing: adding can't be tried.
+  if (at < 0) return reopenCheck(context, profile, reopens, before, undefined);
   const title = titles.texts[at]!.trim();
   const { added, gone } = difference(before.digests, kept.digests, whole);
   const addedTexts = difference(before.texts, kept.texts, whole).added;
-  if (added.length !== 1 || gone.length > 0 || !addedTexts.some((text) => text.includes(title))) {
+  const shownAfter = await showing(title);
+  if (!Array.isArray(shownAfter)) return shownAfter;
+  if (added.length !== 1 || gone.length > 0 || shownAfter.length !== shownBefore + 1) {
     return broke(
       profile,
       keeps,
