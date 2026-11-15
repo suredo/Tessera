@@ -2,6 +2,8 @@
 
 ## 2026-11-15
 
+* **New**: The search-results profile ([#351](https://github.com/suredo/Tessera/issues/351), A78, `VER-03`): a search of an outside service whose results the person keeps some of, as films for a watchlist. Its check searches, keeps a result, keeps it again and opens the tool again, its results from the tool's own sample answers, and never judges which results come or their order; a working finder passes it and each broken one fails with its rule. T7's scenario now names it and searches and keeps a film with the tool's own controls ([contracts](code/contracts/package.md), [runtime](code/runtime/package.md), [scenarios](code/evals/scenarios.md), [decision log](decisions/decision-log.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T16:26:27Z.
+
 * **Fixed**: The test that a failed service start leaves nothing running watches the servers it made close, rather than counting the process's handles, which depended on timing and failed in CI ([#372](https://github.com/suredo/Tessera/pull/372) review) ([runner](code/evals/runner.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T16:01:54Z.
 
 * **Fixed**: A scenario's service that can't be added leaves no server running and no connection behind, and the run still stops Tessera and leaves its report; a fake's key follows a connection key's rules. The connections doc says what claiming `CAP-02` covers, and the scenario format names its services ([#372](https://github.com/suredo/Tessera/pull/372) review) ([runner](code/evals/runner.md), [connections](code/server/connections.md), [scenario format](testing/scenario-format.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T15:53:14Z.

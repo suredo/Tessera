@@ -184,6 +184,38 @@ export const SCHEDULING_PROFILE = {
   fixture: { taskName: "Tessera check task" },
 } as const satisfies VerificationProfile;
 
+/**
+ * A search of an outside service whose results the person keeps some of: T7, the movie finder
+ * (M4, #351). Its results come from the tool's connection, which a check answers with the tool's
+ * own sample answers (A69), so the check can't know which results a search should give: it checks
+ * only what holds for any service, that a search shows results and that keeping one keeps it, once.
+ */
+export const SEARCH_RESULTS_PROFILE = {
+  id: "search-results",
+  fits: "a search of an outside service, keeping some results, as films for a watchlist",
+  hooks: [
+    { name: "search-query", says: "the field where the search is typed" },
+    { name: "search-go", says: "the button that searches for what is typed there" },
+    { name: "result", says: "each result of the last search, one element per result" },
+    {
+      name: "result-title",
+      says: "inside each result, the element whose text is its title, and nothing else",
+    },
+    { name: "result-keep", says: "inside each result, the button that keeps it" },
+    {
+      name: "kept",
+      says: "each result kept, one element per result, its text holding the result's title",
+    },
+  ],
+  rules: [
+    "Typing a search in search-query and pressing search-go shows the results of that search, each a result; the tool's sample answers give at least one result for any search.",
+    "Pressing a result's result-keep keeps it: one more kept, showing its result-title, and saves it.",
+    "Pressing result-keep for a result already kept keeps nothing more.",
+    "Opened again, the tool shows what was kept as it was saved.",
+  ],
+  fixture: { query: "Tessera check search" },
+} as const satisfies VerificationProfile;
+
 /** Every profile, by ID. */
 export const PROFILES = {
   "item-list": ITEM_LIST_PROFILE,
@@ -192,6 +224,7 @@ export const PROFILES = {
   chart: CHART_PROFILE,
   cards: CARDS_PROFILE,
   scheduling: SCHEDULING_PROFILE,
+  "search-results": SEARCH_RESULTS_PROFILE,
 } as const satisfies Record<string, VerificationProfile>;
 
 export const PROFILE_IDS = [
@@ -201,6 +234,7 @@ export const PROFILE_IDS = [
   "chart",
   "cards",
   "scheduling",
+  "search-results",
 ] as const satisfies readonly (keyof typeof PROFILES)[];
 export type ProfileId = (typeof PROFILE_IDS)[number];
 

@@ -1135,6 +1135,104 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
   return { ok: true };
 }
 
+/** "1 result kept", "3 results kept". */
+const keptCount = (count: number) => `${count} ${count === 1 ? "result" : "results"} kept`;
+
+/**
+ * The search-results profile's check (VER-03, #351): it searches, keeps a result no one has kept
+ * yet, presses keep on it again, and opens the tool again. The results are the tool's own sample
+ * answers (A69), so which results come is the tool's: the check asks only that some do, and reads
+ * what it keeps by the result's own title.
+ */
+async function searchResults(context: CheckContext): Promise<CheckOutcome> {
+  const profile = "search-results" as const;
+  const [searches, keeps, once, reopens] = PROFILES[profile].rules;
+  const { query } = PROFILES[profile].fixture;
+
+  // Searching: at least one result.
+  const tool = await context.rehearse();
+  const before = await readList(profile, keeps, tool, "kept");
+  if (!("texts" in before)) return before;
+  const searched = await drive(profile, searches, tool, [
+    { do: "fill", hook: "search-query", value: query },
+    { do: "click", hook: "search-go" },
+  ]);
+  if (!("steps" in searched)) return searched;
+  const results = await readList(profile, searches, tool, "result");
+  if (!("texts" in results)) return results;
+  if (results.count === 0) {
+    return broke(profile, searches, `at least one result after searching for "${query}"`, "none");
+  }
+  const titles = await readList(profile, searches, tool, "result-title");
+  if (!("texts" in titles)) return titles;
+  if (titles.count !== results.count) {
+    return broke(
+      profile,
+      searches,
+      `one result-title in each of the ${results.count} results`,
+      `${titles.count}`,
+    );
+  }
+
+  // Keeping one no one has kept yet: one more kept, showing its title.
+  const isKept = (title: string) => before.texts.some((text) => text.includes(title));
+  const at = titles.texts.findIndex((title) => title.trim() !== "" && !isKept(title.trim()));
+  if (at < 0) {
+    return broke(
+      profile,
+      keeps,
+      "a result with a title, not already kept, to keep",
+      `titles ${clip(titles.texts)}, with ${keptCount(before.count)}`,
+    );
+  }
+  const title = titles.texts[at]!.trim();
+  const kept = await drive(profile, keeps, tool, [{ do: "click", hook: "result-keep", index: at }]);
+  if (!("steps" in kept)) return kept;
+  const after = await readList(profile, keeps, tool, "kept");
+  if (!("texts" in after)) return after;
+  const showing = await findAll(profile, keeps, tool, "kept", title);
+  if (!Array.isArray(showing)) return showing;
+  if (after.count !== before.count + 1 || showing.length !== 1) {
+    return broke(
+      profile,
+      keeps,
+      `${keptCount(before.count + 1)}, one showing "${title}", after keeping it`,
+      `${keptCount(after.count)}, ${showing.length} showing it`,
+    );
+  }
+
+  // Keeping it again: nothing more.
+  const again = await drive(profile, once, tool, [{ do: "click", hook: "result-keep", index: at }]);
+  if (!("steps" in again)) return again;
+  const twice = await readList(profile, once, tool, "kept");
+  if (!("texts" in twice)) return twice;
+  if (twice.count !== after.count) {
+    return broke(
+      profile,
+      once,
+      `still ${keptCount(after.count)} after keeping "${title}" again`,
+      keptCount(twice.count),
+    );
+  }
+
+  // Opened again: what was kept, as it was saved.
+  const reopenedTool = await context.rehearse();
+  const reopened = await readList(profile, reopens, reopenedTool, "kept");
+  if (!("texts" in reopened)) return reopened;
+  const still = await findAll(profile, reopens, reopenedTool, "kept", title);
+  if (!Array.isArray(still)) return still;
+  const differs = changed(after.texts, reopened.texts, (text) => text);
+  if (reopened.count !== after.count || still.length !== 1 || differs) {
+    return broke(
+      profile,
+      reopens,
+      `the ${keptCount(after.count)} it showed, one showing "${title}", after opening the tool again`,
+      `${keptCount(reopened.count)}${differs ? `; ${differs}` : ""}`,
+    );
+  }
+  return { ok: true };
+}
+
 const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<CheckOutcome>>> = {
   "item-list": itemList,
   filtering,
@@ -1142,6 +1240,7 @@ const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<Chec
   chart,
   cards,
   scheduling,
+  "search-results": searchResults,
 };
 
 /**

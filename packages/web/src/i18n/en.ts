@@ -294,6 +294,11 @@ export const en = {
   "details.rule.scheduling.3": "Removing a rule takes it away, and saves that.",
   "details.rule.scheduling.4":
     "Opened again, the tool shows the sessions and rules as they were saved.",
+  "details.rule.search-results.1":
+    "A search shows its results, from the sample answers the tool carries for its service.",
+  "details.rule.search-results.2": "Keeping a result adds it to what is kept, and saves it.",
+  "details.rule.search-results.3": "Keeping a result already kept adds nothing more.",
+  "details.rule.search-results.4": "Opened again, the tool shows what was kept as it was saved.",
   "details.check.noBehavior": "Its behavior wasn't checked, so it isn't verified.",
   "details.check.acceptance":
     "Checked against your request: Tessera tried what you asked with the tool's own controls, which checks less than a full behavior check.",
@@ -359,6 +364,8 @@ export const en = {
   "history.tried.cards": "making cards from pasted notes, and opening it again",
   "history.tried.scheduling":
     "adding a task, keeping a weekday free with a rule, removing the rule, and opening it again",
+  "history.tried.search-results":
+    "searching, keeping a result, keeping it again, and opening it again",
   "history.restore": "Restore",
   "history.restoreLabel": "Restore version {index}",
   "history.confirmHeading": "Restore version {index}?",
