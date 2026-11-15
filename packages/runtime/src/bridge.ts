@@ -32,6 +32,33 @@ export const systemClock: HostClock = {
 };
 
 /** The clock's answer for a moment in a time zone: the date there, and its offset from UTC. */
+/** `date` (YYYY-MM-DD) and `days` more, by the calendar. */
+const addDays = (date: string, days: number): string => {
+  const at = new Date(`${date}T12:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
+};
+
+/**
+ * `clock` moved `days` calendar days on, in its own time zone (RUN-07): the same time of day where
+ * it can be, and always the later date, whatever a daylight-saving change does to the day's length.
+ * For a behavior check that comes back to a tool another day (#351).
+ */
+export function daysLater(clock: HostClock, days: number): HostClock {
+  if (days === 0) return clock;
+  const zone = clock.timeZone();
+  const shift = (now: number) => {
+    const wanted = addDays(clockReading(now, zone).date, days);
+    let at = now + days * 86_400_000;
+    // A day of 23 or 25 hours on the way: an hour at a time toward the wanted date.
+    for (let tries = 0; tries < 4 && clockReading(at, zone).date !== wanted; tries += 1) {
+      at += clockReading(at, zone).date < wanted ? 3_600_000 : -3_600_000;
+    }
+    return at;
+  };
+  return { now: () => shift(clock.now()), timeZone: () => zone };
+}
+
 export function clockReading(epochMs: number, timeZone: string): BridgeResult<"clock.now"> {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,

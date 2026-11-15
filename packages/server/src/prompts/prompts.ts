@@ -572,9 +572,11 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
  * tool with its lists and a catalogue of saved tools filled to its cap (GEN-18): at most 9,184
  * characters over the fixtures' requests when raised from 8,900, which that shape could pass (the
  * owner's choice, 2026-11-11). Raised to 10,900 for the person's connections, the rule for them and
- * up to `INTENT_CONNECTIONS_LISTED` of their names (A74, the owner's choice of 2026-11-14).
+ * up to `INTENT_CONNECTIONS_LISTED` of their names (A74, the owner's choice of 2026-11-14), then to
+ * 11,500 for M4's profiles, each listed for the stage to choose (A79, within the 30,000 the owner
+ * allowed on 2026-11-15, A77).
  */
-export const INTENT_PROMPT_BUDGET = 10_900;
+export const INTENT_PROMPT_BUDGET = 11_500;
 
 /** How many of the person's connections the intent stage is told of, by name (A74). */
 export const INTENT_CONNECTIONS_LISTED = 20;

@@ -28,8 +28,10 @@ export type CheckContext = {
    * again on what it has saved so far, as reopening it would. The copy is never the person's data
    * and is never stored: it goes with the panel. The tool this context gave is unmounted. The next
    * check starts on a live candidate in the staging phase again, and rehearses on a fresh copy.
+   * With `daysAhead`, the host's clock reads that many days later, as a person coming back another
+   * day (RUN-07, #351).
    */
-  rehearse(): Promise<MountedTool>;
+  rehearse(daysAhead?: number): Promise<MountedTool>;
 };
 
 export type VerificationCheck = {

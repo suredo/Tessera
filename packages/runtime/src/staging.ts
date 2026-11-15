@@ -11,7 +11,7 @@ import {
   type PatchRefusal,
   type Workspace,
 } from "@tessera/contracts";
-import { BridgeError, serveBridge, type DataHandlers } from "./bridge.ts";
+import { BridgeError, daysLater, serveBridge, systemClock, type DataHandlers } from "./bridge.ts";
 import type { CheckContext, CheckOutcome, VerificationCheck } from "./checks.ts";
 import { mountTool, type MountedTool, type WatchdogOptions } from "./host.ts";
 import { serverActivation, type Activate } from "./server-activation.ts";
@@ -208,10 +208,11 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       verdict = { check: "start", outcome: { ok: false, reason: (error as Error).message } };
     }
     if (tool) {
-      const serve = (next: MountedTool, data: DataHandlers | undefined) =>
+      const serve = (next: MountedTool, data: DataHandlers | undefined, daysAhead = 0) =>
         serveBridge(next, {
           capabilities: candidate.capabilities,
           samples: candidate.connections ?? {},
+          ...(daysAhead > 0 ? { clock: daysLater(systemClock, daysAhead) } : {}),
           ...(data
             ? { data, rehearsal: true }
             : { data: syntheticData(candidate.syntheticData), staging: true }),
@@ -229,15 +230,22 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       // can't write, and its rehearsals on a fresh copy.
       let mounted = { tool, bridge: serve(tool, undefined), rehearsing: false };
       let copy: DataHandlers | undefined;
-      const replace = async (data: DataHandlers | undefined): Promise<MountedTool> => {
+      const replace = async (
+        data: DataHandlers | undefined,
+        daysAhead = 0,
+      ): Promise<MountedTool> => {
         mounted.bridge.stop();
         mounted.tool.unmount();
         const next = await mount();
-        mounted = { tool: next, bridge: serve(next, data), rehearsing: data !== undefined };
+        mounted = {
+          tool: next,
+          bridge: serve(next, data, daysAhead),
+          rehearsing: data !== undefined,
+        };
         return next;
       };
-      const rehearse = (): Promise<MountedTool> =>
-        replace((copy ??= throwawayData(candidate.syntheticData)));
+      const rehearse = (daysAhead = 0): Promise<MountedTool> =>
+        replace((copy ??= throwawayData(candidate.syntheticData)), daysAhead);
       try {
         for (const check of options.checks) {
           copy = undefined;

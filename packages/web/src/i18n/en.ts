@@ -299,6 +299,13 @@ export const en = {
   "details.rule.search-results.2": "Keeping a result adds it to what is kept, and saves it.",
   "details.rule.search-results.3": "Keeping a result already kept adds nothing more.",
   "details.rule.search-results.4": "Opened again, the tool shows what was kept as it was saved.",
+  "details.rule.items-over-time.1": "Adding an item puts it in the list, and saves it.",
+  "details.rule.items-over-time.2":
+    "Marking an item done marks today by the computer's clock, and saves that; marking it again the same day counts once.",
+  "details.rule.items-over-time.3":
+    "Its streak counts the days in a row it was done, ending today; a day missed starts it again.",
+  "details.rule.items-over-time.4":
+    "Opened again, that day or a later one, the tool shows the items and the days they were done as they were saved.",
   "details.check.noBehavior": "Its behavior wasn't checked, so it isn't verified.",
   "details.check.acceptance":
     "Checked against your request: Tessera tried what you asked with the tool's own controls, which checks less than a full behavior check.",
@@ -364,6 +371,8 @@ export const en = {
   "history.tried.cards": "making cards from pasted notes, and opening it again",
   "history.tried.scheduling":
     "adding a task, keeping a weekday free with a rule, removing the rule, and opening it again",
+  "history.tried.items-over-time":
+    "adding an item, marking it done today, the next day and after a day missed, and opening it again",
   "history.tried.search-results":
     "searching, keeping a result, keeping it again, and opening it again",
   "history.restore": "Restore",

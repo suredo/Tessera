@@ -1300,6 +1300,146 @@ async function reopenCheck(
   return { ok: true };
 }
 
+/**
+ * The items-over-time profile's check (VER-03, #351), across days by the host's clock (RUN-07):
+ * it adds an item of its own today and marks it done, twice, expecting a streak of 1; comes back
+ * the next day and marks it done, expecting 2; comes back two days after that, a day missed, and
+ * marks it done, expecting 1; and opens the tool again that day, expecting the streak still 1. Its
+ * saves go to a throwaway copy each rehearsal starts on (BRG-06). It reads a streak as the first
+ * whole number its element shows, so the tool may say it in any words.
+ */
+async function itemsOverTime(context: CheckContext): Promise<CheckOutcome> {
+  const profile = "items-over-time" as const;
+  const [adds, marks, counts, reopens] = PROFILES[profile].rules;
+  const name = unique(PROFILES[profile].fixture.itemName);
+
+  /** Where the check's item is in `tool`: exactly one item showing its name. */
+  const find = async (tool: MountedTool, rule: string, when: string) => {
+    const at = await findAll(profile, rule, tool, "habit", name);
+    if (!Array.isArray(at)) return at;
+    if (at.length !== 1) {
+      return broke(
+        profile,
+        rule,
+        `one item showing "${name}" ${when}`,
+        `${items(at.length)} showing it`,
+      );
+    }
+    return at[0]!;
+  };
+  /** The streak the check's item shows: the first whole number of its habit-streak. */
+  const streak = async (tool: MountedTool, at: number, rule: string) => {
+    const habits = await readList(profile, rule, tool, "habit");
+    if (!("texts" in habits)) return habits;
+    const streaks = await readList(profile, rule, tool, "habit-streak");
+    if (!("texts" in streaks)) return streaks;
+    if (streaks.count !== habits.count) {
+      return broke(
+        profile,
+        rule,
+        `one habit-streak in each of the ${items(habits.count)}`,
+        `${streaks.count}`,
+      );
+    }
+    const found = /\d+/.exec(streaks.texts[at] ?? "");
+    return found ? Number(found[0]) : `no number in "${(streaks.texts[at] ?? "").slice(0, 60)}"`;
+  };
+  /**
+   * Marks the check's item done in `tool` and gives the streak it then shows. The item is found by
+   * its name before the press and again after it, as a tracker may move a done item, to the top
+   * or by its streak, and no rule asks it to keep its place (#374 review).
+   */
+  const markDone = async (tool: MountedTool, when: string) => {
+    const at = await find(tool, marks, when);
+    if (typeof at !== "number") return at;
+    const clicked = await drive(profile, marks, tool, [
+      { do: "click", hook: "habit-done", index: at },
+    ]);
+    if (!("steps" in clicked)) return clicked;
+    const now = await find(tool, marks, `${when}, after marking it done`);
+    if (typeof now !== "number") return now;
+    return streak(tool, now, counts);
+  };
+  const expect = (
+    shown: number | string | CheckOutcome,
+    wanted: number,
+    rule: string,
+    when: string,
+  ) => {
+    if (typeof shown === "object") return shown;
+    if (shown !== wanted) {
+      return broke(
+        profile,
+        rule,
+        `a streak of ${wanted} ${when}`,
+        typeof shown === "number" ? `${shown}` : shown,
+      );
+    }
+    return undefined;
+  };
+
+  // Today: added, done once and again, a streak of 1.
+  const today = await context.rehearse();
+  const added = await drive(profile, adds, today, [
+    { do: "fill", hook: "habit-name", value: name },
+    { do: "click", hook: "habit-add" },
+  ]);
+  if (!("steps" in added)) return added;
+  const at = await find(today, adds, "after adding it");
+  if (typeof at !== "number") return at;
+  const first = expect(
+    await markDone(today, "today"),
+    1,
+    counts,
+    "after marking it done for the first time today",
+  );
+  if (first) return first;
+  const again = expect(
+    await markDone(today, "today"),
+    1,
+    marks,
+    "after marking it done again the same day",
+  );
+  if (again) return again;
+
+  // The next day: done again, a streak of 2.
+  const tomorrow = await context.rehearse(1);
+  const atTomorrow = await find(tomorrow, reopens, "the next day");
+  if (typeof atTomorrow !== "number") return atTomorrow;
+  const second = expect(
+    await markDone(tomorrow, "the next day"),
+    2,
+    counts,
+    "after marking it done the next day too",
+  );
+  if (second) return second;
+
+  // Two days after that, a day missed: done again, a streak of 1.
+  const later = await context.rehearse(3);
+  const atLater = await find(later, reopens, "three days after adding it");
+  if (typeof atLater !== "number") return atLater;
+  const missed = expect(
+    await markDone(later, "three days after adding it"),
+    1,
+    counts,
+    "after marking it done with the day before missed",
+  );
+  if (missed) return missed;
+
+  // Opened again that day: as it was saved.
+  const reopened = await context.rehearse(3);
+  const atReopened = await find(reopened, reopens, "opened again that day");
+  if (typeof atReopened !== "number") return atReopened;
+  const kept = expect(
+    await streak(reopened, atReopened, reopens),
+    1,
+    reopens,
+    "opened again that day",
+  );
+  if (kept) return kept;
+  return { ok: true };
+}
+
 const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<CheckOutcome>>> = {
   "item-list": itemList,
   filtering,
@@ -1308,6 +1448,7 @@ const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<Chec
   cards,
   scheduling,
   "search-results": searchResults,
+  "items-over-time": itemsOverTime,
 };
 
 /**

@@ -216,6 +216,32 @@ export const SEARCH_RESULTS_PROFILE = {
   fixture: { query: "Tessera check search" },
 } as const satisfies VerificationProfile;
 
+/**
+ * Items marked done day by day, with how many days in a row each was done: T4, the habit tracker
+ * (M4, #351). Its check moves the host's clock (RUN-07) across days, as a person comes back to it.
+ */
+export const ITEMS_OVER_TIME_PROFILE = {
+  id: "items-over-time",
+  fits: "items marked done day by day, with streaks, as a habit tracker",
+  hooks: [
+    { name: "habit-name", says: "the field for a new item's name" },
+    { name: "habit-add", says: "the button that adds the item named there" },
+    { name: "habit", says: "each item, one element per item, its text holding its name" },
+    { name: "habit-done", says: "inside each item, the button that marks it done today" },
+    {
+      name: "habit-streak",
+      says: "inside each item, the element whose text holds its streak in days, as a number",
+    },
+  ],
+  rules: [
+    "Typing a name in habit-name and pressing habit-add adds one item with that name, and saves it.",
+    "Pressing an item's habit-done marks it done today, by the host's clock, and saves that; pressed again the same day, it stays done, counted once.",
+    "Once an item is done today, its habit-streak shows how many days in a row it was done, ending today: done yesterday too shows 2; a day missed before today shows 1.",
+    "Opened again, on the same day or a later one, the tool shows the items and the days they were done as they were saved.",
+  ],
+  fixture: { itemName: "Tessera check habit" },
+} as const satisfies VerificationProfile;
+
 /** Every profile, by ID. */
 export const PROFILES = {
   "item-list": ITEM_LIST_PROFILE,
@@ -225,6 +251,7 @@ export const PROFILES = {
   cards: CARDS_PROFILE,
   scheduling: SCHEDULING_PROFILE,
   "search-results": SEARCH_RESULTS_PROFILE,
+  "items-over-time": ITEMS_OVER_TIME_PROFILE,
 } as const satisfies Record<string, VerificationProfile>;
 
 export const PROFILE_IDS = [
@@ -235,6 +262,7 @@ export const PROFILE_IDS = [
   "cards",
   "scheduling",
   "search-results",
+  "items-over-time",
 ] as const satisfies readonly (keyof typeof PROFILES)[];
 export type ProfileId = (typeof PROFILE_IDS)[number];
 
