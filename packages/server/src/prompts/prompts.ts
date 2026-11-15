@@ -894,6 +894,7 @@ const CAPABILITY_WORDS = {
   clock: "the current date, time and time zone",
   chart: "charts and graphs, drawn by Tessera",
   connection: "outside services the person connected",
+  files: "images the person picks to open",
 } as const satisfies Record<BridgeCapability, string>;
 // A capability with its own prompt part is told of only with that part (#349 step 4).
 const capabilityLines = () =>

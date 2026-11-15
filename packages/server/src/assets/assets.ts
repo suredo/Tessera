@@ -5,6 +5,7 @@ import {
   ASSET_LIMIT_BYTES,
   assetIdSchema,
   assetSchema,
+  PICK_HOLD_HOURS,
   WORKSPACE_ASSETS_LIMIT_BYTES,
   type Asset,
   type AssetType,
@@ -67,20 +68,24 @@ export const getAsset = (store: AssetStore, id: string): Asset | undefined =>
     : undefined;
 
 // Everything stored that may name an asset, as JSON text: every workspace's data, trashed ones
-// included, every tool version, every recovery snapshot and every data undo entry. A new table
-// that stores tool data must be added here, or cleanup can remove an asset it still holds.
+// included, every tool version, every recovery snapshot and every data undo entry, and the images
+// picked for a tool in the last day (A80). A new table that stores tool data must be added here,
+// or cleanup can remove an asset it still holds.
 const REFERENCE_SOURCES = [
   "SELECT data AS text FROM workspaces",
   "SELECT body AS text FROM tool_versions",
   "SELECT data AS text FROM recovery_snapshots",
   "SELECT change AS text FROM data_undo",
+  "SELECT asset_id AS text FROM asset_picks",
 ];
-// The same, for one workspace: its data, the versions in its history and its snapshots.
+// The same, for one workspace: its data, the versions in its history, its snapshots, its undo
+// entries and the images picked for it.
 const WORKSPACE_SOURCES = [
   "SELECT data AS text FROM workspaces WHERE id = ?",
   "SELECT v.body AS text FROM tool_versions v JOIN workspace_versions w ON w.hash = v.hash WHERE w.workspace_id = ?",
   "SELECT data AS text FROM recovery_snapshots WHERE workspace_id = ?",
   "SELECT change AS text FROM data_undo WHERE workspace_id = ?",
+  "SELECT asset_id AS text FROM asset_picks WHERE workspace_id = ?",
 ];
 const textRow = z.object({ text: z.string() });
 
@@ -246,6 +251,32 @@ async function storeNow(
   return { ok: true, asset: getAsset(store, id) ?? asset };
 }
 
+/**
+ * Stores an image the person picked for a tool in `workspaceId` (CAP-03, A80), as `storeAsset`
+ * does, within the workspace's limit, and holds it for that workspace for a day from now, so the
+ * tool can read it and save its ID in its data. Picking the same image again holds it a day from
+ * then. Nothing is stored or held if a check refuses it.
+ */
+export function pickAsset(
+  store: AssetStore,
+  workspaceId: string,
+  bytes: Uint8Array,
+  name: string,
+): Promise<StoreAssetResult> {
+  return exclusively(store, async () => {
+    const stored = await storeNow(store, bytes, { originalName: name, workspaceId });
+    if (stored.ok) {
+      store.db.run(
+        "INSERT INTO asset_picks (workspace_id, asset_id, picked_at) VALUES (?, ?, ?) ON CONFLICT (workspace_id, asset_id) DO UPDATE SET picked_at = excluded.picked_at",
+        workspaceId,
+        stored.asset.id,
+        store.now().toISOString(),
+      );
+    }
+    return stored;
+  });
+}
+
 /** An asset's row and bytes, or undefined for an ID that isn't a stored asset's (AST-03). */
 export async function readAsset(
   store: AssetStore,
@@ -258,7 +289,7 @@ export async function readAsset(
 
 /**
  * Removes every asset nothing refers to any more: its row, in one transaction that checks again,
- * then its file. A crash between the two leaves a file without a row, which the next start's sweep
+ * then its file. Picks older than a day are let go of first (A80). A crash between the two leaves a file without a row, which the next start's sweep
  * removes. Returns the IDs removed. `beforeFiles` is for tests: it runs after the rows go and
  * before the files do.
  */
@@ -274,6 +305,8 @@ async function collectNow(
   options: { beforeFiles?: () => Promise<void> },
 ): Promise<string[]> {
   const removed = store.db.transaction(() => {
+    const expired = new Date(store.now().getTime() - PICK_HOLD_HOURS * 3_600_000).toISOString();
+    store.db.run("DELETE FROM asset_picks WHERE picked_at < ?", expired);
     const held = referencedAssets(store);
     const unheld = store.db.all(assetFromRow, SELECT_ASSET).filter((asset) => !held.has(asset.id));
     for (const asset of unheld) store.db.run("DELETE FROM assets WHERE hash = ?", asset.id);

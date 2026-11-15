@@ -10,6 +10,7 @@ import {
   pageRequestSchema,
   connectionRequestSchema,
 } from "./connection.ts";
+import { pickedFileSchema, pickNameSchema } from "./files.ts";
 import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
 import { patchBatchSchema, recordIdSchema, TOOL_DATA_LIMIT_BYTES } from "./patch.ts";
 
@@ -26,6 +27,8 @@ export const BRIDGE_CAPABILITIES = {
   chart: "Charts the host draws from a spec, with tessera.chart (CAP-04, ADR 0014).",
   connection:
     "Requests to the outside services the person connected, by name, made by the host (CAP-02, ADR 0015).",
+  files:
+    "Images the person picks to open, through the host's picker, kept as assets; never a path (CAP-03, A80).",
 } as const;
 export type BridgeCapability = keyof typeof BRIDGE_CAPABILITIES;
 
@@ -34,7 +37,7 @@ export type BridgeCapability = keyof typeof BRIDGE_CAPABILITIES;
  * request that may use it (connections, #349 step 4), so the bridge part and the discuss stage
  * leave it and its actions out. The manifest file and the checks still hold them.
  */
-export const OWN_PART_CAPABILITIES: readonly BridgeCapability[] = ["connection"];
+export const OWN_PART_CAPABILITIES: readonly BridgeCapability[] = ["connection", "files"];
 
 /**
  * Where a mount stands. A tool is `starting` until the host has given it its data, and `staging`
@@ -228,6 +231,34 @@ export const BRIDGE_ACTIONS = {
       },
     ],
   },
+  "file.pick": {
+    description:
+      "Asks the person to pick an image to open, through the host's own picker: only right after the person clicks. The host keeps it as an asset and answers with its ID and what it is, never a path, or with file null if the person picked nothing. Show it with tessera.assetUrl(id), and save the ID in the tool's data to keep it: an image no data names is let go after a day (CAP-03, A80).",
+    capability: "files",
+    // It changes nothing of the tool's data: the image is held for the workspace until its data
+    // names it. The host page asks only after a click, and the server only for an active tool.
+    writes: false,
+    args: noArgs,
+    result: z.strictObject({
+      file: pickedFileSchema.nullable().describe("The image picked, or null if none was."),
+    }),
+    maxArgsBytes: 1024,
+    examples: [
+      {
+        args: {},
+        result: {
+          file: {
+            id: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+            type: "image/jpeg",
+            name: "beach.jpg",
+            sizeBytes: 482113,
+            widthPx: 1600,
+            heightPx: 1200,
+          },
+        },
+      },
+    ],
+  },
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
 
@@ -328,6 +359,24 @@ export const bridgeDataRequestSchema = z
   })
   .describe("A tool's data call, passed on by the host page to the server (CON-03).");
 export type BridgeDataRequest = z.infer<typeof bridgeDataRequestSchema>;
+
+/** The server's route for a picked file's bytes, on the host app's own origin (A80). */
+export const FILE_PICK_ROUTE = "/api/bridge/file";
+
+/**
+ * What the host page sends with a picked file's bytes, as the route's `request` query parameter,
+ * JSON: the workspace, where the mount stands, the tool's file.pick call as it made it, which the
+ * server checks again (RUN-04), and the file's name. The bytes are the request's body.
+ */
+export const filePickRequestSchema = z
+  .strictObject({
+    workspaceId: z.uuid(),
+    phase: z.enum(BRIDGE_PHASES),
+    call: z.unknown().describe("The tool's file.pick call, checked by the server as the host did."),
+    name: pickNameSchema,
+  })
+  .describe("A picked file, passed on by the host page to the server (CAP-03, A80).");
+export type FilePickRequest = z.infer<typeof filePickRequestSchema>;
 
 /** What the host knows of the mount a call came through. */
 export type BridgeContext = {

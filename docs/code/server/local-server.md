@@ -7,7 +7,7 @@ implements: [SEC-03]
 tests: [../../../packages/server/test/local-server.test.ts, ../../../packages/server/test/bridge-routes.test.ts, ../../../packages/server/test/activation-route.test.ts]
 tags: [code, server, security, http]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T14:12:19Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T21:02:08Z }
 ---
 
 # Purpose
@@ -48,5 +48,5 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `body.ts`: `readJson`, `readBytes`, `text`, `json`
 - `guard.ts`: `APP_HOST`, `RUNTIME_HOST`, `RouteKind` (type), `GuardResult` (type), `routeKind`, `appOrigin`, `runtimeOrigin`, `checkRequest`
-- `index.ts`: `json`, `readJson`, `text`, `APP_HOST`, `RUNTIME_HOST`, `appOrigin`, `checkRequest`, `routeKind`, `runtimeOrigin`, `GuardResult` (type), `RouteKind` (type), `DEFAULT_PORT`, `startLocalServer`, `Handler` (type), `LocalServer` (type), `ServerOptions` (type)
+- `index.ts`: `json`, `readBytes`, `readJson`, `text`, `APP_HOST`, `RUNTIME_HOST`, `appOrigin`, `checkRequest`, `routeKind`, `runtimeOrigin`, `GuardResult` (type), `RouteKind` (type), `DEFAULT_PORT`, `startLocalServer`, `Handler` (type), `LocalServer` (type), `ServerOptions` (type)
 - `server.ts`: `DEFAULT_PORT`, `Handler` (type), `ServerOptions` (type), `LocalServer` (type), `startLocalServer`

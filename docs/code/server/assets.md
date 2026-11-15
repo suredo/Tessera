@@ -7,7 +7,7 @@ implements: [DATA-11, AST-01, AST-02, AST-03, AST-06]
 tests: [../../../packages/server/test/assets.test.ts, ../../../packages/server/test/asset-undo-scenario.test.ts]
 tags: [code, server, data, assets]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-25T11:38:15Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T21:02:08Z }
 ---
 
 # Purpose
@@ -20,6 +20,7 @@ Keeps the person's images (`DATA-11`, A48): photos and other pictures a tool sho
   - `storeAsset` stores bytes as an asset, once (an imported image keeps the date it came with), or returns why not (`StoreAssetResult`): empty, too large, not an image, or over the workspace's limit.
   - `getAsset` gives an asset's row, and `readAsset` its row and bytes, for an ID that is a stored asset's.
   - `workspaceAssets` gives the IDs one workspace's data, versions and snapshots name, which the [bridge route](bridge.md) checks before it hands a tool an image (`AST-04`), and `readAssetNow` reads one at once, for that answer.
+  - `pickAsset` keeps an image the person picked for a tool (A80), as `storeAsset` does within the workspace's limit, and holds it for that workspace for 24 hours from now, in the table of picks (migration 0020-asset-picks.sql); picking it again holds it 24 hours from then.
   - `assetsNamedIn` gives the stored assets named in given texts, as an export's are; `holdingAssets` runs work that stores images and then writes what names them, such as an import, with no cleanup or sweep in between.
   - `referencedAssets` gives the IDs something stored still names; `collectAssets` removes every asset nothing names.
   - `sweepAssets` removes what an interrupted write left, at start.
@@ -31,7 +32,7 @@ Keeps the person's images (`DATA-11`, A48): photos and other pictures a tool sho
 - **Limits are checked before anything is written** (`AST-02`): 25 MB for one asset, and 500 MB for the assets a workspace's data, versions and snapshots name, with the new one. A refusal says plainly why, and writes no file and no row.
 - **A row always has its file.** A new asset is written under a temporary name inside the assets folder, then renamed into place, and only then is its row added. The same bytes always make the same asset, so storing them again adds nothing.
 - **An ID is only ever a SHA-256** (`AST-03`). Every lookup checks the ID first, and a file's path is built from the checked ID and the row's type, never from anything a caller passes, so nothing outside the asset store can be read through it.
-- **An asset goes only when nothing refers to it** (`DATA-09`, `DATA-11`). What refers to an asset isn't recorded: `collectAssets` looks through everything stored, as JSON text, for its ID ([ADR 0007](../../decisions/adr/0007-asset-references-by-scanning.md)). That is every workspace's data, trashed ones included, every tool version, every recovery snapshot and every data undo entry, so an undo can always bring back the images it names. A workspace in the trash keeps its assets until it is removed for good. The row goes in one transaction that checks again, then the file; a crash between them leaves a file without a row, which the next start removes.
+- **An asset goes only when nothing refers to it** (`DATA-09`, `DATA-11`). What refers to an asset isn't recorded: `collectAssets` looks through everything stored, as JSON text, for its ID ([ADR 0007](../../decisions/adr/0007-asset-references-by-scanning.md)). That is every workspace's data, trashed ones included, every tool version, every recovery snapshot and every data undo entry, so an undo can always bring back the images it names, and every image picked for a tool in the last 24 hours (A80): cleanup first lets go of older picks, so a picked image no data names goes at the first cleanup after its hold. A workspace's picks count toward its limit, and its tool may read them (`AST-04`). A workspace in the trash keeps its assets until it is removed for good. The row goes in one transaction that checks again, then the file; a crash between them leaves a file without a row, which the next start removes.
 - **Storing, cleanup and the sweep run one at a time** for each database. Each touches rows and files with waits between them; otherwise cleanup could remove the file of an asset stored again while it waited, leaving a row with no file.
 - **A cropped photo can be undone across a restart** (M1's exit criterion). `asset-undo-scenario.test.ts` replaces a photo with a cropped copy, lets cleanup run, restarts Tessera through its launcher, undoes the crop and finds the original's bytes again; and, once 100 newer changes have discarded the crop's undo entry, cleanup removes the original.
 - **The start-up sweep touches only what is the store's** (`AST-06`). It removes every temporary file, and every file named like an asset, in the folder its name belongs in, that has no row. Any other file is left alone, as is everything outside the assets folder. The [launcher](launcher.md) sweeps and then cleans up at start, and cleans up again hourly after the trash's expiry.
@@ -51,6 +52,6 @@ Depends on [storage](storage.md) and the contracts. The [launcher](launcher.md) 
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `assets.ts`: `AssetStore` (type), `getAsset`, `assetsNamedIn`, `holdingAssets`, `workspaceAssets`, `readAssetNow`, `referencedAssets`, `StoreAssetRefusal` (type), `StoreAssetResult` (type), `storeAsset`, `readAsset`, `collectAssets`, `sweepAssets`
-- `index.ts`: `assetsNamedIn`, `collectAssets`, `getAsset`, `holdingAssets`, `readAsset`, `readAssetNow`, `referencedAssets`, `storeAsset`, `sweepAssets`, `workspaceAssets`, `AssetStore` (type), `StoreAssetRefusal` (type), `StoreAssetResult` (type), `sniffImage`, `Sniffed` (type)
+- `assets.ts`: `AssetStore` (type), `getAsset`, `assetsNamedIn`, `holdingAssets`, `workspaceAssets`, `readAssetNow`, `referencedAssets`, `StoreAssetRefusal` (type), `StoreAssetResult` (type), `storeAsset`, `pickAsset`, `readAsset`, `collectAssets`, `sweepAssets`
+- `index.ts`: `assetsNamedIn`, `collectAssets`, `getAsset`, `holdingAssets`, `pickAsset`, `readAsset`, `readAssetNow`, `referencedAssets`, `storeAsset`, `sweepAssets`, `workspaceAssets`, `AssetStore` (type), `StoreAssetRefusal` (type), `StoreAssetResult` (type), `sniffImage`, `Sniffed` (type)
 - `sniff.ts`: `Sniffed` (type), `sniffImage`

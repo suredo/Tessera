@@ -6,6 +6,7 @@ export {
   collectAssets,
   getAsset,
   holdingAssets,
+  pickAsset,
   readAsset,
   readAssetNow,
   referencedAssets,

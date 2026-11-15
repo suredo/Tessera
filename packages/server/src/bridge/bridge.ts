@@ -1,5 +1,6 @@
 import {
   type Artifact,
+  ASSET_LIMIT_BYTES,
   BRIDGE_ACTIONS,
   BRIDGE_REQUEST_LIMIT_BYTES,
   BRIDGE_ROUTE,
@@ -9,8 +10,17 @@ import {
   type BridgeDataRequest,
   type BridgeErrorCode,
   type BridgeReply,
+  FILE_PICK_ROUTE,
+  filePickRequestSchema,
+  type FilePickRequest,
 } from "@tessera/contracts";
-import { readAssetNow, workspaceAssets, type AssetStore } from "../assets/index.ts";
+import {
+  pickAsset,
+  readAssetNow,
+  workspaceAssets,
+  type AssetStore,
+  type StoreAssetRefusal,
+} from "../assets/index.ts";
 import {
   ConnectionRefusal,
   imageThroughConnection,
@@ -19,7 +29,7 @@ import {
   type ConnectionRequestOptions,
 } from "../connections/index.ts";
 import { checkToolData } from "../data-shape/index.ts";
-import { json, readJson, text, type Handler } from "../http/index.ts";
+import { json, readBytes, readJson, text, type Handler } from "../http/index.ts";
 import type { PatchRefusal } from "../patches/index.ts";
 import { loadVersion } from "../versions/index.ts";
 import {
@@ -189,7 +199,74 @@ export async function answerDataCall(
   }
 }
 
-/** The bridge's route for the local server, answering from `store`. */
+// The store's reasons a picked image isn't kept, as the bridge's codes.
+const PICK_CODES: Record<StoreAssetRefusal, BridgeErrorCode> = {
+  empty: "invalid-args",
+  "not-an-image": "invalid-args",
+  "too-large": "too-large",
+  "workspace-full": "too-large",
+};
+
+/**
+ * Keeps an image the person picked for a tool (CAP-03, A80): the tool's file.pick call is checked
+ * again, with the stored version's capabilities, and only for an active tool, whose person has
+ * clicked; then the bytes are stored as an asset, by their content and within the workspace's
+ * limit, and held for the workspace. The tool hears the asset's ID and what it is, never a path.
+ */
+export async function answerFilePick(
+  store: Store & AssetStore,
+  request: FilePickRequest,
+  bytes: Uint8Array,
+): Promise<BridgeReply | null> {
+  const workspace = getWorkspace(store, request.workspaceId);
+  const artifact = workspace ? currentArtifact(store, workspace.currentVersion) : undefined;
+  const checked = checkBridgeCall(SERVER_INSTANCE, request.call, {
+    instanceId: SERVER_INSTANCE,
+    phase: request.phase,
+    capabilities: artifact?.capabilities ?? [],
+  });
+  if (!checked.ok) return checked.reply;
+  const { requestId, action } = checked;
+  if (action !== "file.pick") {
+    return refusal(requestId, "invalid-args", "Only a file.pick call brings a file.");
+  }
+  if (!workspace || !artifact) {
+    return refusal(
+      requestId,
+      "failed",
+      "The tool's workspace is gone or in the trash. Nothing was kept.",
+    );
+  }
+  // A file comes only from the person's click, which makes the tool active (GEN-06).
+  if (request.phase !== "active") {
+    return refusal(
+      requestId,
+      "not-active",
+      "A file is picked only after the person clicks for it. Nothing was kept.",
+    );
+  }
+  try {
+    const stored = await pickAsset(store, workspace.id, bytes, request.name);
+    if (!stored.ok) return refusal(requestId, PICK_CODES[stored.reason], stored.message);
+    const { asset } = stored;
+    const result = BRIDGE_ACTIONS["file.pick"].result.safeParse({
+      file: {
+        id: asset.id,
+        type: asset.type,
+        name: request.name,
+        sizeBytes: asset.sizeBytes,
+        widthPx: asset.widthPx,
+        heightPx: asset.heightPx,
+      },
+    });
+    if (!result.success) return refusal(requestId, "failed", FAILED);
+    return { requestId, ok: true, result: result.data };
+  } catch {
+    return refusal(requestId, "failed", FAILED);
+  }
+}
+
+/** The bridge's routes for the local server, answering from `store`. */
 export function bridgeRoutes(
   store: Store & AssetStore,
   options: { connections?: ConnectionRequestOptions } = {},
@@ -208,6 +285,33 @@ export function bridgeRoutes(
         return text(res, 400, "Send a workspace, a phase and the tool's call, as JSON.");
       }
       const reply = await answerDataCall(store, request.data, options);
+      if (reply === null) return text(res, 400, "The call has no request ID to answer.");
+      json(res, reply);
+    },
+    // A picked image's bytes, with the call and its name in the query (A80).
+    [FILE_PICK_ROUTE]: async (req, res) => {
+      if (req.method !== "POST") return text(res, 405, "Send a picked file with POST.");
+      let parsed: unknown;
+      try {
+        const query = new URL(req.url ?? "/", "http://localhost").searchParams.get("request");
+        parsed = query === null ? undefined : JSON.parse(query);
+      } catch {
+        parsed = undefined;
+      }
+      const request = filePickRequestSchema.safeParse(parsed);
+      if (!request.success) {
+        return text(
+          res,
+          400,
+          "Send the workspace, the phase, the tool's call and the file's name.",
+        );
+      }
+      if (Number(req.headers["content-length"] ?? 0) > ASSET_LIMIT_BYTES) {
+        return text(res, 413, "The file is too large.");
+      }
+      const bytes = await readBytes(req, ASSET_LIMIT_BYTES);
+      if (bytes === "too-large") return text(res, 413, "The file is too large.");
+      const reply = await answerFilePick(store, request.data, bytes);
       if (reply === null) return text(res, 400, "The call has no request ID to answer.");
       json(res, reply);
     },

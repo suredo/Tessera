@@ -53,6 +53,10 @@
     {
       "name": "connection",
       "description": "Requests to the outside services the person connected, by name, made by the host (CAP-02, ADR 0015)."
+    },
+    {
+      "name": "files",
+      "description": "Images the person picks to open, through the host's picker, kept as assets; never a path (CAP-03, A80)."
     }
   ],
   "actions": [
@@ -810,6 +814,103 @@
           },
           "result": {
             "url": "https://videos.example.com/watch?v=abc123"
+          }
+        }
+      ]
+    },
+    {
+      "name": "file.pick",
+      "description": "Asks the person to pick an image to open, through the host's own picker: only right after the person clicks. The host keeps it as an asset and answers with its ID and what it is, never a path, or with file null if the person picked nothing. Show it with tessera.assetUrl(id), and save the ID in the tool's data to keep it: an image no data names is let go after a day (CAP-03, A80).",
+      "capability": "files",
+      "writes": false,
+      "maxArgsBytes": 1024,
+      "args": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "description": "No arguments."
+      },
+      "result": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "file": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$",
+                    "description": "The image's asset ID: show it with tessera.assetUrl(id), and save it in the tool's data to keep it."
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "image/png",
+                      "image/jpeg",
+                      "image/webp"
+                    ]
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "pattern": "^[^/\\\\\\p{Cc}]+$",
+                    "description": "The picked file's name, as the person's computer calls it; never a path."
+                  },
+                  "sizeBytes": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 26214400
+                  },
+                  "widthPx": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  },
+                  "heightPx": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "id",
+                  "type",
+                  "name",
+                  "sizeBytes",
+                  "widthPx",
+                  "heightPx"
+                ],
+                "additionalProperties": false,
+                "description": "An image the person picked, kept by the host as an asset (DATA-11)."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The image picked, or null if none was."
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "args": {},
+          "result": {
+            "file": {
+              "id": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+              "type": "image/jpeg",
+              "name": "beach.jpg",
+              "sizeBytes": 482113,
+              "widthPx": 1600,
+              "heightPx": 1200
+            }
           }
         }
       ]

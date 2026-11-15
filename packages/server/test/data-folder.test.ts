@@ -237,7 +237,7 @@ describe("migrating real data (ENG-18)", () => {
   it("ENG-18, CAP-02: a schema-16 database migrates with its requests' told kept, and no connections", async () => {
     const root = folderFromFixture("schema-16.sql");
     const folder = await openDataFolder(root);
-    expect(folder.migrated).toEqual([17, 18, 19]);
+    expect(folder.migrated).toEqual([17, 18, 19, 20]);
     expect(backups(root)).toHaveLength(1);
     const [request] = new RequestLedger(folder).unattached();
     expect(request).toMatchObject({ told: { workspaceId: null, numbers: [1] } });
@@ -251,7 +251,7 @@ describe("migrating real data (ENG-18)", () => {
   it("ENG-18, CAP-02: a schema-17 database migrates with its connection kept, and no permission to write yet", async () => {
     const root = folderFromFixture("schema-17.sql");
     const folder = await openDataFolder(root);
-    expect(folder.migrated).toEqual([18, 19]);
+    expect(folder.migrated).toEqual([18, 19, 20]);
     expect(backups(root)).toHaveLength(1);
     expect(listConnections(folder).map((c) => [c.name, c.hasKey])).toEqual([["movies", true]]);
     const garden = "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4";
@@ -268,11 +268,29 @@ describe("migrating real data (ENG-18)", () => {
   it("ENG-18, CAP-02: a schema-18 database migrates with its permission kept, and no requests recorded yet", async () => {
     const root = folderFromFixture("schema-18.sql");
     const folder = await openDataFolder(root);
-    expect(folder.migrated).toEqual([19]);
+    expect(folder.migrated).toEqual([19, 20]);
     expect(backups(root)).toHaveLength(1);
     const garden = "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4";
     expect(writesAllowed(folder, garden, "movies")).toBe(true);
     expect(recentRequests(folder, garden, 20)).toEqual([]);
+    folder.close();
+    const reopened = await openDataFolder(root);
+    expect(reopened.migrated).toEqual([]);
+    reopened.close();
+  });
+
+  it("ENG-18, CAP-03: a schema-19 database migrates with its recorded request kept, and nothing picked yet", async () => {
+    const root = folderFromFixture("schema-19.sql");
+    const folder = await openDataFolder(root);
+    expect(folder.migrated).toEqual([20]);
+    expect(backups(root)).toHaveLength(1);
+    const garden = "0b6c2d1e-3f4a-4b5c-8d6e-7f8091a2b3c4";
+    expect(recentRequests(folder, garden, 20)).toMatchObject([
+      { connection: "movies", method: "GET" },
+    ]);
+    expect(
+      folder.db.all(z.object({ n: z.number() }), "SELECT count(*) AS n FROM asset_picks"),
+    ).toEqual([{ n: 0 }]);
     folder.close();
     const reopened = await openDataFolder(root);
     expect(reopened.migrated).toEqual([]);

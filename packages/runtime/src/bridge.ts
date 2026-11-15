@@ -316,6 +316,9 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
         ? options.data.connectionImage(args, context)
         : Promise.reject(new BridgeError("failed", "The host can't show images from here."));
     },
+    // The host's picker comes with #350 step 1b; until then nothing is picked.
+    "file.pick": () =>
+      Promise.reject(new BridgeError("failed", "The host can't open files here yet.")),
   };
 
   const reply = (message: BridgeReply) => {
