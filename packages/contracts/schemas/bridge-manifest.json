@@ -23,6 +23,11 @@
       "argument": "request",
       "copiesData": true
     },
+    "pickFile": {
+      "action": "file.pick",
+      "argument": "none",
+      "copiesData": true
+    },
     "send": {
       "action": null,
       "argument": "message",

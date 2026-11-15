@@ -652,6 +652,15 @@ import type { BridgeMethodName } from "@tessera/contracts";
       openPage(request: unknown): Promise<unknown> {
         return call("link.open", request);
       },
+      /**
+       * Asks the person to pick an image through the host's own picker (A80), only from a click:
+       * resolves with { id, type, name, sizeBytes, widthPx, heightPx }, the image kept as an asset
+       * (show it with assetUrl(id), save the ID to keep it), or null if none was picked. Never a
+       * path. Rejects as call does.
+       */
+      async pickFile(): Promise<unknown> {
+        return ((await call("file.pick", {})) as { file: unknown }).file;
+      },
     } satisfies Record<BridgeMethodName, unknown>),
     enumerable: true,
   });

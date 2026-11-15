@@ -1,4 +1,10 @@
-import { BRIDGE_ROUTE, bridgeReplySchema, type BridgeDataRequest } from "@tessera/contracts";
+import {
+  BRIDGE_ROUTE,
+  bridgeReplySchema,
+  FILE_PICK_ROUTE,
+  type BridgeDataRequest,
+  type FilePickRequest,
+} from "@tessera/contracts";
 import { BridgeError, type DataCallContext, type DataHandlers } from "./bridge.ts";
 
 // The host page's data handlers (RUN-04): each data call a mounted tool makes goes to the server's
@@ -13,20 +19,24 @@ export function serverData(
   workspaceId: string,
   send: Send = (url, init) => fetch(url, init),
 ): DataHandlers {
-  const ask = async ({ phase, call }: DataCallContext): Promise<unknown> => {
-    const body: BridgeDataRequest = { workspaceId, phase, call };
-    const response = await send(BRIDGE_ROUTE, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    // Anything but a reply, such as a refused or broken request, is the host's failure, and the
-    // bridge answers it plainly; the server's words for it don't reach the tool.
+  // Anything but a reply, such as a refused or broken request, is the host's failure, and the
+  // bridge answers it plainly; the server's words for it don't reach the tool.
+  const answerOf = async (response: Response): Promise<unknown> => {
     if (!response.ok) throw new Error(`The bridge route answered ${response.status}.`);
     const reply = bridgeReplySchema.safeParse(await response.json());
     if (!reply.success) throw new Error("The bridge route's answer isn't a reply.");
     if (!reply.data.ok) throw new BridgeError(reply.data.error.code, reply.data.error.message);
     return reply.data.result;
+  };
+  const ask = async ({ phase, call }: DataCallContext): Promise<unknown> => {
+    const body: BridgeDataRequest = { workspaceId, phase, call };
+    return answerOf(
+      await send(BRIDGE_ROUTE, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
   };
   return {
     // The bridge checks every result against the manifest before the tool sees it.
@@ -42,5 +52,18 @@ export function serverData(
     // An image through one, fetched by the server and kept nowhere (A75).
     connectionImage: (_args, context) =>
       ask(context) as ReturnType<NonNullable<DataHandlers["connectionImage"]>>,
+    // A picked image's bytes, with the call that asked for it, which the server checks again and
+    // keeps as an asset held for the workspace (A80).
+    pickFile: async ({ name, bytes }, { phase, call }) => {
+      const request: FilePickRequest = { workspaceId, phase, call, name };
+      const query = encodeURIComponent(JSON.stringify(request));
+      return answerOf(
+        await send(`${FILE_PICK_ROUTE}?request=${query}`, {
+          method: "POST",
+          headers: { "content-type": "application/octet-stream" },
+          body: bytes,
+        }),
+      ) as ReturnType<NonNullable<DataHandlers["pickFile"]>>;
+    },
   };
 }

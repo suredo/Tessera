@@ -6,9 +6,11 @@ import {
   clockReading,
   daysLater,
   PLACEHOLDER_IMAGE,
+  SAMPLE_PICK,
   serveBridge,
   type BridgeOptions,
   type BridgeTool,
+  type ChosenFile,
   type DataHandlers,
   type HostClock,
 } from "../src/index.ts";
@@ -460,5 +462,140 @@ describe("the host's clock moved on by days (RUN-07, #351)", () => {
     expect(dateOf(daysLater(late, 1))).toBe("2026-02-02");
     // Zero days is the clock itself.
     expect(daysLater(spring, 0)).toBe(spring);
+  });
+});
+
+describe("files in, on the host page (CAP-03, A80)", () => {
+  const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+  const chosen = (name: string, bytes: Uint8Array, size = bytes.byteLength): ChosenFile => ({
+    name,
+    size,
+    arrayBuffer: () => Promise.resolve(bytes.slice().buffer),
+  });
+  const picked = {
+    id: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    type: "image/png" as const,
+    name: "beach.png",
+    sizeBytes: 4,
+    widthPx: 4,
+    heightPx: 3,
+  };
+  /** A tool that declares files, with the person's choice and the server stood in for. */
+  function picking(choose: () => Promise<ChosenFile | null>, options: Partial<BridgeOptions> = {}) {
+    const asked: { accept: readonly string[] }[] = [];
+    const sent: { name: string; bytes: number[]; phase: string }[] = [];
+    const bridge = served({
+      capabilities: ["files"],
+      hasActivation: () => true,
+      chooseFile: (accept) => {
+        asked.push({ accept });
+        return choose();
+      },
+      ...options,
+      data: {
+        read: () => Promise.resolve({ data: {}, revisions: {} }),
+        patch: () => Promise.resolve({ addedIds: [] }),
+        pickFile: (file, context) => {
+          sent.push({ name: file.name, bytes: [...file.bytes], phase: context.phase });
+          return Promise.resolve({ file: picked });
+        },
+        ...options.data,
+      },
+    });
+    return { ...bridge, asked, sent };
+  }
+
+  it("CAP-03: after a click, the host page's picker asks for an image, and the server keeps the bytes", async () => {
+    const { call, interact, asked, sent } = picking(() =>
+      Promise.resolve(chosen("C:\\fakepath\\beach.png", png)),
+    );
+    interact();
+    expect(await call("file.pick")).toMatchObject({ ok: true, result: { file: picked } });
+    expect(asked).toEqual([{ accept: ["image/png", "image/jpeg", "image/webp"] }]);
+    // The name only, never where it was; the call goes with the phase the person's click made.
+    expect(sent).toEqual([{ name: "beach.png", bytes: [...png], phase: "active" }]);
+  });
+
+  it("CAP-03: a pick the person cancels answers null, and the server isn't asked", async () => {
+    const { call, sent } = picking(() => Promise.resolve(null));
+    expect(await call("file.pick")).toMatchObject({ ok: true, result: { file: null } });
+    expect(sent).toEqual([]);
+  });
+
+  it("A80: without the person's click no picker opens, and the tool hears why", async () => {
+    const { call, asked, sent } = picking(() => Promise.resolve(chosen("a.png", png)), {
+      hasActivation: () => false,
+    });
+    const reply = await call("file.pick");
+    expect(code(reply)).toBe("not-allowed");
+    expect(reply?.ok ? "" : reply?.error.message).toContain("only right after the person clicks");
+    expect(asked).toEqual([]);
+    expect(sent).toEqual([]);
+  });
+
+  it("A80: one picker at a time; a second ask while one is open is refused", async () => {
+    let answer: (file: ChosenFile | null) => void = () => {};
+    const { call, asked } = picking(() => new Promise((resolve) => (answer = resolve)));
+    const first = call("file.pick", {}, "r-first");
+    expect(code(await call("file.pick", {}, "r-second"))).toBe("not-allowed");
+    answer(null);
+    await first;
+    expect(asked).toHaveLength(1);
+    // Answered, the next ask opens the picker again.
+    const again = call("file.pick", {}, "r-again");
+    answer(null);
+    await again;
+    expect(asked).toHaveLength(2);
+  });
+
+  it("DATA-11: a file over 25 MB is refused plainly and never sent", async () => {
+    const { call, sent } = picking(() =>
+      Promise.resolve(chosen("huge.png", png, 26 * 1024 * 1024)),
+    );
+    const reply = await call("file.pick");
+    expect(code(reply)).toBe("too-large");
+    expect(reply?.ok ? "" : reply?.error.message).toContain("Nothing was kept: the file is 26 MB");
+    expect(sent).toEqual([]);
+  });
+
+  it("CAP-01: a tool that didn't declare files, or a host that keeps no files, picks nothing", async () => {
+    const undeclared = picking(() => Promise.resolve(chosen("a.png", png)), { capabilities: [] });
+    expect(code(await undeclared.call("file.pick"))).toBe("undeclared-capability");
+    expect(undeclared.asked).toEqual([]);
+    const nowhere = served({ capabilities: ["files"], hasActivation: () => true });
+    expect(code(await nowhere.call("file.pick"))).toBe("failed");
+  });
+
+  it("A80 VER-03: a tool being checked gets the sample image, opens no picker, and can show it", async () => {
+    for (const options of [{ staging: true }, { rehearsal: true }]) {
+      const at = JSON.stringify(options);
+      const { call, asked, sent } = picking(() => Promise.resolve(chosen("a.png", png)), options);
+      expect(await call("file.pick"), at).toMatchObject({
+        ok: true,
+        result: { file: SAMPLE_PICK.file },
+      });
+      expect(await call("asset.read", { id: SAMPLE_PICK.file.id }), at).toMatchObject({
+        ok: true,
+        result: { type: "image/png", bytesBase64: SAMPLE_PICK.bytesBase64 },
+      });
+      // Another image isn't the sample's to show.
+      expect(code(await call("asset.read", { id: picked.id })), at).toBe("failed");
+      expect(asked, at).toEqual([]);
+      expect(sent, at).toEqual([]);
+    }
+  });
+
+  it("A80: the sample's ID is the SHA-256 of its bytes, and it is the PNG it says", async () => {
+    const bytes = Uint8Array.from(atob(SAMPLE_PICK.bytesBase64), (c) => c.charCodeAt(0));
+    const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+    expect([...digest].map((b) => b.toString(16).padStart(2, "0")).join("")).toBe(
+      SAMPLE_PICK.file.id,
+    );
+    expect(bytes.byteLength).toBe(SAMPLE_PICK.file.sizeBytes);
+    const view = new DataView(bytes.buffer);
+    expect([view.getUint32(16), view.getUint32(20)]).toEqual([
+      SAMPLE_PICK.file.widthPx,
+      SAMPLE_PICK.file.heightPx,
+    ]);
   });
 });
