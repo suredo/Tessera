@@ -5,6 +5,7 @@ import {
   ASSET_LIMIT_BYTES,
   assetIdSchema,
   assetSchema,
+  PICK_HOLD_HOURS,
   WORKSPACE_ASSETS_LIMIT_BYTES,
   type Asset,
   type AssetType,
@@ -67,20 +68,24 @@ export const getAsset = (store: AssetStore, id: string): Asset | undefined =>
     : undefined;
 
 // Everything stored that may name an asset, as JSON text: every workspace's data, trashed ones
-// included, every tool version, every recovery snapshot and every data undo entry. A new table
-// that stores tool data must be added here, or cleanup can remove an asset it still holds.
+// included, every tool version, every recovery snapshot and every data undo entry, and the images
+// picked for a tool in the last day (A80). A new table that stores tool data must be added here,
+// or cleanup can remove an asset it still holds.
 const REFERENCE_SOURCES = [
   "SELECT data AS text FROM workspaces",
   "SELECT body AS text FROM tool_versions",
   "SELECT data AS text FROM recovery_snapshots",
   "SELECT change AS text FROM data_undo",
+  "SELECT asset_id AS text FROM asset_picks",
 ];
-// The same, for one workspace: its data, the versions in its history and its snapshots.
+// The same, for one workspace: its data, the versions in its history, its snapshots, its undo
+// entries and the images picked for it.
 const WORKSPACE_SOURCES = [
   "SELECT data AS text FROM workspaces WHERE id = ?",
   "SELECT v.body AS text FROM tool_versions v JOIN workspace_versions w ON w.hash = v.hash WHERE w.workspace_id = ?",
   "SELECT data AS text FROM recovery_snapshots WHERE workspace_id = ?",
   "SELECT change AS text FROM data_undo WHERE workspace_id = ?",
+  "SELECT asset_id AS text FROM asset_picks WHERE workspace_id = ?",
 ];
 const textRow = z.object({ text: z.string() });
 
@@ -156,7 +161,8 @@ export function readAssetNow(
 /** The IDs of the assets something stored still refers to (DATA-09, DATA-11). */
 export const referencedAssets = (store: AssetStore): Set<string> => idsIn(store, REFERENCE_SOURCES);
 
-export type StoreAssetRefusal = "empty" | "too-large" | "not-an-image" | "workspace-full";
+export type StoreAssetRefusal =
+  "empty" | "too-large" | "not-an-image" | "workspace-full" | "workspace-gone";
 export type StoreAssetResult =
   { ok: true; asset: Asset } | { ok: false; reason: StoreAssetRefusal; message: string };
 
@@ -246,6 +252,54 @@ async function storeNow(
   return { ok: true, asset: getAsset(store, id) ?? asset };
 }
 
+const GONE = "the tool's workspace is gone or in the trash.";
+
+/**
+ * Stores an image the person picked for a tool in `workspaceId` (CAP-03, A80), as `storeAsset`
+ * does, within the workspace's limit, and holds it for that workspace for a day from now, so the
+ * tool can read it and save its ID in its data. Picking the same image again holds it a day from
+ * then. `isOpen` says whether the workspace is still there and out of the trash: asked once the
+ * pick's turn comes, and again with the hold, as the workspace may go while the file is written.
+ * Nothing is stored or held if a check refuses it; an image stored for a workspace that went
+ * meanwhile is removed again, unless something else already held it (#376 review).
+ */
+export function pickAsset(
+  store: AssetStore,
+  workspaceId: string,
+  bytes: Uint8Array,
+  name: string,
+  isOpen: () => boolean,
+): Promise<StoreAssetResult> {
+  return exclusively(store, async () => {
+    if (!isOpen()) return refuse("workspace-gone", GONE);
+    const id = createHash("sha256").update(bytes).digest("hex");
+    const existed = getAsset(store, id) !== undefined;
+    const stored = await storeNow(store, bytes, { originalName: name, workspaceId });
+    if (!stored.ok) return stored;
+    const held = store.db.transaction(() => {
+      if (!isOpen()) return false;
+      store.db.run(
+        "INSERT INTO asset_picks (workspace_id, asset_id, picked_at) VALUES (?, ?, ?) ON CONFLICT (workspace_id, asset_id) DO UPDATE SET picked_at = excluded.picked_at",
+        workspaceId,
+        id,
+        store.now().toISOString(),
+      );
+      return true;
+    });
+    if (held) return stored;
+    if (!existed) {
+      // Its row goes in one transaction that checks nothing holds it, then its file, as cleanup's.
+      const removed = store.db.transaction(() => {
+        if (referencedAssets(store).has(id)) return false;
+        store.db.run("DELETE FROM assets WHERE hash = ?", id);
+        return true;
+      });
+      if (removed) await fs.promises.rm(fileOf(store, stored.asset), { force: true });
+    }
+    return refuse("workspace-gone", GONE);
+  });
+}
+
 /** An asset's row and bytes, or undefined for an ID that isn't a stored asset's (AST-03). */
 export async function readAsset(
   store: AssetStore,
@@ -258,7 +312,7 @@ export async function readAsset(
 
 /**
  * Removes every asset nothing refers to any more: its row, in one transaction that checks again,
- * then its file. A crash between the two leaves a file without a row, which the next start's sweep
+ * then its file. Picks older than a day are let go of first (A80). A crash between the two leaves a file without a row, which the next start's sweep
  * removes. Returns the IDs removed. `beforeFiles` is for tests: it runs after the rows go and
  * before the files do.
  */
@@ -274,6 +328,8 @@ async function collectNow(
   options: { beforeFiles?: () => Promise<void> },
 ): Promise<string[]> {
   const removed = store.db.transaction(() => {
+    const expired = new Date(store.now().getTime() - PICK_HOLD_HOURS * 3_600_000).toISOString();
+    store.db.run("DELETE FROM asset_picks WHERE picked_at < ?", expired);
     const held = referencedAssets(store);
     const unheld = store.db.all(assetFromRow, SELECT_ASSET).filter((asset) => !held.has(asset.id));
     for (const asset of unheld) store.db.run("DELETE FROM assets WHERE hash = ?", asset.id);

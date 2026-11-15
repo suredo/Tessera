@@ -4,10 +4,10 @@ title: "Bridge route"
 description: "The server's side of the bridge: a tool's data calls, passed on by the host page, checked again with the stored version's capabilities and answered from the saved data and revisions."
 resource: ../../../packages/server/src/bridge/
 implements: [RUN-04, CAP-01, GEN-06, BRG-04, DATA-02, AST-04, AST-05]
-tests: [../../../packages/server/test/bridge-routes.test.ts, ../../../packages/server/test/connection-requests.test.ts]
+tests: [../../../packages/server/test/bridge-routes.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/file-pick.test.ts]
 tags: [code, server, bridge]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T14:59:18Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T21:21:52Z }
 ---
 
 # Purpose
@@ -20,6 +20,8 @@ Answers a tool's data calls from the saved data (`RUN-04`, `DATA-02`). The host 
   - `bridgeRoutes` gives the local server its one bridge route, the contracts' `/api/bridge`: a POST whose JSON body is the contracts' bridge data request, the workspace, the mount's phase and the tool's call. It answers with the bridge's reply as JSON. The [launcher](launcher.md) mounts it.
   - `answerDataCall` checks one call and answers it, asynchronously: `data.read` from the workspace's saved data and revisions, `data.patch` through the [workspaces](workspaces.md) module's patch function, `asset.read` from the [asset store](assets.md), and `connection.request` through the [connections](connections.md) module's request path, and `connection.image` through its image path (A75), and `link.open` through its page path, which gives back the address to open (A76). Its options, and `bridgeRoutes`', pass that path's limits on, for a test to lower.
 
+  - `answerFilePick` keeps an image the person picked for a tool (A80): the tool's `file.pick` call is checked again, then the bytes are kept by the [asset store](assets.md)'s pick. The routes include the contracts' file pick route, /api/bridge/file, a POST whose body is the picked file's bytes and whose request query parameter is the contracts' file pick request as JSON: the workspace, the phase, the call and the file's name.
+
 # Invariants
 
 - **Checked again, by the server's own lights** (`RUN-04`, `CAP-01`). The capabilities are those the workspace's current, stored tool version declares, read from the database, never sent by the browser; a workspace without a usable version declares none. Arguments, size, shape and action are checked as the host page checked them, by the same function.
@@ -29,6 +31,7 @@ Answers a tool's data calls from the saved data (`RUN-04`, `DATA-02`). The host 
 - **Nothing of the server reaches the tool.** A workspace that is gone or in the trash gets a plain `failed` reply; any unexpected error, such as a busy database, becomes "The host couldn't do that." Results are checked against the manifest before they are sent.
 - **A tool gets only the images its own workspace names** (`AST-04`, `DATA-11`). `asset.read` answers only for an asset the workspace's data, versions or snapshots name, found as cleanup finds references; another workspace's image is refused as `invalid-args`, even by its right ID. The answer is the image's type and its bytes as base64, checked against the manifest: never a path, a folder or an address (`AST-05`). The file is read at once, as the reply is built; one asset is at most 25 MB.
 - **A request through a connection goes only through the connections the stored version names** (`CNX-01`, A66). The names, like the capabilities, come from the workspace's current version in the database; a workspace without a usable version names none, so nothing is sent. The phase the host page sends is checked here too: a staging call reaches no service (`CNX-06`). The request path's refusals come back with their code and plain words ([connections](connections.md)).
+- **A picked file comes only from an active tool that declared files** (`CAP-01`, `GEN-06`, A80). The call is checked as any other, with the stored version's capabilities, and must be `file.pick`; the phase must be `active`, as only a person's click makes it so. The bytes are kept only if they are a PNG, JPEG or WebP image within the limits of one asset and of the workspace (`AST-01`, `AST-02`); a refusal keeps nothing and says why, as does a workspace removed or put in the trash while the pick waits or its file is written. The answer is the asset's ID, type, the name the person's file had, size and dimensions, never a path. A request without its JSON, a name that is a path, or a body over 25 MB is refused before anything is kept.
 - **Only data and connection actions are the server's.** An accepted call for another action, such as `clock.now`, gets `failed`: the host page answers those itself.
 - **The request is bounded.** Only POST; a body over the bridge's limit, with room for the workspace and phase, is refused with 413 before it is parsed; one that isn't the contract gets 400. The local server's guard has already refused anything not from the host app's own pages (`SEC-03`).
 
@@ -45,5 +48,5 @@ Depends on the contracts, [workspaces](workspaces.md), the [data shape](data-sha
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `bridge.ts`: `answerDataCall`, `bridgeRoutes`
-- `index.ts`: `answerDataCall`, `bridgeRoutes`
+- `bridge.ts`: `answerDataCall`, `answerFilePick`, `bridgeRoutes`
+- `index.ts`: `answerDataCall`, `answerFilePick`, `bridgeRoutes`

@@ -8,7 +8,7 @@ export type Reply = { status: number; body: string };
 export function post(
   port: number,
   route: string,
-  body: string,
+  body: string | Uint8Array,
   headers: Record<string, string> = {},
 ): Promise<Reply> {
   return new Promise((resolve, reject) => {

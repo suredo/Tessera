@@ -115,6 +115,14 @@ export {
   type AssetType,
 } from "./asset.ts";
 export {
+  PICK_HOLD_HOURS,
+  PICK_NAME_LIMIT,
+  pickedFileSchema,
+  pickName,
+  pickNameSchema,
+  type PickedFile,
+} from "./files.ts";
+export {
   ARCHIVE_FORMAT,
   ARCHIVE_FORMAT_VERSION,
   archivedWorkspaceSchema,
@@ -152,6 +160,9 @@ export {
   BRIDGE_ROUTE,
   OWN_PART_CAPABILITIES,
   bridgeDataRequestSchema,
+  FILE_PICK_ROUTE,
+  filePickRequestSchema,
+  type FilePickRequest,
   bridgeReplySchema,
   bridgeRequestSchema,
   checkBridgeCall,
