@@ -151,10 +151,31 @@ test("VER-03: so does one that already keeps a result, keeping another", async (
   expect(await check(page, "none", ["Alien"])).toEqual(PASSED);
 });
 
-test("VER-03: so does one that already keeps every result its search gives (#373 review)", async ({
+test("VER-03, VER-07: a finder whose sample answers give only results it keeps from the start fails the rule that says they must give one more (#373 review)", async ({
   page,
 }) => {
-  expect(await check(page, "none", ["Alien", "Heat"])).toEqual(PASSED);
+  const result = await check(page, "none", ["Alien", "Heat"]);
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toMatch(
+    /one more kept after pressing result-keep on each of the 2 results, as the sample answers give one not kept at the start; observed still 2 results kept/,
+  );
+});
+
+test("VER-03: a finder already keeping many results showing the title keeps one more (#373 review)", async ({
+  page,
+}) => {
+  const sequels = Array.from({ length: 20 }, (_, i) => `Alien sequel ${i}`);
+  expect(await check(page, "none", sequels)).toEqual(PASSED);
+});
+
+test("VER-03, VER-07: a finder whose keep does nothing fails, though what it keeps holds the titles (#373 review)", async ({
+  page,
+}) => {
+  const result = await check(page, "keepsNothing", ["Aliens", "Heatwave"]);
+  expect(result).toMatchObject({ outcome: "check-failed", check: "behavior" });
+  expect(result.reason).toMatch(
+    /one more kept after pressing result-keep on each of the 2 results/,
+  );
 });
 
 test("VER-03: so does one keeping results whose titles are part of others kept (#373 review)", async ({

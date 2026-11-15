@@ -1184,7 +1184,6 @@ async function searchResults(context: CheckContext): Promise<CheckOutcome> {
   const showing = async (title: string) => findAll(profile, keeps, tool, "kept", title);
   let kept: List = before;
   let at = -1;
-  let shownBefore = 0;
   for (let index = 0; index < Math.min(results.count, PAGE); index += 1) {
     const title = titles.texts[index]!.trim();
     const was = await showing(title);
@@ -1217,7 +1216,6 @@ async function searchResults(context: CheckContext): Promise<CheckOutcome> {
       }
       continue;
     }
-    shownBefore = was.length;
     if (now.count !== kept.count + 1) {
       return broke(
         profile,
@@ -1230,14 +1228,25 @@ async function searchResults(context: CheckContext): Promise<CheckOutcome> {
     at = index;
     break;
   }
-  // Every result's title was already kept, each press adding nothing: adding can't be tried.
-  if (at < 0) return reopenCheck(context, profile, reopens, before, undefined);
+  // No press added one: the first rule says some result isn't kept at the start, so keeping
+  // failed, whatever the tool's titles have in common with what it kept (#373 review).
+  if (at < 0) {
+    return broke(
+      profile,
+      keeps,
+      `one more kept after pressing result-keep on each of the ${results.count} results, as the sample answers give one not kept at the start`,
+      `still ${keptCount(before.count)}`,
+    );
+  }
+  // The item added, known by its fingerprint, must itself show the title, in its whole text: a
+  // find from its place, as the driver's finds give at most 20 places (#373 review).
   const title = titles.texts[at]!.trim();
   const { added, gone } = difference(before.digests, kept.digests, whole);
   const addedTexts = difference(before.texts, kept.texts, whole).added;
-  const shownAfter = await showing(title);
-  if (!Array.isArray(shownAfter)) return shownAfter;
-  if (added.length !== 1 || gone.length > 0 || shownAfter.length !== shownBefore + 1) {
+  const place = added.length === 1 ? kept.digests.indexOf(added[0]!) : -1;
+  const there = place < 0 ? [] : await findAll(profile, keeps, tool, "kept", title, place);
+  if (!Array.isArray(there)) return there;
+  if (added.length !== 1 || gone.length > 0 || !there.includes(place)) {
     return broke(
       profile,
       keeps,

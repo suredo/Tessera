@@ -208,7 +208,7 @@ export const SEARCH_RESULTS_PROFILE = {
     },
   ],
   rules: [
-    "Typing a search in search-query and pressing search-go shows the results of that search, each a result; the tool's sample answers give at least one result for any search.",
+    "Typing a search in search-query and pressing search-go shows the results of that search, each a result; the tool's sample answers give, for any search, at least one result its starting data hasn't kept.",
     "Pressing a result's result-keep keeps it: one more kept, showing its result-title, and saves it.",
     "Pressing result-keep for a result already kept keeps nothing more.",
     "Opened again, the tool shows what was kept as it was saved.",

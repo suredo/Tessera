@@ -295,7 +295,7 @@ export const en = {
   "details.rule.scheduling.4":
     "Opened again, the tool shows the sessions and rules as they were saved.",
   "details.rule.search-results.1":
-    "A search shows its results, from the sample answers the tool carries for its service.",
+    "A search shows its results, from the sample answers the tool carries for its service, at least one not kept yet.",
   "details.rule.search-results.2": "Keeping a result adds it to what is kept, and saves it.",
   "details.rule.search-results.3": "Keeping a result already kept adds nothing more.",
   "details.rule.search-results.4": "Opened again, the tool shows what was kept as it was saved.",

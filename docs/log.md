@@ -2,7 +2,9 @@
 
 ## 2026-11-15
 
-* **Fixed**: The search-results check counts a press that adds nothing as right only when that result's title is already kept, so a finder whose keep does nothing fails whatever it started with; and it looks for the kept title in each item's whole text, past what a read shows ([#373](https://github.com/suredo/Tessera/pull/373) review, A78) ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T16:53:44Z.
+* **Fixed**: The search-results profile's first rule now says the tool's sample answers give a result its starting data hasn't kept, and its check fails a finder when no press of keep adds one, so a finder whose keep does nothing fails whatever it started with; the item added is known by its fingerprint and must itself show the title, however many kept items already show it ([#373](https://github.com/suredo/Tessera/pull/373) review, A78, `VER-04`) ([runtime](code/runtime/package.md), [decision log](decisions/decision-log.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T17:03:46Z.
+
+* **Fixed**: The search-results check counts a press that adds nothing as right only when that result's title is already kept, and looks for the kept title in each item's whole text, past what a read shows ([#373](https://github.com/suredo/Tessera/pull/373) review, A78) ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T16:53:44Z.
 
 * **Fixed**: The search-results check finds the result it keeps by pressing keep on each in turn, never by matching titles, so a finder that already keeps every result, or keeps titles part of others, passes; and it compares what was kept by fingerprints, so a change past what a read shows fails ([#373](https://github.com/suredo/Tessera/pull/373) review, A78, `VER-03`) ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T16:43:07Z.
 
