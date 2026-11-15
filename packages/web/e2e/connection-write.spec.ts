@@ -237,3 +237,39 @@ test("CNX-09 A76: a click in a tool opens a page under its connection in a new t
   await expect(tool(page).locator("#text")).toHaveText(`Opened ${origin}/watch?v=abc`);
   await opened.close();
 });
+
+test("CNX-09 A76: a page asked for when the click has lapsed opens nothing, and the tool hears why (#371 review)", async ({
+  page,
+}) => {
+  // Playwright turns Chrome's popup blocker off, so this checks the host's own rule: the click's
+  // activation, which lasts about five seconds, must still be there (navigator.userActivation).
+  const late: Artifact = {
+    ...listTool,
+    code: {
+      html: '<button id="later" type="button">Open it later</button><p id="text">Ready</p>',
+      css: "",
+      js: `document.getElementById("later").addEventListener("click", () => {
+  document.getElementById("text").textContent = "Waiting";
+  setTimeout(() => {
+    tessera.openPage({ connection: "lists", path: "/watch?v=late" }).then(
+      () => { document.getElementById("text").textContent = "Opened"; },
+      (error) => { document.getElementById("text").textContent = "Refused " + error.code; },
+    );
+  }, 6000);
+});`,
+    },
+  };
+  const title = `Late ${Math.random().toString(36).slice(2, 7)}`;
+  workspaceWith(app.folder, title, late);
+  await page.goto(app.url);
+  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
+  const opened: string[] = [];
+  page.context().on("page", (p) => opened.push(p.url()));
+  await tool(page).getByRole("button", { name: "Open it later" }).click();
+  // Nothing touches the page while the click lapses: Playwright's own reads of a page count as
+  // the person acting, and would keep it active. The tool asks at 6 s; the click lasts about 5.
+  await page.waitForTimeout(8_000);
+  await expect(tool(page).locator("#text")).toHaveText("Refused not-allowed");
+  expect(opened).toEqual([]);
+});

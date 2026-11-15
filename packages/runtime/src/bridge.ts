@@ -169,9 +169,24 @@ export const openInNewTab = (url: string): void => {
   window.open(url, "_blank", "noopener,noreferrer");
 };
 
+/**
+ * Whether the host page has the person's activation now (A76, #371 review): a click in the tool's
+ * frame gives its ancestors, this page included, a few seconds of it. With `noopener`, a page
+ * that opened and one the browser blocked both return null, so the host asks first instead.
+ */
+export const pageHasActivation = (): boolean =>
+  typeof navigator !== "undefined" && navigator.userActivation !== undefined
+    ? navigator.userActivation.isActive
+    : false;
+
+const NO_CLICK =
+  "A page opens only right after the person clicks for it. Nothing was opened. Open pages only from a click handler.";
+
 export type BridgeOptions = {
   /** How a page opens; `openInNewTab` unless a test gives its own (A76). */
   openWindow?: (url: string) => void;
+  /** Whether the person just clicked; `pageHasActivation` unless a test gives its own (A76). */
+  hasActivation?: () => boolean;
   /** The capabilities the tool's version declares (CAP-01). */
   capabilities: readonly string[];
   data: DataHandlers;
@@ -255,8 +270,13 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
       if (!options.data.openPage) {
         throw new BridgeError("failed", "The host can't open pages here.");
       }
-      // The server checks the address as a read's; the host page opens it (CNX-09).
+      // Only right after a click, before asking the server and again before opening, as the
+      // server's answer takes time: otherwise the browser would block it unseen (CNX-09).
+      const clicked = options.hasActivation ?? pageHasActivation;
+      if (!clicked()) throw new BridgeError("not-allowed", NO_CLICK);
+      // The server checks the address as a read's; the host page opens it.
       const page = await options.data.openPage(args, context);
+      if (!clicked()) throw new BridgeError("not-allowed", NO_CLICK);
       (options.openWindow ?? openInNewTab)(page.url);
       return page;
     },

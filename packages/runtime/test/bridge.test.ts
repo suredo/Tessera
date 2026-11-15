@@ -337,6 +337,7 @@ describe("requests through a connection (CAP-02)", () => {
     const asked: unknown[] = [];
     const { call } = withConnection({
       openWindow: (url) => opened.push(url),
+      hasActivation: () => true,
       data: {
         openPage: (args) => {
           asked.push(args);
@@ -354,10 +355,47 @@ describe("requests through a connection (CAP-02)", () => {
     // A refusal opens nothing.
     const refused = withConnection({
       openWindow: (url) => opened.push(url),
+      hasActivation: () => true,
       data: { openPage: () => Promise.reject(new BridgeError("not-allowed", "No.")) },
     });
     expect(code(await refused.call("link.open", request))).toBe("not-allowed");
     expect(opened).toHaveLength(1);
+  });
+
+  it("CNX-09 A76: without the person's click, or once it lapsed while the server answered, nothing opens and the tool hears why (#371 review)", async () => {
+    const opened: string[] = [];
+    let asked = 0;
+    const page = { url: "https://videos.example.com/watch?v=abc" };
+    const request = { connection: "videos", path: "/watch?v=abc" };
+    // No click: refused before the server is asked.
+    const idle = withConnection({
+      openWindow: (url) => opened.push(url),
+      hasActivation: () => false,
+      data: {
+        openPage: () => {
+          asked += 1;
+          return Promise.resolve(page);
+        },
+      },
+    });
+    const none = await idle.call("link.open", request);
+    expect(code(none)).toBe("not-allowed");
+    expect(JSON.stringify(none)).toMatch(/only right after the person clicks/);
+    expect(asked).toBe(0);
+    // A click that lapsed while the server answered: refused before opening.
+    let active = true;
+    const slow = withConnection({
+      openWindow: (url) => opened.push(url),
+      hasActivation: () => active,
+      data: {
+        openPage: () => {
+          active = false;
+          return Promise.resolve(page);
+        },
+      },
+    });
+    expect(code(await slow.call("link.open", request))).toBe("not-allowed");
+    expect(opened).toEqual([]);
   });
 
   it("A75: outside checks, an image goes to the server's handler", async () => {

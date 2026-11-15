@@ -7,6 +7,7 @@ export {
   sampleAnswer,
   placeholderImage,
   openInNewTab,
+  pageHasActivation,
   PLACEHOLDER_IMAGE,
   serveBridge,
   systemClock,
