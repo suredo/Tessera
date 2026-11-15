@@ -4,6 +4,7 @@ import path from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
 import {
+  connectionInputSchema,
   connectionNameSchema,
   PROFILES,
   profileIdSchema,
@@ -172,10 +173,8 @@ const serviceAnswerSchema = z
  */
 const serviceSchema = z.strictObject({
   connection: connectionNameSchema.describe("The connection's name, as the person added it."),
-  key: z
-    .string()
-    .min(1)
-    .max(200)
+  key: connectionInputSchema.shape.key
+    .unwrap()
     .optional()
     .describe("A made-up key, sent as Authorization: Bearer; none when left out."),
   answers: z.array(serviceAnswerSchema).min(1).max(20),

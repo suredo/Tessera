@@ -1,7 +1,8 @@
 // Docs: docs/code/evals/runner.md
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { addConnection } from "@tessera/server";
+import { connectionInputSchema, type ConnectionInput } from "@tessera/contracts";
+import { addConnection, removeConnection } from "@tessera/server";
 import type { Scenario } from "../scenarios/index.ts";
 
 // The outside services a scenario's tools reach (CAP-02, ADR 0015, #349 step 5): fakes the runner
@@ -21,55 +22,79 @@ export type Services = {
   close(): Promise<void>;
 };
 
-/** Starts the scenario's services and adds their connections to `store`; none when it has none. */
+type Service = Scenario["services"][number];
+
+/** The connection a service is added as, at `origin`: a made-up key as a bearer, or none. */
+const connectionOf = (service: Service, origin: string): ConnectionInput => ({
+  name: service.connection,
+  origins: [origin],
+  ...(service.key
+    ? {
+        auth: { kind: "header" as const, name: "Authorization", prefix: "Bearer " },
+        key: service.key,
+      }
+    : { auth: { kind: "none" as const }, key: null }),
+});
+
+/** A server answering as `service` says, recording each request in `seen`. */
+const serverFor = (service: Service, seen: Services["seen"]) =>
+  http.createServer((req, res) => {
+    const url = new URL(req.url ?? "/", "http://service");
+    seen.push({ connection: service.connection, method: req.method ?? "", url: req.url ?? "" });
+    const answer = service.answers
+      .filter((each) => url.pathname.startsWith(each.path))
+      .sort((a, b) => b.path.length - a.path.length)[0];
+    req.resume();
+    if (!answer) {
+      res.statusCode = 404;
+      res.setHeader("content-type", "text/plain");
+      return res.end("Nothing here.");
+    }
+    res.statusCode = answer.status;
+    if (answer.image) {
+      res.setHeader("content-type", "image/png");
+      return res.end(PNG);
+    }
+    res.setHeader("content-type", answer.type);
+    res.end(answer.body ?? "");
+  });
+
+const closeAll = async (servers: readonly http.Server[]) => {
+  for (const server of servers) {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+};
+
+/**
+ * Starts the scenario's services and adds their connections to `store`; none when it has none.
+ * Every connection is checked before any server starts; if one still can't be added, the
+ * servers already started are closed and the connections already added removed, so a failed
+ * start leaves nothing behind (#372 review).
+ */
 export async function startServices(
   store: Parameters<typeof addConnection>[0],
   services: Scenario["services"],
 ): Promise<Services> {
+  for (const service of services) {
+    connectionInputSchema.parse(connectionOf(service, "http://127.0.0.1:1"));
+  }
   const seen: Services["seen"] = [];
   const servers: http.Server[] = [];
-  for (const service of services) {
-    const server = http.createServer((req, res) => {
-      const url = new URL(req.url ?? "/", "http://service");
-      seen.push({ connection: service.connection, method: req.method ?? "", url: req.url ?? "" });
-      const answer = service.answers
-        .filter((each) => url.pathname.startsWith(each.path))
-        .sort((a, b) => b.path.length - a.path.length)[0];
-      req.resume();
-      if (!answer) {
-        res.statusCode = 404;
-        res.setHeader("content-type", "text/plain");
-        return res.end("Nothing here.");
-      }
-      res.statusCode = answer.status;
-      if (answer.image) {
-        res.setHeader("content-type", "image/png");
-        return res.end(PNG);
-      }
-      res.setHeader("content-type", answer.type);
-      res.end(answer.body ?? "");
-    });
-    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-    servers.push(server);
-    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
-    addConnection(store, {
-      name: service.connection,
-      origins: [origin],
-      ...(service.key
-        ? {
-            auth: { kind: "header" as const, name: "Authorization", prefix: "Bearer " },
-            key: service.key,
-          }
-        : { auth: { kind: "none" as const }, key: null }),
-    });
+  const added: string[] = [];
+  try {
+    for (const service of services) {
+      const server = serverFor(service, seen);
+      servers.push(server);
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+      addConnection(store, connectionOf(service, origin));
+      added.push(service.connection);
+    }
+  } catch (error) {
+    for (const name of added) removeConnection(store, name);
+    await closeAll(servers);
+    throw error;
   }
-  return {
-    seen,
-    close: async () => {
-      for (const server of servers) {
-        server.closeAllConnections();
-        await new Promise((resolve) => server.close(resolve));
-      }
-    },
-  };
+  return { seen, close: () => closeAll(servers) };
 }
