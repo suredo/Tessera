@@ -2,6 +2,8 @@
 
 ## 2026-11-15
 
+* **New**: T4's habit tracker scenario ([#351](https://github.com/suredo/Tessera/issues/351), A79, `RUN-07`): checked by the items-over-time profile, the person marks a habit done with the tracker's own controls, comes back the next day and marks it done again, then asks for a weekly chart. Its rehearsal, written by hand, passes every step ([scenarios](code/evals/scenarios.md), [runner](code/evals/runner.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T20:15:40Z.
+
 * **New**: The items-over-time profile ([#351](https://github.com/suredo/Tessera/issues/351), A79, `VER-03`, `RUN-07`): items marked done day by day with their streaks, as a habit tracker. Its check comes back on later days with the host's clock moved by calendar days, expecting a streak of 1, then 2, then 1 after a day missed, and the same opened again, finding the item by its name before and after each press, as a tracker may move it; a working tracker passes, one that moves done habits to the top too, and each broken one fails with its rule. The intent's budget rises to 11,500, within the room the owner allowed ([runtime](code/runtime/package.md), [contracts](code/contracts/package.md), [prompts](code/server/prompts.md), [decision log](decisions/decision-log.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T18:19:53Z.
 
 * **Fixed**: The search-results check tries every result a search shows, not only the first 100, before failing a finder that keeps none ([#373](https://github.com/suredo/Tessera/pull/373) review) ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T17:14:15Z.

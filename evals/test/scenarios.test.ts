@@ -43,6 +43,7 @@ describe("scenario files (EVAL-01)", () => {
       "T13-drawing-board",
       "T2-reading-list",
       "T3-spending-chart",
+      "T4-habit-tracker",
       "T5-rsvp-form",
       "T6-tip-calculator",
       "T7-movie-finder",
@@ -64,6 +65,8 @@ describe("scenario files (EVAL-01)", () => {
       "T13-drawing-board": 7,
       "T2-reading-list": 8,
       "T3-spending-chart": 10,
+      // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
+      "T4-habit-tracker": 8,
       "T5-rsvp-form": 8,
       "T6-tip-calculator": 7,
       // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
