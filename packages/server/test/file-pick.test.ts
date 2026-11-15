@@ -205,7 +205,7 @@ describe("an image the person picked for a tool, on the server (CAP-03, A80)", (
   });
 
   it("A80: a workspace that goes while its image is written keeps nothing, but an image held already stays", async () => {
-    const { folder, id, pick, workspace } = await photos();
+    const { folder, id, workspace } = await photos();
     const other = workspace("Other photos");
     // The other workspace's data names the JPEG already, so it stays whatever this pick does.
     const held = await answerFilePick(
