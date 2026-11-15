@@ -661,6 +661,15 @@ import type { BridgeMethodName } from "@tessera/contracts";
       async pickFile(): Promise<unknown> {
         return ((await call("file.pick", {})) as { file: unknown }).file;
       },
+      /**
+       * Offers the person a file to save (A81), only from a click: `file` is { name, type,
+       * bytesBase64 } for a PNG, JPEG or WebP image, or { name, type, text } for CSV, plain text
+       * or JSON. The host asks them; resolves true if they saved it, false if not. Rejects as
+       * call does.
+       */
+      async saveFile(file: unknown): Promise<boolean> {
+        return ((await call("file.save", file)) as { saved: boolean }).saved;
+      },
     } satisfies Record<BridgeMethodName, unknown>),
     enumerable: true,
   });

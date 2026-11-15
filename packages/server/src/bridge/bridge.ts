@@ -2,7 +2,7 @@ import {
   type Artifact,
   ASSET_LIMIT_BYTES,
   BRIDGE_ACTIONS,
-  BRIDGE_REQUEST_LIMIT_BYTES,
+  BRIDGE_SERVER_LIMIT_BYTES,
   BRIDGE_ROUTE,
   bridgeDataRequestSchema,
   checkBridgeCall,
@@ -283,7 +283,8 @@ export function bridgeRoutes(
   options: { connections?: ConnectionRequestOptions } = {},
 ): Record<string, Handler> {
   // A call within the bridge's own limit, with room for the workspace and the phase.
-  const limitBytes = BRIDGE_REQUEST_LIMIT_BYTES + 1024;
+  // Only actions the server answers count: a file offered to save never comes here (A81).
+  const limitBytes = BRIDGE_SERVER_LIMIT_BYTES + 1024;
   return {
     [BRIDGE_ROUTE]: async (req, res) => {
       if (req.method !== "POST") return text(res, 405, "Send a tool's call with POST.");

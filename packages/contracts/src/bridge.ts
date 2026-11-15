@@ -10,7 +10,13 @@ import {
   pageRequestSchema,
   connectionRequestSchema,
 } from "./connection.ts";
-import { pickedFileSchema, pickNameSchema } from "./files.ts";
+import {
+  PICK_NAME_LIMIT,
+  pickedFileSchema,
+  pickNameSchema,
+  SAVE_LIMIT_BYTES,
+  saveRequestSchema,
+} from "./files.ts";
 import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
 import { patchBatchSchema, recordIdSchema, TOOL_DATA_LIMIT_BYTES } from "./patch.ts";
 
@@ -28,7 +34,7 @@ export const BRIDGE_CAPABILITIES = {
   connection:
     "Requests to the outside services the person connected, by name, made by the host (CAP-02, ADR 0015).",
   files:
-    "Images the person picks to open, through the host's picker, kept as assets; never a path (CAP-03, A80).",
+    "Images the person picks to open, through the host's picker, kept as assets; and files the tool offers to save, which the host saves once the person says so. Never a path (CAP-03, A80, A81).",
 } as const;
 export type BridgeCapability = keyof typeof BRIDGE_CAPABILITIES;
 
@@ -63,6 +69,8 @@ type ActionDefinition = {
   result: z.ZodType;
   /** The largest arguments the action takes, as UTF-8 JSON. */
   maxArgsBytes: number;
+  /** Answered by the host page alone: the server's bridge route never takes it, nor its size. */
+  hostOnly?: true;
   examples: { args: unknown; result: unknown }[];
 };
 
@@ -142,6 +150,7 @@ export const BRIDGE_ACTIONS = {
       "The current date and time from the host's clock. Use it instead of Date.now() or new Date() (RUN-07).",
     capability: "clock",
     writes: false,
+    hostOnly: true,
     args: noArgs,
     result: z.strictObject({
       epochMs: z.int().describe("Milliseconds since 1970-01-01 UTC."),
@@ -259,6 +268,29 @@ export const BRIDGE_ACTIONS = {
       },
     ],
   },
+  "file.save": {
+    description:
+      "Offers the person a file to save, such as an edited image or a table: only right after the person clicks. The host asks them, naming the file, its kind and size, and saves it through the browser only if they say Save; it answers saved true, or false if they didn't. An image goes as its bytes in base64 (PNG, JPEG or WebP, checked by their bytes), a CSV, plain text or JSON as its text; at most 25 MB. Its name's extension is made the kind's (CAP-03, A81).",
+    capability: "files",
+    // It changes nothing of the tool's data; what leaves is the person's to allow, each time.
+    writes: false,
+    // The host page asks and saves; the server never sees the file.
+    hostOnly: true,
+    args: saveRequestSchema,
+    result: z.strictObject({
+      saved: z.boolean().describe("Whether the person chose to save it."),
+    }),
+    // The text and the name as JSON writes them: at most six bytes for each character, as a
+    // control character's escape takes, so any text and name within their limits fit whatever they
+    // hold; 1 KB for the rest (#378 review). Base64 is less.
+    maxArgsBytes: 6 * (SAVE_LIMIT_BYTES + PICK_NAME_LIMIT) + 1024,
+    examples: [
+      {
+        args: { name: "groceries.csv", type: "text/csv", text: "item,quantity\nmilk,2\n" },
+        result: { saved: true },
+      },
+    ],
+  },
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
 
@@ -272,6 +304,7 @@ export const BRIDGE_METHODS = {
   connectionImageUrl: { action: "connection.image", argument: "request", copiesData: true },
   openPage: { action: "link.open", argument: "request", copiesData: true },
   pickFile: { action: "file.pick", argument: "none", copiesData: true },
+  saveFile: { action: "file.save", argument: "file", copiesData: true },
   send: { action: null, argument: "message", copiesData: true },
   onMessage: { action: null, argument: "listener", copiesData: false },
   chart: { action: null, argument: "element and spec", copiesData: false, capability: "chart" },
@@ -296,6 +329,17 @@ export type BridgeResult<A extends BridgeActionName> = z.infer<
 /** The largest request the bridge reads: the largest arguments, with room for the envelope. */
 export const BRIDGE_REQUEST_LIMIT_BYTES =
   Math.max(...Object.values(BRIDGE_ACTIONS).map((a) => a.maxArgsBytes)) + 1024;
+
+/**
+ * The largest call the server's bridge route reads: the largest arguments of an action the server
+ * answers, so a file a tool offers to save, which only the host page sees (A81), doesn't widen it.
+ */
+export const BRIDGE_SERVER_LIMIT_BYTES =
+  Math.max(
+    ...Object.values(BRIDGE_ACTIONS as Record<string, ActionDefinition>)
+      .filter((a) => !a.hostOnly)
+      .map((a) => a.maxArgsBytes),
+  ) + 1024;
 
 const requestIdSchema = z
   .string()
@@ -444,6 +488,20 @@ function walkCall(message: unknown, limitBytes: number): "ok" | "malformed" | "t
   return visit(message, 0);
 }
 
+// What the bridge reads of a call before it walks it: the envelope's room, and the largest
+// arguments of the action it names, so a call for a small action is never walked far, whatever
+// the largest action takes (#378 review). A call naming no action it knows gets the envelope's.
+const ENVELOPE_BYTES = 1024;
+function walkLimitOf(message: unknown): number {
+  const name =
+    typeof message === "object" && message !== null && Object.hasOwn(message, "action")
+      ? (message as { action?: unknown }).action
+      : undefined;
+  return typeof name === "string" && Object.hasOwn(BRIDGE_ACTIONS, name)
+    ? (BRIDGE_ACTIONS[name as BridgeActionName] as ActionDefinition).maxArgsBytes + ENVELOPE_BYTES
+    : ENVELOPE_BYTES;
+}
+
 // The call's request ID, if it has a usable one, read without walking the rest of it.
 function usableRequestId(message: unknown): string | null {
   if (typeof message !== "object" || message === null || !Object.hasOwn(message, "requestId")) {
@@ -473,8 +531,9 @@ export function checkBridgeCall(
   // Every refusal from here on carries the request ID, if the call has a usable one.
   const id = usableRequestId(message);
 
-  const walked = walkCall(message, BRIDGE_REQUEST_LIMIT_BYTES);
-  const tooLarge = `The call is larger than the bridge takes (${kb(BRIDGE_REQUEST_LIMIT_BYTES)} KB).`;
+  const limitBytes = walkLimitOf(message);
+  const walked = walkCall(message, limitBytes);
+  const tooLarge = `The call is larger than the bridge takes (${kb(limitBytes)} KB).`;
   if (walked === "malformed") {
     return refuse(
       id,
@@ -482,7 +541,7 @@ export function checkBridgeCall(
       `The call isn't plain data (objects, lists, text, numbers), at most ${BRIDGE_MAX_DEPTH} levels deep.`,
     );
   }
-  if (walked === "too-large" || utf8Bytes(JSON.stringify(message)) > BRIDGE_REQUEST_LIMIT_BYTES) {
+  if (walked === "too-large" || utf8Bytes(JSON.stringify(message)) > limitBytes) {
     return refuse(id, "too-large", tooLarge);
   }
   const request = bridgeRequestSchema.safeParse(message);
