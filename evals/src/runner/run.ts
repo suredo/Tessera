@@ -27,6 +27,7 @@ import {
   type StepTarget,
 } from "../scenarios/index.ts";
 import { featuresMissed, outcomeOf, say } from "./messages.ts";
+import { startServices, type Services } from "./services.ts";
 
 // The scenario runner (EVAL-01, EVAL-02): it starts an empty Tessera on the run's own data folder,
 // with every model call going through the harness (cap and ledger), and plays a scenario's steps
@@ -215,6 +216,7 @@ export async function runScenario(
   });
   if (app.status !== "started") throw new Error(`Tessera didn't start: ${app.status}`);
   const store = app.dataFolder;
+  let services: Services | undefined;
   options.onStarted?.(store);
   const results: StepResult[] = scenario.steps.map((s, index) => ({
     index: index + 1,
@@ -230,6 +232,10 @@ export async function runScenario(
   let context: BrowserContext | undefined;
   const misfits = () => options.misfits?.() ?? [];
   try {
+    // The scenario's outside services, fakes on loopback, added as the person's connections before
+    // any step, so no run reaches a real service (CAP-02, ADR 0015); inside the guard, so one that
+    // won't start still stops Tessera and leaves a report (#372 review).
+    services = await startServices(store, scenario.services);
     // Inside the guard, so a browser that won't start still stops Tessera and leaves a report.
     browser = await (options.launchBrowser ?? (() => chromium.launch({ channel: "chrome" })))();
     context = await browser.newContext({
@@ -297,6 +303,7 @@ export async function runScenario(
       stopped ??= error instanceof Error ? error.message : String(error);
     }
     await app.stop();
+    await services?.close();
   }
   const report: RunReport = {
     scenario: scenario.id,

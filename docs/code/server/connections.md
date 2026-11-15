@@ -3,16 +3,16 @@ type: Code Module
 title: "Connections"
 description: "Connections to outside services that the person adds (CAP-02, ADR 0015): kept in the data folder with their keys, which no listing, reply or export carries, and the request path, which sends a tool's read only through the connections its version names, only to their origins, with the key added by the host (CNX-01 to CNX-06)."
 resource: ../../../packages/server/src/connections/
-implements: [CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06, CNX-07, CNX-08, CNX-09]
+implements: [CAP-02, CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06, CNX-07, CNX-08, CNX-09]
 tests: [../../../packages/server/test/connections.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, connections, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T14:59:18Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T15:53:14Z }
 ---
 
 # Purpose
 
-Keeps the connections the person adds to outside services, as [ADR 0015](../../decisions/adr/0015-person-connections.md) decides (`CAP-02`, A65): Tessera chooses no sources, so any service the person names can be one. Built in #349's steps ([plan](https://github.com/suredo/Tessera/issues/349)): connections can be added, listed and removed (step 1), and a tool can read through the ones its version names (step 2), with the boundary's checks, `CNX-01` to `CNX-06` in the [threat model](../../spec/threat-model.md). This doc doesn't claim `CAP-02` yet: writes stay refused until the first-write confirmation, and a tool being checked reaches nothing until staging's made-up answers (step 3).
+Keeps the connections the person adds to outside services, as [ADR 0015](../../decisions/adr/0015-person-connections.md) decides (`CAP-02`, A65): Tessera chooses no sources, so any service the person names can be one. Built in #349's steps ([plan](https://github.com/suredo/Tessera/issues/349)), and claiming `CAP-02` since they are all in place: connections are added, listed and removed in their own section (step 1, A71); a tool reads through the ones its version names (step 2), changes things only once the person allowed its first change (step 3, A70), and is checked against its version's sample answers, reaching nothing (A69); the details view shows its connections, permissions and recent requests (A72, A73); the prompts tell a request given connections how to use them (A74); images come through as assets kept nowhere (A75) and pages open under its connections' addresses after a click (A76); and the movie finder (T7) is rehearsed against fake services (step 5). The boundary's checks are `CNX-01` to `CNX-09` in the [threat model](../../spec/threat-model.md).
 
 # Entry points
 

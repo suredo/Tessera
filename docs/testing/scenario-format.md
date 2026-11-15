@@ -4,7 +4,7 @@ title: "Scenario file format"
 description: "The scenario file format, step types and fields, with a full example."
 tags: [testing, scenario-format]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T16:20:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T15:53:14Z }
 ---
 # Scenario file format
 
@@ -57,6 +57,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 - `clock`: the starting date, time and time zone (`RUN-07`)
 - `budget`: the maximum calls for the live run
 - `profiles`: the verification profiles the person's tools should match, by their IDs in the registry; a `do` step uses their hooks
+- `services`: the outside services the person's tools reach (`CAP-02`), at most three, none when left out: each `{ connection: <name>, key: <made-up key>, answers: [...] }`, the key optional and following a connection key's rules, each answer `{ path: </path>, body: <text> }` with an optional `status` (200) and `type` (`application/json`), or `{ path: </path>, image: true }` for a real 1-pixel PNG. The runner serves each as a fake on loopback, answering by the longest path a request's path starts with, its query aside, or a 404, and adds it to the run's Tessera as the person's connection of that name before the first step, so no run, live or rehearsed, reaches a real service
 - `acceptanceChecks`: true to run Tessera with checks from the request on (`VER-09`), so a new tool that fits no profile gets checks written from the request; false when left out, so a recording made without them still replays, though Tessera itself has them on by default (A57). A scenario recorded from M4 on sets it to measure Tessera as it ships
 - `review`: the AI review items that apply ([AI technical review](judging.md#ai-technical-review-each-scenario-eval-03))
 

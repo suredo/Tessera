@@ -3,6 +3,7 @@ export const packageName = "@tessera/server";
 export * from "./archives/index.ts";
 export * from "./bridge/index.ts";
 export * from "./checks/index.ts";
+export * from "./connections/index.ts";
 export * from "./data-shape/index.ts";
 export * from "./generation/index.ts";
 export * from "./http/index.ts";
