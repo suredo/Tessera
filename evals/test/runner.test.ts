@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import type { Server } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -466,19 +467,17 @@ describe("a scenario's outside services (CAP-02, #349 step 5)", () => {
   it("CAP-02: a service that can't be added leaves no server listening and no connection behind (#372 review)", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-services-"));
     const folder = await openDataFolder(dir);
-    // Servers listening now, read a turn of the event loop later, once closed ones are gone.
-    const listening = async () => {
-      await new Promise((resolve) => setImmediate(resolve));
-      return process.getActiveResourcesInfo().filter((kind) => kind === "TCPServerWrap").length;
-    };
-    const before = await listening();
+    // Every server a start made, to see each closed: counting the process's handles would depend
+    // on when the event loop drops them (#372 review).
+    const made: Server[] = [];
+    const record = (server: Server) => made.push(server);
     const answers = [{ path: "/x", status: 200, type: "text/plain", body: "x" }];
     try {
       // A key the connection contract refuses: refused before any server starts.
       await expect(
-        startServices(folder, [{ connection: "movies", key: "bad\nkey", answers }]),
+        startServices(folder, [{ connection: "movies", key: "bad\nkey", answers }], record),
       ).rejects.toThrow();
-      expect(await listening()).toBe(before);
+      expect(made).toEqual([]);
       // A name already taken: the first service's server and connection are undone.
       addConnection(folder, {
         name: "videos",
@@ -487,12 +486,17 @@ describe("a scenario's outside services (CAP-02, #349 step 5)", () => {
         key: null,
       });
       await expect(
-        startServices(folder, [
-          { connection: "movies", answers },
-          { connection: "videos", answers },
-        ]),
+        startServices(
+          folder,
+          [
+            { connection: "movies", answers },
+            { connection: "videos", answers },
+          ],
+          record,
+        ),
       ).rejects.toThrow(/already a connection called videos/);
-      expect(await listening()).toBe(before);
+      expect(made).toHaveLength(2);
+      expect(made.map((server) => server.listening)).toEqual([false, false]);
       expect(listConnections(folder).map((c) => c.name)).toEqual(["videos"]);
       // And a scenario can't name such a key at all.
       const scenario = loadScenario(path.join(scenarios, "T7-movie-finder.yaml"));

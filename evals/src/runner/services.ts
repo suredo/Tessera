@@ -75,6 +75,8 @@ const closeAll = async (servers: readonly http.Server[]) => {
 export async function startServices(
   store: Parameters<typeof addConnection>[0],
   services: Scenario["services"],
+  /** Told of each server as it is made, for a test to see it closed. */
+  made: (server: http.Server) => void = () => undefined,
 ): Promise<Services> {
   for (const service of services) {
     connectionInputSchema.parse(connectionOf(service, "http://127.0.0.1:1"));
@@ -86,6 +88,7 @@ export async function startServices(
     for (const service of services) {
       const server = serverFor(service, seen);
       servers.push(server);
+      made(server);
       await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
       const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
       addConnection(store, connectionOf(service, origin));
