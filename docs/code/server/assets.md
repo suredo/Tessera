@@ -7,7 +7,7 @@ implements: [DATA-11, AST-01, AST-02, AST-03, AST-06]
 tests: [../../../packages/server/test/assets.test.ts, ../../../packages/server/test/asset-undo-scenario.test.ts]
 tags: [code, server, data, assets]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T21:02:08Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T21:21:52Z }
 ---
 
 # Purpose
@@ -20,7 +20,7 @@ Keeps the person's images (`DATA-11`, A48): photos and other pictures a tool sho
   - `storeAsset` stores bytes as an asset, once (an imported image keeps the date it came with), or returns why not (`StoreAssetResult`): empty, too large, not an image, or over the workspace's limit.
   - `getAsset` gives an asset's row, and `readAsset` its row and bytes, for an ID that is a stored asset's.
   - `workspaceAssets` gives the IDs one workspace's data, versions and snapshots name, which the [bridge route](bridge.md) checks before it hands a tool an image (`AST-04`), and `readAssetNow` reads one at once, for that answer.
-  - `pickAsset` keeps an image the person picked for a tool (A80), as `storeAsset` does within the workspace's limit, and holds it for that workspace for 24 hours from now, in the table of picks (migration 0020-asset-picks.sql); picking it again holds it 24 hours from then.
+  - `pickAsset` keeps an image the person picked for a tool (A80), as `storeAsset` does within the workspace's limit, and holds it for that workspace for 24 hours from now, in the table of picks (migration 0020-asset-picks.sql); picking it again holds it 24 hours from then. The workspace must still be open when the pick's turn comes and again as the hold is written, as it may go while the file is written; if it went, an image this pick newly stored is removed again, unless something else holds it, and nothing is held.
   - `assetsNamedIn` gives the stored assets named in given texts, as an export's are; `holdingAssets` runs work that stores images and then writes what names them, such as an import, with no cleanup or sweep in between.
   - `referencedAssets` gives the IDs something stored still names; `collectAssets` removes every asset nothing names.
   - `sweepAssets` removes what an interrupted write left, at start.

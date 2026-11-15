@@ -20,8 +20,9 @@ export const pickNameSchema = z
   .string()
   .min(1)
   .max(PICK_NAME_LIMIT)
-  .regex(/^[^/\\\p{Cc}]+$/u, "a file's name, never a path")
-  .refine((name) => !/^\.+$/.test(name), "a file's name, never only dots")
+  // One pattern, so the JSON Schema says it as zod does: no slash, backslash or control
+  // character, and not only dots (#376 review).
+  .regex(/^(?!\.+$)[^/\\\p{Cc}]+$/u, "a file's name, never a path or only dots")
   .describe("The picked file's name, as the person's computer calls it; never a path.");
 
 /** A name the browser gave, made one a pick may carry: the last part, without what isn't allowed. */

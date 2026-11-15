@@ -205,6 +205,7 @@ const PICK_CODES: Record<StoreAssetRefusal, BridgeErrorCode> = {
   "not-an-image": "invalid-args",
   "too-large": "too-large",
   "workspace-full": "too-large",
+  "workspace-gone": "failed",
 };
 
 /**
@@ -217,6 +218,10 @@ export async function answerFilePick(
   store: Store & AssetStore,
   request: FilePickRequest,
   bytes: Uint8Array,
+  options: {
+    /** Whether the workspace is still open; a test gives its own to have it go meanwhile. */
+    isOpen?: () => boolean;
+  } = {},
 ): Promise<BridgeReply | null> {
   const workspace = getWorkspace(store, request.workspaceId);
   const artifact = workspace ? currentArtifact(store, workspace.currentVersion) : undefined;
@@ -246,7 +251,13 @@ export async function answerFilePick(
     );
   }
   try {
-    const stored = await pickAsset(store, workspace.id, bytes, request.name);
+    const stored = await pickAsset(
+      store,
+      workspace.id,
+      bytes,
+      request.name,
+      options.isOpen ?? (() => getWorkspace(store, workspace.id) !== undefined),
+    );
     if (!stored.ok) return refusal(requestId, PICK_CODES[stored.reason], stored.message);
     const { asset } = stored;
     const result = BRIDGE_ACTIONS["file.pick"].result.safeParse({

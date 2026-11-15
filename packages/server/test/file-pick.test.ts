@@ -12,11 +12,11 @@ import {
 } from "@tessera/contracts";
 import { afterAll, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { collectAssets, getAsset } from "../src/assets/index.ts";
+import { collectAssets, getAsset, holdingAssets } from "../src/assets/index.ts";
 import { answerDataCall, answerFilePick, bridgeRoutes } from "../src/bridge/index.ts";
 import { startLocalServer } from "../src/http/index.ts";
 import { openDataFolder } from "../src/storage/index.ts";
-import { deleteWorkspace } from "../src/trash/index.ts";
+import { deleteWorkspace, emptyTrash, listTrash } from "../src/trash/index.ts";
 import { saveVersion } from "../src/versions/index.ts";
 import {
   addWorkspaceVersion,
@@ -172,6 +172,71 @@ describe("an image the person picked for a tool, on the server (CAP-03, A80)", (
     deleteWorkspace(folder, id);
     expect(await pick(png)).toMatchObject({ ok: false });
     expect(assetCount(folder)).toBe(0);
+  });
+
+  it("A80: a workspace removed or trashed while its pick waits keeps nothing (#376 review)", async () => {
+    for (const removal of ["emptied", "trashed"] as const) {
+      const { folder, id, pick } = await photos();
+      // The store's queue is held, so the pick waits behind it while the workspace goes.
+      let release = () => {};
+      let started = () => {};
+      const running = new Promise<void>((r) => (started = r));
+      const holding = holdingAssets(folder, () => {
+        started();
+        return new Promise<void>((r) => (release = r));
+      });
+      const picked = pick(png);
+      deleteWorkspace(folder, id);
+      if (removal === "emptied") emptyTrash(folder, listTrash(folder).confirmation);
+      // The held work starts a moment later, and only then can it be let go.
+      await running;
+      release();
+      await holding;
+      const reply = await picked;
+      expect(reply).toMatchObject({ ok: false, error: { code: "failed" } });
+      expect(messageOf(reply)).toContain("Nothing was saved");
+      expect(assetCount(folder)).toBe(0);
+      expect(
+        fs
+          .readdirSync(folder.paths.assets, { recursive: true })
+          .filter((f) => /\.png$/.test(String(f))),
+      ).toEqual([]);
+    }
+  });
+
+  it("A80: a workspace that goes while its image is written keeps nothing, but an image held already stays", async () => {
+    const { folder, id, pick, workspace } = await photos();
+    const other = workspace("Other photos");
+    // The other workspace's data names the JPEG already, so it stays whatever this pick does.
+    const held = await answerFilePick(
+      folder,
+      {
+        workspaceId: other,
+        phase: "active",
+        call: { requestId: "o1", action: "file.pick", args: {} },
+        name: "held.jpg",
+      },
+      jpeg,
+    );
+    saveWorkspaceData(folder, other, { photos: [{ id: "p-1", asset: idOf(held!) }] }, 0);
+    for (const bytes of [png, jpeg]) {
+      let open = true;
+      const reply = await answerFilePick(
+        folder,
+        {
+          workspaceId: id,
+          phase: "active",
+          call: { requestId: "r9", action: "file.pick", args: {} },
+          name: "x.png",
+        },
+        bytes,
+        // Open when its turn comes, gone by the time the hold is written.
+        { isOpen: () => (open ? ((open = false), true) : false) },
+      );
+      expect(reply).toMatchObject({ ok: false, error: { code: "failed" } });
+    }
+    expect(assetCount(folder)).toBe(1);
+    expect(getAsset(folder, idOf(held!))).toBeDefined();
   });
 
   it("DATA-09, A80: cleanup keeps a picked image for a day, then only if the tool's data names it", async () => {
