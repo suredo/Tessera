@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "requestLimitBytes": 157288448,
+  "requestLimitBytes": 157289978,
   "maxDepthCount": 64,
   "methods": {
     "call": {
@@ -930,7 +930,7 @@
       "description": "Offers the person a file to save, such as an edited image or a table: only right after the person clicks. The host asks them, naming the file, its kind and size, and saves it through the browser only if they say Save; it answers saved true, or false if they didn't. An image goes as its bytes in base64 (PNG, JPEG or WebP, checked by their bytes), a CSV, plain text or JSON as its text; at most 25 MB. Its name's extension is made the kind's (CAP-03, A81).",
       "capability": "files",
       "writes": false,
-      "maxArgsBytes": 157287424,
+      "maxArgsBytes": 157288954,
       "args": {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "anyOf": [

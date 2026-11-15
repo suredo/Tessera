@@ -186,6 +186,15 @@ describe("a file a tool offers to save (CAP-03, A81)", () => {
     // The worst escaping, six bytes for one, within the limit too.
     const controls = { name: "c.txt", type: "text/plain", text: "\u0001".repeat(1024 * 1024) };
     expect(call("file.save", controls)).toMatchObject({ ok: true });
+    // The worst of both: the longest name and 25 MB of text, every character escaped to six
+    // bytes, about 150 MB as JSON (#378 second review).
+    const worst = {
+      name: "\u0001".repeat(255),
+      type: "text/plain",
+      text: "\u0001".repeat(25 * 1024 * 1024),
+    };
+    expect(call("file.save", worst)).toMatchObject({ ok: true });
+    expect(checkSaveFile(worst as never)).toMatchObject({ ok: true, file: { name: "file.txt" } });
     // Over 25 MB of text is refused, however it is sent.
     const over = { ...lines, text: "x".repeat(25 * 1024 * 1024 + 1) };
     expect(call("file.save", over)).toMatchObject({ ok: false });

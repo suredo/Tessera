@@ -10,7 +10,13 @@ import {
   pageRequestSchema,
   connectionRequestSchema,
 } from "./connection.ts";
-import { pickedFileSchema, pickNameSchema, SAVE_LIMIT_BYTES, saveRequestSchema } from "./files.ts";
+import {
+  PICK_NAME_LIMIT,
+  pickedFileSchema,
+  pickNameSchema,
+  SAVE_LIMIT_BYTES,
+  saveRequestSchema,
+} from "./files.ts";
 import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
 import { patchBatchSchema, recordIdSchema, TOOL_DATA_LIMIT_BYTES } from "./patch.ts";
 
@@ -274,9 +280,10 @@ export const BRIDGE_ACTIONS = {
     result: z.strictObject({
       saved: z.boolean().describe("Whether the person chose to save it."),
     }),
-    // A text's bytes as JSON writes them: at most six for one, as a control character's escape
-    // takes, so every text within the limit fits whatever it holds (#378 review). Base64 is less.
-    maxArgsBytes: 6 * SAVE_LIMIT_BYTES + 1024,
+    // The text and the name as JSON writes them: at most six bytes for each character, as a
+    // control character's escape takes, so any text and name within their limits fit whatever they
+    // hold; 1 KB for the rest (#378 review). Base64 is less.
+    maxArgsBytes: 6 * (SAVE_LIMIT_BYTES + PICK_NAME_LIMIT) + 1024,
     examples: [
       {
         args: { name: "groceries.csv", type: "text/csv", text: "item,quantity\nmilk,2\n" },
