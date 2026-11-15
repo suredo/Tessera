@@ -182,6 +182,19 @@ export const connectionRequestSchema = z
       .describe("Text sent with a write, such as JSON; never with GET or HEAD."),
   })
   .describe("A request through a connection the person added (CAP-02).");
+
+/** The largest image a connection's answer may hand a tool, in bytes (A75). */
+export const CONNECTION_IMAGE_LIMIT_BYTES = 5 * 1024 * 1024;
+
+/**
+ * An image a tool shows from a connection, such as a poster an answer names (ADR 0015 point 6,
+ * A75): the host fetches it with GET, checks it is an image, and hands over its bytes, keeping
+ * nothing. Only the connection, which of its addresses and the path: never a method or a body.
+ */
+export const connectionImageRequestSchema = connectionRequestSchema
+  .pick({ connection: true, origin: true, path: true })
+  .describe("An image to show, fetched through a connection the person added (CAP-02, A75).");
+export type ConnectionImageRequest = z.infer<typeof connectionImageRequestSchema>;
 export type ConnectionRequest = z.infer<typeof connectionRequestSchema>;
 
 export const connectionAnswerSchema = z

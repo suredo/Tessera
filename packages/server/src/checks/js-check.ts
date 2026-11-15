@@ -1365,7 +1365,11 @@ export function checkJs(
       );
       return;
     }
-    if (action === "connection.request") checkConnection(node, args[1]);
+    // A request through a connection, or an image through one (A75): the call's request is its
+    // second argument, or a method's first.
+    if (action === "connection.request" || action === "connection.image") {
+      checkConnection(node, args[definition.action === "argument" ? 1 : 0]);
+    }
   };
 
   // A tool reaches only the connections its version names (A66, CNX-01): the name is fixed text in
@@ -1380,7 +1384,7 @@ export function checkJs(
     if (!properties || properties.some((p) => p.type !== "Property" || p["computed"])) {
       found(
         node,
-        `Write the request as an object in the call itself, with its connection's name as fixed text: tessera.call("connection.request", { connection: "name", method: "GET", path: "/..." }). Don't spread or compute its properties.` +
+        `Write the request as an object in the call itself, with its connection's name as fixed text, as { connection: "name", path: "/..." }. Don't spread or compute its properties.` +
           named,
       );
       return;

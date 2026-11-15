@@ -135,6 +135,13 @@ export async function startTool(
             ),
           }
         : {}),
+      // An image through one is a read, so it never asks; once settled it is in the record (A75).
+      ...(data.connectionImage
+        ? {
+            connectionImage: (args, context) =>
+              data.connectionImage!(args, context).finally(() => onConnectionUsed?.()),
+          }
+        : {}),
     },
   });
   return true;

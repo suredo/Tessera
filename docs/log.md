@@ -1,5 +1,11 @@
 # Documentation log
 
+## 2026-11-15
+
+* **Fixed**: An image that repeats a connection's key outside ASCII, written as UTF-8, is refused: its bytes are read both ways when looking for the key; `CNX-08` is named by its tests and its code doc, and the 5 MB limit is tested at its boundary ([#369](https://github.com/suredo/Tessera/pull/369) review, `CNX-04`) ([connections](code/server/connections.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T01:32:56Z.
+
+* **New**: A tool can show an image through its connection, such as a poster ([#349](https://github.com/suredo/Tessera/issues/349) step 4, A75, the owner's choice, `CNX-08`): `tessera.connectionImageUrl({ connection, path })` asks the host, which fetches it with GET and every check a read gets, refuses anything that isn't a PNG, JPEG or WebP by its bytes, over 5 MB or holding the key, and hands over its bytes, keeping nothing; a tool being checked gets a placeholder. The static check names its connection as for a request. Not yet in the generation prompts ([connections](code/server/connections.md), [bridge](code/server/bridge.md), [runtime](code/runtime/package.md), [contracts](code/contracts/package.md), [checks](code/server/checks.md), [prompts](code/server/prompts.md), [web](code/web/package.md), [threat model](spec/threat-model.md), [ADR 0015](decisions/adr/0015-person-connections.md), [decision log](decisions/decision-log.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-15T01:23:31Z.
+
 ## 2026-11-14
 
 * **Fixed**: An edit's repair is told the connections the failed edit added by sample path, never the answers, and keeps them, samples and all, when it leaves them out, so its prompt stays within its budget ([#368](https://github.com/suredo/Tessera/pull/368) review, A74, `GEN-03`) ([prompts](code/server/prompts.md), [generation](code/server/generation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-14T21:23:20Z.

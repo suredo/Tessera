@@ -4,7 +4,7 @@ title: "ADR 0015. Outside services through connections the person adds"
 description: "Decides D11 (CAP-02, A65): no vetted sources; the person adds a connection to any service, a tool uses one by name through the host, reads run freely, a tool's first write through a connection is confirmed, and checks never reach the real service."
 tags: [decisions, capabilities, outside-data, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T19:17:56Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T01:23:31Z }
 ---
 # ADR 0015. Outside services through connections the person adds
 
@@ -33,7 +33,7 @@ The comparison put to the owner, for the movie finder: the **Internet Archive** 
 4. **A tool's first write through a connection is confirmed.** The first request that may change something (POST, PUT, PATCH, DELETE) from a tool through a connection asks the person, in plain words, where it goes and what it sends: the connection's name, the action in plain words (send, change, delete), the address without the key, and the text it sends, cut to a few lines with a way to see it all, with Allow and Don't allow (A70, the owner's choice of 2026-11-14). Once they allow it, that tool's later writes through that connection run without asking. They can take the permission back at any time in the details view.
 5. **Checks never reach the real service.** In staging, a connection answers with recorded or made-up answers, never the service, so building and checking a tool reads and writes nothing outside.
    **Sample answers carried by the tool** (A69, the owner's choice of 2026-11-14). A tool's version carries, for each connection it uses, a few sample answers by path, written with the tool, and in staging a request gets the sample whose path matches it best. Checks then see realistic data: a movie finder's list renders, and its behavior check means something.
-6. **What comes back is data, never instructions** (`SEC-02`). Wherever it is quoted to a model, it is quoted as data. Images in an answer that the tool shows are fetched by the host and handed over as assets (`DATA-11`); a page or video opens in a new browser tab through the host, after the person clicks, as before.
+6. **What comes back is data, never instructions** (`SEC-02`). Wherever it is quoted to a model, it is quoted as data. Images in an answer that the tool shows are fetched by the host and handed over as assets (`DATA-11`): **handed over, never kept** (A75, the owner's choice of 2026-11-14), as the bytes and type an asset is shown with, checked as an asset is, while a tool being checked gets a placeholder; a page or video opens in a new browser tab through the host, after the person clicks, as before.
 7. **The details view shows each tool's connections, its permission to write, and its recent requests** (where, when, read or write, the outcome), never the key (`OBS-01`).
    **Beside the checks** (A72, chosen by Claude Code on 2026-11-14, for the owner's review at the end of M4): each connection by name, with what the tool may do through it in plain words, Take back beside an allowed permission, and a connection the person no longer has said as not added. **Recent requests** (A73): each request of a running tool, kept with the workspace, the newest 50, with the address the tool asked for before the host adds the key; the details list the newest 20 in plain words.
 

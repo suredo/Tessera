@@ -37,5 +37,8 @@ export function serverData(
     // The server makes the request, through the connections the tool's version names (CAP-02).
     connection: (_args, context) =>
       ask(context) as ReturnType<NonNullable<DataHandlers["connection"]>>,
+    // An image through one, fetched by the server and kept nowhere (A75).
+    connectionImage: (_args, context) =>
+      ask(context) as ReturnType<NonNullable<DataHandlers["connectionImage"]>>,
   };
 }

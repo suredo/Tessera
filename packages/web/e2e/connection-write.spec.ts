@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
 import { addConnection, writesAllowed } from "../../server/src/connections/index.ts";
+import { PLACEHOLDER_IMAGE } from "../../runtime/src/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, TOOL_START, workspaceWith, type AppHost } from "./support/app-host.ts";
 
@@ -27,6 +28,11 @@ test.beforeAll(async () => {
         url: req.url ?? "",
         body: Buffer.concat(chunks).toString("utf8"),
       });
+      // A poster a tool shows (A75): a real PNG, 1 by 1 pixel.
+      if (req.url === "/poster.png") {
+        res.setHeader("content-type", "image/png");
+        return res.end(Buffer.from(PLACEHOLDER_IMAGE.bytesBase64, "base64"));
+      }
       res.statusCode = 201;
       res.setHeader("content-type", "application/json");
       res.end('{"id":"i-1"}');
@@ -170,4 +176,32 @@ test("CNX-07: on Don't allow, nothing is sent or kept, and the tool hears it was
   await expect(asked).toBeHidden();
   expect(seen).toEqual([]);
   expect(writesAllowed(app.folder, id, "lists")).toBe(false);
+});
+
+test("A75: a tool shows an image through its connection, fetched by the host, as a blob: URL", async ({
+  page,
+}) => {
+  seen.length = 0;
+  const poster: Artifact = {
+    ...listTool,
+    code: {
+      html: '<img id="poster" alt="Poster"><p id="text">Loading</p>',
+      css: "",
+      js: `tessera.connectionImageUrl({ connection: "lists", path: "/poster.png" }).then(
+  (url) => {
+    const img = document.getElementById("poster");
+    img.onload = () => { document.getElementById("text").textContent = "Shown " + img.naturalWidth + " " + url.slice(0, 5); };
+    img.src = url;
+  },
+  (error) => { document.getElementById("text").textContent = "Refused " + error.code; },
+);`,
+    },
+  };
+  const title = `Poster ${Math.random().toString(36).slice(2, 7)}`;
+  workspaceWith(app.folder, title, poster);
+  await page.goto(app.url);
+  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await expect(tool(page).locator("#text")).toHaveText("Shown 1 blob:", TOOL_START);
+  expect(seen).toEqual([{ method: "GET", url: "/poster.png", body: "" }]);
+  await expect(question(page)).toBeHidden();
 });

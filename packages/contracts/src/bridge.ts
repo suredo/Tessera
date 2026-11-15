@@ -2,7 +2,10 @@ import { z } from "zod";
 import { ASSET_LIMIT_BYTES, ASSET_TYPES, assetIdSchema } from "./asset.ts";
 import {
   CONNECTION_BODY_LIMIT_BYTES,
+  CONNECTION_IMAGE_LIMIT_BYTES,
+  CONNECTION_PATH_LIMIT,
   connectionAnswerSchema,
+  connectionImageRequestSchema,
   connectionRequestSchema,
 } from "./connection.ts";
 import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
@@ -180,6 +183,27 @@ export const BRIDGE_ACTIONS = {
       },
     ],
   },
+  "connection.image": {
+    description:
+      "Fetches an image through a connection the tool was built for, such as a poster an answer names, by a path under its address: its type and its bytes, as base64, kept nowhere. Show it through a blob: URL, as tessera.connectionImageUrl(request) does (A75, DATA-11).",
+    capability: "connection",
+    writes: false,
+    args: connectionImageRequestSchema,
+    result: z.strictObject({
+      type: z.enum(ASSET_TYPES),
+      bytesBase64: z
+        .base64()
+        .max(Math.ceil(CONNECTION_IMAGE_LIMIT_BYTES / 3) * 4)
+        .describe("The image's bytes, as base64."),
+    }),
+    maxArgsBytes: CONNECTION_PATH_LIMIT + 1024,
+    examples: [
+      {
+        args: { connection: "movies", path: "/t/p/w200/alien.jpg" },
+        result: { type: "image/jpeg", bytesBase64: "/9j/4AAQ" },
+      },
+    ],
+  },
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
 
@@ -190,6 +214,7 @@ export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
 export const BRIDGE_METHODS = {
   call: { action: "argument", argument: "fixed action", copiesData: true },
   assetUrl: { action: "asset.read", argument: "id", copiesData: true },
+  connectionImageUrl: { action: "connection.image", argument: "request", copiesData: true },
   send: { action: null, argument: "message", copiesData: true },
   onMessage: { action: null, argument: "listener", copiesData: false },
   chart: { action: null, argument: "element and spec", copiesData: false, capability: "chart" },

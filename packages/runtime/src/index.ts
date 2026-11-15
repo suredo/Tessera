@@ -5,6 +5,8 @@ export {
   BridgeError,
   clockReading,
   sampleAnswer,
+  placeholderImage,
+  PLACEHOLDER_IMAGE,
   serveBridge,
   systemClock,
   type BridgeOptions,

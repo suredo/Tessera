@@ -4,6 +4,7 @@ import type { MountEvent } from "../src/host.ts";
 import {
   BridgeError,
   clockReading,
+  PLACEHOLDER_IMAGE,
   serveBridge,
   type BridgeOptions,
   type BridgeTool,
@@ -205,7 +206,9 @@ describe("requests through a connection (CAP-02)", () => {
     },
   };
   // A host page whose server answers every connection request, recording what it was asked.
-  const withConnection = (options: Partial<BridgeOptions> = {}) => {
+  const withConnection = (
+    options: Omit<Partial<BridgeOptions>, "data"> & { data?: Partial<DataHandlers> } = {},
+  ) => {
     const asked: unknown[] = [];
     const fake = served({
       capabilities: ["connection"],
@@ -279,6 +282,50 @@ describe("requests through a connection (CAP-02)", () => {
     const bare = withConnection({ staging: true });
     expect(code(await bare.call("connection.request", read))).toBe("not-allowed");
     expect(bare.asked).toEqual([]);
+  });
+
+  it("A75 CNX-06: a tool being checked gets the placeholder image for a connection its version names, and nothing is fetched", async () => {
+    const fetched: unknown[] = [];
+    for (const options of [{ staging: true }, { rehearsal: true }]) {
+      const { call } = withConnection({
+        ...options,
+        samples,
+        data: {
+          connectionImage: (args) => {
+            fetched.push(args);
+            return Promise.reject(new Error("never"));
+          },
+        },
+      });
+      const at = JSON.stringify(options);
+      expect(
+        await call("connection.image", { connection: "movies", path: "/p.png" }),
+        at,
+      ).toMatchObject({
+        ok: true,
+        result: PLACEHOLDER_IMAGE,
+      });
+      expect(code(await call("connection.image", { connection: "bank", path: "/p.png" })), at).toBe(
+        "not-allowed",
+      );
+    }
+    expect(fetched).toEqual([]);
+  });
+
+  it("A75: outside checks, an image goes to the server's handler", async () => {
+    const image = { ...PLACEHOLDER_IMAGE };
+    const asked: unknown[] = [];
+    const { call } = withConnection({
+      data: {
+        connectionImage: (args) => {
+          asked.push(args);
+          return Promise.resolve(image);
+        },
+      },
+    });
+    const request = { connection: "movies", path: "/p.png" };
+    expect(await call("connection.image", request)).toMatchObject({ ok: true, result: image });
+    expect(asked).toEqual([request]);
   });
 
   it("CNX-07: outside checks, a change goes to the server, which decides whether the person allowed it", async () => {

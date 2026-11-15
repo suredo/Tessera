@@ -3,11 +3,11 @@ type: Code Module
 title: "Connections"
 description: "Connections to outside services that the person adds (CAP-02, ADR 0015): kept in the data folder with their keys, which no listing, reply or export carries, and the request path, which sends a tool's read only through the connections its version names, only to their origins, with the key added by the host (CNX-01 to CNX-06)."
 resource: ../../../packages/server/src/connections/
-implements: [CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06, CNX-07]
+implements: [CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06, CNX-07, CNX-08]
 tests: [../../../packages/server/test/connections.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, connections, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T19:57:44Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T01:32:40Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Keeps the connections the person adds to outside services, as [ADR 0015](../../d
 # Entry points
 
 - `src/connections/connections.ts`: `listConnections` gives every connection, by name, each as the contracts' `Connection`, which says whether it has a key but never carries one. `addConnection` checks a `ConnectionInput` and keeps it, refusing a taken name or more than the contracts' limit of 50, in plain words; `removeConnection` removes one and its key, refusing a name it doesn't know.
-- `src/connections/requests.ts`: `requestThroughConnection` makes a tool's request through a connection, for the tool version it runs and the mount's phase, and gives the contracts' connection answer, or throws a `ConnectionRefusal` with the bridge's code and a plain message. `ConnectionRequestOptions` lowers the time and size limits for a test. Each request of a tool not being checked is recorded, however it ended, in its own table (migration `0019-connection-requests.sql`, [storage](storage.md)): its connection, method, the address the tool asked for before the key is added, cut to 300 characters, and when, both read as it is asked, so removing or changing the connection while the service answers doesn't change where the record says it went, and the status or refusal code; only the newest `CONNECTION_REQUESTS_KEPT` (50) per workspace stay, and a failure to record never changes what the tool hears (A73). `recentRequests` reads them, newest first, for the [host API](host-api.md)'s details. Before a tool runs, the [static check](checks.md) refuses a request through a connection its version doesn't name, or one whose name it can't read (`CNX-01`).
+- `src/connections/requests.ts`: `requestThroughConnection` makes a tool's request through a connection, for the tool version it runs and the mount's phase, and gives the contracts' connection answer, or throws a `ConnectionRefusal` with the bridge's code and a plain message. `ConnectionRequestOptions` lowers the time and size limits for a test. `imageThroughConnection` fetches an image a tool shows through one (A75, `CNX-08`): a GET with every check a read gets, refused unless it succeeded, is an image by its bytes (by the [asset store](assets.md)'s check), is at most 5 MB and doesn't hold the key, its bytes read as text one byte to a character and as UTF-8, so a key outside ASCII is found too; its bytes and type go to the tool (`ConnectionImage`) and are kept nowhere, and it is recorded as any request. Each request of a tool not being checked is recorded, however it ended, in its own table (migration `0019-connection-requests.sql`, [storage](storage.md)): its connection, method, the address the tool asked for before the key is added, cut to 300 characters, and when, both read as it is asked, so removing or changing the connection while the service answers doesn't change where the record says it went, and the status or refusal code; only the newest `CONNECTION_REQUESTS_KEPT` (50) per workspace stay, and a failure to record never changes what the tool hears (A73). `recentRequests` reads them, newest first, for the [host API](host-api.md)'s details. Before a tool runs, the [static check](checks.md) refuses a request through a connection its version doesn't name, or one whose name it can't read (`CNX-01`).
 - The [host API](host-api.md) answers `connections.list`, `connections.add` and `connections.remove` with them, and the [bridge route](bridge.md) answers a tool's `connection.request` through `requestThroughConnection`. The [contracts](../contracts/package.md) define the shapes in `src/connection.ts`.
 
 # Behavior
@@ -45,5 +45,5 @@ Keeps the connections the person adds to outside services, as [ADR 0015](../../d
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `connections.ts`: `listConnections`, `addConnection`, `removeConnection`, `writesAllowed`, `allowWrites`, `takeBackWrites`
-- `index.ts`: `addConnection`, `allowWrites`, `listConnections`, `removeConnection`, `takeBackWrites`, `writesAllowed`, `ConnectionRefusal`, `recentRequests`, `requestThroughConnection`, `CONNECTION_REQUESTS_KEPT`, `ConnectionRequestOptions` (type), `Connection` (type), `ConnectionInput` (type)
-- `requests.ts`: `ConnectionRequestOptions` (type), `ConnectionRefusal`, `requestThroughConnection`, `CONNECTION_REQUESTS_KEPT`, `recentRequests`
+- `index.ts`: `addConnection`, `allowWrites`, `listConnections`, `removeConnection`, `takeBackWrites`, `writesAllowed`, `ConnectionRefusal`, `recentRequests`, `imageThroughConnection`, `requestThroughConnection`, `ConnectionImage` (type), `CONNECTION_REQUESTS_KEPT`, `ConnectionRequestOptions` (type), `Connection` (type), `ConnectionInput` (type)
+- `requests.ts`: `ConnectionImage` (type), `ConnectionRequestOptions` (type), `ConnectionRefusal`, `requestThroughConnection`, `imageThroughConnection`, `CONNECTION_REQUESTS_KEPT`, `recentRequests`

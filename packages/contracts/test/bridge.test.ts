@@ -94,11 +94,23 @@ describe("the bridge manifest (CON-03, CAP-01)", () => {
       Object.values(node).forEach((each) => walk(action, each));
     };
     manifest.actions.forEach((action) => walk(action.name, action.args));
-    // The one exception: a connection request's path, under one of the connection's own origins,
-    // which the host resolves and checks (CNX-02). It can't name a file or a whole address.
+    // The one exception: a path under one of a connection's own origins, which the host resolves
+    // and checks (CNX-02), for a request or an image through it (A75): the same schema, so it
+    // can't name a file or a whole address either.
     expect(
       names.filter((n) => /path|file|url|uri|href|workspace|folder|dir|origin/i.test(n)),
-    ).toEqual(["connection.request: origin", "connection.request: path"]);
+    ).toEqual([
+      "connection.request: origin",
+      "connection.request: path",
+      "connection.image: origin",
+      "connection.image: path",
+    ]);
+    expect(BRIDGE_ACTIONS["connection.image"].args.shape.path).toBe(
+      BRIDGE_ACTIONS["connection.request"].args.shape.path,
+    );
+    expect(BRIDGE_ACTIONS["connection.image"].args.shape.origin).toBe(
+      BRIDGE_ACTIONS["connection.request"].args.shape.origin,
+    );
   });
 
   it("CNX-02: a connection request's path is a path under the connection, never a whole address", () => {

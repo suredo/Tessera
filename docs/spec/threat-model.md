@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T19:57:44Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T01:23:31Z }
 ---
 # Threat model and boundary checks
 
@@ -128,6 +128,7 @@ Run against the server's side of the bridge, which makes every request through a
 | CNX-04 | Anything, while looking for the key: every reply, success or refusal, from services that write it back (echoed, in the content type, upper-cased, URL-encoded, in base64, in any mix of JSON escapes, in HTML or XML character references wherever they stand, in a page as a parser shows it, split elements and attributes included), every other table of the data folder, the console | The key reaches only the service, in its header or after the tool's query; the answer's source gives the address without it, and an answer that repeats it is refused whole. |
 | CNX-05 | A request whose answer is too large (announced or not), too slow, or not text | Refused whole, with a plain message; none of the answer is passed on. |
 | CNX-06 | A request from a tool being checked (the staging panel, a rehearsal), read or write; outside checks, a write or a read with a body | A tool being checked gets the sample answer its version carries for that path, or a plain 404, from the host page itself: nothing reaches the server or the service (A69); a connection its version doesn't name stays refused. Outside checks, a read with a body is refused; reads (GET, HEAD) go out from a tool running in its workspace, while it starts too, and changes as `CNX-07` allows. |
+| CNX-08 | An image through a connection (`connection.image`, A75): one the service answers with an error status, text or anything else that isn't a PNG, JPEG or WebP by its bytes, more than 5 MB, or bytes holding the key; one through a connection the version doesn't name; one while the tool is checked | Refused, with nothing shown: a real image is handed over as its bytes and type, kept nowhere, and recorded as a read. It is a GET with every check a read gets (`CNX-01` to `CNX-05`). While the tool is checked, a connection its version names gives a placeholder image, and nothing is fetched (`CNX-06`). |
 | CNX-07 | A change through a connection (POST, PUT, PATCH, DELETE) while the tool starts, without the person's permission, after it was taken back, through another connection than the one allowed, or from another workspace's tool | Refused before anything is sent: while the tool starts as `not-active`, as a data write is (`GEN-06`); otherwise as `needs-permission`, which the host page answers by asking the person (A70). Allowed, it goes out with its body and the key the host adds. A permission is kept per workspace and connection, taken back at any time, and removed with its workspace or connection, so one added again under the same name starts with none. |
 
 ## Import checks
