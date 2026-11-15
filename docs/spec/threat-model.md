@@ -1,10 +1,10 @@
 ---
 type: Requirement Area
 title: "Threat model and boundary checks"
-description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, imports, assets and migrations (SBX, BRG, IMP, AST, MIG)."
+description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, connections, files, imports, assets and migrations (SBX, BRG, CNX, FIL, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T15:20:33Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T23:23:08Z }
 ---
 # Threat model and boundary checks
 
@@ -131,6 +131,18 @@ Run against the server's side of the bridge, which makes every request through a
 | CNX-08 | An image through a connection (`connection.image`, A75): one the service answers with an error status, text or anything else that isn't a PNG, JPEG or WebP by its bytes, more than 5 MB, or bytes holding the key; one through a connection the version doesn't name; one while the tool is checked | Refused, with nothing shown: a real image is handed over as its bytes and type, kept nowhere, and recorded as a read. It is a GET with every check a read gets (`CNX-01` to `CNX-05`). While the tool is checked, a connection its version names gives a placeholder image, and nothing is fetched (`CNX-06`). |
 | CNX-09 | A page opened for the person (`link.open`, A76): one through a connection the version doesn't name, off the connection's address, with a whole address or before the person uses the tool; one asked for with no click of the person's, or after the click has lapsed; one while the tool is checked | Refused, with nothing opened: the address is checked as a read's (`CNX-01`, `CNX-02`), given back without the key, and opened by the host page in a new tab with no opener or referrer, only while the host page has the person's click (its activation, checked before the server is asked and again before opening), so a tool never hears a page opened that didn't. Nothing is sent to the service. While the tool is checked, no window opens (`CNX-06`). A tool still can't open a window itself (`SBX-10`). |
 | CNX-07 | A change through a connection (POST, PUT, PATCH, DELETE) while the tool starts, without the person's permission, after it was taken back, through another connection than the one allowed, or from another workspace's tool | Refused before anything is sent: while the tool starts as `not-active`, as a data write is (`GEN-06`); otherwise as `needs-permission`, which the host page answers by asking the person (A70). Allowed, it goes out with its body and the key the host adds. A permission is kept per workspace and connection, taken back at any time, and removed with its workspace or connection, so one added again under the same name starts with none. |
+
+## File checks
+
+Run against the bridge in the host page, the server's route for a picked file, the static check, and a tool in the sandbox in Chrome ([#350](https://github.com/suredo/Tessera/issues/350), `CAP-03`, A80, A81). A tool reaches the person's files only through the host: the browser's picker, which the person chooses from, to open an image, and the host's own question before a file is saved. A tool's own file input still opens the browser's picker inside the sandbox, and no code can stop it, as a nested frame can always make one; the tool then gets only the bytes of the file the person chose, never a path or a folder. Generated tools are sent to the host's way by the prompt and the static check instead (the owner's choice, A80).
+
+| ID | The tool tries | Expected result |
+| --- | --- | --- |
+| FIL-01 | To open the picker (`file.pick`): without the files capability, without the person's click, while another pick is open, or while it is checked | Refused with a plain reason, and no picker opens; a checked tool gets a small sample image instead, and nothing reaches the server. |
+| FIL-02 | To have the host keep a picked file that isn't a PNG, JPEG or WebP by its bytes, whatever its name; an empty one, one over 25 MB or over its workspace's 500 MB; a name that is a path; a call that isn't `file.pick`, or from a tool that isn't active; for a workspace removed or put in the trash meanwhile | Refused with a plain message, and nothing is kept: no asset and no hold. |
+| FIL-03 | To learn where a file is: the pick's answer, and its own file input's value and file | The pick answers an asset's ID, type, name, size and dimensions; its own input gives "C:\fakepath\\" and the file's name. Never a path or a folder. |
+| FIL-04 | To save a file (`file.save`): without the files capability or the person's click, while another question is open; bytes that aren't the image kind they say, JSON that doesn't parse, a kind that runs or renders when opened (HTML, SVG, scripts), over 25 MB; a name with another extension or a path; while it is checked | Refused before the person is asked; otherwise nothing is saved unless the person says Save, and then under its last name part with the kind's extension. A checked tool is answered saved, and nothing is asked or saved. |
+| FIL-05 | To reach the file system itself: a `file:` address by fetch, XMLHttpRequest or an image, the browser's file pickers, a download link, a new window; and, in generated code, its own file input, a download attribute or the file pickers | Each fails inside the sandbox, and nothing is read, saved or opened; generated code with any of them fails the static check, which sends it to the host's way. |
 
 ## Import checks
 

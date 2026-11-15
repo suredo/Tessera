@@ -22,7 +22,7 @@ const NAMES = {
 };
 
 describe("a picked file (CAP-03, A80)", () => {
-  it("CAP-03: a picked file's name is never a path, nor only dots", () => {
+  it("FIL-02 CAP-03: a picked file's name is never a path, nor only dots", () => {
     for (const name of NAMES.good) expect(pickNameSchema.safeParse(name).success, name).toBe(true);
     for (const name of NAMES.bad) expect(pickNameSchema.safeParse(name).success, name).toBe(false);
   });
@@ -109,7 +109,7 @@ describe("a file a tool offers to save (CAP-03, A81)", () => {
   );
   const jpeg = btoa(String.fromCharCode(0xff, 0xd8, 0xff, 0xe0, 0, 16));
 
-  it("CAP-03: a saved file's name is its last part, with the kind's extension, replacing one it had", () => {
+  it("FIL-04 CAP-03: a saved file's name is its last part, with the kind's extension, replacing one it had", () => {
     expect(saveName("groceries.csv", "text/csv")).toBe("groceries.csv");
     expect(saveName("notes.html", "text/plain")).toBe("notes.txt");
     expect(saveName("photo.PNG", "image/jpeg")).toBe("photo.jpg");
@@ -120,7 +120,7 @@ describe("a file a tool offers to save (CAP-03, A81)", () => {
     expect(saveName("y".repeat(300), "image/webp")).toHaveLength(255);
   });
 
-  it("A81: an image must start as the kind it says, and JSON must parse", () => {
+  it("FIL-04 A81: an image must start as the kind it says, and JSON must parse", () => {
     expect(checkSaveFile({ name: "a.png", type: "image/png", bytesBase64: png })).toMatchObject({
       ok: true,
       file: { name: "a.png", type: "image/png" },
@@ -144,7 +144,7 @@ describe("a file a tool offers to save (CAP-03, A81)", () => {
     expect(csv.ok && new TextDecoder().decode(csv.file.bytes)).toBe("a,b\n1,2\n");
   });
 
-  it("CON-03, A81: only images as bytes and plain data as text, in zod and the manifest's JSON Schema alike", () => {
+  it("FIL-04 CON-03, A81: only images as bytes and plain data as text, in zod and the manifest's JSON Schema alike", () => {
     const action = bridgeManifest().actions.find((a) => a.name === "file.save")!;
     const valid = new Ajv({ strict: false }).compile(action.args);
     const cases: [unknown, boolean][] = [

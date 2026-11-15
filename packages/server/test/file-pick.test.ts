@@ -107,7 +107,7 @@ const idOf = (reply: BridgeReply) => {
 };
 
 describe("an image the person picked for a tool, on the server (CAP-03, A80)", () => {
-  it("CAP-03, DATA-11: keeps it as an asset and answers with its ID and what it is, never a path", async () => {
+  it("FIL-03 CAP-03, DATA-11: keeps it as an asset and answers with its ID and what it is, never a path", async () => {
     const { folder, pick, read } = await photos();
     const reply = await pick(png);
     expect(reply).toMatchObject({
@@ -130,7 +130,7 @@ describe("an image the person picked for a tool, on the server (CAP-03, A80)", (
     expect(await read(id, other)).toMatchObject({ ok: false, error: { code: "invalid-args" } });
   });
 
-  it("CAP-01, GEN-06: refuses a tool that didn't declare files, and one whose person hasn't clicked, keeping nothing", async () => {
+  it("FIL-02 CAP-01, GEN-06: refuses a tool that didn't declare files, and one whose person hasn't clicked, keeping nothing", async () => {
     const undeclared = await photos([]);
     expect(await undeclared.pick(png)).toMatchObject({
       ok: false,
@@ -147,7 +147,7 @@ describe("an image the person picked for a tool, on the server (CAP-03, A80)", (
     expect(assetCount(folder)).toBe(0);
   });
 
-  it("AST-01: refuses a file that isn't a PNG, JPEG or WebP image, whatever its name, plainly", async () => {
+  it("FIL-02 AST-01: refuses a file that isn't a PNG, JPEG or WebP image, whatever its name, plainly", async () => {
     const { folder, pick } = await photos();
     const html = new TextEncoder().encode("<html><script>alert(1)</script></html>");
     const refused = await pick(html, { name: "photo.png" });
@@ -160,7 +160,7 @@ describe("an image the person picked for a tool, on the server (CAP-03, A80)", (
     expect(assetCount(folder)).toBe(0);
   });
 
-  it("RUN-04: only a file.pick call brings a file, and a tool in the trash keeps nothing", async () => {
+  it("FIL-02 RUN-04: only a file.pick call brings a file, and a tool in the trash keeps nothing", async () => {
     const { folder, id, call, pick } = await photos();
     const reply = await answerFilePick(
       folder,
@@ -174,7 +174,7 @@ describe("an image the person picked for a tool, on the server (CAP-03, A80)", (
     expect(assetCount(folder)).toBe(0);
   });
 
-  it("A80: a workspace removed or trashed while its pick waits keeps nothing (#376 review)", async () => {
+  it("FIL-02 A80: a workspace removed or trashed while its pick waits keeps nothing (#376 review)", async () => {
     for (const removal of ["emptied", "trashed"] as const) {
       const { folder, id, pick } = await photos();
       // The store's queue is held, so the pick waits behind it while the workspace goes.
@@ -204,7 +204,7 @@ describe("an image the person picked for a tool, on the server (CAP-03, A80)", (
     }
   });
 
-  it("A80: a workspace that goes while its image is written keeps nothing, but an image held already stays", async () => {
+  it("FIL-02 A80: a workspace that goes while its image is written keeps nothing, but an image held already stays", async () => {
     const { folder, id, workspace } = await photos();
     const other = workspace("Other photos");
     // The other workspace's data names the JPEG already, so it stays whatever this pick does.
@@ -265,7 +265,7 @@ describe("an image the person picked for a tool, on the server (CAP-03, A80)", (
 });
 
 describe("the route for a picked file (SEC-03)", () => {
-  it("takes the bytes with the call in the query, and refuses anything else plainly", async () => {
+  it("FIL-02: takes the bytes with the call in the query, and refuses anything else plainly", async () => {
     const { folder, id, call } = await photos();
     const server = await startLocalServer({ port: 0, routes: bridgeRoutes(folder) });
     const query = (request: unknown) =>

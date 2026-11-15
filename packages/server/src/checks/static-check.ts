@@ -1,5 +1,5 @@
 import type { Artifact } from "@tessera/contracts";
-import { checkJs as checkScript } from "./js-check.ts";
+import { checkJs as checkScript, FILES_THROUGH_HOST } from "./js-check.ts";
 import { parse as parseDocument, parseFragment, type DefaultTreeAdapterMap } from "parse5";
 
 // The static check (VER-01): every candidate's code, and every imported tool's, is read with real
@@ -44,6 +44,9 @@ const FORBIDDEN_ATTRIBUTES = new Set([
   "xlink:href",
 ]);
 
+/** Attributes that save or pick files the tool's own way. */
+const FILE_ATTRIBUTES = new Set(["download", "webkitdirectory"]);
+
 /** Checks a tool's code; findings say what to change, for repair (GEN-09). */
 export function staticCheck(
   code: Artifact["code"],
@@ -80,7 +83,11 @@ export function checkHtml(html: string): StaticFinding[] {
       }
       for (const { name, value } of node.attrs ?? []) {
         const attribute = name.toLowerCase();
-        if (attribute.startsWith("on")) {
+        if (tag === "input" && attribute === "type" && value.trim().toLowerCase() === "file") {
+          found(node, `The HTML has a file input. ${FILES_THROUGH_HOST}`);
+        } else if (FILE_ATTRIBUTES.has(attribute)) {
+          found(node, `The <${tag}> element has a ${attribute} attribute. ${FILES_THROUGH_HOST}`);
+        } else if (attribute.startsWith("on")) {
           found(
             node,
             `The <${tag}> element has an ${attribute} attribute. Listen with addEventListener in the JavaScript instead.`,
