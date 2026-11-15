@@ -174,4 +174,26 @@ describe("a file a tool offers to save (CAP-03, A81)", () => {
     expect(BRIDGE_SERVER_LIMIT_BYTES).toBeLessThan(1024 * 1024);
     expect(BRIDGE_ACTIONS["file.save"].hostOnly).toBe(true);
   });
+
+  it("A81, BRG-01: a text within 25 MB is taken whatever JSON's escaping makes of it, and a small action's call is still walked only so far (#378 review)", () => {
+    const context = { instanceId: "i", phase: "active" as const, capabilities: ["files"] };
+    const call = (action: string, args: unknown) =>
+      checkBridgeCall("i", { requestId: "r1", action, args }, context);
+    // 24 MB of lines: each newline is two bytes as JSON, so the call is about 36 MB.
+    const lines = { name: "lines.txt", type: "text/plain", text: "x\n".repeat(12 * 1024 * 1024) };
+    expect(call("file.save", lines)).toMatchObject({ ok: true, action: "file.save" });
+    expect(checkSaveFile(lines as never).ok).toBe(true);
+    // The worst escaping, six bytes for one, within the limit too.
+    const controls = { name: "c.txt", type: "text/plain", text: "\u0001".repeat(1024 * 1024) };
+    expect(call("file.save", controls)).toMatchObject({ ok: true });
+    // Over 25 MB of text is refused, however it is sent.
+    const over = { ...lines, text: "x".repeat(25 * 1024 * 1024 + 1) };
+    expect(call("file.save", over)).toMatchObject({ ok: false });
+    // A small action's call isn't walked as far as a save's: refused at its own limit.
+    const big = call("data.read", { note: "x".repeat(64 * 1024) });
+    expect(big).toMatchObject({ ok: false, reply: { error: { code: "too-large" } } });
+    expect(!big.ok && big.reply?.error.message).toBe(
+      "The call is larger than the bridge takes (2 KB).",
+    );
+  });
 });

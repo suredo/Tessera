@@ -274,7 +274,9 @@ export const BRIDGE_ACTIONS = {
     result: z.strictObject({
       saved: z.boolean().describe("Whether the person chose to save it."),
     }),
-    maxArgsBytes: Math.ceil(SAVE_LIMIT_BYTES / 3) * 4 + 1024,
+    // A text's bytes as JSON writes them: at most six for one, as a control character's escape
+    // takes, so every text within the limit fits whatever it holds (#378 review). Base64 is less.
+    maxArgsBytes: 6 * SAVE_LIMIT_BYTES + 1024,
     examples: [
       {
         args: { name: "groceries.csv", type: "text/csv", text: "item,quantity\nmilk,2\n" },
@@ -479,6 +481,20 @@ function walkCall(message: unknown, limitBytes: number): "ok" | "malformed" | "t
   return visit(message, 0);
 }
 
+// What the bridge reads of a call before it walks it: the envelope's room, and the largest
+// arguments of the action it names, so a call for a small action is never walked far, whatever
+// the largest action takes (#378 review). A call naming no action it knows gets the envelope's.
+const ENVELOPE_BYTES = 1024;
+function walkLimitOf(message: unknown): number {
+  const name =
+    typeof message === "object" && message !== null && Object.hasOwn(message, "action")
+      ? (message as { action?: unknown }).action
+      : undefined;
+  return typeof name === "string" && Object.hasOwn(BRIDGE_ACTIONS, name)
+    ? (BRIDGE_ACTIONS[name as BridgeActionName] as ActionDefinition).maxArgsBytes + ENVELOPE_BYTES
+    : ENVELOPE_BYTES;
+}
+
 // The call's request ID, if it has a usable one, read without walking the rest of it.
 function usableRequestId(message: unknown): string | null {
   if (typeof message !== "object" || message === null || !Object.hasOwn(message, "requestId")) {
@@ -508,8 +524,9 @@ export function checkBridgeCall(
   // Every refusal from here on carries the request ID, if the call has a usable one.
   const id = usableRequestId(message);
 
-  const walked = walkCall(message, BRIDGE_REQUEST_LIMIT_BYTES);
-  const tooLarge = `The call is larger than the bridge takes (${kb(BRIDGE_REQUEST_LIMIT_BYTES)} KB).`;
+  const limitBytes = walkLimitOf(message);
+  const walked = walkCall(message, limitBytes);
+  const tooLarge = `The call is larger than the bridge takes (${kb(limitBytes)} KB).`;
   if (walked === "malformed") {
     return refuse(
       id,
@@ -517,7 +534,7 @@ export function checkBridgeCall(
       `The call isn't plain data (objects, lists, text, numbers), at most ${BRIDGE_MAX_DEPTH} levels deep.`,
     );
   }
-  if (walked === "too-large" || utf8Bytes(JSON.stringify(message)) > BRIDGE_REQUEST_LIMIT_BYTES) {
+  if (walked === "too-large" || utf8Bytes(JSON.stringify(message)) > limitBytes) {
     return refuse(id, "too-large", tooLarge);
   }
   const request = bridgeRequestSchema.safeParse(message);
