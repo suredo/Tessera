@@ -2,10 +2,12 @@ import type { Workspace } from "@tessera/contracts";
 import { createRuntime, type ToolRuntime } from "@tessera/runtime";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { t } from "./i18n/translate.ts";
+import { SaveQuestion } from "./SaveQuestion.tsx";
 import {
   rememberedState,
   rememberState,
   startTool,
+  type SaveQuestion as Offer,
   type WriteQuestion as Question,
 } from "./tool-start.ts";
 import { WriteQuestion } from "./WriteQuestion.tsx";
@@ -72,8 +74,29 @@ export function ToolPanel({
       answering.current = resolve;
       setQuestion(asked);
     });
+  // The question before a file the tool offers is saved, while it waits (A81).
+  const [offer, setOffer] = useState<Offer | null>(null);
+  const deciding = useRef<((save: boolean) => void) | null>(null);
+  const decide = (save: boolean) => {
+    const resolve = deciding.current;
+    deciding.current = null;
+    setOffer(null);
+    resolve?.(save);
+  };
+  const askToSave = (asked: Offer) =>
+    new Promise<boolean>((resolve) => {
+      deciding.current?.(false);
+      deciding.current = resolve;
+      setOffer(asked);
+    });
   // A panel that goes, or a new tool, leaves no question open: it is answered no.
-  useEffect(() => () => answering.current?.(false), [id]);
+  useEffect(
+    () => () => {
+      answering.current?.(false);
+      deciding.current?.(false);
+    },
+    [id],
+  );
 
   // Starts the tool through `open`, until the panel goes or another start replaces this one.
   const start = (current: ToolRuntime, open: Parameters<typeof startTool>[2]) => {
@@ -83,6 +106,7 @@ export function ToolPanel({
     startTool(current, id, open, controller.signal, {
       onWrite: () => dataChanged.current?.(),
       askToWrite,
+      askToSave,
       onConnectionUsed: () => connectionUsed.current?.(),
     }).then(
       (running) => {
@@ -133,6 +157,7 @@ export function ToolPanel({
       data-workspace-id={id}
     >
       {question && <WriteQuestion question={question} onAnswer={answer} />}
+      {offer && <SaveQuestion question={offer} onAnswer={decide} />}
       <div className="tool-controls">
         {hasTool && mode === "running" && (
           <button

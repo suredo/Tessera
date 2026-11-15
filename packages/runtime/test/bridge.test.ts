@@ -11,6 +11,7 @@ import {
   type BridgeOptions,
   type BridgeTool,
   type ChosenFile,
+  type SaveOffer,
   type DataHandlers,
   type HostClock,
 } from "../src/index.ts";
@@ -597,5 +598,101 @@ describe("files in, on the host page (CAP-03, A80)", () => {
       SAMPLE_PICK.file.widthPx,
       SAMPLE_PICK.file.heightPx,
     ]);
+  });
+});
+
+describe("files out, on the host page (CAP-03, A81)", () => {
+  const csv = { name: "notes.html", type: "text/csv", text: "item,quantity\nmilk,2\n" };
+  /** A tool that declares files, with the person's answer and the browser's save stood in for. */
+  function offering(answer: () => Promise<boolean>, options: Partial<BridgeOptions> = {}) {
+    const asked: SaveOffer[] = [];
+    const saved: { name: string; type: string; text: string }[] = [];
+    const bridge = served({
+      capabilities: ["files"],
+      hasActivation: () => true,
+      askToSave: (offer) => {
+        asked.push(offer);
+        return answer();
+      },
+      saveFile: (file) =>
+        saved.push({
+          name: file.name,
+          type: file.type,
+          text: new TextDecoder().decode(file.bytes),
+        }),
+      ...options,
+    });
+    return { ...bridge, asked, saved };
+  }
+
+  it("CAP-03: after a click the person is asked, with the file's safe name, kind and size, and Save saves it", async () => {
+    const { call, asked, saved } = offering(() => Promise.resolve(true));
+    expect(await call("file.save", csv)).toMatchObject({ ok: true, result: { saved: true } });
+    // Never under the name the tool gave: its extension is the kind's.
+    expect(asked).toEqual([{ name: "notes.csv", type: "text/csv", sizeBytes: 21 }]);
+    expect(saved).toEqual([{ name: "notes.csv", type: "text/csv", text: csv.text }]);
+  });
+
+  it("A81: Don't save saves nothing, and the tool hears it", async () => {
+    const { call, saved } = offering(() => Promise.resolve(false));
+    expect(await call("file.save", csv)).toMatchObject({ ok: true, result: { saved: false } });
+    expect(saved).toEqual([]);
+  });
+
+  it("A81: a file that isn't what it says is refused before the person is asked", async () => {
+    const { call, asked } = offering(() => Promise.resolve(true));
+    const reply = await call("file.save", {
+      name: "a.png",
+      type: "image/png",
+      bytesBase64: btoa("<svg/>"),
+    });
+    expect(code(reply)).toBe("invalid-args");
+    expect(reply?.ok ? "" : reply?.error.message).toContain("Nothing was saved: the bytes aren't");
+    expect(code(await call("file.save", { name: "a", type: "text/html", text: "<p>" }))).toBe(
+      "invalid-args",
+    );
+    expect(asked).toEqual([]);
+  });
+
+  it("A81: without the person's click nothing is asked, and the tool hears why", async () => {
+    const { call, asked, saved } = offering(() => Promise.resolve(true), {
+      hasActivation: () => false,
+    });
+    const reply = await call("file.save", csv);
+    expect(code(reply)).toBe("not-allowed");
+    expect(reply?.ok ? "" : reply?.error.message).toContain("only right after the person clicks");
+    expect(asked).toEqual([]);
+    expect(saved).toEqual([]);
+  });
+
+  it("A81: one question at a time; a second offer while one is asked is refused", async () => {
+    let answer: (save: boolean) => void = () => {};
+    const { call, asked } = offering(() => new Promise((resolve) => (answer = resolve)));
+    const first = call("file.save", csv, "r-first");
+    expect(code(await call("file.save", csv, "r-second"))).toBe("not-allowed");
+    answer(false);
+    await first;
+    expect(asked).toHaveLength(1);
+  });
+
+  it("CAP-01: a tool that didn't declare files, or a host that asks no one, saves nothing", async () => {
+    const undeclared = offering(() => Promise.resolve(true), { capabilities: [] });
+    expect(code(await undeclared.call("file.save", csv))).toBe("undeclared-capability");
+    expect(undeclared.asked).toEqual([]);
+    const nowhere = served({ capabilities: ["files"], hasActivation: () => true });
+    expect(code(await nowhere.call("file.save", csv))).toBe("failed");
+  });
+
+  it("A81 VER-03: a tool being checked is answered saved, and nothing is asked or saved; a broken file is still refused", async () => {
+    for (const options of [{ staging: true }, { rehearsal: true }]) {
+      const at = JSON.stringify(options);
+      const { call, asked, saved } = offering(() => Promise.resolve(true), options);
+      expect(await call("file.save", csv), at).toMatchObject({ ok: true, result: { saved: true } });
+      expect(code(await call("file.save", { ...csv, type: "application/json" })), at).toBe(
+        "invalid-args",
+      );
+      expect(asked, at).toEqual([]);
+      expect(saved, at).toEqual([]);
+    }
   });
 });

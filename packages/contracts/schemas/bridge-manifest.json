@@ -1,6 +1,6 @@
 {
   "manifestVersion": 1,
-  "requestLimitBytes": 263168,
+  "requestLimitBytes": 34954584,
   "maxDepthCount": 64,
   "methods": {
     "call": {
@@ -26,6 +26,11 @@
     "pickFile": {
       "action": "file.pick",
       "argument": "none",
+      "copiesData": true
+    },
+    "saveFile": {
+      "action": "file.save",
+      "argument": "file",
       "copiesData": true
     },
     "send": {
@@ -61,7 +66,7 @@
     },
     {
       "name": "files",
-      "description": "Images the person picks to open, through the host's picker, kept as assets; never a path (CAP-03, A80)."
+      "description": "Images the person picks to open, through the host's picker, kept as assets; and files the tool offers to save, which the host saves once the person says so. Never a path (CAP-03, A80, A81)."
     }
   ],
   "actions": [
@@ -916,6 +921,110 @@
               "widthPx": 1600,
               "heightPx": 1200
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "file.save",
+      "description": "Offers the person a file to save, such as an edited image or a table: only right after the person clicks. The host asks them, naming the file, its kind and size, and saves it through the browser only if they say Save; it answers saved true, or false if they didn't. An image goes as its bytes in base64 (PNG, JPEG or WebP, checked by their bytes), a CSV, plain text or JSON as its text; at most 25 MB. Its name's extension is made the kind's (CAP-03, A81).",
+      "capability": "files",
+      "writes": false,
+      "maxArgsBytes": 34953560,
+      "args": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "description": "The file's name; the host keeps only its last part and makes its extension the kind's."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "image/png",
+                  "image/jpeg",
+                  "image/webp"
+                ]
+              },
+              "bytesBase64": {
+                "type": "string",
+                "minLength": 4,
+                "maxLength": 34952536,
+                "format": "base64",
+                "contentEncoding": "base64",
+                "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+                "description": "The image's bytes, as base64, such as a canvas's toDataURL without its prefix."
+              }
+            },
+            "required": [
+              "name",
+              "type",
+              "bytesBase64"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 255,
+                "description": "The file's name; the host keeps only its last part and makes its extension the kind's."
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "text/csv",
+                  "text/plain",
+                  "application/json"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 26214400,
+                "description": "The file's text."
+              }
+            },
+            "required": [
+              "name",
+              "type",
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "description": "A file a tool offers the person to save (CAP-03, A81)."
+      },
+      "result": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean",
+            "description": "Whether the person chose to save it."
+          }
+        },
+        "required": [
+          "saved"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "args": {
+            "name": "groceries.csv",
+            "type": "text/csv",
+            "text": "item,quantity\nmilk,2\n"
+          },
+          "result": {
+            "saved": true
           }
         }
       ]

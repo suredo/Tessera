@@ -1,5 +1,5 @@
 import type { BridgeArgs } from "@tessera/contracts";
-import type { DataHandlers, RuntimeState, ToolRuntime } from "@tessera/runtime";
+import type { DataHandlers, RuntimeState, SaveOffer, ToolRuntime } from "@tessera/runtime";
 import { BridgeError, serveBridge, serverData } from "@tessera/runtime";
 import { ask } from "./host-api.ts";
 
@@ -26,6 +26,17 @@ export type StartOptions = {
    * settles, so open details show the permission and the request (A72, A73).
    */
   onConnectionUsed?: () => void;
+  /**
+   * Asks the person whether to save a file the tool offers (A81); resolves true if they say Save.
+   * Without it, no file is saved.
+   */
+  askToSave?: (question: SaveQuestion) => Promise<boolean>;
+};
+
+/** What the person is asked before a file a tool offers is saved (A81). */
+export type SaveQuestion = SaveOffer & {
+  /** The tool's name. */
+  tool: string;
 };
 
 /** What the person is asked before a tool's first change through a connection (A70). */
@@ -106,7 +117,7 @@ export async function startTool(
   workspaceId: string,
   open: (runtime: ToolRuntime) => ReturnType<ToolRuntime["open"]>,
   signal: AbortSignal,
-  { onWrite, askToWrite, onConnectionUsed }: StartOptions = {},
+  { onWrite, askToWrite, onConnectionUsed, askToSave }: StartOptions = {},
   deps: StartDeps = defaults,
 ): Promise<boolean> {
   const { workspace, capabilities } = await deps.ask("workspaces.open", { id: workspaceId });
@@ -116,6 +127,10 @@ export async function startTool(
   const data = deps.serverData(workspaceId);
   deps.serveBridge(tool, {
     capabilities,
+    // A file the tool offers is saved only once the person says so, asked with its name (A81).
+    ...(askToSave
+      ? { askToSave: (offer: SaveOffer) => askToSave({ ...offer, tool: workspace.title }) }
+      : {}),
     data: {
       ...data,
       patch: async (batch, context) => {

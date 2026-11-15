@@ -7,7 +7,7 @@ implements: [RUN-04, CAP-01, GEN-06, BRG-04, DATA-02, AST-04, AST-05]
 tests: [../../../packages/server/test/bridge-routes.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/file-pick.test.ts]
 tags: [code, server, bridge]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T21:21:52Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T22:23:20Z }
 ---
 
 # Purpose
@@ -33,7 +33,7 @@ Answers a tool's data calls from the saved data (`RUN-04`, `DATA-02`). The host 
 - **A request through a connection goes only through the connections the stored version names** (`CNX-01`, A66). The names, like the capabilities, come from the workspace's current version in the database; a workspace without a usable version names none, so nothing is sent. The phase the host page sends is checked here too: a staging call reaches no service (`CNX-06`). The request path's refusals come back with their code and plain words ([connections](connections.md)).
 - **A picked file comes only from an active tool that declared files** (`CAP-01`, `GEN-06`, A80). The call is checked as any other, with the stored version's capabilities, and must be `file.pick`; the phase must be `active`, as only a person's click makes it so. The bytes are kept only if they are a PNG, JPEG or WebP image within the limits of one asset and of the workspace (`AST-01`, `AST-02`); a refusal keeps nothing and says why, as does a workspace removed or put in the trash while the pick waits or its file is written. The answer is the asset's ID, type, the name the person's file had, size and dimensions, never a path. A request without its JSON, a name that is a path, or a body over 25 MB is refused before anything is kept.
 - **Only data and connection actions are the server's.** An accepted call for another action, such as `clock.now`, gets `failed`: the host page answers those itself.
-- **The request is bounded.** Only POST; a body over the bridge's limit, with room for the workspace and phase, is refused with 413 before it is parsed; one that isn't the contract gets 400. The local server's guard has already refused anything not from the host app's own pages (`SEC-03`).
+- **The request is bounded.** Only POST; a body over the server's part of the bridge's limit (the contracts' `BRIDGE_SERVER_LIMIT_BYTES`, the largest arguments of an action the server answers, so a file a tool offers to save, which only the host page sees, doesn't widen it, A81), with room for the workspace and phase, is refused with 413 before it is parsed; one that isn't the contract gets 400. The local server's guard has already refused anything not from the host app's own pages (`SEC-03`).
 
 # Depends on / used by
 

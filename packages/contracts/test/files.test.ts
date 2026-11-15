@@ -2,11 +2,15 @@ import { Ajv } from "ajv";
 import { describe, expect, it } from "vitest";
 import {
   BRIDGE_ACTIONS,
+  BRIDGE_REQUEST_LIMIT_BYTES,
+  BRIDGE_SERVER_LIMIT_BYTES,
   bridgeManifest,
   checkBridgeCall,
+  checkSaveFile,
   filePickRequestSchema,
   pickName,
   pickNameSchema,
+  saveName,
 } from "../src/index.ts";
 
 // Files in (CAP-03, A80): what a picked file carries, and the file.pick call. A tool gets an
@@ -96,5 +100,78 @@ describe("a picked file (CAP-03, A80)", () => {
     expect(filePickRequestSchema.safeParse(request).success).toBe(true);
     expect(filePickRequestSchema.safeParse({ ...request, path: "/tmp" }).success).toBe(false);
     expect(filePickRequestSchema.safeParse({ ...request, name: "../x.png" }).success).toBe(false);
+  });
+});
+
+describe("a file a tool offers to save (CAP-03, A81)", () => {
+  const png = btoa(
+    String.fromCharCode(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13),
+  );
+  const jpeg = btoa(String.fromCharCode(0xff, 0xd8, 0xff, 0xe0, 0, 16));
+
+  it("CAP-03: a saved file's name is its last part, with the kind's extension, replacing one it had", () => {
+    expect(saveName("groceries.csv", "text/csv")).toBe("groceries.csv");
+    expect(saveName("notes.html", "text/plain")).toBe("notes.txt");
+    expect(saveName("photo.PNG", "image/jpeg")).toBe("photo.jpg");
+    expect(saveName("../../evil.exe", "application/json")).toBe("evil.json");
+    expect(saveName("Report v1.2", "text/plain")).toBe("Report v1.2.txt");
+    expect(saveName("..", "text/csv")).toBe("file.csv");
+    expect(saveName("picture", "image/png")).toBe("picture.png");
+    expect(saveName("y".repeat(300), "image/webp")).toHaveLength(255);
+  });
+
+  it("A81: an image must start as the kind it says, and JSON must parse", () => {
+    expect(checkSaveFile({ name: "a.png", type: "image/png", bytesBase64: png })).toMatchObject({
+      ok: true,
+      file: { name: "a.png", type: "image/png" },
+    });
+    expect(checkSaveFile({ name: "a.jpg", type: "image/jpeg", bytesBase64: jpeg }).ok).toBe(true);
+    for (const [type, bytesBase64] of [
+      ["image/jpeg", png],
+      ["image/webp", png],
+      ["image/png", btoa("<svg onload=alert(1)>")],
+    ] as const) {
+      const refused = checkSaveFile({ name: "a", type, bytesBase64 });
+      expect(refused, type).toMatchObject({ ok: false });
+      expect(refused.ok ? "" : refused.message).toMatch(/^Nothing was saved: the bytes aren't/);
+    }
+    expect(checkSaveFile({ name: "d", type: "application/json", text: '{"a":1}' }).ok).toBe(true);
+    expect(checkSaveFile({ name: "d", type: "application/json", text: "{a:1}" })).toEqual({
+      ok: false,
+      message: "Nothing was saved: the text isn't JSON, as the file says.",
+    });
+    const csv = checkSaveFile({ name: "list", type: "text/csv", text: "a,b\n1,2\n" });
+    expect(csv.ok && new TextDecoder().decode(csv.file.bytes)).toBe("a,b\n1,2\n");
+  });
+
+  it("CON-03, A81: only images as bytes and plain data as text, in zod and the manifest's JSON Schema alike", () => {
+    const action = bridgeManifest().actions.find((a) => a.name === "file.save")!;
+    const valid = new Ajv({ strict: false }).compile(action.args);
+    const cases: [unknown, boolean][] = [
+      [{ name: "a.png", type: "image/png", bytesBase64: png }, true],
+      [{ name: "a.csv", type: "text/csv", text: "a,b" }, true],
+      [{ name: "a.json", type: "application/json", text: "{}" }, true],
+      // Nothing that runs or renders when opened, and no image as text or text as bytes.
+      [{ name: "a.html", type: "text/html", text: "<p>" }, false],
+      [{ name: "a.svg", type: "image/svg+xml", text: "<svg/>" }, false],
+      [{ name: "a.png", type: "image/png", text: "x" }, false],
+      [{ name: "a.csv", type: "text/csv", bytesBase64: png }, false],
+      [{ name: "a.csv", type: "text/csv", text: "a", bytesBase64: png }, false],
+      [{ name: "a.csv", type: "text/csv", text: "" }, false],
+      [{ name: "", type: "text/csv", text: "a" }, false],
+      [{ name: "a.csv", type: "text/csv", text: "a", path: "/tmp" }, false],
+    ];
+    for (const [args, expected] of cases) {
+      const at = JSON.stringify(args);
+      expect(BRIDGE_ACTIONS["file.save"].args.safeParse(args).success, at).toBe(expected);
+      expect(valid(args), at).toBe(expected);
+    }
+  });
+
+  it("A81, RUN-04: the bridge takes a file of 25 MB to save, but the server's route stays as small as what it answers", () => {
+    const save = BRIDGE_ACTIONS["file.save"].maxArgsBytes;
+    expect(BRIDGE_REQUEST_LIMIT_BYTES).toBeGreaterThan(save);
+    expect(BRIDGE_SERVER_LIMIT_BYTES).toBeLessThan(1024 * 1024);
+    expect(BRIDGE_ACTIONS["file.save"].hostOnly).toBe(true);
   });
 });

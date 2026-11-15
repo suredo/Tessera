@@ -3,7 +3,10 @@ import {
   ASSET_TYPES,
   BRIDGE_ACTIONS,
   checkBridgeCall,
+  checkSaveFile,
   pickName,
+  type SaveFile,
+  type SaveType,
   type Artifact,
   type BridgeActionName,
   type BridgeArgs,
@@ -210,6 +213,26 @@ export type DataHandlers = {
   pickFile?(file: PickedBytes, context: DataCallContext): Promise<BridgeResult<"file.pick">>;
 };
 
+/** What the person is told of a file a tool offers to save (A81): never its bytes. */
+export type SaveOffer = { name: string; type: SaveType; sizeBytes: number };
+
+/**
+ * Hands a file to the browser to save, from the host page, never the tool's frame (A81): a
+ * download of its bytes under its name, which the browser saves where it saves downloads.
+ */
+export const saveInPage = (file: SaveFile): void => {
+  const url = URL.createObjectURL(new Blob([file.bytes], { type: file.type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = file.name;
+  link.rel = "noopener";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  // Long enough for the browser to have read it.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+};
+
 /** A picked file's name, made one a pick may carry, and its bytes, as the host page sends them. */
 export type PickedBytes = { name: string; bytes: Uint8Array<ArrayBuffer> };
 
@@ -252,6 +275,8 @@ export const pageHasActivation = (): boolean =>
 
 const NO_CLICK =
   "A page opens only right after the person clicks for it. Nothing was opened. Open pages only from a click handler.";
+const NO_CLICK_SAVE =
+  "A file is offered only right after the person clicks for it. Nothing was saved. Offer files only from a click handler.";
 const NO_CLICK_PICK =
   "A file is picked only right after the person clicks for it. Nothing was opened. Ask for files only from a click handler.";
 const MB = 1024 * 1024;
@@ -261,6 +286,13 @@ export type BridgeOptions = {
   openWindow?: (url: string) => void;
   /** How the person chooses a file; `chooseFileInPage` unless a test gives its own (A80). */
   chooseFile?: (accept: readonly string[]) => Promise<ChosenFile | null>;
+  /**
+   * Asks the person whether to save a file the tool offers (A81), in the host's own words;
+   * resolves true if they say Save. Without it, no file is saved.
+   */
+  askToSave?: (offer: SaveOffer) => Promise<boolean>;
+  /** How a file is saved once the person says so; `saveInPage` unless a test gives its own. */
+  saveFile?: (file: SaveFile) => void;
   /** Whether the person just clicked; `pageHasActivation` unless a test gives its own (A76). */
   hasActivation?: () => boolean;
   /** The capabilities the tool's version declares (CAP-01). */
@@ -308,6 +340,8 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
   let serving = true;
   // One picker at a time: the browser shows one, and a second would never be answered.
   let picking = false;
+  // One question about saving at a time, so a tool can't stack them in front of the person.
+  let offering = false;
 
   // One handler per action in the manifest: TypeScript refuses this object if one is missing.
   const run: {
@@ -408,6 +442,37 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
       }
       const bytes = new Uint8Array(await chosen.arrayBuffer());
       return options.data.pickFile({ name: pickName(chosen.name), bytes }, context);
+    },
+    "file.save": async (args) => {
+      // Checked first, in a check too, so a tool that offers a broken file is told why.
+      const checked = checkSaveFile(args);
+      if (!checked.ok) throw new BridgeError("invalid-args", checked.message);
+      // A check asks nothing and saves nothing (A81): the offer is answered as saved.
+      if (options.staging || options.rehearsal) return { saved: true };
+      if (!options.askToSave) throw new BridgeError("failed", "The host can't save files here.");
+      const clicked = options.hasActivation ?? pageHasActivation;
+      if (!clicked()) throw new BridgeError("not-allowed", NO_CLICK_SAVE);
+      if (offering) {
+        throw new BridgeError(
+          "not-allowed",
+          "The person is already being asked about a file. Nothing was saved. Offer it again once that is answered.",
+        );
+      }
+      offering = true;
+      let allowed: boolean;
+      try {
+        const { file } = checked;
+        allowed = await options.askToSave({
+          name: file.name,
+          type: file.type,
+          sizeBytes: file.bytes.byteLength,
+        });
+      } finally {
+        offering = false;
+      }
+      if (!allowed) return { saved: false };
+      (options.saveFile ?? saveInPage)(checked.file);
+      return { saved: true };
     },
   };
 

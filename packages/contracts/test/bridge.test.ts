@@ -98,7 +98,10 @@ describe("the bridge manifest (CON-03, CAP-01)", () => {
     // and checks (CNX-02), for a request, an image through it (A75) or a page under it (A76): the same schema, so it
     // can't name a file or a whole address either.
     expect(
-      names.filter((n) => /path|file|url|uri|href|workspace|folder|dir|origin/i.test(n)),
+      // The argument's own name, not its action's: file.save's name is the file's, never a path.
+      names.filter((n) =>
+        /path|file|url|uri|href|workspace|folder|dir|origin/i.test(n.split(": ")[1]!),
+      ),
     ).toEqual([
       "connection.request: origin",
       "connection.request: path",

@@ -10,7 +10,7 @@ import {
   pageRequestSchema,
   connectionRequestSchema,
 } from "./connection.ts";
-import { pickedFileSchema, pickNameSchema } from "./files.ts";
+import { pickedFileSchema, pickNameSchema, SAVE_LIMIT_BYTES, saveRequestSchema } from "./files.ts";
 import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
 import { patchBatchSchema, recordIdSchema, TOOL_DATA_LIMIT_BYTES } from "./patch.ts";
 
@@ -28,7 +28,7 @@ export const BRIDGE_CAPABILITIES = {
   connection:
     "Requests to the outside services the person connected, by name, made by the host (CAP-02, ADR 0015).",
   files:
-    "Images the person picks to open, through the host's picker, kept as assets; never a path (CAP-03, A80).",
+    "Images the person picks to open, through the host's picker, kept as assets; and files the tool offers to save, which the host saves once the person says so. Never a path (CAP-03, A80, A81).",
 } as const;
 export type BridgeCapability = keyof typeof BRIDGE_CAPABILITIES;
 
@@ -63,6 +63,8 @@ type ActionDefinition = {
   result: z.ZodType;
   /** The largest arguments the action takes, as UTF-8 JSON. */
   maxArgsBytes: number;
+  /** Answered by the host page alone: the server's bridge route never takes it, nor its size. */
+  hostOnly?: true;
   examples: { args: unknown; result: unknown }[];
 };
 
@@ -142,6 +144,7 @@ export const BRIDGE_ACTIONS = {
       "The current date and time from the host's clock. Use it instead of Date.now() or new Date() (RUN-07).",
     capability: "clock",
     writes: false,
+    hostOnly: true,
     args: noArgs,
     result: z.strictObject({
       epochMs: z.int().describe("Milliseconds since 1970-01-01 UTC."),
@@ -259,6 +262,26 @@ export const BRIDGE_ACTIONS = {
       },
     ],
   },
+  "file.save": {
+    description:
+      "Offers the person a file to save, such as an edited image or a table: only right after the person clicks. The host asks them, naming the file, its kind and size, and saves it through the browser only if they say Save; it answers saved true, or false if they didn't. An image goes as its bytes in base64 (PNG, JPEG or WebP, checked by their bytes), a CSV, plain text or JSON as its text; at most 25 MB. Its name's extension is made the kind's (CAP-03, A81).",
+    capability: "files",
+    // It changes nothing of the tool's data; what leaves is the person's to allow, each time.
+    writes: false,
+    // The host page asks and saves; the server never sees the file.
+    hostOnly: true,
+    args: saveRequestSchema,
+    result: z.strictObject({
+      saved: z.boolean().describe("Whether the person chose to save it."),
+    }),
+    maxArgsBytes: Math.ceil(SAVE_LIMIT_BYTES / 3) * 4 + 1024,
+    examples: [
+      {
+        args: { name: "groceries.csv", type: "text/csv", text: "item,quantity\nmilk,2\n" },
+        result: { saved: true },
+      },
+    ],
+  },
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
 
@@ -272,6 +295,7 @@ export const BRIDGE_METHODS = {
   connectionImageUrl: { action: "connection.image", argument: "request", copiesData: true },
   openPage: { action: "link.open", argument: "request", copiesData: true },
   pickFile: { action: "file.pick", argument: "none", copiesData: true },
+  saveFile: { action: "file.save", argument: "file", copiesData: true },
   send: { action: null, argument: "message", copiesData: true },
   onMessage: { action: null, argument: "listener", copiesData: false },
   chart: { action: null, argument: "element and spec", copiesData: false, capability: "chart" },
@@ -296,6 +320,17 @@ export type BridgeResult<A extends BridgeActionName> = z.infer<
 /** The largest request the bridge reads: the largest arguments, with room for the envelope. */
 export const BRIDGE_REQUEST_LIMIT_BYTES =
   Math.max(...Object.values(BRIDGE_ACTIONS).map((a) => a.maxArgsBytes)) + 1024;
+
+/**
+ * The largest call the server's bridge route reads: the largest arguments of an action the server
+ * answers, so a file a tool offers to save, which only the host page sees (A81), doesn't widen it.
+ */
+export const BRIDGE_SERVER_LIMIT_BYTES =
+  Math.max(
+    ...Object.values(BRIDGE_ACTIONS as Record<string, ActionDefinition>)
+      .filter((a) => !a.hostOnly)
+      .map((a) => a.maxArgsBytes),
+  ) + 1024;
 
 const requestIdSchema = z
   .string()
