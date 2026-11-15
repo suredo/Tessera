@@ -1365,9 +1365,13 @@ export function checkJs(
       );
       return;
     }
-    // A request through a connection, or an image through one (A75): the call's request is its
+    // A request through a connection, an image through one (A75) or a page under one (A76): the call's request is its
     // second argument, or a method's first.
-    if (action === "connection.request" || action === "connection.image") {
+    if (
+      action === "connection.request" ||
+      action === "connection.image" ||
+      action === "link.open"
+    ) {
       checkConnection(node, args[definition.action === "argument" ? 1 : 0]);
     }
   };

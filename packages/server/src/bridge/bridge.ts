@@ -14,6 +14,7 @@ import { readAssetNow, workspaceAssets, type AssetStore } from "../assets/index.
 import {
   ConnectionRefusal,
   imageThroughConnection,
+  pageThroughConnection,
   requestThroughConnection,
   type ConnectionRequestOptions,
 } from "../connections/index.ts";
@@ -157,6 +158,24 @@ export async function answerDataCall(
           options.connections,
         );
         return { requestId, ok: true, result: image };
+      } catch (error) {
+        if (error instanceof ConnectionRefusal)
+          return refusal(requestId, error.code, error.message);
+        throw error;
+      }
+    }
+    if (action === "link.open") {
+      // A page under one of the version's connections, for the host page to open (A76).
+      if (!artifact) return refusal(requestId, "failed", FAILED);
+      try {
+        const page = pageThroughConnection(
+          store,
+          workspace.id,
+          artifact,
+          request.phase,
+          args as BridgeArgs<"link.open">,
+        );
+        return { requestId, ok: true, result: page };
       } catch (error) {
         if (error instanceof ConnectionRefusal)
           return refusal(requestId, error.code, error.message);

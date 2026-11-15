@@ -134,9 +134,10 @@ export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
 /**
  * The room a request that may use a connection gets on top of its stage's budget (A74, the
  * owner's choice of 2026-11-14): the connections part and the connections quoted, about 1,800
- * characters when set. Every other request keeps the budget above.
+ * characters when set. Every other request keeps the budget above. Raised to 4,000 for opening pages
+ * (A77): the owner allowed up to 30,000 on 2026-11-15, and the largest, repair's, is 27,500.
  */
-export const CONNECTIONS_PROMPT_ROOM = 2_000;
+export const CONNECTIONS_PROMPT_ROOM = 4_000;
 
 /** A stage's budget for a prompt, with the connections' room when it tells any (A74). */
 export const promptBudget = (stage: GenerationStage, withConnections: boolean): number =>

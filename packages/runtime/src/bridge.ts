@@ -148,6 +148,11 @@ export type DataHandlers = {
     args: BridgeArgs<"connection.request">,
     context: DataCallContext,
   ): Promise<BridgeResult<"connection.request">>;
+  /** A page under a connection's address, checked by the server for the host page to open (A76). */
+  openPage?(
+    args: BridgeArgs<"link.open">,
+    context: DataCallContext,
+  ): Promise<BridgeResult<"link.open">>;
   /** An image through a connection (A75), fetched by the host and kept nowhere. */
   connectionImage?(
     args: BridgeArgs<"connection.image">,
@@ -155,7 +160,33 @@ export type DataHandlers = {
   ): Promise<BridgeResult<"connection.image">>;
 };
 
+/**
+ * Opens a page in a new tab, in the host page, never the tool's frame (A76): `noopener` and
+ * `noreferrer`, so the page can't reach Tessera or learn where it came from. The browser opens
+ * it only right after a click, by its own rule, and blocks it otherwise.
+ */
+export const openInNewTab = (url: string): void => {
+  window.open(url, "_blank", "noopener,noreferrer");
+};
+
+/**
+ * Whether the host page has the person's activation now (A76, #371 review): a click in the tool's
+ * frame gives its ancestors, this page included, a few seconds of it. With `noopener`, a page
+ * that opened and one the browser blocked both return null, so the host asks first instead.
+ */
+export const pageHasActivation = (): boolean =>
+  typeof navigator !== "undefined" && navigator.userActivation !== undefined
+    ? navigator.userActivation.isActive
+    : false;
+
+const NO_CLICK =
+  "A page opens only right after the person clicks for it. Nothing was opened. Open pages only from a click handler.";
+
 export type BridgeOptions = {
+  /** How a page opens; `openInNewTab` unless a test gives its own (A76). */
+  openWindow?: (url: string) => void;
+  /** Whether the person just clicked; `pageHasActivation` unless a test gives its own (A76). */
+  hasActivation?: () => boolean;
   /** The capabilities the tool's version declares (CAP-01). */
   capabilities: readonly string[];
   data: DataHandlers;
@@ -223,6 +254,31 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
       return options.data.connection
         ? options.data.connection(args, context)
         : Promise.reject(new BridgeError("failed", "The host can't reach outside services here."));
+    },
+    "link.open": async (args, context) => {
+      // A check opens nothing (CNX-06): a page of a connection its version names is answered,
+      // and no window opens (A76).
+      if (options.staging || options.rehearsal) {
+        if (!Object.hasOwn(options.samples ?? {}, args.connection)) {
+          throw new BridgeError(
+            "not-allowed",
+            `This tool wasn't built to use the connection ${args.connection}. Using it takes an edit. Nothing was opened.`,
+          );
+        }
+        return { url: `sample:${args.path}` };
+      }
+      if (!options.data.openPage) {
+        throw new BridgeError("failed", "The host can't open pages here.");
+      }
+      // Only right after a click, before asking the server and again before opening, as the
+      // server's answer takes time: otherwise the browser would block it unseen (CNX-09).
+      const clicked = options.hasActivation ?? pageHasActivation;
+      if (!clicked()) throw new BridgeError("not-allowed", NO_CLICK);
+      // The server checks the address as a read's; the host page opens it.
+      const page = await options.data.openPage(args, context);
+      if (!clicked()) throw new BridgeError("not-allowed", NO_CLICK);
+      (options.openWindow ?? openInNewTab)(page.url);
+      return page;
     },
     "connection.image": (args, context) => {
       // A check fetches nothing either: a named connection's image is the placeholder (A75).

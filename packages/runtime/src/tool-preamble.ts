@@ -644,6 +644,14 @@ import type { BridgeMethodName } from "@tessera/contracts";
       async connectionImageUrl(request: unknown): Promise<string> {
         return blobUrl(await call("connection.image", request));
       },
+      /**
+       * Opens a page for the person in a new tab (A76), such as a film's page: `request` is
+       * { connection, path, origin? }, under one of the tool's connections; the host opens it,
+       * only right after a click. Resolves with the address it opened; rejects as call does.
+       */
+      openPage(request: unknown): Promise<unknown> {
+        return call("link.open", request);
+      },
     } satisfies Record<BridgeMethodName, unknown>),
     enumerable: true,
   });

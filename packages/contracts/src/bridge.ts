@@ -4,8 +4,10 @@ import {
   CONNECTION_BODY_LIMIT_BYTES,
   CONNECTION_IMAGE_LIMIT_BYTES,
   CONNECTION_PATH_LIMIT,
+  CONNECTION_URL_LIMIT,
   connectionAnswerSchema,
   connectionImageRequestSchema,
+  pageRequestSchema,
   connectionRequestSchema,
 } from "./connection.ts";
 import { jsonObjectSchema, refusingReservedKey } from "./json.ts";
@@ -204,6 +206,28 @@ export const BRIDGE_ACTIONS = {
       },
     ],
   },
+  "link.open": {
+    description:
+      "Opens a page for the person in a new tab, such as a film's page or its trailer, under the address of a connection the tool was built for, by a path: only right after the person clicks, and never with the key. Use tessera.openPage(request) (A76).",
+    capability: "connection",
+    writes: false,
+    args: pageRequestSchema,
+    result: z
+      .strictObject({
+        url: z
+          .url()
+          .max(CONNECTION_URL_LIMIT)
+          .describe("The page's address as it opened, never with the key."),
+      })
+      .describe("The page opened, or the call is refused."),
+    maxArgsBytes: CONNECTION_PATH_LIMIT + 1024,
+    examples: [
+      {
+        args: { connection: "videos", path: "/watch?v=abc123" },
+        result: { url: "https://videos.example.com/watch?v=abc123" },
+      },
+    ],
+  },
 } as const satisfies Record<string, ActionDefinition>;
 export type BridgeActionName = keyof typeof BRIDGE_ACTIONS;
 
@@ -215,6 +239,7 @@ export const BRIDGE_METHODS = {
   call: { action: "argument", argument: "fixed action", copiesData: true },
   assetUrl: { action: "asset.read", argument: "id", copiesData: true },
   connectionImageUrl: { action: "connection.image", argument: "request", copiesData: true },
+  openPage: { action: "link.open", argument: "request", copiesData: true },
   send: { action: null, argument: "message", copiesData: true },
   onMessage: { action: null, argument: "listener", copiesData: false },
   chart: { action: null, argument: "element and spec", copiesData: false, capability: "chart" },

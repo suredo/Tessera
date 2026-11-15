@@ -289,7 +289,7 @@ async function setup(
     args: Record<string, unknown>,
     phase: BridgeDataRequest["phase"] = "active",
     options = {},
-    action: "connection.request" | "connection.image" = "connection.request",
+    action: "connection.request" | "connection.image" | "link.open" = "connection.request",
   ): Promise<BridgeReply> => {
     const reply = await answerDataCall(
       folder,
@@ -728,6 +728,44 @@ describe("images through a connection (ADR 0015 point 6, A75)", () => {
         "connection.image",
       );
       expect(over, path).toMatchObject({ ok: false, error: { code: "too-large" } });
+    }
+  });
+});
+
+describe("pages a tool opens (ADR 0015 point 6, A76)", () => {
+  const page = (args: Record<string, unknown>) => args;
+  it("CNX-09 A76: a page under the connection's address comes back without the key, and nothing is sent", async () => {
+    const { ask } = await setup();
+    service.seen.length = 0;
+    const opened = await ask(
+      page({ connection: "listings", path: "/watch?v=abc" }),
+      "active",
+      {},
+      "link.open",
+    );
+    expect(opened).toMatchObject({ ok: true, result: { url: `${service.origin}/watch?v=abc` } });
+    expect(JSON.stringify(opened)).not.toContain(KEY);
+    expect(JSON.stringify(opened)).not.toContain("api_key");
+    expect(service.seen).toEqual([]);
+  });
+
+  it("CNX-09 A66 CNX-02: one through a connection it wasn't built for, off its address, or before the person uses the tool, is refused", async () => {
+    const { ask } = await setup();
+    for (const [args, phase, code] of [
+      [page({ connection: "bank", path: "/x" }), "active", "not-allowed"],
+      [
+        page({ connection: "movies", path: "/x", origin: elsewhere.origin }),
+        "active",
+        "not-allowed",
+      ],
+      [page({ connection: "movies", path: "//elsewhere.example/x" }), "active", "invalid-args"],
+      [page({ connection: "movies", path: "/x" }), "starting", "not-active"],
+      [page({ connection: "movies", path: "/x" }), "staging", "not-active"],
+      [page({ connection: "movies", path: "/x", method: "POST" }), "active", "invalid-args"],
+    ] as const) {
+      expect(codeOf(await ask(args, phase, {}, "link.open")), JSON.stringify(args) + phase).toBe(
+        code,
+      );
     }
   });
 });

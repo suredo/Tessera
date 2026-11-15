@@ -12,6 +12,7 @@ export {
   ConnectionRefusal,
   recentRequests,
   imageThroughConnection,
+  pageThroughConnection,
   requestThroughConnection,
   type ConnectionImage,
   CONNECTION_REQUESTS_KEPT,

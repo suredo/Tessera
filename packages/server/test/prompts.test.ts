@@ -164,11 +164,12 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(quoted.methods).toEqual(
       Object.fromEntries(
         Object.entries(original.methods)
-          .filter(([name]) => name !== "connectionImageUrl")
+          .filter(([name]) => !["connectionImageUrl", "openPage"].includes(name))
           .map(([name, method]) => [name, method.argument]),
       ),
     );
     expect(Object.keys(quoted.methods)).not.toContain("connectionImageUrl");
+    expect(Object.keys(quoted.methods)).not.toContain("openPage");
     expect(quoted.methodUsage).toBe(original.methodUsage);
     const ajv = new Ajv({ strict: false });
     // A capability with its own part is left out with its actions (#349); the rest keep their order.
@@ -909,8 +910,12 @@ describe("connections in the generation prompt (CAP-02, A66, A74, #349 step 4)",
   });
 
   it("GEN-03 A74: with connections, every stage's largest shape stays within its budget and the connections' room", () => {
-    expect(CONNECTIONS_PROMPT_ROOM).toBe(2_000);
-    expect(promptBudget("edit", true)).toBe(PROMPT_BUDGETS.edit + 2_000);
+    expect(CONNECTIONS_PROMPT_ROOM).toBe(4_000);
+    expect(promptBudget("edit", true)).toBe(PROMPT_BUDGETS.edit + 4_000);
+    // Within the most the owner allowed, 30,000 (A77).
+    for (const stage of ["create", "edit", "repair"] as const) {
+      expect(promptBudget(stage, true)).toBeLessThanOrEqual(30_000);
+    }
     expect(promptBudget("edit", false)).toBe(PROMPT_BUDGETS.edit);
     const LONGEST = `{"last":[{"from":"person","text":"${"x".repeat(CONVERSATION_MAX_QUOTED - 38)}"}]}`;
     const largest: Record<string, number> = { create: 0, edit: 0, repair: 0 };

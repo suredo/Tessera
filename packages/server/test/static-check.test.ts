@@ -856,3 +856,22 @@ describe("an image through a connection is checked the same way (A75, CNX-01)", 
     ).toHaveLength(1);
   });
 });
+
+describe("a page a tool opens is checked the same way (A76, CNX-01, CNX-09)", () => {
+  it("CNX-09 A76: openPage and link.open name one of the version's connections, written out", () => {
+    for (const js of [
+      'tessera.openPage({ connection: "videos", path: "/watch?v=1" });',
+      'tessera.call("link.open", { connection: "videos", path: "/watch?v=1" });',
+    ]) {
+      expect(checkJs(js, ["connection"], ["videos"]), js).toEqual([]);
+      expect(
+        checkJs(js.replace('"videos"', '"bank"'), ["connection"], ["videos"]).map((f) => f.message),
+        js,
+      ).toEqual(['This tool wasn\'t made to use a connection called "bank". Use one of: videos.']);
+    }
+    // A tool still can't open a window itself (SBX-10).
+    expect(
+      checkJs('window.open("https://videos.example.com")', ["connection"], ["videos"]),
+    ).not.toEqual([]);
+  });
+});
