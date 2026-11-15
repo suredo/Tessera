@@ -540,7 +540,10 @@ function imageOf(
       "The service didn't answer with a PNG, JPEG or WebP image. Nothing was shown.",
     );
   }
-  if (repeatsKey(Buffer.from(bytes).toString("latin1"))) refuse("failed", repeated);
+  // The bytes read both ways a key can be written in them: one byte per character, and UTF-8, so
+  // a key outside ASCII is found too (CNX-04, #369 review).
+  const asText = [Buffer.from(bytes).toString("latin1"), new TextDecoder().decode(bytes)];
+  if (asText.some(repeatsKey)) refuse("failed", repeated);
   const image = {
     type: sniffed.ok ? sniffed.type : "image/png",
     bytesBase64: Buffer.from(bytes).toString("base64"),
