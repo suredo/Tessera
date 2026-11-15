@@ -17,6 +17,7 @@ const base = {
   features: [{ name: "guest list", request: "a table of my guests" }],
   profile: null,
   drawsCharts: false,
+  usesFiles: false,
   connections: [],
 };
 const withoutFeatures: Record<string, unknown> = { kind: "create", ...base };
@@ -36,6 +37,7 @@ const valid: Record<string, unknown> = {
   },
   "a behavior statement": { ...base, kind: "edit", interfacePart: null, behaviorChange: true },
   "a tool that draws charts (CAP-04)": { kind: "create", ...base, drawsCharts: true },
+  "a tool that opens and saves files (CAP-03)": { kind: "create", ...base, usesFiles: true },
   "a tool that reaches two connections (A74)": {
     kind: "create",
     ...base,
@@ -93,5 +95,11 @@ describe("recorded intents", () => {
     const recorded: Record<string, unknown> = { kind: "create", ...base };
     delete recorded["drawsCharts"];
     expect(intentSchema.parse(recorded).drawsCharts).toBe(false);
+  });
+
+  it("CAP-03: an answer recorded before files existed reads as using none", () => {
+    const recorded: Record<string, unknown> = { kind: "create", ...base };
+    delete recorded["usesFiles"];
+    expect(intentSchema.parse(recorded).usesFiles).toBe(false);
   });
 });

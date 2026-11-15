@@ -529,6 +529,49 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(names(repair.parts)).toContain("chart");
   });
 
+  it("CAP-03 A82: a tool that will open or save files, or already declares files, is told how, through the host only", () => {
+    const request = "Let me open a photo, crop it and save it.";
+    const told = assemblePrompt({
+      stage: "create",
+      request,
+      intent: intent({ kind: "create", usesFiles: true }),
+      uiMode: "standard",
+    });
+    expect(names(told.parts)).toContain("files");
+    expect(told.system).toContain("await tessera.pickFile()");
+    expect(told.system).toContain("await tessera.saveFile(file)");
+    expect(told.system).toContain("at most 25 MB");
+    expect(told.system).toContain("Never make a file input");
+    for (const usesFiles of [false, undefined]) {
+      const plain = assemblePrompt({
+        stage: "create",
+        request,
+        intent: intent({ kind: "create", usesFiles }),
+        uiMode: "standard",
+      });
+      expect(names(plain.parts)).not.toContain("files");
+      expect(plain.system).not.toContain("pickFile");
+    }
+    // Editing a tool that declares files keeps the part, whatever the intent says.
+    const edit = assemblePrompt({
+      stage: "edit",
+      request: "Make the buttons bigger",
+      intent: intent({}),
+      uiMode: "standard",
+      source: shoppingList,
+      editArtifact: {
+        contractVersion: 4,
+        code: shoppingList,
+        data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
+        capabilities: ["files"],
+        connections: {},
+        pins: [],
+        ui: { standardVersion: 1, mode: "standard" },
+      },
+    });
+    expect(names(edit.parts)).toContain("files");
+  });
+
   // A62: and with the conversation before the request at its longest, told already quoted, which
   // every shape keeps room for.
   const LONGEST = `{"last":[{"from":"person","text":"${"x".repeat(CONVERSATION_MAX_QUOTED - 38)}"}]}`;
@@ -574,20 +617,24 @@ describe("assembling a stage's prompt (GEN-03)", () => {
         PROMPT_BUDGETS[stage],
       );
     }
-    // Every profile's part fits, with the chart part too, the largest setting the largest shape
-    // (VER-03, CAP-04).
+    // Every profile's part fits, with the chart part too, and the files part, the largest setting
+    // the largest shape (VER-03, CAP-04, CAP-03).
     for (const profile of PROFILE_IDS) {
-      for (const drawsCharts of [false, true]) {
-        const shape = `${profile}${drawsCharts ? " and charts" : ""}`;
+      for (const [drawsCharts, usesFiles] of [
+        [false, false],
+        [true, false],
+        [true, true],
+      ]) {
+        const shape = `${profile}${drawsCharts ? " and charts" : ""}${usesFiles ? " and files" : ""}`;
         const create = assemblePrompt({
           stage: "create",
           request: "I need a shopping list I can tick off at the store.",
-          intent: intent({ kind: "create", profile, drawsCharts }),
+          intent: intent({ kind: "create", profile, drawsCharts, usesFiles }),
           uiMode: "standard",
           ...told,
         }).size;
         expect(create, `create with ${shape} is ${create} characters`).toBeLessThanOrEqual(
-          PROMPT_BUDGETS.create,
+          promptBudget("create", false, usesFiles),
         );
         const edit = assemblePrompt({
           stage: "edit",
@@ -595,10 +642,10 @@ describe("assembling a stage's prompt (GEN-03)", () => {
           uiMode: "standard",
           ...told,
           source: shoppingList,
-          intent: intent({ profile, drawsCharts }),
+          intent: intent({ profile, drawsCharts, usesFiles }),
         }).size;
         expect(edit, `edit with ${shape} is ${edit} characters`).toBeLessThanOrEqual(
-          PROMPT_BUDGETS.edit,
+          promptBudget("edit", false, usesFiles),
         );
       }
     }
@@ -920,6 +967,8 @@ describe("connections in the generation prompt (CAP-02, A66, A74, #349 step 4)",
     // Within the most the owner allowed, 30,000 (A77).
     for (const stage of ["create", "edit", "repair"] as const) {
       expect(promptBudget(stage, true)).toBeLessThanOrEqual(30_000);
+      // With the files' room too (A82).
+      expect(promptBudget(stage, true, true)).toBeLessThanOrEqual(30_000);
     }
     expect(promptBudget("edit", false)).toBe(PROMPT_BUDGETS.edit);
     const LONGEST = `{"last":[{"from":"person","text":"${"x".repeat(CONVERSATION_MAX_QUOTED - 38)}"}]}`;

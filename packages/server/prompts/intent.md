@@ -23,6 +23,7 @@ Then fill the other fields:
 - language: the request's language as a BCP 47 tag, such as en or pt-BR.
 - features: each separate thing the request asks for, with the words it comes from.
 - drawsCharts: true when the finished tool shows a chart or graph.
+- usesFiles: true when the finished tool opens a file from the person's computer, such as a photo to edit, or saves one there, such as an export.
 - connections: the connections listed that the finished tool reaches to get or change things outside Tessera, by name exactly as listed, at most 3; [] when it needs none, or none is listed.
 - profile: the check Tessera runs on the tool once the request is done, when the tool will be one of these; null when none fits, or when the request builds or changes no tool (data, open_saved, discuss, clarify, unsupported). Judge the whole tool, not only the words of an edit. The tool is:
 {{profiles}}
