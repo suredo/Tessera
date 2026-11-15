@@ -1,11 +1,11 @@
-# T7, movie and video finder (docs/testing/app-catalogue.md), in its M4 form before its
-# search-and-selection profile (the owner's choice, #349): a tool that searches an outside service
+# T7, movie and video finder (docs/testing/app-catalogue.md), in its M4 form: a tool that searches an outside service
 # through a connection the person added, shows posters through it and opens a trailer on the video
 # site's own page, with a watchlist kept in the tool. The runner serves both services as fakes on
 # loopback and adds them as the person's connections, so no run reaches a real service (CAP-02,
-# ADR 0015). The person asks for the finder, then for the films sorted by year, and reloads. Whether
-# it shows posters, keeps the watchlist and opens trailers is the AI review's, until the profile's
-# do steps can drive it.
+# ADR 0015). Checked by the search-results profile (VER-03, #351): the person asks for the finder,
+# searches and keeps a film with the tool's own controls (EVAL-01), asks for the films sorted by
+# year, and finds the film still kept after a reload. Whether it shows posters and opens trailers is
+# the AI review's.
 id: T7-movie-finder
 tier: advanced
 language: en
@@ -13,7 +13,7 @@ person: "Someone who likes old science-fiction films"
 goal: "Find old science-fiction films to watch, keep a watchlist, and watch a trailer"
 clock: { start: "2026-11-14T20:00:00", zone: "Europe/Lisbon" }
 budget: { calls: 8 }
-profiles: []
+profiles: [search-results]
 services:
   - connection: movies
     key: made-up-movies-key-0000
@@ -30,6 +30,11 @@ services:
 steps:
   - say: "Find old science-fiction films I can watch and let me keep a watchlist."
     expect: { created: true, workspace: new }
+  - do: { fill: search-query, value: forbidden }
+  - do: { click: search-go }
+    expect: { version: unchanged, data: unchanged }
+  - do: { click: result-keep, in: { hook: result, text: Forbidden Planet } }
+    expect: { version: unchanged, data: changed }
   - say: "Sort the films by year, oldest first."
     expect: { version: new }
   - reload: true

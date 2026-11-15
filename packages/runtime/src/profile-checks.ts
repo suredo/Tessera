@@ -1135,6 +1135,171 @@ async function scheduling(context: CheckContext): Promise<CheckOutcome> {
   return { ok: true };
 }
 
+/** "1 result kept", "3 results kept". */
+const keptCount = (count: number) => `${count} ${count === 1 ? "result" : "results"} kept`;
+
+/**
+ * The search-results profile's check (VER-03, #351): it searches, keeps a result, keeps it again,
+ * and opens the tool again. The results are the tool's own sample answers (A69), so which results
+ * come is the tool's: the check asks only that some do. Which result it keeps is found by doing,
+ * never guessed from titles (#373 review): it presses keep on each result in turn until one adds a
+ * kept item, which must show that result's title; a press that adds nothing was a result already
+ * kept, as the third rule says. When the tool keeps nothing yet, the first must add one. What was
+ * kept is compared whole, by fingerprints, when the tool is opened again.
+ */
+async function searchResults(context: CheckContext): Promise<CheckOutcome> {
+  const profile = "search-results" as const;
+  const [searches, keeps, once, reopens] = PROFILES[profile].rules;
+  const { query } = PROFILES[profile].fixture;
+  const whole = (text: string) => text;
+
+  // Searching: at least one result, each with one title.
+  const tool = await context.rehearse();
+  const before = await readList(profile, keeps, tool, "kept");
+  if (!("texts" in before)) return before;
+  const searched = await drive(profile, searches, tool, [
+    { do: "fill", hook: "search-query", value: query },
+    { do: "click", hook: "search-go" },
+  ]);
+  if (!("steps" in searched)) return searched;
+  const results = await readList(profile, searches, tool, "result");
+  if (!("texts" in results)) return results;
+  if (results.count === 0) {
+    return broke(profile, searches, `at least one result after searching for "${query}"`, "none");
+  }
+  const titles = await readList(profile, searches, tool, "result-title");
+  if (!("texts" in titles)) return titles;
+  if (titles.count !== results.count) {
+    return broke(
+      profile,
+      searches,
+      `one result-title in each of the ${results.count} results`,
+      `${titles.count}`,
+    );
+  }
+
+  // Keeping: each result in turn until one adds a kept item; one already kept adds nothing.
+  // A result's title is looked for in each kept item's whole text, past what a read shows of it,
+  // by the driver's own find (#373 review).
+  const showing = async (title: string) => findAll(profile, keeps, tool, "kept", title);
+  let kept: List = before;
+  let at = -1;
+  // Every result, its title read across every page, so one not kept is found wherever it is
+  // (#373 review); each press is one bounded drive.
+  for (let index = 0; index < titles.texts.length; index += 1) {
+    const title = titles.texts[index]!.trim();
+    const was = await showing(title);
+    if (!Array.isArray(was)) return was;
+    const pressed = await drive(profile, keeps, tool, [
+      { do: "click", hook: "result-keep", index },
+    ]);
+    if (!("steps" in pressed)) return pressed;
+    const now = await readList(profile, keeps, tool, "kept");
+    if (!("texts" in now)) return now;
+    if (now.count === kept.count) {
+      // Nothing added: right only for a result already kept, its title shown by a kept item, and
+      // then nothing else may change either; otherwise keeping it failed (#373 review).
+      if (was.length === 0) {
+        return broke(
+          profile,
+          keeps,
+          `one more kept, showing "${title}", after keeping it`,
+          `still ${keptCount(now.count)}, none showing it`,
+        );
+      }
+      // Fingerprints decide; the texts say what changed, in words.
+      if (changed(kept.digests, now.digests, whole)) {
+        return broke(
+          profile,
+          once,
+          `what was kept as it was after keeping a result already kept`,
+          changed(kept.texts, now.texts, whole) ?? "a kept item changed past what a read shows",
+        );
+      }
+      continue;
+    }
+    if (now.count !== kept.count + 1) {
+      return broke(
+        profile,
+        keeps,
+        `${keptCount(kept.count + 1)} after keeping one result`,
+        keptCount(now.count),
+      );
+    }
+    kept = now;
+    at = index;
+    break;
+  }
+  // No press added one: the first rule says some result isn't kept at the start, so keeping
+  // failed, whatever the tool's titles have in common with what it kept (#373 review).
+  if (at < 0) {
+    return broke(
+      profile,
+      keeps,
+      `one more kept after pressing result-keep on each of the ${results.count} results, as the sample answers give one not kept at the start`,
+      `still ${keptCount(before.count)}`,
+    );
+  }
+  // The item added, known by its fingerprint, must itself show the title, in its whole text: a
+  // find from its place, as the driver's finds give at most 20 places (#373 review).
+  const title = titles.texts[at]!.trim();
+  const { added, gone } = difference(before.digests, kept.digests, whole);
+  const addedTexts = difference(before.texts, kept.texts, whole).added;
+  const place = added.length === 1 ? kept.digests.indexOf(added[0]!) : -1;
+  const there = place < 0 ? [] : await findAll(profile, keeps, tool, "kept", title, place);
+  if (!Array.isArray(there)) return there;
+  if (added.length !== 1 || gone.length > 0 || !there.includes(place)) {
+    return broke(
+      profile,
+      keeps,
+      `one more kept, showing "${title}", and the others as they were, after keeping it`,
+      `new: ${clip(addedTexts)}${gone.length > 0 ? `; ${gone.length} changed or gone` : ""}`,
+    );
+  }
+
+  // Keeping it again: nothing more.
+  const again = await drive(profile, once, tool, [{ do: "click", hook: "result-keep", index: at }]);
+  if (!("steps" in again)) return again;
+  const twice = await readList(profile, once, tool, "kept");
+  if (!("texts" in twice)) return twice;
+  if (twice.count !== kept.count || changed(kept.digests, twice.digests, whole)) {
+    const said = changed(kept.texts, twice.texts, whole);
+    return broke(
+      profile,
+      once,
+      `still ${keptCount(kept.count)}, as they were, after keeping "${title}" again`,
+      `${keptCount(twice.count)}${said ? `; ${said}` : ""}`,
+    );
+  }
+  return reopenCheck(context, profile, reopens, kept, title);
+}
+
+/**
+ * Opened again, what was kept is as it was saved: the same count, and each item the same, compared
+ * whole by its fingerprint, past what a read shows of it (#373 review).
+ */
+async function reopenCheck(
+  context: CheckContext,
+  profile: ProfileId,
+  rule: string,
+  kept: List,
+  title: string | undefined,
+): Promise<CheckOutcome> {
+  const reopenedTool = await context.rehearse();
+  const reopened = await readList(profile, rule, reopenedTool, "kept");
+  if (!("texts" in reopened)) return reopened;
+  const differs = changed(kept.digests, reopened.digests, (text) => text);
+  if (reopened.count !== kept.count || differs) {
+    return broke(
+      profile,
+      rule,
+      `the ${keptCount(kept.count)} it showed${title ? `, one showing "${title}"` : ""}, as they were, after opening the tool again`,
+      `${keptCount(reopened.count)}${differs ? "; some changed, gone or new" : ""}`,
+    );
+  }
+  return { ok: true };
+}
+
 const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<CheckOutcome>>> = {
   "item-list": itemList,
   filtering,
@@ -1142,6 +1307,7 @@ const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<Chec
   chart,
   cards,
   scheduling,
+  "search-results": searchResults,
 };
 
 /**
