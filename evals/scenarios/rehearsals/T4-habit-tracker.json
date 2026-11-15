@@ -1,0 +1,129 @@
+{
+  "about": "A rehearsal of T4-habit-tracker, written by hand: no model answered these.",
+  "scenario": "T4-habit-tracker",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": false,
+          "targetsCurrentTool": false,
+          "kind": "create",
+          "profile": "items-over-time"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "My habits",
+          "summary": "Tracks walking, reading and drinking water each day, with the days in a row you kept each one.",
+          "code": {
+            "html": "<h1>My habits</h1>\n<div id=\"add\">\n  <label for=\"name\">New habit</label> <input id=\"name\" data-hook=\"habit-name\" autocomplete=\"off\">\n  <button type=\"button\" data-hook=\"habit-add\">Add habit</button>\n</div>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"habits\"></ul>",
+            "css": "#habits { list-style: none; padding: 0; display: grid; gap: 0.75rem; }\n#habits li { display: grid; gap: 0.25rem; padding: 0.75rem; border: 1px solid #c8c8c8; border-radius: 0.5rem; }\n.name { font-weight: 600; }\n.streak { color: #3b3b3b; }",
+            "js": "const list = document.getElementById(\"habits\");\nconst status = document.getElementById(\"status\");\nlet state = { data: { habits: [] }, revisions: { habits: {} } };\nlet today = \"\";\nconst dayBefore = (date, days = 1) => {\n  const at = new Date(date + \"T12:00:00Z\");\n  at.setUTCDate(at.getUTCDate() - days);\n  return at.toISOString().slice(0, 10);\n};\n// Days in a row done, ending today; a habit not yet done today shows 0.\nconst streakOf = (habit) => {\n  const done = new Set(habit.done);\n  let count = 0;\n  for (let day = today; done.has(day); day = dayBefore(day)) count += 1;\n  return count;\n};\nconst show = () => {\n  list.replaceChildren(...state.data.habits.map((habit) => {\n    const item = document.createElement(\"li\");\n    item.dataset.hook = \"habit\";\n    const name = document.createElement(\"span\");\n    name.className = \"name\";\n    name.textContent = habit.name;\n    const streak = document.createElement(\"span\");\n    streak.className = \"streak\";\n    streak.dataset.hook = \"habit-streak\";\n    const days = streakOf(habit);\n    streak.textContent = days + (days === 1 ? \" day in a row\" : \" days in a row\");\n    const done = document.createElement(\"button\");\n    done.type = \"button\";\n    done.dataset.hook = \"habit-done\";\n    const doneToday = habit.done.includes(today);\n    done.textContent = doneToday ? \"Done today\" : \"Mark done today\";\n    done.setAttribute(\"aria-pressed\", String(doneToday));\n    done.addEventListener(\"click\", () => markDone(habit));\n    item.append(name, streak, done);\n    return item;\n  }));\n};\nconst load = () =>\n  tessera.call(\"clock.now\").then((clock) => {\n    today = clock.date;\n    return tessera.call(\"data.read\");\n  }).then((read) => { state = read; show(); });\nconst save = (operations, said) =>\n  tessera.call(\"data.patch\", { operations }).then(load).then(\n    () => { status.textContent = said; },\n    () => { status.textContent = \"That wasn't saved. Try again.\"; return load(); },\n  );\nconst markDone = (habit) => {\n  if (habit.done.includes(today)) return;\n  save(\n    [{ op: \"replace\", collection: \"habits\", id: habit.id, revisionCount: state.revisions.habits[habit.id], fields: { done: [...habit.done, today] } }],\n    habit.name + \" is done today.\",\n  );\n};\nconst add = () => {\n  const input = document.getElementById(\"name\");\n  const name = input.value.trim();\n  if (!name) { status.textContent = \"Write the habit's name first.\"; return; }\n  input.value = \"\";\n  save([{ op: \"add\", collection: \"habits\", record: { name, done: [] } }], name + \" was added.\");\n};\ndocument.querySelector(\"[data-hook=habit-add]\").addEventListener(\"click\", add);\ndocument.getElementById(\"name\").addEventListener(\"keydown\", (event) => {\n  if (event.key === \"Enter\") add();\n});\nload();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "required": ["habits"],
+              "properties": {
+                "habits": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "name", "done"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "done": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "habits": []
+            },
+            "initialState": {
+              "habits": [
+                {
+                  "id": "h-1",
+                  "name": "Walk",
+                  "done": []
+                },
+                {
+                  "id": "h-2",
+                  "name": "Read",
+                  "done": []
+                },
+                {
+                  "id": "h-3",
+                  "name": "Drink water",
+                  "done": []
+                }
+              ]
+            }
+          },
+          "capabilities": ["clock"],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": true,
+          "targetsCurrentTool": true,
+          "kind": "edit"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Shows the last seven days for each habit, the days it was done filled in.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>My habits</h1>\n<div id=\"add\">\n  <label for=\"name\">New habit</label> <input id=\"name\" data-hook=\"habit-name\" autocomplete=\"off\">\n  <button type=\"button\" data-hook=\"habit-add\">Add habit</button>\n</div>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"habits\"></ul>",
+              "css": "#habits { list-style: none; padding: 0; display: grid; gap: 0.75rem; }\n#habits li { display: grid; gap: 0.25rem; padding: 0.75rem; border: 1px solid #c8c8c8; border-radius: 0.5rem; }\n.name { font-weight: 600; }\n.streak { color: #3b3b3b; }\n.week { display: flex; gap: 0.25rem; margin: 0; padding: 0; list-style: none; }\n.week li { display: grid; place-items: center; min-width: 2.25rem; padding: 0.125rem; border: 0; border-radius: 0.25rem; background: #ececec; font-size: 0.8rem; }\n.week li.done { background: #2f6b3a; color: #fff; }",
+              "js": "const list = document.getElementById(\"habits\");\nconst status = document.getElementById(\"status\");\nlet state = { data: { habits: [] }, revisions: { habits: {} } };\nlet today = \"\";\nconst dayBefore = (date, days = 1) => {\n  const at = new Date(date + \"T12:00:00Z\");\n  at.setUTCDate(at.getUTCDate() - days);\n  return at.toISOString().slice(0, 10);\n};\n// Days in a row done, ending today; a habit not yet done today shows 0.\nconst streakOf = (habit) => {\n  const done = new Set(habit.done);\n  let count = 0;\n  for (let day = today; done.has(day); day = dayBefore(day)) count += 1;\n  return count;\n};\nconst weekOf = (habit) => {\n  const days = document.createElement(\"ul\");\n  days.className = \"week\";\n  days.setAttribute(\"aria-label\", \"The last seven days\");\n  for (let back = 6; back >= 0; back -= 1) {\n    const day = dayBefore(today, back);\n    const done = habit.done.includes(day);\n    const cell = document.createElement(\"li\");\n    cell.className = done ? \"done\" : \"\";\n    cell.textContent = new Date(day + \"T12:00:00Z\").toLocaleDateString(\"en\", { weekday: \"short\", timeZone: \"UTC\" });\n    cell.title = done ? \"Done\" : \"Not done\";\n    cell.setAttribute(\"aria-label\", cell.textContent + \": \" + cell.title.toLowerCase());\n    days.append(cell);\n  }\n  return days;\n};\nconst show = () => {\n  list.replaceChildren(...state.data.habits.map((habit) => {\n    const item = document.createElement(\"li\");\n    item.dataset.hook = \"habit\";\n    const name = document.createElement(\"span\");\n    name.className = \"name\";\n    name.textContent = habit.name;\n    const streak = document.createElement(\"span\");\n    streak.className = \"streak\";\n    streak.dataset.hook = \"habit-streak\";\n    const days = streakOf(habit);\n    streak.textContent = days + (days === 1 ? \" day in a row\" : \" days in a row\");\n    const done = document.createElement(\"button\");\n    done.type = \"button\";\n    done.dataset.hook = \"habit-done\";\n    const doneToday = habit.done.includes(today);\n    done.textContent = doneToday ? \"Done today\" : \"Mark done today\";\n    done.setAttribute(\"aria-pressed\", String(doneToday));\n    done.addEventListener(\"click\", () => markDone(habit));\n    item.append(name, streak, weekOf(habit), done);\n    return item;\n  }));\n};\nconst load = () =>\n  tessera.call(\"clock.now\").then((clock) => {\n    today = clock.date;\n    return tessera.call(\"data.read\");\n  }).then((read) => { state = read; show(); });\nconst save = (operations, said) =>\n  tessera.call(\"data.patch\", { operations }).then(load).then(\n    () => { status.textContent = said; },\n    () => { status.textContent = \"That wasn't saved. Try again.\"; return load(); },\n  );\nconst markDone = (habit) => {\n  if (habit.done.includes(today)) return;\n  save(\n    [{ op: \"replace\", collection: \"habits\", id: habit.id, revisionCount: state.revisions.habits[habit.id], fields: { done: [...habit.done, today] } }],\n    habit.name + \" is done today.\",\n  );\n};\nconst add = () => {\n  const input = document.getElementById(\"name\");\n  const name = input.value.trim();\n  if (!name) { status.textContent = \"Write the habit's name first.\"; return; }\n  input.value = \"\";\n  save([{ op: \"add\", collection: \"habits\", record: { name, done: [] } }], name + \" was added.\");\n};\ndocument.querySelector(\"[data-hook=habit-add]\").addEventListener(\"click\", add);\ndocument.getElementById(\"name\").addEventListener(\"keydown\", (event) => {\n  if (event.key === \"Enter\") add();\n});\nload();"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+# T4, habit tracker (docs/testing/app-catalogue.md), in its M4 form: a tracker checked by the
+# items-over-time profile (VER-03, A79) before it opens, its streaks counted by the host's clock
+# (RUN-07). The person marks a habit done with the tracker's own controls (EVAL-01); comes back the
+# next day and marks it done again, the day before still kept; and asks for a weekly chart, a change
+# to the tool that keeps the data. Whether the streaks and the chart read well is the AI review's.
+id: T4-habit-tracker
+tier: advanced
+language: en
+person: "Someone building three daily habits"
+goal: "Mark habits done each day and see the streaks and the week at a glance"
+clock: { start: "2026-11-02T19:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 8 }
+profiles: [items-over-time]
+steps:
+  - say: "Help me track three habits every day: walk, read, drink water. Show my streaks."
+    expect: { created: true, workspace: new }
+  - do: { click: habit-done, in: { hook: habit, text: Walk } }
+    expect: { version: unchanged, data: changed }
+  - next-day: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+  - do: { click: habit-done, in: { hook: habit, text: Walk } }
+    expect: { version: unchanged, data: changed }
+  - say: "Also show a weekly chart of the days I did each habit."
+    expect: { version: new }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence
