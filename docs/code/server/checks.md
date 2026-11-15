@@ -3,11 +3,11 @@ type: Code Module
 title: "Static check"
 description: "Every candidate's and imported tool's code, parsed before it runs: sandbox, bridge and host-clock checks (ADR 0009, VER-01); startup writes are the runtime's to refuse (A60); where a look differs from the UI standard is noted, never refused (VER-06, A63)."
 resource: ../../../packages/server/src/checks/
-implements: [SBX-06, SBX-07, RUN-07, VER-01, VER-06, UX-04]
+implements: [FIL-05, SBX-06, SBX-07, RUN-07, VER-01, VER-06, UX-04]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts, ../../../packages/server/test/style-notes.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T14:59:18Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T23:37:05Z }
 ---
 
 # Purpose
@@ -21,6 +21,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 
 # Invariants
 
+- **The person's files only through the host** (`CAP-03`, A80, `FIL-05`). A file input (`type="file"` in the HTML, or set from the script on the page's own element, by property or by either attribute method), a download or webkitdirectory attribute, or such a property written on the page's own element, and the browser's file pickers (`showOpenFilePicker`, `showSaveFilePicker`, `showDirectoryPicker`) are refused, with a message that names `tessera.pickFile()` and `tessera.saveFile(file)` (`FILES_THROUGH_HOST`). This steers, as the owner chose: a tool's own file input gives only the file the person chose, and no check could find every way to make one. A tool's own data may have a type of "file" or a download field.
 - **Recognized bridge calls use the shared manifest** (`VER-01`). For references recognized as the host's bridge, the accepted form is a direct `tessera.method(...)` call with a written-out method name. Methods come from contracts' `BRIDGE_METHODS`; action names and capability requirements come from `BRIDGE_ACTIONS`. `call` needs fixed action text, and its action must exist and have its capability declared. `assetUrl` accepts a computed image ID and checks its fixed underlying action; `send` takes a message and `onMessage` a listener, without treating either as an action name. Create, edit and import pass the artifact's actual capabilities before storage/staging. A method that works in the page alone still needs its capability declared: `tessera.chart` without the chart capability is refused (`CAP-04`). A `connection.request` call, an image through one (`connection.image`, or `connectionImageUrl`, whose request is its first argument, A75), and a page under one (`link.open`, or openPage, A76), names one of the connections its version uses (A66, `CNX-01`): its request is an object in the call itself, with no spread or computed key, its `connection` fixed text, each one if there are two, and among the names create, edit and import pass from the artifact; the finding names the ones it may use. The host still refuses any other at run time. And a tool that names Chart.js, `Chart` as a name of its own or reached through the page (`window.Chart`, `self["Chart"]`, or taken out of it, as in `const { Chart: C } = window`), is refused, so the library stays the host's to change ([ADR 0014](../../decisions/adr/0014-chart-library.md)); a property of the tool's own called Chart is just a name.
 - **Direct bridge aliases fail at their source.** Storing, passing, returning, destructuring or computing the global `tessera` reference or its methods is refused with repair guidance, including `bind`, `call` and `apply`. Access through a recognized page-object path is refused too. Existing shadowing/write guards remain. This is restricted syntax, not complete JavaScript alias analysis: normal local objects may still have methods such as `call` or a `tessera` property, and the inherited page-tracking gaps below can conceal indirect bridge access. Existing prompt fixtures, development samples and sanitized live replays use direct calls; they provide no evidence that bridge aliases need support. These checks reuse the existing parsed tree walk without another convergence pass or dependency.
 - **Current time comes from the host** (`RUN-07`). Bare `Date` and `.Date` reached through recognized page values may only construct a date with an explicit input, or reach fixed `parse`/`UTC` methods. `Date.now` references (including computed keys and borrowing), `Date()` calls even with arguments, zero-argument construction, and constructor aliases fail at their source. A constructor needs at least one non-spread argument because spreads alone may be empty. The repair diagnostic points to `tessera.call("clock.now")` and its capability from `BRIDGE_ACTIONS`; explicit-input construction, arithmetic and instance formatting remain available. Unrelated local `.Date` and `.now` properties pass. This reuses the parsed walk and page tracking without another analysis pass. Bare `Date` is treated conservatively across scopes, including shadowed names; local constructor aliases are deliberately unsupported.
@@ -94,6 +95,6 @@ acorn, eslint-scope and parse5, pinned exactly. The [export and import](archives
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `index.ts`: `checkHtml`, `checkJs`, `staticCheck`, `StaticCheckResult` (type), `StaticFinding` (type), `STYLE_NOTES_LIMIT`, `styleNotes`
-- `js-check.ts`: `JsFinding` (type), `checkJs`
+- `js-check.ts`: `JsFinding` (type), `FILES_THROUGH_HOST`, `checkJs`
 - `static-check.ts`: `StaticFinding` (type), `StaticCheckResult` (type), `staticCheck`, `checkHtml`, `checkJs`
 - `style-notes.ts`: `STYLE_NOTES_LIMIT`, `styleNotes`

@@ -523,7 +523,7 @@ describe("files in, on the host page (CAP-03, A80)", () => {
     expect(sent).toEqual([]);
   });
 
-  it("A80: without the person's click no picker opens, and the tool hears why", async () => {
+  it("FIL-01 A80: without the person's click no picker opens, and the tool hears why", async () => {
     const { call, asked, sent } = picking(() => Promise.resolve(chosen("a.png", png)), {
       hasActivation: () => false,
     });
@@ -534,7 +534,7 @@ describe("files in, on the host page (CAP-03, A80)", () => {
     expect(sent).toEqual([]);
   });
 
-  it("A80: one picker at a time; a second ask while one is open is refused", async () => {
+  it("FIL-01 A80: one picker at a time; a second ask while one is open is refused", async () => {
     let answer: (file: ChosenFile | null) => void = () => {};
     const { call, asked } = picking(() => new Promise((resolve) => (answer = resolve)));
     const first = call("file.pick", {}, "r-first");
@@ -559,7 +559,7 @@ describe("files in, on the host page (CAP-03, A80)", () => {
     expect(sent).toEqual([]);
   });
 
-  it("CAP-01: a tool that didn't declare files, or a host that keeps no files, picks nothing", async () => {
+  it("FIL-01 CAP-01: a tool that didn't declare files, or a host that keeps no files, picks nothing", async () => {
     const undeclared = picking(() => Promise.resolve(chosen("a.png", png)), { capabilities: [] });
     expect(code(await undeclared.call("file.pick"))).toBe("undeclared-capability");
     expect(undeclared.asked).toEqual([]);
@@ -567,7 +567,7 @@ describe("files in, on the host page (CAP-03, A80)", () => {
     expect(code(await nowhere.call("file.pick"))).toBe("failed");
   });
 
-  it("A80 VER-03: a tool being checked gets the sample image, opens no picker, and can show it", async () => {
+  it("FIL-01 A80 VER-03: a tool being checked gets the sample image, opens no picker, and can show it", async () => {
     for (const options of [{ staging: true }, { rehearsal: true }]) {
       const at = JSON.stringify(options);
       const { call, asked, sent } = picking(() => Promise.resolve(chosen("a.png", png)), options);
@@ -639,7 +639,7 @@ describe("files out, on the host page (CAP-03, A81)", () => {
     expect(saved).toEqual([]);
   });
 
-  it("A81: a file that isn't what it says is refused before the person is asked", async () => {
+  it("FIL-04 A81: a file that isn't what it says is refused before the person is asked", async () => {
     const { call, asked } = offering(() => Promise.resolve(true));
     const reply = await call("file.save", {
       name: "a.png",
@@ -654,7 +654,7 @@ describe("files out, on the host page (CAP-03, A81)", () => {
     expect(asked).toEqual([]);
   });
 
-  it("A81: without the person's click nothing is asked, and the tool hears why", async () => {
+  it("FIL-04 A81: without the person's click nothing is asked, and the tool hears why", async () => {
     const { call, asked, saved } = offering(() => Promise.resolve(true), {
       hasActivation: () => false,
     });
@@ -665,7 +665,7 @@ describe("files out, on the host page (CAP-03, A81)", () => {
     expect(saved).toEqual([]);
   });
 
-  it("A81: one question at a time; a second offer while one is asked is refused", async () => {
+  it("FIL-04 A81: one question at a time; a second offer while one is asked is refused", async () => {
     let answer: (save: boolean) => void = () => {};
     const { call, asked } = offering(() => new Promise((resolve) => (answer = resolve)));
     const first = call("file.save", csv, "r-first");
@@ -675,7 +675,7 @@ describe("files out, on the host page (CAP-03, A81)", () => {
     expect(asked).toHaveLength(1);
   });
 
-  it("CAP-01: a tool that didn't declare files, or a host that asks no one, saves nothing", async () => {
+  it("FIL-04 CAP-01: a tool that didn't declare files, or a host that asks no one, saves nothing", async () => {
     const undeclared = offering(() => Promise.resolve(true), { capabilities: [] });
     expect(code(await undeclared.call("file.save", csv))).toBe("undeclared-capability");
     expect(undeclared.asked).toEqual([]);
@@ -683,7 +683,7 @@ describe("files out, on the host page (CAP-03, A81)", () => {
     expect(code(await nowhere.call("file.save", csv))).toBe("failed");
   });
 
-  it("A81 VER-03: a tool being checked is answered saved, and nothing is asked or saved; a broken file is still refused", async () => {
+  it("FIL-04 A81 VER-03: a tool being checked is answered saved, and nothing is asked or saved; a broken file is still refused", async () => {
     for (const options of [{ staging: true }, { rehearsal: true }]) {
       const at = JSON.stringify(options);
       const { call, asked, saved } = offering(() => Promise.resolve(true), options);

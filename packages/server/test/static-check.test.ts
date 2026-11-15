@@ -875,3 +875,60 @@ describe("a page a tool opens is checked the same way (A76, CNX-01, CNX-09)", ()
     ).not.toEqual([]);
   });
 });
+
+describe("files through the host only (CAP-03, A80, VER-01)", () => {
+  const steered = (findings: { message: string }[]) =>
+    findings.some((f) => f.message.includes("tessera.pickFile() and tessera.saveFile(file)"));
+
+  it("FIL-05 CAP-03: a file input, a download or a folder picker in the HTML is sent to the host's", () => {
+    for (const html of [
+      '<input type="file">',
+      '<label>Photo <INPUT TYPE=" File " accept="image/*"></label>',
+      "<template><input type=file></template>",
+      '<a href="#" download="list.csv">Save</a>',
+      '<input type="text" webkitdirectory>',
+    ]) {
+      expect(steered(checkHtml(html)), html).toBe(true);
+    }
+    // Other inputs, and a button, are the tool's own.
+    expect(checkHtml('<input type="text"><input type="number"><button>Open</button>')).toEqual([]);
+  });
+
+  it("FIL-05 CAP-03: a file input, a download or the browser's file pickers in the JavaScript are sent to the host's", () => {
+    for (const js of [
+      'const input = document.createElement("input"); input.type = "file";',
+      'const input = document.createElement("input"); input.setAttribute("type", "file");',
+      // The namespaced form sets the same attribute (#380 review).
+      'const input = document.createElement("input"); input.setAttributeNS(null, "type", "file");',
+      'document.getElementById("list").setAttribute("download", "list.csv");',
+      'document.getElementById("pick").webkitdirectory = true;',
+      'document.getElementById("save").download = "list.csv";',
+      "showOpenFilePicker();",
+      "window.showSaveFilePicker();",
+      "const pick = window.showDirectoryPicker;",
+      'document.body.innerHTML = "<input type=file>";',
+    ]) {
+      expect(steered(checkJs(js)), js).toBe(true);
+    }
+  });
+
+  it("CAP-03: the host's own ways, and a type that isn't a file's, pass", () => {
+    expect(
+      checkJs(
+        `document.getElementById("open").addEventListener("click", async () => {
+  const file = await tessera.pickFile();
+  if (file) document.getElementById("photo").src = await tessera.assetUrl(file.id);
+});
+document.getElementById("save").addEventListener("click", () =>
+  tessera.saveFile({ name: "list.csv", type: "text/csv", text: "a,b" }));
+const field = document.createElement("input");
+field.type = "number";
+field.setAttribute("type", "text");
+const record = { download: "later", type: "file" };
+record.download = true;
+tessera.call("data.read").then(({ data }) => { data.items[0].type = "file"; });`,
+        ["files"],
+      ),
+    ).toEqual([]);
+  });
+});

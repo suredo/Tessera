@@ -105,7 +105,7 @@ const messages = (page: Page) =>
 /** The images a workspace's tool may read: here, only those picked for it. */
 const held = (workspaceId: string) => [...workspaceAssets(host.folder!, workspaceId)];
 
-test("CAP-03, DATA-11: after a click the host's picker opens, and the tool shows the image it picked, never a path", async ({
+test("FIL-03, CAP-03, DATA-11: after a click the host's picker opens, and the tool shows the image it picked, never a path", async ({
   page,
 }) => {
   const workspaceId = workspace();
@@ -137,7 +137,7 @@ test("CAP-03, DATA-11: after a click the host's picker opens, and the tool shows
   expect(held(workspaceId)).toEqual([picked.id]);
 });
 
-test("AST-01: a file that isn't an image, whatever its name, is refused plainly and nothing is kept", async ({
+test("FIL-02, AST-01: a file that isn't an image, whatever its name, is refused plainly and nothing is kept", async ({
   page,
 }) => {
   const workspaceId = workspace();
@@ -161,7 +161,7 @@ test("AST-01: a file that isn't an image, whatever its name, is refused plainly 
   expect(held(workspaceId)).toEqual([]);
 });
 
-test("A80: without the person's click no picker opens, and the tool hears why", async ({
+test("FIL-01, A80: without the person's click no picker opens, and the tool hears why", async ({
   page,
 }) => {
   test.setTimeout(30_000);

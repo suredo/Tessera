@@ -61,7 +61,7 @@ async function offer(page: Page, button: string) {
   return title;
 }
 
-test("CAP-03, A81: the person is asked in plain words, and on Save the browser saves the file under the kind's name", async ({
+test("FIL-04, CAP-03, A81: the person is asked in plain words, and on Save the browser saves the file under the kind's name", async ({
   page,
 }) => {
   const title = await offer(page, "Save the list");
@@ -80,7 +80,7 @@ test("CAP-03, A81: the person is asked in plain words, and on Save the browser s
   await expect(asked).toBeHidden();
 });
 
-test("A81: on Don't save nothing is saved, and the tool hears it", async ({ page }) => {
+test("FIL-04, A81: on Don't save nothing is saved, and the tool hears it", async ({ page }) => {
   let downloads = 0;
   page.on("download", () => (downloads += 1));
   await offer(page, "Save the list");

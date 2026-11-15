@@ -3,11 +3,11 @@ type: Code Module
 title: "Bridge route"
 description: "The server's side of the bridge: a tool's data calls, passed on by the host page, checked again with the stored version's capabilities and answered from the saved data and revisions."
 resource: ../../../packages/server/src/bridge/
-implements: [RUN-04, CAP-01, GEN-06, BRG-04, DATA-02, AST-04, AST-05]
+implements: [RUN-04, CAP-01, GEN-06, BRG-04, DATA-02, AST-04, AST-05, FIL-02]
 tests: [../../../packages/server/test/bridge-routes.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/file-pick.test.ts]
 tags: [code, server, bridge]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T22:23:20Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T23:24:08Z }
 ---
 
 # Purpose

@@ -97,6 +97,18 @@ const ADDRESS_NAMES = new Set([
   "action",
   "formAction",
 ]);
+/** Properties and attributes that save or pick files the tool's own way (CAP-03, A80). */
+const FILE_NAMES = new Set(["download", "webkitdirectory"]);
+/** The browser's own file pickers, which a tool reaches only through Tessera (CAP-03, A80). */
+const FILE_PICKERS = new Set(["showOpenFilePicker", "showSaveFilePicker", "showDirectoryPicker"]);
+/**
+ * What a tool is told when it reaches for the person's files itself (CAP-03, A80): its own file
+ * input, a download, or the browser's file pickers. The browser's picker, which the person chooses
+ * from, is the only way in, so this steers rather than guards; it sends tools to the host's.
+ */
+export const FILES_THROUGH_HOST =
+  'A tool opens and saves the person\'s files only through Tessera: tessera.pickFile() and tessera.saveFile(file), with the "files" capability.';
+
 /** Methods that take an element or attribute name: only called directly, with the name written out. */
 const NAMED_METHODS = new Set([
   "createElement",
@@ -1200,6 +1212,9 @@ export function checkJs(
     if (parent && isNameNotReference(node, parent)) return;
     if (name === "Chart") found(node, CHART_DIRECT);
     if (name === "Date") checkDate(node, parent);
+    if (FILE_PICKERS.has(name)) {
+      found(node, `The JavaScript uses ${name}. ${FILES_THROUGH_HOST}`);
+    }
     // The tool's own variable of that name, declared and used as its own, is not the global.
     const global = page.bindings.isGlobal(node);
     if (FORBIDDEN_GLOBALS.has(name) && global) {
@@ -1265,6 +1280,28 @@ export function checkJs(
         node,
         `The JavaScript sets .${name}, which could send the tool to another page. A tool can't navigate.`,
       );
+      return;
+    }
+    if (FILE_PICKERS.has(name)) {
+      found(node, `The JavaScript uses .${name}. ${FILES_THROUGH_HOST}`);
+      return;
+    }
+    // On the page's own elements only: a tool's own data may have a download field (#380 review).
+    if (FILE_NAMES.has(name) && page.isPage(object) && isWritten(node, parent)) {
+      found(node, `The JavaScript sets .${name}. ${FILES_THROUGH_HOST}`);
+      return;
+    }
+    // input.type = "file" makes a file input of the tool's own; on its own data, type is data.
+    if (
+      name === "type" &&
+      page.isPage(object) &&
+      parent?.type === "AssignmentExpression" &&
+      parent["left"] === node &&
+      fixedText(parent["right"] as AnyNode)
+        ?.trim()
+        .toLowerCase() === "file"
+    ) {
+      found(node, `The JavaScript makes a file input. ${FILES_THROUGH_HOST}`);
       return;
     }
     if (
@@ -1492,6 +1529,16 @@ export function checkJs(
         );
       } else if (FORBIDDEN_ATTRIBUTES.has(name)) {
         found(node, `The JavaScript sets a ${name} attribute, which a tool can't use.`);
+      } else if (FILE_NAMES.has(name)) {
+        found(node, `The JavaScript sets a ${name} attribute. ${FILES_THROUGH_HOST}`);
+      } else if (
+        name === "type" &&
+        method !== "toggleAttribute" &&
+        fixedText(method === "setAttributeNS" ? args[2] : args[1])
+          ?.trim()
+          .toLowerCase() === "file"
+      ) {
+        found(node, `The JavaScript makes a file input. ${FILES_THROUGH_HOST}`);
       }
     }
   };
