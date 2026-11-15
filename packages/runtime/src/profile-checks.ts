@@ -1344,13 +1344,21 @@ async function itemsOverTime(context: CheckContext): Promise<CheckOutcome> {
     const found = /\d+/.exec(streaks.texts[at] ?? "");
     return found ? Number(found[0]) : `no number in "${(streaks.texts[at] ?? "").slice(0, 60)}"`;
   };
-  /** Marks the check's item done in `tool` and gives the streak it then shows. */
-  const markDone = async (tool: MountedTool, at: number) => {
+  /**
+   * Marks the check's item done in `tool` and gives the streak it then shows. The item is found by
+   * its name before the press and again after it, as a tracker may move a done item, to the top
+   * or by its streak, and no rule asks it to keep its place (#374 review).
+   */
+  const markDone = async (tool: MountedTool, when: string) => {
+    const at = await find(tool, marks, when);
+    if (typeof at !== "number") return at;
     const clicked = await drive(profile, marks, tool, [
       { do: "click", hook: "habit-done", index: at },
     ]);
     if (!("steps" in clicked)) return clicked;
-    return streak(tool, at, counts);
+    const now = await find(tool, marks, `${when}, after marking it done`);
+    if (typeof now !== "number") return now;
+    return streak(tool, now, counts);
   };
   const expect = (
     shown: number | string | CheckOutcome,
@@ -1380,14 +1388,14 @@ async function itemsOverTime(context: CheckContext): Promise<CheckOutcome> {
   const at = await find(today, adds, "after adding it");
   if (typeof at !== "number") return at;
   const first = expect(
-    await markDone(today, at),
+    await markDone(today, "today"),
     1,
     counts,
     "after marking it done for the first time today",
   );
   if (first) return first;
   const again = expect(
-    await markDone(today, at),
+    await markDone(today, "today"),
     1,
     marks,
     "after marking it done again the same day",
@@ -1399,7 +1407,7 @@ async function itemsOverTime(context: CheckContext): Promise<CheckOutcome> {
   const atTomorrow = await find(tomorrow, reopens, "the next day");
   if (typeof atTomorrow !== "number") return atTomorrow;
   const second = expect(
-    await markDone(tomorrow, atTomorrow),
+    await markDone(tomorrow, "the next day"),
     2,
     counts,
     "after marking it done the next day too",
@@ -1411,7 +1419,7 @@ async function itemsOverTime(context: CheckContext): Promise<CheckOutcome> {
   const atLater = await find(later, reopens, "three days after adding it");
   if (typeof atLater !== "number") return atLater;
   const missed = expect(
-    await markDone(later, atLater),
+    await markDone(later, "three days after adding it"),
     1,
     counts,
     "after marking it done with the day before missed",

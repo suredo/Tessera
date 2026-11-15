@@ -9,9 +9,12 @@ import { ready } from "./support/ready.ts";
 // throwaway copy (BRG-06). A good tracker passes; each deliberately broken one fails, saying what
 // was expected, what was observed and whose rule it is (VER-07).
 
-type Flaw = "none" | "countsTwice" | "neverResets" | "ignoresClock" | "notSaved";
+type Flaw = "none" | "sortsDone" | "countsTwice" | "neverResets" | "ignoresClock" | "notSaved";
 
-/** A habit tracker that fits the items-over-time profile, with `flaw` built in. */
+/**
+ * A habit tracker that fits the items-over-time profile, with `flaw` built in; "sortsDone" is no
+ * flaw, a working tracker that shows the habits done today first.
+ */
 const tracker = (flaw: Flaw): Artifact["code"] => ({
   html: `<label for="name">Habit</label> <input id="name" data-hook="habit-name">
 <button type="button" data-hook="habit-add">Add</button>
@@ -37,7 +40,9 @@ const streakOf = (habit) => {
   return count;
 };
 const render = () => {
-  document.getElementById("habits").replaceChildren(...state.data.habits.map((habit) => {
+  const habits = [...state.data.habits];
+  if (flaw === "sortsDone") habits.sort((a, b) => Number(b.done.includes(today)) - Number(a.done.includes(today)));
+  document.getElementById("habits").replaceChildren(...habits.map((habit) => {
     const item = document.createElement("li");
     item.dataset.hook = "habit";
     const name = document.createElement("span");
@@ -74,7 +79,14 @@ document.querySelector("[data-hook=habit-add]").addEventListener("click", () => 
 });`,
 });
 
-const flaws: Flaw[] = ["none", "countsTwice", "neverResets", "ignoresClock", "notSaved"];
+const flaws: Flaw[] = [
+  "none",
+  "sortsDone",
+  "countsTwice",
+  "neverResets",
+  "ignoresClock",
+  "notSaved",
+];
 let host: SandboxHost;
 
 test.beforeAll(async () => {
@@ -127,6 +139,12 @@ test("VER-03, RUN-07: a tracker counting days in a row by the host's clock, and 
 
 test("VER-03: so does one that already tracks other habits", async ({ page }) => {
   expect(await check(page, "none", ["Walk", "Read"])).toEqual(PASSED);
+});
+
+test("VER-03: so does one that moves a habit done today to the top, finding it again by its name", async ({
+  page,
+}) => {
+  expect(await check(page, "sortsDone", ["Walk", "Read"])).toEqual(PASSED);
 });
 
 for (const [flaw, title, rule, words] of [
