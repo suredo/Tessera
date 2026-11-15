@@ -1,6 +1,9 @@
 import {
+  ASSET_LIMIT_BYTES,
+  ASSET_TYPES,
   BRIDGE_ACTIONS,
   checkBridgeCall,
+  pickName,
   type Artifact,
   type BridgeActionName,
   type BridgeArgs,
@@ -31,7 +34,6 @@ export const systemClock: HostClock = {
   timeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
 };
 
-/** The clock's answer for a moment in a time zone: the date there, and its offset from UTC. */
 /** `date` (YYYY-MM-DD) and `days` more, by the calendar. */
 const addDays = (date: string, days: number): string => {
   const at = new Date(`${date}T12:00:00Z`);
@@ -59,6 +61,7 @@ export function daysLater(clock: HostClock, days: number): HostClock {
   return { now: () => shift(clock.now()), timeZone: () => zone };
 }
 
+/** The clock's answer for a moment in a time zone: the date there, and its offset from UTC. */
 export function clockReading(epochMs: number, timeZone: string): BridgeResult<"clock.now"> {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
@@ -136,6 +139,24 @@ export const PLACEHOLDER_IMAGE = {
 } as const;
 
 /**
+ * What a checked tool's pick gets (A80): a PNG of 16 by 12 pixels in four coloured quarters, with
+ * its asset ID, the SHA-256 of its bytes. No picker opens, and `asset.read` shows it by that ID
+ * while the tool is checked.
+ */
+export const SAMPLE_PICK = {
+  file: {
+    id: "3d1a5ef87bb6164cfbd0bd52ee1fc2db74a1d78b1051088e33ce59ad4d4a3d33",
+    type: "image/png",
+    name: "sample.png",
+    sizeBytes: 92,
+    widthPx: 16,
+    heightPx: 12,
+  },
+  bytesBase64:
+    "iVBORw0KGgoAAAANSUhEUgAAABAAAAAMCAIAAADkharWAAAAI0lEQVR42mPQz7bCih4s1MaKGEakBu2YFVjRCTs7rGhEagAAWPztkV9j768AAAAASUVORK5CYII=",
+} as const;
+
+/**
  * What a candidate's image through a connection gets while it is checked (A75, CNX-06): the
  * placeholder, for a connection its version names, and nothing is fetched.
  */
@@ -185,7 +206,30 @@ export type DataHandlers = {
     args: BridgeArgs<"connection.image">,
     context: DataCallContext,
   ): Promise<BridgeResult<"connection.image">>;
+  /** An image the person picked, kept by the server as an asset (A80); without it, none is. */
+  pickFile?(file: PickedBytes, context: DataCallContext): Promise<BridgeResult<"file.pick">>;
 };
+
+/** A picked file's name, made one a pick may carry, and its bytes, as the host page sends them. */
+export type PickedBytes = { name: string; bytes: Uint8Array<ArrayBuffer> };
+
+/** The file the person chose in the browser's picker, as much of it as the host reads. */
+export type ChosenFile = { name: string; size: number; arrayBuffer(): Promise<ArrayBuffer> };
+
+/**
+ * Shows the browser's own file picker in the host page, never the tool's frame (A80), for the
+ * types in `accept`: resolves with the file the person chose, or null if they chose none. The
+ * browser shows it only right after a click, by its own rule.
+ */
+export const chooseFileInPage = (accept: readonly string[]): Promise<ChosenFile | null> =>
+  new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = accept.join(",");
+    input.addEventListener("change", () => resolve(input.files?.[0] ?? null), { once: true });
+    input.addEventListener("cancel", () => resolve(null), { once: true });
+    input.click();
+  });
 
 /**
  * Opens a page in a new tab, in the host page, never the tool's frame (A76): `noopener` and
@@ -208,10 +252,15 @@ export const pageHasActivation = (): boolean =>
 
 const NO_CLICK =
   "A page opens only right after the person clicks for it. Nothing was opened. Open pages only from a click handler.";
+const NO_CLICK_PICK =
+  "A file is picked only right after the person clicks for it. Nothing was opened. Ask for files only from a click handler.";
+const MB = 1024 * 1024;
 
 export type BridgeOptions = {
   /** How a page opens; `openInNewTab` unless a test gives its own (A76). */
   openWindow?: (url: string) => void;
+  /** How the person chooses a file; `chooseFileInPage` unless a test gives its own (A80). */
+  chooseFile?: (accept: readonly string[]) => Promise<ChosenFile | null>;
   /** Whether the person just clicked; `pageHasActivation` unless a test gives its own (A76). */
   hasActivation?: () => boolean;
   /** The capabilities the tool's version declares (CAP-01). */
@@ -257,6 +306,8 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
   const clock = options.clock ?? systemClock;
   let phase: BridgePhase = options.rehearsal ? "active" : options.staging ? "staging" : "starting";
   let serving = true;
+  // One picker at a time: the browser shows one, and a second would never be answered.
+  let picking = false;
 
   // One handler per action in the manifest: TypeScript refuses this object if one is missing.
   const run: {
@@ -267,10 +318,18 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
   } = {
     "data.read": (_args, context) => options.data.read(context),
     "data.patch": (batch, context) => options.data.patch(batch, context),
-    "asset.read": (args, context) =>
-      options.data.asset
+    "asset.read": (args, context) => {
+      // A checked tool shows the sample its pick got (A80).
+      if ((options.staging || options.rehearsal) && args.id === SAMPLE_PICK.file.id) {
+        return Promise.resolve({
+          type: SAMPLE_PICK.file.type,
+          bytesBase64: SAMPLE_PICK.bytesBase64,
+        });
+      }
+      return options.data.asset
         ? options.data.asset(args, context)
-        : Promise.reject(new BridgeError("failed", "The host can't show images here.")),
+        : Promise.reject(new BridgeError("failed", "The host can't show images here."));
+    },
     "clock.now": () => Promise.resolve(clockReading(clock.now(), clock.timeZone())),
     "connection.request": (args, context) => {
       // A check never reaches the real service (ADR 0015, point 5): a candidate's request, read or
@@ -316,9 +375,40 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
         ? options.data.connectionImage(args, context)
         : Promise.reject(new BridgeError("failed", "The host can't show images from here."));
     },
-    // The host's picker comes with #350 step 1b; until then nothing is picked.
-    "file.pick": () =>
-      Promise.reject(new BridgeError("failed", "The host can't open files here yet.")),
+    "file.pick": async (_args, context) => {
+      // A check opens no picker (A80): its pick is the sample image, kept nowhere.
+      if (options.staging || options.rehearsal) return { file: { ...SAMPLE_PICK.file } };
+      if (!options.data.pickFile) {
+        throw new BridgeError("failed", "The host can't open files here.");
+      }
+      // Only right after a click, so a tool can't put a picker in front of the person unasked;
+      // the browser would refuse it anyway, unseen.
+      const clicked = options.hasActivation ?? pageHasActivation;
+      if (!clicked()) throw new BridgeError("not-allowed", NO_CLICK_PICK);
+      if (picking) {
+        throw new BridgeError(
+          "not-allowed",
+          "The person is already picking a file. Nothing more was opened. Ask again once that pick is answered.",
+        );
+      }
+      picking = true;
+      let chosen: ChosenFile | null;
+      try {
+        chosen = await (options.chooseFile ?? chooseFileInPage)(ASSET_TYPES);
+      } finally {
+        picking = false;
+      }
+      if (!chosen) return { file: null };
+      // Over the limit, it isn't sent at all; the server checks again, by its own lights.
+      if (chosen.size > ASSET_LIMIT_BYTES) {
+        throw new BridgeError(
+          "too-large",
+          `Nothing was kept: the file is ${Math.ceil(chosen.size / MB)} MB, over the limit of ${ASSET_LIMIT_BYTES / MB} MB for one image.`,
+        );
+      }
+      const bytes = new Uint8Array(await chosen.arrayBuffer());
+      return options.data.pickFile({ name: pickName(chosen.name), bytes }, context);
+    },
   };
 
   const reply = (message: BridgeReply) => {

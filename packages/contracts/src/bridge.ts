@@ -271,6 +271,7 @@ export const BRIDGE_METHODS = {
   assetUrl: { action: "asset.read", argument: "id", copiesData: true },
   connectionImageUrl: { action: "connection.image", argument: "request", copiesData: true },
   openPage: { action: "link.open", argument: "request", copiesData: true },
+  pickFile: { action: "file.pick", argument: "none", copiesData: true },
   send: { action: null, argument: "message", copiesData: true },
   onMessage: { action: null, argument: "listener", copiesData: false },
   chart: { action: null, argument: "element and spec", copiesData: false, capability: "chart" },

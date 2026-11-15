@@ -164,12 +164,14 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(quoted.methods).toEqual(
       Object.fromEntries(
         Object.entries(original.methods)
-          .filter(([name]) => !["connectionImageUrl", "openPage"].includes(name))
+          .filter(([name]) => !["connectionImageUrl", "openPage", "pickFile"].includes(name))
           .map(([name, method]) => [name, method.argument]),
       ),
     );
     expect(Object.keys(quoted.methods)).not.toContain("connectionImageUrl");
     expect(Object.keys(quoted.methods)).not.toContain("openPage");
+    // So do files, with theirs (#350 step 3).
+    expect(Object.keys(quoted.methods)).not.toContain("pickFile");
     expect(quoted.methodUsage).toBe(original.methodUsage);
     const ajv = new Ajv({ strict: false });
     // A capability with its own part is left out with its actions (#349); the rest keep their order.
