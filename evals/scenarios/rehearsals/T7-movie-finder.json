@@ -1,0 +1,128 @@
+{
+  "about": "A rehearsal of T7-movie-finder, written by hand: no model answered these.",
+  "scenario": "T7-movie-finder",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [],
+          "kind": "create",
+          "connections": ["movies", "videos"]
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Old science-fiction films",
+          "summary": "Finds old science-fiction films through your film service, shows their posters and trailers, and keeps a watchlist.",
+          "code": {
+            "html": "<h1>Old science-fiction films</h1>\n<form id=\"search\">\n  <label for=\"query\">Search</label> <input id=\"query\" type=\"search\" value=\"science fiction\">\n  <button type=\"submit\">Search</button>\n</form>\n<p id=\"status\" role=\"status\">Searching…</p>\n<ul id=\"results\"></ul>\n<h2>My watchlist</h2>\n<p id=\"empty\">Nothing on your watchlist yet.</p>\n<ul id=\"watchlist\"></ul>",
+            "css": "#results, #watchlist { list-style: none; padding: 0; display: grid; gap: var(--ui-space-3); }\n#results li { display: grid; grid-template-columns: 4rem 1fr; gap: var(--ui-space-2); align-items: start; }\n#results img { width: 4rem; height: 6rem; object-fit: cover; background: var(--ui-surface); }",
+            "js": "const results = document.getElementById(\"results\");\nconst status = document.getElementById(\"status\");\nconst watchlist = document.getElementById(\"watchlist\");\nconst empty = document.getElementById(\"empty\");\nlet state = { data: { watchlist: [] }, revisions: { watchlist: {} } };\n\nfunction showWatchlist() {\n  watchlist.replaceChildren();\n  empty.hidden = state.data.watchlist.length > 0;\n  for (const film of state.data.watchlist) {\n    const item = document.createElement(\"li\");\n    item.textContent = film.title + \" (\" + film.year + \")\";\n    watchlist.append(item);\n  }\n}\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; showWatchlist(); });\n\nfunction filmItem(film) {\n  const item = document.createElement(\"li\");\n  const poster = document.createElement(\"img\");\n  poster.alt = \"Poster of \" + film.title;\n  tessera.connectionImageUrl({ connection: \"movies\", path: film.poster }).then(\n    (url) => { poster.src = url; },\n    () => { poster.alt = \"No poster for \" + film.title; },\n  );\n  const about = document.createElement(\"div\");\n  const title = document.createElement(\"h3\");\n  title.textContent = film.title + \" (\" + film.year + \")\";\n  const keep = document.createElement(\"button\");\n  keep.type = \"button\";\n  keep.textContent = \"Add \" + film.title + \" to my watchlist\";\n  keep.addEventListener(\"click\", () => {\n    if (state.data.watchlist.some((kept) => kept.title === film.title)) return;\n    tessera\n      .call(\"data.patch\", { operations: [{ op: \"add\", collection: \"watchlist\", record: { title: film.title, year: film.year } }] })\n      .then(load, (error) => { status.textContent = error.message; });\n  });\n  const trailer = document.createElement(\"button\");\n  trailer.type = \"button\";\n  trailer.textContent = \"Watch the trailer of \" + film.title;\n  trailer.addEventListener(\"click\", () => {\n    tessera.openPage({ connection: \"videos\", path: film.trailer }).catch((error) => { status.textContent = error.message; });\n  });\n  about.append(title, keep, \" \", trailer);\n  item.append(poster, about);\n  return item;\n}\n\nasync function search(query) {\n  status.textContent = \"Searching…\";\n  try {\n    const answer = await tessera.call(\"connection.request\", {\n      connection: \"movies\",\n      method: \"GET\",\n      path: \"/search?genre=science-fiction&before=1970&query=\" + encodeURIComponent(query),\n    });\n    if (answer.statusCode !== 200) {\n      status.textContent = \"The film service answered \" + answer.statusCode + \". Try again later.\";\n      return;\n    }\n    const films = JSON.parse(answer.body).results;\n    results.replaceChildren(...films.map(filmItem));\n    status.textContent = films.length + \" films, from your \" + answer.source.connection + \" connection.\";\n  } catch (error) {\n    status.textContent = \"The search didn't work: \" + error.message;\n  }\n}\n\ndocument.getElementById(\"search\").addEventListener(\"submit\", (event) => {\n  event.preventDefault();\n  search(document.getElementById(\"query\").value);\n});\nload();\nsearch(document.getElementById(\"query\").value);"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "required": ["watchlist"],
+              "properties": {
+                "watchlist": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "title", "year"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "year": {
+                        "type": "integer"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "watchlist": []
+            },
+            "initialState": {}
+          },
+          "capabilities": ["connection"],
+          "connections": {
+            "movies": {
+              "samples": {
+                "/search": {
+                  "statusCode": 200,
+                  "contentType": "application/json",
+                  "body": "{\"results\":[{\"id\":\"m-4\",\"title\":\"Forbidden Planet\",\"year\":1956,\"poster\":\"/posters/forbidden-planet.png\",\"trailer\":\"/watch?v=forbidden-planet\"},{\"id\":\"m-1\",\"title\":\"Metropolis\",\"year\":1927,\"poster\":\"/posters/metropolis.png\",\"trailer\":\"/watch?v=metropolis\"}]}"
+                }
+              }
+            },
+            "videos": {
+              "samples": {
+                "/watch": {
+                  "statusCode": 200,
+                  "contentType": "text/html",
+                  "body": "<p>A trailer.</p>"
+                }
+              }
+            }
+          },
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [],
+          "kind": "edit"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Shows the films oldest first.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Old science-fiction films</h1>\n<form id=\"search\">\n  <label for=\"query\">Search</label> <input id=\"query\" type=\"search\" value=\"science fiction\">\n  <button type=\"submit\">Search</button>\n</form>\n<p id=\"status\" role=\"status\">Searching…</p>\n<ul id=\"results\"></ul>\n<h2>My watchlist</h2>\n<p id=\"empty\">Nothing on your watchlist yet.</p>\n<ul id=\"watchlist\"></ul>",
+              "css": "#results, #watchlist { list-style: none; padding: 0; display: grid; gap: var(--ui-space-3); }\n#results li { display: grid; grid-template-columns: 4rem 1fr; gap: var(--ui-space-2); align-items: start; }\n#results img { width: 4rem; height: 6rem; object-fit: cover; background: var(--ui-surface); }",
+              "js": "const results = document.getElementById(\"results\");\nconst status = document.getElementById(\"status\");\nconst watchlist = document.getElementById(\"watchlist\");\nconst empty = document.getElementById(\"empty\");\nlet state = { data: { watchlist: [] }, revisions: { watchlist: {} } };\n\nfunction showWatchlist() {\n  watchlist.replaceChildren();\n  empty.hidden = state.data.watchlist.length > 0;\n  for (const film of state.data.watchlist) {\n    const item = document.createElement(\"li\");\n    item.textContent = film.title + \" (\" + film.year + \")\";\n    watchlist.append(item);\n  }\n}\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; showWatchlist(); });\n\nfunction filmItem(film) {\n  const item = document.createElement(\"li\");\n  const poster = document.createElement(\"img\");\n  poster.alt = \"Poster of \" + film.title;\n  tessera.connectionImageUrl({ connection: \"movies\", path: film.poster }).then(\n    (url) => { poster.src = url; },\n    () => { poster.alt = \"No poster for \" + film.title; },\n  );\n  const about = document.createElement(\"div\");\n  const title = document.createElement(\"h3\");\n  title.textContent = film.title + \" (\" + film.year + \")\";\n  const keep = document.createElement(\"button\");\n  keep.type = \"button\";\n  keep.textContent = \"Add \" + film.title + \" to my watchlist\";\n  keep.addEventListener(\"click\", () => {\n    if (state.data.watchlist.some((kept) => kept.title === film.title)) return;\n    tessera\n      .call(\"data.patch\", { operations: [{ op: \"add\", collection: \"watchlist\", record: { title: film.title, year: film.year } }] })\n      .then(load, (error) => { status.textContent = error.message; });\n  });\n  const trailer = document.createElement(\"button\");\n  trailer.type = \"button\";\n  trailer.textContent = \"Watch the trailer of \" + film.title;\n  trailer.addEventListener(\"click\", () => {\n    tessera.openPage({ connection: \"videos\", path: film.trailer }).catch((error) => { status.textContent = error.message; });\n  });\n  about.append(title, keep, \" \", trailer);\n  item.append(poster, about);\n  return item;\n}\n\nasync function search(query) {\n  status.textContent = \"Searching…\";\n  try {\n    const answer = await tessera.call(\"connection.request\", {\n      connection: \"movies\",\n      method: \"GET\",\n      path: \"/search?genre=science-fiction&before=1970&query=\" + encodeURIComponent(query),\n    });\n    if (answer.statusCode !== 200) {\n      status.textContent = \"The film service answered \" + answer.statusCode + \". Try again later.\";\n      return;\n    }\n    const films = JSON.parse(answer.body).results;\n    films.sort((a, b) => a.year - b.year);\n    results.replaceChildren(...films.map(filmItem));\n    status.textContent = films.length + \" films, from your \" + answer.source.connection + \" connection.\";\n  } catch (error) {\n    status.textContent = \"The search didn't work: \" + error.message;\n  }\n}\n\ndocument.getElementById(\"search\").addEventListener(\"submit\", (event) => {\n  event.preventDefault();\n  search(document.getElementById(\"query\").value);\n});\nload();\nsearch(document.getElementById(\"query\").value);"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
+    }
+  ]
+}

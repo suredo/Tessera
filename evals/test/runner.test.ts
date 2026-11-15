@@ -3,11 +3,19 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { intentSchema, type Intent } from "@tessera/contracts";
-import { listWorkspaces, ProviderError, ScriptError, type Store } from "@tessera/server";
+import {
+  listConnections,
+  listWorkspaces,
+  openDataFolder,
+  ProviderError,
+  ScriptError,
+  type Store,
+} from "@tessera/server";
 import { afterAll, describe, expect, it } from "vitest";
 import { loadScenario } from "../src/scenarios/index.ts";
 import { featuresMissed, outcomeOf, say } from "../src/runner/messages.ts";
 import { reportMarkdown } from "../src/runner/report.ts";
+import { startServices } from "../src/runner/services.ts";
 import { dataSettled, runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
 import { answersProvider, loadAnswers, type Answers } from "../src/runner/script.ts";
 import { CANCELLED_WAIT_MS, recordAnswers } from "../src/runner/record.ts";
@@ -158,6 +166,7 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
       "T3-spending-chart",
       "T5-rsvp-form",
       "T6-tip-calculator",
+      "T7-movie-finder",
       "V9-acceptance-checks",
     ]);
     for (const id of ids) {
@@ -417,5 +426,39 @@ describe("a do step's wait for its save (EVAL-01, EVAL-02)", () => {
 
   it("EVAL-02: with no write, the wait ends at ten seconds, and the facts say what happened", async () => {
     expect(await settledAt([])).toBe(10_000);
+  });
+});
+
+describe("a scenario's outside services (CAP-02, #349 step 5)", () => {
+  it("CAP-02: each is served on loopback, added as the person's connection, and answers by path", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "tessera-services-"));
+    const folder = await openDataFolder(dir);
+    const scenario = loadScenario(path.join(scenarios, "T7-movie-finder.yaml"));
+    const services = await startServices(folder, scenario.services);
+    try {
+      const added = listConnections(folder);
+      expect(added.map((c) => [c.name, c.hasKey])).toEqual([
+        ["movies", true],
+        ["videos", false],
+      ]);
+      const movies = added.find((c) => c.name === "movies")!.origins[0]!;
+      expect(movies).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/);
+      const search = await fetch(`${movies}/search?query=x`);
+      expect(search.headers.get("content-type")).toBe("application/json");
+      const found = JSON.parse(await search.text()) as { results: { title: string }[] };
+      expect(found.results[0]!.title).toBe("Forbidden Planet");
+      const poster = new Uint8Array(await (await fetch(`${movies}/posters/x.png`)).arrayBuffer());
+      expect([...poster.slice(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+      expect((await fetch(`${movies}/nothing`)).status).toBe(404);
+      expect(services.seen.map((s) => s.url)).toEqual([
+        "/search?query=x",
+        "/posters/x.png",
+        "/nothing",
+      ]);
+    } finally {
+      await services.close();
+      folder.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

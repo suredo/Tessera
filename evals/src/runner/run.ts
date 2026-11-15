@@ -27,6 +27,7 @@ import {
   type StepTarget,
 } from "../scenarios/index.ts";
 import { featuresMissed, outcomeOf, say } from "./messages.ts";
+import { startServices } from "./services.ts";
 
 // The scenario runner (EVAL-01, EVAL-02): it starts an empty Tessera on the run's own data folder,
 // with every model call going through the harness (cap and ledger), and plays a scenario's steps
@@ -215,6 +216,9 @@ export async function runScenario(
   });
   if (app.status !== "started") throw new Error(`Tessera didn't start: ${app.status}`);
   const store = app.dataFolder;
+  // The scenario's outside services, fakes on loopback, added as the person's connections before
+  // any step, so no run reaches a real service (CAP-02, ADR 0015).
+  const services = await startServices(store, scenario.services);
   options.onStarted?.(store);
   const results: StepResult[] = scenario.steps.map((s, index) => ({
     index: index + 1,
@@ -297,6 +301,7 @@ export async function runScenario(
       stopped ??= error instanceof Error ? error.message : String(error);
     }
     await app.stop();
+    await services.close();
   }
   const report: RunReport = {
     scenario: scenario.id,

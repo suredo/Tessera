@@ -3,7 +3,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { parse } from "yaml";
 import { z } from "zod";
-import { PROFILES, profileIdSchema, reviewItemSchema } from "@tessera/contracts";
+import {
+  connectionNameSchema,
+  PROFILES,
+  profileIdSchema,
+  reviewItemSchema,
+} from "@tessera/contracts";
 
 // Scenario files (EVAL-01): one person, one goal, a language, a budget and steps, each with the
 // host facts it expects (EVAL-02). Every scenario starts from an empty Tessera. The format is in
@@ -139,6 +144,43 @@ export const STEPS = [
   "restore",
 ] as const;
 
+/**
+ * What a fake service answers a path with (CAP-02, #349 step 5): text, or an image, which is a
+ * real 1-pixel PNG. A request gets the answer whose path is the longest its own starts with.
+ */
+const serviceAnswerSchema = z
+  .strictObject({
+    path: z
+      .string()
+      .regex(/^\/[^\s?#]*$/, "a path such as /search, without a query")
+      .describe("The path this answer is for; its query is ignored."),
+    status: z.int().min(100).max(599).default(200),
+    type: z.string().min(1).max(200).default("application/json"),
+    body: z
+      .string()
+      .max(64 * 1024)
+      .optional(),
+    image: z.literal(true).optional().describe("Answers with a real PNG image."),
+  })
+  .refine((answer) => (answer.body === undefined) !== (answer.image === undefined), {
+    message: "an answer has a body or is an image, not both",
+  });
+
+/**
+ * A fake outside service the runner serves on loopback and adds to the run's Tessera as a
+ * connection the person added, so no run reaches a real service (ADR 0015).
+ */
+const serviceSchema = z.strictObject({
+  connection: connectionNameSchema.describe("The connection's name, as the person added it."),
+  key: z
+    .string()
+    .min(1)
+    .max(200)
+    .optional()
+    .describe("A made-up key, sent as Authorization: Bearer; none when left out."),
+  answers: z.array(serviceAnswerSchema).min(1).max(20),
+});
+
 export const scenarioSchema = z
   .strictObject({
     id: z.string().regex(/^[A-Z]\d+(-[a-z0-9]+)+$/, "an ID such as T1-shopping-list"),
@@ -165,6 +207,15 @@ export const scenarioSchema = z
       .describe(
         "Runs Tessera with checks from the request on (VER-09): a new tool that fits no profile gets checks written from the request. Off unless set, so a recording made without them still replays; Tessera itself has them on (A57).",
       ),
+    services: z
+      .array(serviceSchema)
+      .max(3)
+      .default([])
+      .refine(
+        (services) => new Set(services.map((s) => s.connection)).size === services.length,
+        "each service's connection once",
+      )
+      .describe("The outside services its tools reach through connections the person added."),
     steps: z.array(stepSchema).min(1),
     review: z
       .array(reviewItemSchema)

@@ -7,6 +7,7 @@ import {
   checkFacts,
   loadScenario,
   loadScenarios,
+  scenarioSchema,
   stepKind,
   type HostState,
   type StepOutcome,
@@ -44,6 +45,7 @@ describe("scenario files (EVAL-01)", () => {
       "T3-spending-chart",
       "T5-rsvp-form",
       "T6-tip-calculator",
+      "T7-movie-finder",
       "V9-acceptance-checks",
     ]);
     for (const scenario of all) {
@@ -64,6 +66,8 @@ describe("scenario files (EVAL-01)", () => {
       "T3-spending-chart": 10,
       "T5-rsvp-form": 8,
       "T6-tip-calculator": 7,
+      // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
+      "T7-movie-finder": 8,
       // Four creations, each intent, acceptance and create, with one repair in reserve (VER-09).
       "V9-acceptance-checks": 16,
     });
@@ -327,5 +331,42 @@ describe("host facts (EVAL-02)", () => {
     expect(checkFacts(empty, empty, none, { answer: "unsupported" })).toEqual([
       "The host didn't answer unsupported.",
     ]);
+  });
+});
+
+describe("a scenario's outside services (CAP-02, #349 step 5)", () => {
+  it("CAP-02: T7 names its fake services by connection, each answer a body or an image", () => {
+    const t7 = loadScenario(path.join(scenarios, "T7-movie-finder.yaml"));
+    expect(t7.services.map((s) => s.connection)).toEqual(["movies", "videos"]);
+    expect(t7.services[0]!.answers.find((a) => a.path === "/posters")).toMatchObject({
+      image: true,
+    });
+    // Every other scenario reaches no service.
+    for (const id of ["T1-shopping-list", "T6-tip-calculator"]) {
+      expect(loadScenario(path.join(scenarios, `${id}.yaml`)).services, id).toEqual([]);
+    }
+  });
+
+  it("CAP-02: refuses a service answer with both a body and an image, or one connection twice", () => {
+    const base = { path: "/x" };
+    const parse = (services: unknown) =>
+      scenarioSchema.safeParse({
+        id: "T0-test-scenario",
+        tier: "simple",
+        language: "en",
+        person: "x",
+        clock: { start: "2026-11-01T10:00:00", zone: "UTC" },
+        budget: { calls: 1 },
+        services,
+        steps: [{ say: "x" }],
+      }).success;
+    expect(parse([{ connection: "movies", answers: [{ ...base, body: "{}" }] }])).toBe(true);
+    expect(parse([{ connection: "movies", answers: [{ ...base, body: "{}", image: true }] }])).toBe(
+      false,
+    );
+    expect(parse([{ connection: "movies", answers: [base] }])).toBe(false);
+    const one = { connection: "movies", answers: [{ ...base, body: "{}" }] };
+    expect(parse([one, one])).toBe(false);
+    expect(parse([{ connection: "Movies", answers: [{ ...base, body: "{}" }] }])).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ type: Code Module
 title: "Connections"
 description: "Connections to outside services that the person adds (CAP-02, ADR 0015): kept in the data folder with their keys, which no listing, reply or export carries, and the request path, which sends a tool's read only through the connections its version names, only to their origins, with the key added by the host (CNX-01 to CNX-06)."
 resource: ../../../packages/server/src/connections/
-implements: [CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06, CNX-07, CNX-08, CNX-09]
+implements: [CAP-02, CNX-01, CNX-02, CNX-03, CNX-04, CNX-05, CNX-06, CNX-07, CNX-08, CNX-09]
 tests: [../../../packages/server/test/connections.test.ts, ../../../packages/server/test/connection-requests.test.ts, ../../../packages/server/test/data-folder.test.ts]
 tags: [code, server, connections, security]
 status: draft

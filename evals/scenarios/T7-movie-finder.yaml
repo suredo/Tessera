@@ -1,0 +1,45 @@
+# T7, movie and video finder (docs/testing/app-catalogue.md), in its M4 form before its
+# search-and-selection profile (the owner's choice, #349): a tool that searches an outside service
+# through a connection the person added, shows posters through it and opens a trailer on the video
+# site's own page, with a watchlist kept in the tool. The runner serves both services as fakes on
+# loopback and adds them as the person's connections, so no run reaches a real service (CAP-02,
+# ADR 0015). The person asks for the finder, then for the films sorted by year, and reloads. Whether
+# it shows posters, keeps the watchlist and opens trailers is the AI review's, until the profile's
+# do steps can drive it.
+id: T7-movie-finder
+tier: advanced
+language: en
+person: "Someone who likes old science-fiction films"
+goal: "Find old science-fiction films to watch, keep a watchlist, and watch a trailer"
+clock: { start: "2026-11-14T20:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 8 }
+profiles: []
+services:
+  - connection: movies
+    key: made-up-movies-key-0000
+    answers:
+      - path: /search
+        body: '{"results":[{"id":"m-4","title":"Forbidden Planet","year":1956,"poster":"/posters/forbidden-planet.png","trailer":"/watch?v=forbidden-planet"},{"id":"m-3","title":"The Day the Earth Stood Still","year":1951,"poster":"/posters/day-earth.png","trailer":"/watch?v=day-earth"},{"id":"m-2","title":"Things to Come","year":1936,"poster":"/posters/things-to-come.png","trailer":"/watch?v=things-to-come"},{"id":"m-1","title":"Metropolis","year":1927,"poster":"/posters/metropolis.png","trailer":"/watch?v=metropolis"}]}'
+      - path: /posters
+        image: true
+  - connection: videos
+    answers:
+      - path: /watch
+        type: text/html
+        body: "<!doctype html><title>Trailer</title><p>A trailer.</p>"
+steps:
+  - say: "Find old science-fiction films I can watch and let me keep a watchlist."
+    expect: { created: true, workspace: new }
+  - say: "Sort the films by year, oldest first."
+    expect: { version: new }
+  - reload: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence
