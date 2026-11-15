@@ -70,6 +70,13 @@ const common = {
     .describe(
       "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
     ),
+  // Absent in answers recorded before files existed, which read as none.
+  usesFiles: z
+    .boolean()
+    .default(false)
+    .describe(
+      "True when the tool, once the request is done, opens a file the person picks or offers one to save, so it is told how (CAP-03, A82).",
+    ),
   // Absent in answers recorded before connections existed, which read as none.
   connections: z
     .array(connectionNameSchema)

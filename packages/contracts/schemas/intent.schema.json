@@ -106,6 +106,11 @@
           "description": "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
           "type": "boolean"
         },
+        "usesFiles": {
+          "default": false,
+          "description": "True when the tool, once the request is done, opens a file the person picks or offers one to save, so it is told how (CAP-03, A82).",
+          "type": "boolean"
+        },
         "connections": {
           "default": [],
           "description": "The person's connections, only from those listed, that the tool reaches once the request is done, by name; [] when none (CAP-02, A74).",
@@ -130,6 +135,7 @@
         "features",
         "profile",
         "drawsCharts",
+        "usesFiles",
         "connections"
       ],
       "additionalProperties": false
@@ -245,6 +251,11 @@
           "description": "True when the tool, once the request is done, shows a chart or graph, so it is told how to draw one (CAP-04).",
           "type": "boolean"
         },
+        "usesFiles": {
+          "default": false,
+          "description": "True when the tool, once the request is done, opens a file the person picks or offers one to save, so it is told how (CAP-03, A82).",
+          "type": "boolean"
+        },
         "connections": {
           "default": [],
           "description": "The person's connections, only from those listed, that the tool reaches once the request is done, by name; [] when none (CAP-02, A74).",
@@ -268,6 +279,7 @@
         "features",
         "profile",
         "drawsCharts",
+        "usesFiles",
         "connections"
       ],
       "additionalProperties": false

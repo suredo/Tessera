@@ -5,6 +5,7 @@ import {
   bridgeManifest,
   type BridgeCapability,
   CHART_LIMITS,
+  SAVE_LIMIT_BYTES,
   CHART_TYPES,
   CONNECTION_ANSWER_LIMIT_BYTES,
   CONNECTION_BODY_LIMIT_BYTES,
@@ -44,6 +45,7 @@ export const PROMPT_PARTS = [
   "accessibility",
   "profile",
   "chart",
+  "files",
   "connections",
   "connections-edit",
   "connections-repair",
@@ -139,9 +141,22 @@ export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
  */
 export const CONNECTIONS_PROMPT_ROOM = 4_000;
 
-/** A stage's budget for a prompt, with the connections' room when it tells any (A74). */
-export const promptBudget = (stage: GenerationStage, withConnections: boolean): number =>
-  PROMPT_BUDGETS[stage] + (withConnections ? CONNECTIONS_PROMPT_ROOM : 0);
+/**
+ * The room a request whose tool opens or saves files gets on top of its stage's budget (A82, as
+ * A74 for connections): the files part, about 1,000 characters when set. With the connections'
+ * room too, the largest, repair's, is 29,000, within the 30,000 the owner allowed (A77).
+ */
+export const FILES_PROMPT_ROOM = 1_500;
+
+/** A stage's budget for a prompt, with the connections' room and the files' when it tells them. */
+export const promptBudget = (
+  stage: GenerationStage,
+  withConnections: boolean,
+  withFiles = false,
+): number =>
+  PROMPT_BUDGETS[stage] +
+  (withConnections ? CONNECTIONS_PROMPT_ROOM : 0) +
+  (withFiles ? FILES_PROMPT_ROOM : 0);
 
 const PLACEHOLDER = /\{\{(\w+)\}\}/g;
 
@@ -400,6 +415,15 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
       series: String(CHART_LIMITS.series),
       text: String(CHART_LIMITS.text),
     });
+  }
+  // How to open and save files through the host (CAP-03, A82), for a tool that will or already
+  // declares files: only then, as with charts.
+  if (
+    input.intent?.usesFiles ||
+    input.editArtifact?.capabilities.includes("files") ||
+    input.attempt?.capabilities.includes("files")
+  ) {
+    addSystem("files", { limit: String(SAVE_LIMIT_BYTES / (1024 * 1024)) });
   }
   // How to reach a connection and write its samples, from the contracts' limits, for a tool that
   // may use one (CAP-02, A74): only then, so every other prompt keeps its budget.
@@ -894,7 +918,7 @@ const CAPABILITY_WORDS = {
   clock: "the current date, time and time zone",
   chart: "charts and graphs, drawn by Tessera",
   connection: "outside services the person connected",
-  files: "images the person picks to open",
+  files: "images the person picks to open, and files the person saves",
 } as const satisfies Record<BridgeCapability, string>;
 // A capability with its own prompt part is told of only with that part (#349 step 4).
 const capabilityLines = () =>
