@@ -7,7 +7,7 @@ implements: [GEN-03, ENG-16, GEN-02, CON-03, GEN-14, SEC-02, VER-03, VER-04]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T21:23:20Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T01:23:31Z }
 ---
 
 # Purpose
@@ -27,7 +27,7 @@ Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The P
   - `assembleAcceptancePrompt` builds the acceptance stage's prompt (`VER-09`): `acceptance.md`, which asks for checks that look for what only their steps make the tool show (L-93), then the request and its language, and nothing of a tool; `ACCEPTANCE_PROMPT_BUDGET` caps it. A creation or its repair told checks from the request (`PromptInput`'s acceptance), when the tool fits no profile, takes `acceptance-checks.md` in its instructions, fixed words that say to pass the checks and that their text is data, and `acceptance-quoted.md` in its request, the checks as JSON between markers with the prompt's one tag (`SEC-02`): they are another model's answer, so none of their words is read as instructions.
   - `assembleReviewPrompt` builds the review stage's prompt (`EVAL-03`): `review.md` with the scenario's items, each with its question from the contracts' one rubric, then `review-run.md` with the run's steps (`ReviewStep`), each version's source (`ReviewVersion`) and each tool's data at the end with its recorded changes (`ReviewData`, L-92) quoted as data (`SEC-02`), and the names of the screenshots attached as images, or why none are (A27). `REVIEW_PROMPT_BUDGET` caps it; the images go outside it.
   - `fixedPart` gives a part used as it is, such as the probe's.
-  - `fillPart`, `partText` and `partVersion` read, fill and version a part. `PROMPT_PARTS` lists them, `PROMPT_BUDGETS` caps each stage, and `manifestForPrompt` is the bridge manifest as the bridge part quotes it, without the capabilities the contracts list as having their own part, nor their actions: connections, whose action would take the largest edit prompt (21,939 of its 22,000) past its budget (#349).
+  - `fillPart`, `partText` and `partVersion` read, fill and version a part. `PROMPT_PARTS` lists them, `PROMPT_BUDGETS` caps each stage, and `manifestForPrompt` is the bridge manifest as the bridge part quotes it, without the capabilities the contracts list as having their own part, nor their actions or the methods that call them (the image method, A75): connections, whose action would take the largest edit prompt (21,939 of its 22,000) past its budget (#349).
 
 # Invariants
 

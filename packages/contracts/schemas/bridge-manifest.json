@@ -13,6 +13,11 @@
       "argument": "id",
       "copiesData": true
     },
+    "connectionImageUrl": {
+      "action": "connection.image",
+      "argument": "request",
+      "copiesData": true
+    },
     "send": {
       "action": null,
       "argument": "message",
@@ -663,6 +668,80 @@
               "url": "https://api.example.com/search/movie?query=alien",
               "receivedAt": "2026-11-14T10:00:00.000Z"
             }
+          }
+        }
+      ]
+    },
+    {
+      "name": "connection.image",
+      "description": "Fetches an image through a connection the tool was built for, such as a poster an answer names, by a path under its address: its type and its bytes, as base64, kept nowhere. Show it through a blob: URL, as tessera.connectionImageUrl(request) does (A75, DATA-11).",
+      "capability": "connection",
+      "writes": false,
+      "maxArgsBytes": 3072,
+      "args": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "connection": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,39}$",
+            "description": "The connection's name, how a tool asks for it: lowercase letters, digits and hyphens, starting with a letter, at most 40 characters, such as movies or home-lights."
+          },
+          "origin": {
+            "description": "Which of the connection's addresses to ask; its first when left out.",
+            "type": "string",
+            "maxLength": 300
+          },
+          "path": {
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^\\/(?!\\/)[^\\s#\\\\\\p{Cc}]*$",
+            "description": "The path and query under the connection's address, starting with a single /, such as /search?query=alien. Never a whole address."
+          }
+        },
+        "required": [
+          "connection",
+          "path"
+        ],
+        "additionalProperties": false,
+        "description": "An image to show, fetched through a connection the person added (CAP-02, A75)."
+      },
+      "result": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "image/png",
+              "image/jpeg",
+              "image/webp"
+            ]
+          },
+          "bytesBase64": {
+            "type": "string",
+            "maxLength": 6990508,
+            "format": "base64",
+            "contentEncoding": "base64",
+            "pattern": "^$|^(?:[0-9a-zA-Z+/]{4})*(?:(?:[0-9a-zA-Z+/]{2}==)|(?:[0-9a-zA-Z+/]{3}=))?$",
+            "description": "The image's bytes, as base64."
+          }
+        },
+        "required": [
+          "type",
+          "bytesBase64"
+        ],
+        "additionalProperties": false
+      },
+      "examples": [
+        {
+          "args": {
+            "connection": "movies",
+            "path": "/t/p/w200/alien.jpg"
+          },
+          "result": {
+            "type": "image/jpeg",
+            "bytesBase64": "/9j/4AAQ"
           }
         }
       ]

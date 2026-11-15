@@ -54,6 +54,8 @@ export {
   CONNECTION_URL_LIMIT,
   connectionAnswerSchema,
   connectionRequestSchema,
+  connectionImageRequestSchema,
+  CONNECTION_IMAGE_LIMIT_BYTES,
   CONNECTION_SAMPLES_LIMIT,
   CONNECTION_SAMPLE_LIMIT,
   connectionSampleSchema,
@@ -66,6 +68,7 @@ export {
   type ConnectionInput,
   type ConnectionMethod,
   type ConnectionRequest,
+  type ConnectionImageRequest,
 } from "./connection.ts";
 export {
   CONNECTION_REQUEST_ADDRESS_LIMIT,

@@ -13,6 +13,7 @@ import {
 import { readAssetNow, workspaceAssets, type AssetStore } from "../assets/index.ts";
 import {
   ConnectionRefusal,
+  imageThroughConnection,
   requestThroughConnection,
   type ConnectionRequestOptions,
 } from "../connections/index.ts";
@@ -137,6 +138,25 @@ export async function answerDataCall(
           options.connections,
         );
         return { requestId, ok: true, result: answer };
+      } catch (error) {
+        if (error instanceof ConnectionRefusal)
+          return refusal(requestId, error.code, error.message);
+        throw error;
+      }
+    }
+    if (action === "connection.image") {
+      // An image through one of the version's connections, fetched and kept nowhere (A75).
+      if (!artifact) return refusal(requestId, "failed", FAILED);
+      try {
+        const image = await imageThroughConnection(
+          store,
+          workspace.id,
+          artifact,
+          request.phase,
+          args as BridgeArgs<"connection.image">,
+          options.connections,
+        );
+        return { requestId, ok: true, result: image };
       } catch (error) {
         if (error instanceof ConnectionRefusal)
           return refusal(requestId, error.code, error.message);

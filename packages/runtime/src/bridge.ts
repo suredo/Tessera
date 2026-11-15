@@ -101,6 +101,30 @@ export function sampleAnswer(
       };
 }
 
+/** A plain grey square, 1 by 1 pixel, as PNG: what a checked tool's image gets (A75, CNX-06). */
+export const PLACEHOLDER_IMAGE = {
+  type: "image/png",
+  bytesBase64:
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+} as const;
+
+/**
+ * What a candidate's image through a connection gets while it is checked (A75, CNX-06): the
+ * placeholder, for a connection its version names, and nothing is fetched.
+ */
+export function placeholderImage(
+  samples: Artifact["connections"],
+  request: BridgeArgs<"connection.image">,
+): BridgeResult<"connection.image"> {
+  if (!Object.hasOwn(samples, request.connection)) {
+    throw new BridgeError(
+      "not-allowed",
+      `This tool wasn't built to use the connection ${request.connection}. Using it takes an edit. Nothing was sent.`,
+    );
+  }
+  return { ...PLACEHOLDER_IMAGE };
+}
+
 /**
  * What a data handler is told beside the arguments: where the mount stood when the call was
  * checked, and the call exactly as the tool made it, so the server can check it again (RUN-04).
@@ -124,6 +148,11 @@ export type DataHandlers = {
     args: BridgeArgs<"connection.request">,
     context: DataCallContext,
   ): Promise<BridgeResult<"connection.request">>;
+  /** An image through a connection (A75), fetched by the host and kept nowhere. */
+  connectionImage?(
+    args: BridgeArgs<"connection.image">,
+    context: DataCallContext,
+  ): Promise<BridgeResult<"connection.image">>;
 };
 
 export type BridgeOptions = {
@@ -194,6 +223,15 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
       return options.data.connection
         ? options.data.connection(args, context)
         : Promise.reject(new BridgeError("failed", "The host can't reach outside services here."));
+    },
+    "connection.image": (args, context) => {
+      // A check fetches nothing either: a named connection's image is the placeholder (A75).
+      if (options.staging || options.rehearsal) {
+        return Promise.resolve(placeholderImage(options.samples ?? {}, args));
+      }
+      return options.data.connectionImage
+        ? options.data.connectionImage(args, context)
+        : Promise.reject(new BridgeError("failed", "The host can't show images from here."));
     },
   };
 

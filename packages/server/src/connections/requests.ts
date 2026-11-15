@@ -3,6 +3,7 @@ import {
   CONNECTION_ANSWER_LIMIT_BYTES,
   CONNECTION_READ_METHODS,
   CONNECTION_TIMEOUT_MS,
+  CONNECTION_IMAGE_LIMIT_BYTES,
   CONNECTION_REQUEST_ADDRESS_LIMIT,
   CONNECTION_URL_LIMIT,
   connectionAnswerSchema,
@@ -15,7 +16,13 @@ import {
   type ConnectionAnswer,
   type ConnectionRequest,
   type ConnectionRequestRecord,
+  type BridgeResult,
+  type ConnectionImageRequest,
 } from "@tessera/contracts";
+import { sniffImage } from "../assets/index.ts";
+
+/** An image through a connection, as the tool gets it (A75). */
+export type ConnectionImage = BridgeResult<"connection.image">;
 import { decodeHTML } from "entities";
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
 import { z } from "zod";
@@ -194,12 +201,14 @@ export async function requestThroughConnection(
   options: ConnectionRequestOptions = {},
 ): Promise<ConnectionAnswer> {
   // A tool being checked sends nothing anywhere, so there is nothing to record (CNX-06).
-  if (phase === "staging") return send(store, workspaceId, artifact, phase, request, options);
+  if (phase === "staging") {
+    return (await send(store, workspaceId, artifact, phase, request, options)).answer!;
+  }
   // Where and when, read as it is asked: the person may remove or change the connection while the
   // service answers, and the record must keep where it went (#365 review).
   const asked = { address: addressOf(store, request), at: store.now().toISOString() };
   try {
-    const answer = await send(store, workspaceId, artifact, phase, request, options);
+    const answer = (await send(store, workspaceId, artifact, phase, request, options)).answer!;
     recordRequest(store, workspaceId, request, asked, {
       kind: "answered",
       statusCode: answer.statusCode,
@@ -234,6 +243,37 @@ function addressOf(store: Store, request: ConnectionRequest): string {
     }
   }
   return `${origin}${request.path}`.slice(0, CONNECTION_REQUEST_ADDRESS_LIMIT);
+}
+
+/**
+ * Fetches an image a tool shows through a connection (ADR 0015 point 6, A75): a GET with every
+ * check a read gets, and its answer refused unless it succeeded and is a PNG, JPEG or WebP, by its
+ * bytes (AST-01), within `CONNECTION_IMAGE_LIMIT_BYTES` and without the key in it (CNX-04). Its
+ * bytes go to the tool and are kept nowhere; the request is recorded as any other.
+ */
+export async function imageThroughConnection(
+  store: Store,
+  workspaceId: string,
+  artifact: Artifact,
+  phase: BridgePhase,
+  image: ConnectionImageRequest,
+  options: ConnectionRequestOptions = {},
+): Promise<ConnectionImage> {
+  const request: ConnectionRequest = { ...image, method: "GET" };
+  const read = () => send(store, workspaceId, artifact, phase, request, options, "image");
+  if (phase === "staging") return (await read()).image!;
+  const asked = { address: addressOf(store, request), at: store.now().toISOString() };
+  try {
+    const { statusCode, image: found } = await read();
+    recordRequest(store, workspaceId, request, asked, { kind: "answered", statusCode });
+    return found!;
+  } catch (error) {
+    recordRequest(store, workspaceId, request, asked, {
+      kind: "refused",
+      code: error instanceof ConnectionRefusal ? error.code : "failed",
+    });
+    throw error;
+  }
 }
 
 /** How many requests through connections a workspace keeps, newest first (A73). */
@@ -326,7 +366,10 @@ export function recentRequests(
     );
 }
 
-/** The request itself, as `requestThroughConnection` describes it, without the record. */
+/**
+ * The request itself, as `requestThroughConnection` describes it, without the record: read as a
+ * text answer, or, for `imageThroughConnection`, as an image.
+ */
 async function send(
   store: Store,
   workspaceId: string,
@@ -334,7 +377,8 @@ async function send(
   phase: BridgePhase,
   request: ConnectionRequest,
   options: ConnectionRequestOptions,
-): Promise<ConnectionAnswer> {
+  as: "answer" | "image" = "answer",
+): Promise<{ statusCode: number; answer?: ConnectionAnswer; image?: ConnectionImage }> {
   const name = request.connection;
   if (phase === "staging") {
     refuse("not-allowed", `A tool being checked doesn't reach outside services. ${NOTHING_SENT}`);
@@ -413,7 +457,9 @@ async function send(
   }
 
   const timeoutMs = options.timeoutMs ?? CONNECTION_TIMEOUT_MS;
-  const limit = options.answerLimitBytes ?? CONNECTION_ANSWER_LIMIT_BYTES;
+  const limit =
+    options.answerLimitBytes ??
+    (as === "image" ? CONNECTION_IMAGE_LIMIT_BYTES : CONNECTION_ANSWER_LIMIT_BYTES);
   const signal = AbortSignal.timeout(timeoutMs);
   const tooSlow = `The service didn't answer within ${Math.round(timeoutMs / 1000)} seconds.`;
   let response: Response;
@@ -457,6 +503,7 @@ async function send(
     "The service's answer repeated the connection's key, so Tessera passed none of it on.";
   const contentType = response.headers.get("content-type")?.slice(0, 200) ?? null;
   if (contentType !== null && repeatsKey(contentType)) return refuse("failed", repeated);
+  if (as === "image") return imageOf(response.status, bytes, repeatsKey, repeated);
   const type = (contentType ?? "text/plain").split(";")[0]!.trim().toLowerCase();
   if (bytes.byteLength > 0 && !isText(type)) {
     refuse("failed", `The service answered with ${type}, which tools can't read yet.`);
@@ -470,5 +517,33 @@ async function send(
     source: { connection: name, url: source, receivedAt: store.now().toISOString() },
   });
   if (!answer.success) return refuse("failed", "The service's answer couldn't be passed on.");
-  return answer.data;
+  return { statusCode: response.status, answer: answer.data };
+}
+
+/**
+ * An image's answer, as `imageThroughConnection` hands it over: refused unless it succeeded, is an
+ * image by its bytes, and doesn't hold the key, read as text in every form the check knows.
+ */
+function imageOf(
+  statusCode: number,
+  bytes: Uint8Array,
+  repeatsKey: (text: string) => boolean,
+  repeated: string,
+): { statusCode: number; image: ConnectionImage } {
+  if (statusCode < 200 || statusCode > 299) {
+    refuse("failed", `The service answered ${statusCode}, not an image. Nothing was shown.`);
+  }
+  const sniffed = sniffImage(bytes);
+  if (!sniffed.ok) {
+    refuse(
+      "failed",
+      "The service didn't answer with a PNG, JPEG or WebP image. Nothing was shown.",
+    );
+  }
+  if (repeatsKey(Buffer.from(bytes).toString("latin1"))) refuse("failed", repeated);
+  const image = {
+    type: sniffed.ok ? sniffed.type : "image/png",
+    bytesBase64: Buffer.from(bytes).toString("base64"),
+  };
+  return { statusCode, image };
 }

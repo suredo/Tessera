@@ -160,11 +160,15 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     const quoted = JSON.parse(manifestForPrompt()) as Omit<typeof original, "methods"> & {
       methods: Record<string, string>;
     };
+    // Every method but those of a capability with its own part, which that part tells (A75).
     expect(quoted.methods).toEqual(
       Object.fromEntries(
-        Object.entries(original.methods).map(([name, method]) => [name, method.argument]),
+        Object.entries(original.methods)
+          .filter(([name]) => name !== "connectionImageUrl")
+          .map(([name, method]) => [name, method.argument]),
       ),
     );
+    expect(Object.keys(quoted.methods)).not.toContain("connectionImageUrl");
     expect(quoted.methodUsage).toBe(original.methodUsage);
     const ajv = new Ajv({ strict: false });
     // A capability with its own part is left out with its actions (#349); the rest keep their order.

@@ -68,6 +68,11 @@ async function fakeService(
 let service: Fake;
 let elsewhere: Fake;
 const timers: NodeJS.Timeout[] = [];
+/** A real PNG, 1 by 1 pixel, as base64: an image a tool shows (A75). */
+const PLACEHOLDER_IMAGE = {
+  bytesBase64:
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+};
 
 beforeAll(async () => {
   elsewhere = await fakeService((_req, res) => res.end("You should never see this."));
@@ -76,6 +81,18 @@ beforeAll(async () => {
     if (url.pathname === "/search") {
       res.setHeader("content-type", "application/json; charset=utf-8");
       return res.end(JSON.stringify({ results: [{ title: "Alien", year: 1979 }] }));
+    }
+    // Images a tool shows (A75): a real PNG, one that repeats the key the request came with, text
+    // that calls itself an image, and an image behind an error status.
+    if (url.pathname.startsWith("/poster")) {
+      res.setHeader("content-type", "image/png");
+      if (url.pathname === "/poster-missing") res.statusCode = 404;
+      if (url.pathname === "/poster-fake") return res.end("<html>not an image</html>");
+      const png = Buffer.from(PLACEHOLDER_IMAGE.bytesBase64, "base64");
+      const sent = String(req.headers.authorization ?? "");
+      return res.end(
+        url.pathname === "/poster-echo" ? Buffer.concat([png, Buffer.from(sent)]) : png,
+      );
     }
     if (url.pathname === "/redirect") {
       res.statusCode = 302;
@@ -257,13 +274,14 @@ async function setup(
     args: Record<string, unknown>,
     phase: BridgeDataRequest["phase"] = "active",
     options = {},
+    action: "connection.request" | "connection.image" = "connection.request",
   ): Promise<BridgeReply> => {
     const reply = await answerDataCall(
       folder,
       {
         workspaceId: id,
         phase,
-        call: { requestId: `r${(calls += 1)}`, action: "connection.request", args },
+        call: { requestId: `r${(calls += 1)}`, action, args },
       },
       { connections: options },
     );
@@ -575,5 +593,86 @@ describe("requests through a connection (CAP-02, ADR 0015)", () => {
     });
     expect(codeOf(await slow)).toBe("ok");
     expect(recentRequests(folder, id, 1).map((r) => r.address)).toEqual([`${service.origin}/slow`]);
+  });
+});
+
+describe("images through a connection (ADR 0015 point 6, A75)", () => {
+  const image = (args: Record<string, unknown>) => args;
+  it("A75 CNX-04: a real image is handed over as its bytes and type, kept nowhere, and recorded as a read", async () => {
+    const { folder, ask, id } = await setup();
+    const shown = await ask(
+      image({ connection: "movies", path: "/poster.png" }),
+      "active",
+      {},
+      "connection.image",
+    );
+    expect(shown).toMatchObject({
+      ok: true,
+      result: { type: "image/png", bytesBase64: PLACEHOLDER_IMAGE.bytesBase64 },
+    });
+    // The key went to the service, as for any request through the connection.
+    expect(service.seen.at(-1)).toMatchObject({ url: "/poster.png" });
+    expect(recentRequests(folder, id, 1)).toMatchObject([
+      { connection: "movies", method: "GET", outcome: { kind: "answered", statusCode: 200 } },
+    ]);
+    // Nothing is stored: no asset row.
+    const rows = folder.db.all(z.object({ n: z.number() }), "SELECT COUNT(*) AS n FROM assets");
+    expect(rows[0]!.n).toBe(0);
+  });
+
+  it("A75 AST-01 CNX-04: an error status, text that calls itself an image, or an image holding the key is refused", async () => {
+    const { ask } = await setup();
+    for (const [path, words] of [
+      ["/poster-missing", /answered 404/],
+      ["/poster-fake", /PNG, JPEG or WebP/],
+      ["/poster-echo", /repeated the connection's key/],
+    ] as const) {
+      const reply = await ask(
+        image({ connection: "movies", path }),
+        "active",
+        {},
+        "connection.image",
+      );
+      expect(reply, path).toMatchObject({ ok: false, error: { code: "failed" } });
+      expect(!reply.ok && reply.error.message, path).toMatch(words);
+      expect(JSON.stringify(reply)).not.toContain(KEY);
+    }
+  });
+
+  it("A66 CNX-06: an image through a connection the tool wasn't built for, or while it is checked, is refused, and nothing is sent", async () => {
+    const { ask } = await setup();
+    service.seen.length = 0;
+    expect(
+      codeOf(
+        await ask(
+          image({ connection: "bank", path: "/poster.png" }),
+          "active",
+          {},
+          "connection.image",
+        ),
+      ),
+    ).toBe("not-allowed");
+    expect(
+      codeOf(
+        await ask(
+          image({ connection: "movies", path: "/poster.png" }),
+          "staging",
+          {},
+          "connection.image",
+        ),
+      ),
+    ).toBe("not-allowed");
+    // A method or a body isn't part of an image's request.
+    expect(
+      codeOf(
+        await ask(
+          image({ connection: "movies", path: "/poster.png", method: "DELETE" }),
+          "active",
+          {},
+          "connection.image",
+        ),
+      ),
+    ).toBe("invalid-args");
+    expect(service.seen).toEqual([]);
   });
 });

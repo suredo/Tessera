@@ -634,18 +634,28 @@ import type { BridgeMethodName } from "@tessera/contracts";
        * gets bytes and a type, never a file path. Rejects as call does.
        */
       async assetUrl(id: string): Promise<string> {
-        const { type, bytesBase64 } = (await call("asset.read", { id })) as {
-          type: string;
-          bytesBase64: string;
-        };
-        const text = atob(bytesBase64);
-        const bytes = new Uint8Array(text.length);
-        for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i);
-        return URL.createObjectURL(new Blob([bytes], { type }));
+        return blobUrl(await call("asset.read", { id }));
+      },
+      /**
+       * A blob: URL showing an image through a connection (A75), such as a poster an answer
+       * names: the host fetches it and keeps nothing. `request` is { connection, path, origin? }.
+       * Rejects as call does.
+       */
+      async connectionImageUrl(request: unknown): Promise<string> {
+        return blobUrl(await call("connection.image", request));
       },
     } satisfies Record<BridgeMethodName, unknown>),
     enumerable: true,
   });
+
+  /** An image's bytes and type, as the host hands them over, as a blob: URL (DATA-11). */
+  function blobUrl(image: unknown): string {
+    const { type, bytesBase64 } = image as { type: string; bytesBase64: string };
+    const text = atob(bytesBase64);
+    const bytes = new Uint8Array(text.length);
+    for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i);
+    return URL.createObjectURL(new Blob([bytes], { type }));
+  }
 
   /**
    * Asks the host to do `action` (CON-03); resolves with its result, or rejects with an error

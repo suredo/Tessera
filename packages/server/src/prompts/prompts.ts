@@ -224,12 +224,14 @@ function plainSchema(value: unknown): unknown {
 
 /**
  * The bridge manifest (CON-03) as the bridge part quotes it: compact JSON, without the noise, and
- * without the capabilities that have their own part, nor their actions (the edit budget, #349).
+ * without the capabilities that have their own part, nor their actions or the methods that call
+ * them (the edit budget, #349): the connections part tells those.
  */
 export const manifestForPrompt = (): string => {
   const manifest = bridgeManifest();
   const ownPart = (name: string | null) =>
     name !== null && (OWN_PART_CAPABILITIES as readonly string[]).includes(name);
+  const actionOf = (name: string) => manifest.actions.find((action) => action.name === name);
   // The host's page-isolation metadata is not an instruction to the model.
   return JSON.stringify(
     plainSchema({
@@ -237,7 +239,9 @@ export const manifestForPrompt = (): string => {
       capabilities: manifest.capabilities.filter((capability) => !ownPart(capability.name)),
       actions: manifest.actions.filter((action) => !ownPart(action.capability)),
       methods: Object.fromEntries(
-        Object.entries(manifest.methods).map(([name, method]) => [name, method.argument]),
+        Object.entries(manifest.methods)
+          .filter(([, method]) => !ownPart(actionOf(String(method.action))?.capability ?? null))
+          .map(([name, method]) => [name, method.argument]),
       ),
     }),
   );

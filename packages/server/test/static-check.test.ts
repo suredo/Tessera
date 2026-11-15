@@ -826,3 +826,33 @@ describe("a tool asks only for the connections its version names (A66, CNX-01, #
     expect(checkJs('tessera.call("clock.now");', ["clock"], [])).toEqual([]);
   });
 });
+
+describe("an image through a connection is checked the same way (A75, CNX-01)", () => {
+  const messages = (js: string, connections: string[]) =>
+    checkJs(js, ["connection"], connections).map((f) => f.message);
+
+  it("CNX-01 A75: connectionImageUrl and connection.image name one of the version's connections, written out", () => {
+    for (const js of [
+      'tessera.connectionImageUrl({ connection: "movies", path: "/p.png" });',
+      'tessera.call("connection.image", { connection: "movies", path: "/p.png" });',
+    ]) {
+      expect(messages(js, ["movies"]), js).toEqual([]);
+      expect(messages(js.replace('"movies"', '"bank"'), ["movies"]), js).toEqual([
+        'This tool wasn\'t made to use a connection called "bank". Use one of: movies.',
+      ]);
+    }
+    expect(
+      messages("tessera.connectionImageUrl(request);", ["movies"]).filter((m) =>
+        /connection/.test(m),
+      ),
+    ).toHaveLength(1);
+    // Without the capability, the method is refused as any connection call is.
+    expect(
+      checkJs(
+        'tessera.connectionImageUrl({ connection: "movies", path: "/p.png" });',
+        [],
+        ["movies"],
+      ),
+    ).toHaveLength(1);
+  });
+});

@@ -11,7 +11,9 @@ export {
 export {
   ConnectionRefusal,
   recentRequests,
+  imageThroughConnection,
   requestThroughConnection,
+  type ConnectionImage,
   CONNECTION_REQUESTS_KEPT,
   type ConnectionRequestOptions,
 } from "./requests.ts";
