@@ -1286,7 +1286,8 @@ export function checkJs(
       found(node, `The JavaScript uses .${name}. ${FILES_THROUGH_HOST}`);
       return;
     }
-    if (FILE_NAMES.has(name) && isWritten(node, parent)) {
+    // On the page's own elements only: a tool's own data may have a download field (#380 review).
+    if (FILE_NAMES.has(name) && page.isPage(object) && isWritten(node, parent)) {
       found(node, `The JavaScript sets .${name}. ${FILES_THROUGH_HOST}`);
       return;
     }
@@ -1532,8 +1533,10 @@ export function checkJs(
         found(node, `The JavaScript sets a ${name} attribute. ${FILES_THROUGH_HOST}`);
       } else if (
         name === "type" &&
-        method === "setAttribute" &&
-        fixedText(args[1])?.trim().toLowerCase() === "file"
+        method !== "toggleAttribute" &&
+        fixedText(method === "setAttributeNS" ? args[2] : args[1])
+          ?.trim()
+          .toLowerCase() === "file"
       ) {
         found(node, `The JavaScript makes a file input. ${FILES_THROUGH_HOST}`);
       }

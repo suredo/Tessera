@@ -898,6 +898,8 @@ describe("files through the host only (CAP-03, A80, VER-01)", () => {
     for (const js of [
       'const input = document.createElement("input"); input.type = "file";',
       'const input = document.createElement("input"); input.setAttribute("type", "file");',
+      // The namespaced form sets the same attribute (#380 review).
+      'const input = document.createElement("input"); input.setAttributeNS(null, "type", "file");',
       'document.getElementById("list").setAttribute("download", "list.csv");',
       'document.getElementById("pick").webkitdirectory = true;',
       'document.getElementById("save").download = "list.csv";',
@@ -923,6 +925,7 @@ const field = document.createElement("input");
 field.type = "number";
 field.setAttribute("type", "text");
 const record = { download: "later", type: "file" };
+record.download = true;
 tessera.call("data.read").then(({ data }) => { data.items[0].type = "file"; });`,
         ["files"],
       ),
