@@ -1456,6 +1456,20 @@ const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<Chec
  * The behavior check of the profile `id` (VER-03), run in staging after the smoke check. Its name
  * is `behavior`, so a failure is repaired as one (GEN-09).
  */
+/**
+ * How far apart two images' pixels may be on average, per channel of 255, and still be the same
+ * image: JPEG's encoding of the sample stays well within it, a blank image is far past it.
+ */
+const SAME_IMAGE = 24;
+
+/** The average difference per channel between two images' pixels, of the same size. */
+function distance(a: Uint8ClampedArray, b: Uint8ClampedArray): number {
+  if (a.length !== b.length || a.length === 0) return 255;
+  let total = 0;
+  for (let i = 0; i < a.length; i += 1) total += Math.abs(a[i]! - b[i]!);
+  return total / a.length;
+}
+
 /** An image a checked tool offered, decoded by the host page: its size and its pixels. */
 async function decoded(
   file: SaveFile,
@@ -1536,6 +1550,21 @@ async function editingWithFiles(context: CheckContext): Promise<CheckOutcome> {
       saves,
       `the picked image, ${sample.widthPx} by ${sample.heightPx} pixels, before any edit`,
       `${untouched.width} by ${untouched.height} pixels`,
+    );
+  }
+  // Its pixels too, not only its size: a canvas sized to the image but never drawn on is blank
+  // (#381 review). Within what JPEG's encoding changes, at most this far apart on average.
+  const original = await decoded({
+    name: sample.name,
+    type: sample.type,
+    bytes: Uint8Array.from(atob(SAMPLE_PICK.bytesBase64), (c) => c.charCodeAt(0)),
+  });
+  if (!original || distance(untouched.pixels, original.pixels) > SAME_IMAGE) {
+    return broke(
+      profile,
+      saves,
+      `the picked image, ${sample.widthPx} by ${sample.heightPx} pixels, before any edit`,
+      `a ${untouched.width} by ${untouched.height} image that isn't the picked one`,
     );
   }
 

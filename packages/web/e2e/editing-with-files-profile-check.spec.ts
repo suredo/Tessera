@@ -9,7 +9,8 @@ import { ready } from "./support/ready.ts";
 // was offered (A81). A good editor passes, saving PNG or JPEG; each deliberately broken one fails,
 // saying what was expected, what was observed and whose rule it is (VER-07).
 
-type Flaw = "none" | "jpeg" | "noPick" | "blank" | "editDoesNothing" | "savesText" | "noSave";
+type Flaw =
+  "none" | "jpeg" | "noPick" | "unsized" | "blank" | "editDoesNothing" | "savesText" | "noSave";
 
 /** An image editor that fits the editing-with-files profile, with `flaw` built in. */
 const editor = (flaw: Flaw): Artifact["code"] => ({
@@ -34,8 +35,10 @@ document.querySelector("[data-hook=image-open]").addEventListener("click", async
   if (flaw === "noPick") { canvas.width = 16; canvas.height = 12; pen.fillRect(0, 0, 16, 12); return; }
   const file = await tessera.pickFile();
   if (!file) return;
-  // One flaw draws nothing, leaving the canvas blank at its default size.
-  if (flaw === "blank") return;
+  // One flaw draws nothing, leaving the canvas blank at its default size; one sizes it to the
+  // image but still draws nothing (#381 review).
+  if (flaw === "unsized") return;
+  if (flaw === "blank") { canvas.width = file.widthPx; canvas.height = file.heightPx; return; }
   const image = await load(await tessera.assetUrl(file.id));
   canvas.width = image.naturalWidth;
   canvas.height = image.naturalHeight;
@@ -67,7 +70,16 @@ document.querySelector("[data-hook=image-save]").addEventListener("click", async
 });`,
 });
 
-const flaws: Flaw[] = ["none", "jpeg", "noPick", "blank", "editDoesNothing", "savesText", "noSave"];
+const flaws: Flaw[] = [
+  "none",
+  "jpeg",
+  "noPick",
+  "unsized",
+  "blank",
+  "editDoesNothing",
+  "savesText",
+  "noSave",
+];
 let host: SandboxHost;
 
 test.beforeAll(async () => {
@@ -128,10 +140,16 @@ for (const [flaw, title, rule, words] of [
     /an image asked for with tessera\.pickFile\(\); observed none asked for/,
   ],
   [
-    "blank",
+    "unsized",
     "never shows the image it opened",
     "before any edit, it is the picked image",
     /the picked image, 16 by 12 pixels, before any edit; observed 300 by 150 pixels/,
+  ],
+  [
+    "blank",
+    "sizes its canvas to the image but never draws it",
+    "before any edit, it is the picked image",
+    /the picked image, 16 by 12 pixels, before any edit; observed a 16 by 12 image that isn't the picked one/,
   ],
   [
     "editDoesNothing",
