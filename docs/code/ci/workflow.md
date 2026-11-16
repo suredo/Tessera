@@ -7,7 +7,7 @@ implements: [ENG-02, TEST-01]
 tests: [../../../scripts/test/ci-workflow.test.ts]
 tags: [code, ci, github]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T01:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T08:56:51Z }
 ---
 
 # Purpose
@@ -17,6 +17,7 @@ Runs every check on every pull request and on every push to `main` (`ENG-02`), s
 # Entry points
 
 - `.github/workflows/ci.yml`: the whole workflow. Its header comment lists what each job covers. The jobs are the OKF check, merge-ready, one job per workspace check (a matrix over the scripts in `package.json`), the Windows platform job, the browser tests in three parts (`--shard`), and `Windows (platform and Chrome)`, which passes only when all of those did.
+- `scripts/ci/socket-counts.ps1`: counts the Windows machine's TCP connections by state every 10 seconds while the browser tests run (`-Watch`, started in the background before them), then prints the peaks and the ephemeral port range (`-Report`, whatever happened); the browser parts keep the samples as socket-counts-1 to 3. It only reads, to find whether a run that fails with ERR_NO_BUFFER_SPACE ran out of ports, and when (#216, `ENG-20`).
 - `scripts/test/ci-workflow.test.ts`: reads the workflow and checks that it runs on every change, runs each check above, keeps Windows to the platform job and the browser tests, reports them under one name, and gives no job a secret.
 - `.github/dependabot.yml`: weekly update proposals for the workspace and the actions, which `ENG-02` also asks for. It isn't this doc's resource, so the drift check doesn't watch it.
 

@@ -2,6 +2,8 @@
 
 ## 2026-11-16
 
+* **Changed**: CI's browser parts count the machine's sockets by state every 10 seconds while the tests run, print the peaks and keep the samples, to find why a run fails with ERR_NO_BUFFER_SPACE ([#216](https://github.com/suredo/Tessera/issues/216), `ENG-20`; [CI workflow](code/ci/workflow.md)). It failed so again on #385. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T08:56:51Z.
+
 * **New**: A live evaluation's metrics ([#353](https://github.com/suredo/Tessera/issues/353), `OBS-03`): `node evals/src/runner/metrics.ts <run folder>...` gives, per stage, calls, failures, p50 and p95 model time and tokens, with usage nobody reported counted apart; and of the requests that made or changed a tool, how many needed a repair and passed the host's and staging's checks at the first try. The live evaluation protocol asks for it in each result ([runner](code/evals/runner.md), [live evaluation](practices/live-evaluation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T03:26:18Z.
 
 * **Changed**: The first-sight check takes examples marked data-example, labelled in the person's own words, rather than looking for the word "example"; and checks week fields too, by their ISO week ([#384](https://github.com/suredo/Tessera/pull/384) review, A85; [decision log](decisions/decision-log.md), [runtime](code/runtime/package.md)). The creation prompt says to mark them. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T03:14:41Z.

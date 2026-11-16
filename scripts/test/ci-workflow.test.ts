@@ -99,6 +99,23 @@ describe("the CI workflow", () => {
     expect(playwright).toMatch(/name: "chrome-320",\s*testMatch: LAYOUT_SPECS/);
   });
 
+  it("ENG-20: counts the machine's sockets while the browser tests run, and reports and keeps them whatever happened (#216)", () => {
+    const steps = job("windows-browser").steps;
+    const at = (needle: string) => steps.findIndex((s) => s.run?.includes(needle));
+    const watch = at("socket-counts.ps1");
+    const tests = at("pnpm e2e");
+    const report = at("socket-counts.ps1 -Report");
+    expect(watch).toBeGreaterThan(-1);
+    expect(steps[watch]!.run).toContain('"-Watch"');
+    expect(watch).toBeLessThan(tests);
+    expect(report).toBeGreaterThan(tests);
+    expect((steps[report] as { if?: string }).if).toBe("always()");
+    const kept = steps.find(
+      (s) => s.uses?.startsWith("actions/upload-artifact") && s.name?.includes("socket"),
+    );
+    expect((kept as { if?: string } | undefined)?.if).toBe("always()");
+  });
+
   it("runs four unit workers on CI and one test file at a time locally (ENG-31, #188)", () => {
     expect(read("vitest.config.ts")).toContain(`maxWorkers: process.env["CI"] ? 4 : 1`);
     const scripts = (JSON.parse(read("package.json")) as { scripts: Record<string, string> })

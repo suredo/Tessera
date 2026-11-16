@@ -124,8 +124,24 @@ jobs:
       - name: pnpm from packageManager, through Corepack
         run: corepack enable
       - run: pnpm install --frozen-lockfile
+      # The machine's TCP connections by state, every 10 s, while the tests run: whether a run that
+      # fails with ERR_NO_BUFFER_SPACE ran out of ports, and when (#216). It only reads.
+      - name: Count sockets while the browser tests run (#216)
+        shell: pwsh
+        run: Start-Process pwsh -ArgumentList "-NoProfile", "-File", "scripts/ci/socket-counts.ps1", "-Watch" -WindowStyle Hidden
       - name: Browser tests in Chrome (TEST-06)
         run: pnpm e2e --shard=${{ matrix.shard }}/3
+      - name: Socket counts' peaks (#216)
+        if: always()
+        shell: pwsh
+        run: ./scripts/ci/socket-counts.ps1 -Report
+      - name: Keep the socket counts (#216)
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: socket-counts-${{ matrix.shard }}
+          path: test-output/sockets/
+          retention-days: 14
       # No videos on CI (A56): a failed test's light trace is kept, and the owner records a video
       # locally when one is needed.
       - name: Keep the traces of failed tests (ENG-10)
