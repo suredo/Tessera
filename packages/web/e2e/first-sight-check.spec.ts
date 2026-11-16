@@ -13,17 +13,29 @@ type Kind =
   | "ignores"
   | "inField"
   | "labelledExamples"
+  | "sampleExamples"
+  | "japaneseExamples"
   | "unlabelledExamples"
   | "pastDate"
+  | "pastWeek"
   | "today";
+
+/** How each kind that labels its examples words the label, in its own language (#384 review). */
+const LABELS: Partial<Record<Kind, string>> = {
+  labelledExamples: "An example: ",
+  sampleExamples: "Sample data: ",
+  japaneseExamples: "サンプル: ",
+};
 
 /** A list tool of the kind `kind` says: showing its data, or not, with a date field. */
 const tool = (kind: Kind): Artifact["code"] => ({
   html: `<h1>Errands</h1>
 <label for="due">Due</label> <input id="due" type="date"${kind === "pastDate" ? ' value="2020-01-01"' : ""}>
+<label for="week">Week</label> <input id="week" type="week"${kind === "pastWeek" ? ' value="2020-W01"' : ""}>
 <ul id="items"></ul>`,
   css: "",
   js: `const kind = ${JSON.stringify(kind)};
+const label = ${JSON.stringify(LABELS[kind] ?? null)};
 const list = document.getElementById("items");
 ${kind === "today" ? `tessera.call("clock.now").then((clock) => { document.getElementById("due").value = clock.date; });` : ""}
 tessera.call("data.read").then(({ data }) => {
@@ -36,7 +48,9 @@ tessera.call("data.read").then(({ data }) => {
       field.value = item.title;
       row.append(field);
     } else {
-      row.textContent = item.title + (item.example && kind === "labelledExamples" ? " (an example)" : "");
+      // An example labelled in the tool's own words, and marked as one (A85).
+      if (item.example && label) row.dataset.example = "";
+      row.textContent = (item.example && label ? label : "") + item.title;
     }
     return row;
   }));
@@ -48,8 +62,11 @@ const kinds: Kind[] = [
   "ignores",
   "inField",
   "labelledExamples",
+  "sampleExamples",
+  "japaneseExamples",
   "unlabelledExamples",
   "pastDate",
+  "pastWeek",
   "today",
 ];
 let host: SandboxHost;
@@ -113,6 +130,9 @@ test("UX-01: so does one that shows them in fields, one that labels its examples
 }) => {
   expect(await check(page, "inField", entries)).toEqual(PASSED);
   expect(await check(page, "labelledExamples", examples)).toEqual(PASSED);
+  // Whatever its words, in whatever language: the mark says which are examples (#384 review).
+  expect(await check(page, "sampleExamples", examples)).toEqual(PASSED);
+  expect(await check(page, "japaneseExamples", examples)).toEqual(PASSED);
   expect(await check(page, "today", entries)).toEqual(PASSED);
 });
 
@@ -125,9 +145,15 @@ for (const [kind, title, starting, words] of [
   ],
   [
     "unlabelledExamples",
-    "doesn't say its examples are examples",
+    "marks none of its examples as examples",
     examples,
-    /The tool starts with examples but doesn't say they are examples/,
+    /The tool starts with examples but marks none of them as an example/,
+  ],
+  [
+    "pastWeek",
+    "has a week field that starts on a past week",
+    entries,
+    /A date field starts on 2020-W01, before today/,
   ],
   [
     "pastDate",

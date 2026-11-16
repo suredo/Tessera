@@ -25,7 +25,14 @@ export {
   type HostClock,
   type ServedBridge,
 } from "./bridge.ts";
-export { entryTexts, firstSightCheck, fold, pastDates, statedEntries } from "./first-sight.ts";
+export {
+  entryTexts,
+  firstSightCheck,
+  fold,
+  isoWeek,
+  pastDates,
+  statedEntries,
+} from "./first-sight.ts";
 export {
   driveTool,
   smokeCheck,

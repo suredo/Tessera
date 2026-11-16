@@ -54,9 +54,26 @@ export function entryTexts(entry: Entry): string[] {
     .filter((text) => /\p{L}.*\p{L}/u.test(text));
 }
 
+/** The ISO week a day (YYYY-MM-DD) falls in, as a week field writes it: YYYY-Www. */
+export function isoWeek(day: string): string {
+  // A week runs Monday to Sunday, and its Thursday decides its year (ISO 8601).
+  const thursday = (at: Date) => {
+    const moved = new Date(at);
+    moved.setUTCDate(moved.getUTCDate() - ((moved.getUTCDay() + 6) % 7) + 3);
+    return moved;
+  };
+  const own = thursday(new Date(`${day}T12:00:00Z`));
+  const year = own.getUTCFullYear();
+  // Week 1 is the one with 4 January in it.
+  const first = thursday(new Date(Date.UTC(year, 0, 4, 12)));
+  const week = 1 + Math.round((own.getTime() - first.getTime()) / (7 * 86_400_000));
+  return `${year}-W${String(week).padStart(2, "0")}`;
+}
+
 /**
  * The date fields that start before `today` (YYYY-MM-DD), by their own values: a date or a date
- * and time by its day, a month by its month. A week, or an empty field, is left alone.
+ * and time by its day, a month by its month, a week by its ISO week (#384 review). An empty field
+ * is left alone.
  */
 export function pastDates(fields: readonly DriveField[], today: string): string[] {
   return fields
@@ -64,13 +81,11 @@ export function pastDates(fields: readonly DriveField[], today: string): string[
       if (value === "") return false;
       if (type === "date" || type === "datetime-local") return value.slice(0, 10) < today;
       if (type === "month") return value.slice(0, 7) < today.slice(0, 7);
+      if (type === "week") return value.slice(0, 8) < isoWeek(today);
       return false;
     })
     .map(({ value }) => value);
 }
-
-/** How a page says something is an example, in the languages Tessera speaks and its neighbours'. */
-const EXAMPLE = /\b(examples?|exemplos?|ejemplos?|exemples?|beispiele?|esempi|esempio)\b/u;
 
 /**
  * The first-sight check for a new tool, from its candidate's defaults and starting data. It opens
@@ -102,9 +117,11 @@ export const firstSightCheck = (
       }
     } else if (examples.length > 0) {
       proved = true;
-      if (!EXAMPLE.test(page)) {
+      // Marked, not worded: the label is in the person's language, which the AI review reads;
+      // the mark says which elements the tool shows as examples (#384 review).
+      if ((step.count ?? 0) === 0) {
         found.push(
-          "The tool starts with examples but doesn't say they are examples. Label each one as an example.",
+          "The tool starts with examples but marks none of them as an example. Show each one labelled as an example, in the person's language, on an element marked data-example.",
         );
       }
     }

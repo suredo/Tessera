@@ -212,7 +212,9 @@ import type { BridgeMethodName } from "@tessera/contracts";
             choices: [],
             value: field.value.slice(0, 200),
           }));
-        results.push({ ok: true, texts: [text], fields: dates });
+        // How many visible elements the tool marks as an example, whatever words it shows (A85).
+        const examples = [...document.querySelectorAll("[data-example]")].filter(visible).length;
+        results.push({ ok: true, count: examples, texts: [text], fields: dates });
         continue;
       }
       // A frame still without its size can't show anything, so nothing found then is Tessera's

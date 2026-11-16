@@ -1,6 +1,6 @@
 import type { JsonValue } from "@tessera/contracts";
 import { describe, expect, it } from "vitest";
-import { entryTexts, pastDates, statedEntries } from "../src/index.ts";
+import { entryTexts, isoWeek, pastDates, statedEntries } from "../src/index.ts";
 import type { DriveField } from "../src/protocol.ts";
 
 // The first-sight check's reading of a new tool's starting data and date fields (UX-01, GEN-05,
@@ -41,7 +41,7 @@ describe("what a new tool should show at first sight (UX-01, A85)", () => {
     ).toEqual(["grande sertão: veredas", "x".repeat(60)]);
   });
 
-  it("RUN-07, L-63: a date field that starts before today is found, by day or by month; an empty one isn't", () => {
+  it("RUN-07, L-63: a date field that starts before today is found, by day, month or week; an empty one isn't", () => {
     const field = (type: string, value: string): DriveField => ({
       kind: "input",
       type,
@@ -67,9 +67,22 @@ describe("what a new tool should show at first sight (UX-01, A85)", () => {
           field("month", "2026-10"),
           field("month", "2026-11"),
           field("week", "2020-W01"),
+          // 2026-11-15 is a Sunday, in week 46; the week before is past, this one isn't.
+          field("week", "2026-W45"),
+          field("week", "2026-W46"),
+          field("week", "2026-W47"),
         ],
         today,
       ),
-    ).toEqual(["2026-11-14", "2024-01-01T09:00", "2026-10"]);
+    ).toEqual(["2026-11-14", "2024-01-01T09:00", "2026-10", "2020-W01", "2026-W45"]);
+  });
+
+  it("RUN-07: a day's ISO week, at the year's edges too (#384 review)", () => {
+    expect(isoWeek("2026-11-15")).toBe("2026-W46");
+    expect(isoWeek("2026-11-16")).toBe("2026-W47");
+    // 1 January 2021 was a Friday, in the last week of 2020; 31 December 2024 a Tuesday, in 2025's first.
+    expect(isoWeek("2021-01-01")).toBe("2020-W53");
+    expect(isoWeek("2024-12-31")).toBe("2025-W01");
+    expect(isoWeek("2026-01-01")).toBe("2026-W01");
   });
 });
