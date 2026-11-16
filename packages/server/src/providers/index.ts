@@ -27,6 +27,7 @@ export {
   findClaude,
   imageMessage,
   installedClaude,
+  signInWith,
   installClaude,
   MAX_TURNS,
   resultEnvelopeSchema,

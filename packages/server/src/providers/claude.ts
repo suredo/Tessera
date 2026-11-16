@@ -443,6 +443,21 @@ export async function findClaude(
     // An answer that isn't JSON is no sign-in.
     signedIn = false;
   }
-  if (!signedIn) return { ok: false, problem: "signed-out", message: FAILURE_MESSAGES.sign_in };
+  if (!signedIn) {
+    // Found outside the PATH, as Anthropic's installer leaves it, the person's terminal can't find
+    // `claude` either, so the sign-in names the program by its full path (#388 review).
+    const message =
+      executable === onPath ? FAILURE_MESSAGES.sign_in : signInWith(executable, platform);
+    return { ok: false, problem: "signed-out", message };
+  }
   return { ok: true, executable, version };
 }
+
+/**
+ * The sign-in fix for a Claude Code found outside the PATH: the program by its full path, as the
+ * terminal named runs it (PLAT-03, #388 review).
+ */
+export const signInWith = (executable: string, platform: NodeJS.Platform): string =>
+  platform === "win32"
+    ? `Claude Code isn't signed in. Open PowerShell, run \`& "${executable}" auth login\`, then try again.`
+    : `Claude Code isn't signed in. Open a terminal, run \`"${executable}" auth login\`, then try again.`;

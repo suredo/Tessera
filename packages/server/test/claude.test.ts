@@ -462,6 +462,17 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
         ok: true,
         executable: installed,
       });
+      // Not signed in yet, as a fresh account isn't: the terminal can't find `claude` either, so
+      // the sign-in names the program by its full path (#388 second review).
+      const signedOut = answering("2.1.310 (Claude Code)", '{"loggedIn":false}');
+      expect(await findClaude(env, platform, signedOut), platform).toEqual({
+        ok: false,
+        problem: "signed-out",
+        message:
+          platform === "win32"
+            ? `Claude Code isn't signed in. Open PowerShell, run \`& "${installed}" auth login\`, then try again.`
+            : `Claude Code isn't signed in. Open a terminal, run \`"${installed}" auth login\`, then try again.`,
+      });
       // Only npm's launcher on the PATH: the installed program is taken instead.
       if (platform === "win32") {
         const npm = pathWith("claude.CMD");
@@ -483,9 +494,10 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
       ok: false,
       problem: "old",
     });
+    // On the PATH, the terminal finds `claude` too, so the usual sign-in is exact.
     expect(
       await findClaude(env, "win32", answering("2.1.310 (Claude Code)", '{"loggedIn":false}')),
-    ).toMatchObject({ ok: false, problem: "signed-out" });
+    ).toEqual({ ok: false, problem: "signed-out", message: FAILURE_MESSAGES.sign_in });
     expect(
       await findClaude(env, "win32", answering("2.1.310 (Claude Code)", '{"loggedIn":true}')),
     ).toMatchObject({
