@@ -179,6 +179,22 @@ export function dataProblems(
       shape.push(...recordProblems(schema, data, what));
     }
   }
+  // Examples are the request's starting data, never defaults, which using the tool again copies
+  // (GEN-05, A84): they would come back each time as if they were the person's.
+  for (const [list, records] of Object.entries(reusableDefaults)) {
+    if (!Array.isArray(records)) continue;
+    const examples = records.filter(
+      (record) =>
+        typeof record === "object" &&
+        record !== null &&
+        (record as Record<string, unknown>)["example"] === true,
+    ).length;
+    if (examples > 0) {
+      shape.push(
+        `The reusable defaults: "${list}" has ${examples} example ${examples === 1 ? "record" : "records"}. Examples go in data.initialState, so using the tool again doesn't copy them.`,
+      );
+    }
+  }
   return shape;
 }
 
