@@ -486,6 +486,20 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     }
   });
 
+  it("UX-01, GEN-05: a creation is told to be useful at once: examples marked, never defaults, and dates from today (A84)", () => {
+    const create = assemblePrompt({
+      stage: "create",
+      request: "A planner for my study sessions",
+      intent: intent({ kind: "create" }),
+      uiMode: "standard",
+    });
+    expect(create.system).toContain('each record with "example": true (in the schema too)');
+    expect(create.system).toContain("never in data.reusableDefaults");
+    expect(create.system).toContain(
+      'start from today by tessera.call("clock.now"), never a fixed day',
+    );
+  });
+
   it("CAP-04: a tool that will show a chart, or already declares chart, is told how to draw one, from the spec's one definition", () => {
     const request = "Show my spending this month as a chart.";
     const charted = assemblePrompt({

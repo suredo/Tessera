@@ -125,10 +125,12 @@ export type RepairClass = (typeof REPAIR_CLASSES)[number];
  * Creation's fixture is a creation that fits a profile, its largest shape: with the item list,
  * 16,997 when set at 17,000; with the filtering profile, 17,530, and the owner approved 20,000 on
  * 2026-11-08, room for the profiles still to come. Every profile's part is measured in both, with
- * and without the chart part.
+ * and without the chart part. With the guidance on examples and dates (#352, A84), the largest,
+ * filtering with charts, measured 20,198, and creation's rose to 21,000, within the 30,000 the owner
+ * allowed (A77).
  */
 export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
-  create: 20_000,
+  create: 21_000,
   edit: 22_000,
   repair: 23_500,
 };

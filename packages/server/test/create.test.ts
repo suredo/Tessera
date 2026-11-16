@@ -103,6 +103,55 @@ describe("starting data (GEN-05)", () => {
       sections: [{ id: "s-1", name: "Dairy" }],
     });
   });
+
+  it("GEN-05, UX-01: examples go in the starting data, marked, never in the defaults Use again copies (A84)", () => {
+    const schema = {
+      ...listSchema,
+      properties: {
+        ...listSchema.properties,
+        items: {
+          ...listSchema.properties.items,
+          items: {
+            ...listSchema.properties.items.items,
+            properties: {
+              ...listSchema.properties.items.items.properties,
+              example: { type: "boolean" },
+            },
+          },
+        },
+      },
+    };
+    const example = { id: "e-1", title: "Bread (an example)", example: true };
+    // In the starting data, an example is kept as the request's.
+    const started = candidateFrom(
+      tool({
+        data: { schema, reusableDefaults: { items: [] }, initialState: { items: [example] } },
+      }),
+    );
+    expect(started.kind).toBe("candidate");
+    // In the defaults, it is refused, plainly, for repair.
+    const defaulted = candidateFrom(
+      tool({ data: { schema, reusableDefaults: { items: [example] }, initialState: {} } }),
+    );
+    expect(defaulted).toEqual({
+      kind: "failed",
+      failure: "schema-shape",
+      findings: [
+        'The reusable defaults: "items" has 1 example record. Examples go in data.initialState, so using the tool again doesn\'t copy them.',
+      ],
+    });
+    // A record whose example field is false is no example.
+    const plain = candidateFrom(
+      tool({
+        data: {
+          schema,
+          reusableDefaults: { items: [{ ...example, example: false }] },
+          initialState: {},
+        },
+      }),
+    );
+    expect(plain.kind).toBe("candidate");
+  });
 });
 
 describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
