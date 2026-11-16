@@ -293,6 +293,10 @@ export type BridgeOptions = {
   askToSave?: (offer: SaveOffer) => Promise<boolean>;
   /** How a file is saved once the person says so; `saveInPage` unless a test gives its own. */
   saveFile?: (file: SaveFile) => void;
+  /** Told of each pick a checked tool asks for, answered with the sample (VER-03, #351). */
+  onPick?: () => void;
+  /** Told of each file a checked tool offers, checked and named, never saved (VER-03, #351). */
+  onOffer?: (file: SaveFile) => void;
   /** Whether the person just clicked; `pageHasActivation` unless a test gives its own (A76). */
   hasActivation?: () => boolean;
   /** The capabilities the tool's version declares (CAP-01). */
@@ -411,7 +415,10 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
     },
     "file.pick": async (_args, context) => {
       // A check opens no picker (A80): its pick is the sample image, kept nowhere.
-      if (options.staging || options.rehearsal) return { file: { ...SAMPLE_PICK.file } };
+      if (options.staging || options.rehearsal) {
+        options.onPick?.();
+        return { file: { ...SAMPLE_PICK.file } };
+      }
       if (!options.data.pickFile) {
         throw new BridgeError("failed", "The host can't open files here.");
       }
@@ -448,7 +455,11 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
       const checked = checkSaveFile(args);
       if (!checked.ok) throw new BridgeError("invalid-args", checked.message);
       // A check asks nothing and saves nothing (A81): the offer is answered as saved.
-      if (options.staging || options.rehearsal) return { saved: true };
+      if (options.staging || options.rehearsal) {
+        // A behavior check sees what was offered, as the person would be asked about it.
+        options.onOffer?.(checked.file);
+        return { saved: true };
+      }
       if (!options.askToSave) throw new BridgeError("failed", "The host can't save files here.");
       const clicked = options.hasActivation ?? pageHasActivation;
       if (!clicked()) throw new BridgeError("not-allowed", NO_CLICK_SAVE);

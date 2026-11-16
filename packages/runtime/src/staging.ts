@@ -9,6 +9,7 @@ import {
   type DataState,
   type JsonValue,
   type PatchRefusal,
+  type SaveFile,
   type Workspace,
 } from "@tessera/contracts";
 import { BridgeError, daysLater, serveBridge, systemClock, type DataHandlers } from "./bridge.ts";
@@ -208,10 +209,14 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       verdict = { check: "start", outcome: { ok: false, reason: (error as Error).message } };
     }
     if (tool) {
+      // What the candidate picked and offered during the check now running (A80, A81).
+      let record: { picks: number; offers: SaveFile[] } = { picks: 0, offers: [] };
       const serve = (next: MountedTool, data: DataHandlers | undefined, daysAhead = 0) =>
         serveBridge(next, {
           capabilities: candidate.capabilities,
           samples: candidate.connections ?? {},
+          onPick: () => (record.picks += 1),
+          onOffer: (file) => record.offers.push(file),
           ...(daysAhead > 0 ? { clock: daysLater(systemClock, daysAhead) } : {}),
           ...(data
             ? { data, rehearsal: true }
@@ -249,6 +254,7 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       try {
         for (const check of options.checks) {
           copy = undefined;
+          record = { picks: 0, offers: [] };
           let outcome: CheckOutcome;
           try {
             if (mounted.rehearsing) await replace(undefined);
@@ -257,6 +263,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
               panel,
               signal: controller.signal,
               rehearse,
+              picks: () => record.picks,
+              offered: () => [...record.offers],
             });
           } catch (error) {
             // The candidate didn't start again for this check.
