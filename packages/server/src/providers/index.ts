@@ -26,6 +26,7 @@ export {
   failureKind,
   findClaude,
   imageMessage,
+  installedClaude,
   installClaude,
   MAX_TURNS,
   resultEnvelopeSchema,

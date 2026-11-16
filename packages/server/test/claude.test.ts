@@ -431,7 +431,7 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
       ok: false,
       problem: "missing",
       message:
-        "Claude Code isn't installed, or isn't on the PATH. To install it, open PowerShell and run `irm https://claude.ai/install.ps1 | iex`. Then close Tessera and start it again, so it finds the new program.",
+        "Claude Code isn't installed, or isn't on the PATH. To install it, open PowerShell and run `irm https://claude.ai/install.ps1 | iex`. Then try again.",
     });
     expect(await findClaude({ PATH: tempDir() }, "linux")).toMatchObject({
       problem: "missing",
@@ -442,8 +442,39 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
     const npm = await findClaude(pathWith("claude.CMD"), "win32");
     expect(npm).toMatchObject({ ok: false, problem: "batch-file" });
     expect(npm.ok ? "" : npm.message).toMatch(
-      /^Claude Code was found as .+claude\.CMD, npm's launcher, which Tessera can't start\. Install Claude Code's own program instead: open PowerShell and run `irm https:\/\/claude\.ai\/install\.ps1 \| iex`\. Then close Tessera and start it again, so it finds the new program\.$/,
+      /^Claude Code was found as .+claude\.CMD, npm's launcher, which Tessera can't start\. Install Claude Code's own program instead: open PowerShell and run `irm https:\/\/claude\.ai\/install\.ps1 \| iex`\. Then try again.$/,
     );
+  });
+
+  it("PLAT-03, CLI-02: a fresh account's Claude Code, where Anthropic's installer puts it but not on the PATH, is found (#388 review)", async () => {
+    const signedIn = answering("2.1.310 (Claude Code)", '{"loggedIn":true}');
+    for (const [platform, homeVariable, file] of [
+      ["win32", "USERPROFILE", "claude.exe"],
+      ["linux", "HOME", "claude"],
+    ] as const) {
+      const home = tempDir();
+      const installed = path.join(home, ".local", "bin", file);
+      fs.mkdirSync(path.dirname(installed), { recursive: true });
+      fs.writeFileSync(installed, "");
+      // Nothing on the PATH: found where the installer put it, so following the fix is enough.
+      const env = { PATH: tempDir(), PATHEXT: ".COM;.EXE;.BAT;.CMD", [homeVariable]: home };
+      expect(await findClaude(env, platform, signedIn), platform).toMatchObject({
+        ok: true,
+        executable: installed,
+      });
+      // Only npm's launcher on the PATH: the installed program is taken instead.
+      if (platform === "win32") {
+        const npm = pathWith("claude.CMD");
+        expect(await findClaude({ ...npm, USERPROFILE: home }, platform, signedIn)).toMatchObject({
+          ok: true,
+          executable: installed,
+        });
+      }
+    }
+    // Without a home folder named, nothing more is looked at.
+    expect(await findClaude({ PATH: tempDir() }, "win32", signedIn)).toMatchObject({
+      problem: "missing",
+    });
   });
 
   it("CLI-02: refuses a version older than the tested one, and checks sign-in without a model call", async () => {
@@ -476,7 +507,7 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
       ok: false,
       problem: "broken",
       message: expect.stringMatching(
-        /^Tessera found Claude Code at .+ but couldn't start it\. Check that your account may run it, or install it again: (open PowerShell and run `irm https:\/\/claude\.ai\/install\.ps1 \| iex`|open a terminal and run `curl -fsSL https:\/\/claude\.ai\/install\.sh \| bash`)\. Then close Tessera and start it again, so it finds the new program\.$/,
+        /^Tessera found Claude Code at .+ but couldn't start it\. Check that your account may run it, or install it again: (open PowerShell and run `irm https:\/\/claude\.ai\/install\.ps1 \| iex`|open a terminal and run `curl -fsSL https:\/\/claude\.ai\/install\.sh \| bash`)\. Then try again.$/,
       ) as unknown,
     });
   });

@@ -340,7 +340,7 @@ export type ClaudeStatus = ClaudeCheck;
 
 /**
  * How a person installs Claude Code's own program, exactly, on `platform`: Anthropic's installer,
- * which puts a program (not npm's claude.cmd) on the PATH (PLAT-03, #325).
+ * which puts the program itself (not npm's claude.cmd) in the person's .local/bin (PLAT-03, #325).
  */
 export const installClaude = (platform: NodeJS.Platform): string =>
   platform === "win32"
@@ -348,10 +348,23 @@ export const installClaude = (platform: NodeJS.Platform): string =>
     : "open a terminal and run `curl -fsSL https://claude.ai/install.sh | bash`";
 
 /**
- * What to do once a program is installed: Tessera reads the PATH it started with, so it finds a
- * new program only when started again (PLAT-03, #325).
+ * What to do once a program is installed (PLAT-03, #325). Tessera finds it then without starting
+ * again: Claude Code where Anthropic's installer puts it, whatever the PATH, and Codex in npm's
+ * folder, which the Node.js installer put on the PATH before Tessera started.
  */
-export const AFTER_INSTALL = "Then close Tessera and start it again, so it finds the new program.";
+export const AFTER_INSTALL = "Then try again.";
+
+/**
+ * Where Anthropic's installer puts Claude Code, if it is there: .local/bin in the person's home
+ * folder, as `env` names it. The installer doesn't add that folder to the PATH, so a fresh
+ * account's Claude Code would otherwise not be found (#388 review).
+ */
+export function installedClaude(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string | null {
+  const home = platform === "win32" ? env["USERPROFILE"] : env["HOME"];
+  if (!home) return null;
+  const file = path.join(home, ".local", "bin", platform === "win32" ? "claude.exe" : "claude");
+  return fs.existsSync(file) ? file : null;
+}
 
 /**
  * Finds the real Claude Code and checks it, without spending a model call (CLI-02): it is on the
@@ -364,9 +377,12 @@ export async function findClaude(
   run: typeof runProcess = runProcess,
 ): Promise<ClaudeStatus> {
   // On Windows the program itself first: npm's claude.cmd, earlier on the PATH, would hide it.
-  const executable =
+  const onPath =
     (platform === "win32" ? findExecutable("claude.exe", env, platform) : null) ??
     findExecutable("claude", env, platform);
+  // Not on the PATH as a program: where Anthropic's installer puts it (#388 review).
+  const executable =
+    onPath && !/\.(cmd|bat)$/i.test(onPath) ? onPath : (installedClaude(env, platform) ?? onPath);
   if (!executable) {
     return {
       ok: false,

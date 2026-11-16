@@ -607,7 +607,7 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
       ok: false,
       problem: "missing",
       message:
-        "Codex isn't installed, or isn't on the PATH. To install it, open a terminal and run `npm install -g @openai/codex`. Then close Tessera and start it again, so it finds the new program.",
+        "Codex isn't installed, or isn't on the PATH. To install it, open a terminal and run `npm install -g @openai/codex`. Then try again.",
     });
     // npm's codex.cmd without the script it starts beside it: installed again the same way.
     const broken = await findCodex(home(), pathWith("codex.CMD"), "win32");
@@ -659,8 +659,11 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
 
   it("TCL-06, CLI-02: refuses a version older than the tested one, and checks sign-in without a model call", async () => {
     const env = pathWith("codex.exe");
-    expect(await findCodex(home(), env, "win32", answering("codex-cli 0.100.0", ""))).toMatchObject(
-      { ok: false, problem: "old" },
+    const old = await findCodex(home(), env, "win32", answering("codex-cli 0.100.0", ""));
+    expect(old).toMatchObject({ ok: false, problem: "old" });
+    // The exact fix (PLAT-03, #325).
+    expect(old.ok ? "" : old.message).toContain(
+      "To update it, open a terminal and run `npm install -g @openai/codex@latest`, then try again.",
     );
     const folder = home();
     const signIn = codexSignInCommand(folder, "win32");
@@ -766,7 +769,7 @@ describe("finding Codex (CLI-02, PLAT-03)", () => {
       ok: false,
       problem: "broken",
       message: expect.stringMatching(
-        /^Tessera found Codex at .+ but couldn't start it\. Check that your account may run it, or install it again: open a terminal and run `npm install -g @openai\/codex`\. Then close Tessera and start it again, so it finds the new program\.$/,
+        /^Tessera found Codex at .+ but couldn't start it\. Check that your account may run it, or install it again: open a terminal and run `npm install -g @openai\/codex`\. Then try again.$/,
       ) as unknown,
     });
   });
