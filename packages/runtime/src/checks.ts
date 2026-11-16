@@ -1,6 +1,6 @@
 import type { MountedTool } from "./host.ts";
 import type { DriveField, DriveResult, DriveStep } from "./protocol.ts";
-import { chartSpecSchema } from "@tessera/contracts";
+import { chartSpecSchema, type SaveFile } from "@tessera/contracts";
 
 // The checks a candidate runs in the staging panel before it may be activated (RUN-03): the smoke
 // check (VER-02), and a stub for tests. The static check (VER-01) runs on the server, before a
@@ -32,6 +32,16 @@ export type CheckContext = {
    * day (RUN-07, #351).
    */
   rehearse(daysAhead?: number): Promise<MountedTool>;
+  /**
+   * How many times the candidate has asked to pick a file during this check; each was answered
+   * with the sample image and no picker opened (A80, #351).
+   */
+  picks(): number;
+  /**
+   * The files the candidate has offered to save during this check, in order, as checked and
+   * named; none was saved and no one was asked (A81, #351).
+   */
+  offered(): readonly SaveFile[];
 };
 
 export type VerificationCheck = {

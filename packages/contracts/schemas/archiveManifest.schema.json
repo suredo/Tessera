@@ -142,7 +142,8 @@
                         "cards",
                         "scheduling",
                         "search-results",
-                        "items-over-time"
+                        "items-over-time",
+                        "editing-with-files"
                       ],
                       "description": "A verification profile: a behavior pattern the host checks (VER-03)."
                     },

@@ -306,6 +306,12 @@ export const en = {
     "Its streak counts the days in a row it was done, ending today; a day missed starts it again.",
   "details.rule.items-over-time.4":
     "Opened again, that day or a later one, the tool shows the items and the days they were done as they were saved.",
+  "details.rule.editing-with-files.1":
+    "Opening an image lets you pick one from your computer, and shows it.",
+  "details.rule.editing-with-files.2":
+    "Saving offers the image as it is now, to save on your computer; before any change, it is the image you opened, at its own size.",
+  "details.rule.editing-with-files.3":
+    "A change changes the image, so saving it then gives the changed image.",
   "details.check.noBehavior": "Its behavior wasn't checked, so it isn't verified.",
   "details.check.acceptance":
     "Checked against your request: Tessera tried what you asked with the tool's own controls, which checks less than a full behavior check.",
@@ -373,6 +379,8 @@ export const en = {
     "adding a task, keeping a weekday free with a rule, removing the rule, and opening it again",
   "history.tried.items-over-time":
     "adding an item, marking it done today, the next day and after a day missed, and opening it again",
+  "history.tried.editing-with-files":
+    "opening an image, saving it untouched, changing it, and saving it again",
   "history.tried.search-results":
     "searching, keeping a result, keeping it again, and opening it again",
   "history.restore": "Restore",

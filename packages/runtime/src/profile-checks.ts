@@ -1,4 +1,4 @@
-import { PROFILES, type ProfileId } from "@tessera/contracts";
+import { PROFILES, type ProfileId, type SaveFile } from "@tessera/contracts";
 import {
   driveTool,
   type CheckContext,
@@ -6,7 +6,7 @@ import {
   type DriveReport,
   type VerificationCheck,
 } from "./checks.ts";
-import { clockReading, systemClock } from "./bridge.ts";
+import { clockReading, SAMPLE_PICK, systemClock } from "./bridge.ts";
 import type { MountedTool } from "./host.ts";
 import type { DriveField, DriveResult, DriveStep } from "./protocol.ts";
 
@@ -1449,12 +1449,115 @@ const CHECKS: Readonly<Record<ProfileId, (context: CheckContext) => Promise<Chec
   scheduling,
   "search-results": searchResults,
   "items-over-time": itemsOverTime,
+  "editing-with-files": editingWithFiles,
 };
 
 /**
  * The behavior check of the profile `id` (VER-03), run in staging after the smoke check. Its name
  * is `behavior`, so a failure is repaired as one (GEN-09).
  */
+/** An image a checked tool offered, decoded by the host page: its size and its pixels. */
+async function decoded(
+  file: SaveFile,
+): Promise<{ width: number; height: number; pixels: Uint8ClampedArray } | undefined> {
+  try {
+    const bitmap = await createImageBitmap(new Blob([file.bytes], { type: file.type }));
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const pen = canvas.getContext("2d");
+    if (!pen) return undefined;
+    pen.drawImage(bitmap, 0, 0);
+    const { data } = pen.getImageData(0, 0, bitmap.width, bitmap.height);
+    return { width: bitmap.width, height: bitmap.height, pixels: data };
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The editing-with-files profile's check (VER-03, A83, #351): it opens an image through image-open,
+ * which a checked tool gets as the host's sample (A80), and expects image-view; saves it untouched
+ * through image-save, expecting an image the sample's size, so the picked image was loaded, not a
+ * blank canvas; edits it through image-edit and saves again, expecting an image whose size or
+ * pixels differ. Nothing is saved: the host records what the tool offered (A81).
+ */
+async function editingWithFiles(context: CheckContext): Promise<CheckOutcome> {
+  const profile = "editing-with-files" as const;
+  const [opens, saves, edits] = PROFILES[profile].rules;
+  const sample = SAMPLE_PICK.file;
+  const tool = await context.rehearse();
+
+  const asked = context.picks();
+  const opened = await drive(profile, opens, tool, [{ do: "click", hook: "image-open" }]);
+  if (!("steps" in opened)) return opened;
+  if (context.picks() === asked) {
+    return broke(profile, opens, "an image asked for with tessera.pickFile()", "none asked for");
+  }
+  const view = await drive(profile, opens, tool, [{ do: "read", hook: "image-view" }]);
+  if (!("steps" in view)) return view;
+  const shown = view.steps[0];
+  if (!shown?.ok || !shown.count) {
+    return broke(profile, opens, "the element marked image-view", "none");
+  }
+
+  /** Presses image-save and gives the image the tool then offered, decoded. */
+  const save = async (rule: string, when: string) => {
+    const before = context.offered().length;
+    const pressed = await drive(profile, rule, tool, [{ do: "click", hook: "image-save" }]);
+    if (!("steps" in pressed)) return pressed;
+    // The offer goes through the bridge after the press: given a moment, as a person would wait.
+    for (let waited = 0; context.offered().length === before && waited < 3_000; waited += 50) {
+      if (context.signal.aborted) break;
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    const file = context.offered()[before];
+    if (!file) {
+      return broke(
+        profile,
+        rule,
+        `an image offered with tessera.saveFile(file) ${when}`,
+        "none offered",
+      );
+    }
+    if (!file.type.startsWith("image/")) {
+      return broke(profile, rule, `a PNG, JPEG or WebP image ${when}`, file.type);
+    }
+    const image = await decoded(file);
+    if (!image) {
+      return broke(profile, rule, `an image that opens ${when}`, "one that doesn't");
+    }
+    return image;
+  };
+
+  const untouched = await save(saves, "before any edit");
+  if (!("pixels" in untouched)) return untouched;
+  if (untouched.width !== sample.widthPx || untouched.height !== sample.heightPx) {
+    return broke(
+      profile,
+      saves,
+      `the picked image, ${sample.widthPx} by ${sample.heightPx} pixels, before any edit`,
+      `${untouched.width} by ${untouched.height} pixels`,
+    );
+  }
+
+  const edited = await drive(profile, edits, tool, [{ do: "click", hook: "image-edit" }]);
+  if (!("steps" in edited)) return edited;
+  const after = await save(edits, "after an edit");
+  if (!("pixels" in after)) return after;
+  const same =
+    after.width === untouched.width &&
+    after.height === untouched.height &&
+    after.pixels.every((value, i) => value === untouched.pixels[i]);
+  if (same) {
+    return broke(
+      profile,
+      edits,
+      "an image that differs from the one before the edit",
+      "the same image",
+    );
+  }
+  return { ok: true };
+}
+
 export const profileCheck = (id: ProfileId): VerificationCheck => ({
   name: "behavior",
   run: (context) => CHECKS[id](context),

@@ -242,6 +242,34 @@ export const ITEMS_OVER_TIME_PROFILE = {
   fixture: { itemName: "Tessera check habit" },
 } as const satisfies VerificationProfile;
 
+/**
+ * An image the person opens from their computer, edits and saves: T14, the image editor, the first
+ * editing app tested (A26, A83). Its check opens a sample image of the host's, saves it untouched,
+ * edits it and saves it again; what the edits are, and how they look, is the AI review's.
+ */
+export const EDITING_WITH_FILES_PROFILE = {
+  id: "editing-with-files",
+  fits: "an image the person opens from their computer, edits and saves, as an image editor",
+  hooks: [
+    { name: "image-open", says: "the button that opens an image the person picks" },
+    {
+      name: "image-view",
+      says: "the element that shows the image being edited, such as an img or a canvas",
+    },
+    {
+      name: "image-edit",
+      says: "a button that makes one edit to the image, such as rotating, cropping or drawing on it",
+    },
+    { name: "image-save", says: "the button that saves the image as it is now" },
+  ],
+  rules: [
+    "Pressing image-open asks Tessera for an image the person picks, with tessera.pickFile(), and shows it in image-view.",
+    "Pressing image-save offers the image as it is now to save, with tessera.saveFile(file), as a PNG, JPEG or WebP image; before any edit, it is the picked image at its own width and height.",
+    "Pressing image-edit changes the image, so saving it then offers an image that differs from the one before the edit.",
+  ],
+  fixture: {},
+} as const satisfies VerificationProfile;
+
 /** Every profile, by ID. */
 export const PROFILES = {
   "item-list": ITEM_LIST_PROFILE,
@@ -252,6 +280,7 @@ export const PROFILES = {
   scheduling: SCHEDULING_PROFILE,
   "search-results": SEARCH_RESULTS_PROFILE,
   "items-over-time": ITEMS_OVER_TIME_PROFILE,
+  "editing-with-files": EDITING_WITH_FILES_PROFILE,
 } as const satisfies Record<string, VerificationProfile>;
 
 export const PROFILE_IDS = [
@@ -263,6 +292,7 @@ export const PROFILE_IDS = [
   "scheduling",
   "search-results",
   "items-over-time",
+  "editing-with-files",
 ] as const satisfies readonly (keyof typeof PROFILES)[];
 export type ProfileId = (typeof PROFILE_IDS)[number];
 
