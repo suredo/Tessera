@@ -4,7 +4,7 @@ title: "Decision log"
 description: "Every decision made so far (A1–A83), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T00:58:58Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T01:16:37Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
