@@ -322,6 +322,11 @@ export const generateReplySchema = z
           "The connections its version uses, with the sample answers staging gives in place of the service's (A69).",
         ),
       syntheticData: jsonObjectSchema.describe("What staging runs it against: its defaults."),
+      startingData: jsonObjectSchema
+        .optional()
+        .describe(
+          "A new tool's starting data, its defaults and the request's entries, which staging's first-sight check opens it on, a throwaway copy (UX-01, A85).",
+        ),
       profile: profileIdSchema
         .nullable()
         .default(null)

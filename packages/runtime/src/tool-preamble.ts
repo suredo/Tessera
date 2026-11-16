@@ -168,6 +168,55 @@ import type { BridgeMethodName } from "@tessera/contracts";
         start?: unknown;
       };
       const hook = typeof step?.hook === "string" ? step.hook : "";
+      // The whole page as the person sees it, with no hook (UX-01, A85): its visible text and
+      // what its visible fields hold, the first 20,000 characters, and its visible date fields.
+      if (step.do === "page") {
+        if (window.innerWidth === 0) {
+          results.push({ ok: false, problem: noSize() });
+          break;
+        }
+        const visible = (element: Element) => element.checkVisibility({ visibilityProperty: true });
+        const fields = [...document.querySelectorAll("input, textarea, select")].filter(visible);
+        const held = fields
+          .map((field) =>
+            field instanceof HTMLSelectElement
+              ? (field.selectedOptions[0]?.text ?? "")
+              : field instanceof HTMLInputElement &&
+                  ["checkbox", "radio", "file"].includes(field.type)
+                ? ""
+                : (field as HTMLInputElement | HTMLTextAreaElement).value,
+          )
+          .filter((value) => value.trim() !== "");
+        const text = [document.body?.innerText ?? "", ...held]
+          .join(" ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 20_000);
+        const dates = fields
+          .filter(
+            (field): field is HTMLInputElement =>
+              field instanceof HTMLInputElement &&
+              ["date", "datetime-local", "month", "week"].includes(field.type),
+          )
+          .slice(0, 50)
+          .map((field) => ({
+            kind: "input",
+            type: field.type,
+            name: field.name.slice(0, 100),
+            required: field.required,
+            checked: false,
+            min: field.min.slice(0, 40),
+            max: field.max.slice(0, 40),
+            step: field.step.slice(0, 40),
+            maxLength: -1,
+            choices: [],
+            value: field.value.slice(0, 200),
+          }));
+        // How many visible elements the tool marks as an example, whatever words it shows (A85).
+        const examples = [...document.querySelectorAll("[data-example]")].filter(visible).length;
+        results.push({ ok: true, count: examples, texts: [text], fields: dates });
+        continue;
+      }
       // A frame still without its size can't show anything, so nothing found then is Tessera's
       // problem, not the tool's: said so, rather than that the tool lacks the hook (#308, L-91).
       if (window.innerWidth === 0) {

@@ -1,6 +1,12 @@
 # Documentation log
 
+## 2026-11-16
+
+* **Changed**: The first-sight check takes examples marked data-example, labelled in the person's own words, rather than looking for the word "example"; and checks week fields too, by their ISO week ([#384](https://github.com/suredo/Tessera/pull/384) review, A85; [decision log](decisions/decision-log.md), [runtime](code/runtime/package.md)). The creation prompt says to mark them. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T03:14:41Z.
+
 ## 2026-11-15
+
+* **New**: The first-sight check ([#352](https://github.com/suredo/Tessera/issues/352) step b, A85, `UX-01`): in staging, a new tool is opened on a throwaway copy of its starting data and read as the person sees it. It fails when the request gave entries and none shows, when its examples aren't labelled, or when a date field starts before today by the host's clock, and is repaired as a behavior check is. A new drive step reads a page's text and date fields with no hook. Every recorded live run still replays ([decision log](decisions/decision-log.md), [runtime](code/runtime/package.md), [generation](code/server/generation.md), [web](code/web/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T02:53:17Z.
 
 * **New**: Useful at once, the guidance ([#352](https://github.com/suredo/Tessera/issues/352) step a, A84, `UX-01`, `GEN-05`): the creation prompt says examples go in the request's starting data, marked "example": true, and dates a tool fills in start from today by the host's clock; the host refuses example records in the reusable defaults, which using the tool again copies. Creation's prompt budget rises to 21,000 ([decision log](decisions/decision-log.md), [prompts](code/server/prompts.md), [generation](code/server/generation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T02:20:58Z.
 

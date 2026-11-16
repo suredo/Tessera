@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11, GEN-16, CLI-07, GEN-12, GEN
 tests: [../../../packages/server/test/discuss.test.ts, ../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T02:20:58Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T02:53:17Z }
 ---
 
 # Purpose
@@ -51,6 +51,7 @@ The core of generation (#146): interface requests create or edit a candidate too
 - **Edit repair retains the original baseline.** Each call uses the original code and declarations, with a failed edit quoted separately when its shape is valid. Edits and their schema/static/smoke repairs use the same edit contract and host checks, existing per-class counts and the edit and repair limits (180 seconds each by default); provider failures never repair. Browser smoke-repair continuation is integrated separately.
 
 - **The answer is a discriminated union** (`CON-02`): a tool, or "cannot" with a reason. No null means two things, and capabilities are limited to the bridge's own. A new tool's answer may name connections with their sample answers, but `candidateFrom` keeps only those the request allows (`connectionProblems` refuses any other, naming the ones it may use, a repairable shape finding; none are allowed until the request gives some, [#349](https://github.com/suredo/Tessera/issues/349) step 4), and gives the tool the "connection" capability exactly when it uses one (A74). `CreateInput.allowedConnections` names them. A repair that leaves its connections out keeps the failed answer's, samples and all, since its prompt names them by path only.
+- **A new tool's reply carries its starting data** (`UX-01`, A85): the defaults and the request's entries, for staging's first-sight check, which opens the tool on a throwaway copy; staging's other checks keep the defaults.
 - **Examples are never defaults** (`GEN-05`, `UX-01`, A84). `dataProblems` refuses a record marked "example": true in the reusable defaults, a creation's or an edit's, as a data-shape problem for repair: using the tool again copies the defaults, so an example there would come back as if it were the person's. In the request's starting data, examples are kept, marked.
 - **Defaults and the request's entries stay apart** (`GEN-05`). The artifact keeps only the reusable defaults. A new workspace starts from the defaults, with each list the request gave entries for extended by them. The request's entries never become defaults.
 - **Nothing is stored or run before the host's checks.** In order:

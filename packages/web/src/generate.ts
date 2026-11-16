@@ -16,6 +16,7 @@ import {
 } from "@tessera/contracts";
 import {
   acceptanceChecks,
+  firstSightCheck,
   profileCheck,
   smokeCheck,
   stageCandidate,
@@ -262,6 +263,7 @@ async function stageRequest(
         capabilities: reply.capabilities,
         connections: reply.connections,
         syntheticData: reply.syntheticData,
+        ...(reply.startingData ? { startingData: reply.startingData } : {}),
       },
       workspaceId: reply.workspaceId,
       expectedDataRevision: reply.expectedDataRevision,
@@ -270,6 +272,8 @@ async function stageRequest(
       // in the experiment, the checks the server wrote from the request, one each (VER-09).
       checks: [
         smokeCheck(),
+        // A new tool, as the person will first see it (UX-01, A85).
+        ...(reply.startingData ? [firstSightCheck(reply.syntheticData, reply.startingData)] : []),
         ...(reply.profile ? [profileCheck(reply.profile)] : []),
         ...(reply.acceptance ? acceptanceChecks(reply.acceptance) : []),
       ],
@@ -474,7 +478,10 @@ export async function carryOut(
           if (staged.outcome === "check-failed") {
             // A check from the request is repaired as a behavior check is: the tool doesn't do what
             // a check it was told about expects (VER-09, GEN-09).
-            const behaves = staged.check === "behavior" || staged.check === "acceptance";
+            const behaves =
+              staged.check === "behavior" ||
+              staged.check === "acceptance" ||
+              staged.check === "first-sight";
             const failure = behaves ? "behavior" : "smoke";
             if (
               !repaired.has(failure) &&

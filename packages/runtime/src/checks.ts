@@ -1,6 +1,6 @@
 import type { MountedTool } from "./host.ts";
 import type { DriveField, DriveResult, DriveStep } from "./protocol.ts";
-import { chartSpecSchema, type SaveFile } from "@tessera/contracts";
+import { chartSpecSchema, type JsonValue, type SaveFile } from "@tessera/contracts";
 
 // The checks a candidate runs in the staging panel before it may be activated (RUN-03): the smoke
 // check (VER-02), and a stub for tests. The static check (VER-01) runs on the server, before a
@@ -32,6 +32,13 @@ export type CheckContext = {
    * day (RUN-07, #351).
    */
   rehearse(daysAhead?: number): Promise<MountedTool>;
+  /**
+   * Starts the candidate again as the person will first see it, on a fresh throwaway copy of its
+   * starting data, or of its synthetic data when it has none, and resolves with it (UX-01, A85).
+   */
+  opening(): Promise<MountedTool>;
+  /** A new tool's starting data, its defaults and the request's entries; none for an edit. */
+  startingData?: Record<string, JsonValue>;
   /**
    * How many times the candidate has asked to pick a file during this check; each was answered
    * with the sample image and no picker opened (A80, #351).
