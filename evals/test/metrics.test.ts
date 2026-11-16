@@ -1,5 +1,6 @@
 import { ledgerEntrySchema, type LedgerEntry } from "@tessera/contracts";
 import { describe, expect, it } from "vitest";
+import { say } from "../src/runner/messages.ts";
 import { metricsMarkdown, metricsOf } from "../src/runner/metrics.ts";
 import type { StepResult } from "../src/runner/run.ts";
 
@@ -38,8 +39,12 @@ const call = (
           ? { kind: "refused", reason: "call_cap" }
           : { kind: "ok" },
   });
-const step = (kind: StepResult["kind"], outcome: StepResult["outcome"] = "passed") =>
-  ({ index: 0, kind, action: "", outcome, notice: "", problems: [], seconds: 1 }) as StepResult;
+const step = (kind: StepResult["kind"], outcome: StepResult["outcome"] = "passed", notice = "") =>
+  ({ index: 0, kind, action: "", outcome, notice, problems: [], seconds: 1 }) as StepResult;
+// What the host says when a tool was made or changed: only a tool past staging's checks is.
+const made = say("request.made", { name: "List", summary: "A list." });
+const changed = say("request.edited", { name: "List", summary: "A list." });
+const failed = say("request.checkFailed");
 
 describe("a live evaluation's metrics (OBS-03)", () => {
   it("OBS-03, CLI-04: per stage, calls, failures, time and tokens, with unknown usage counted apart, never as 0", () => {
@@ -69,15 +74,15 @@ describe("a live evaluation's metrics (OBS-03)", () => {
     });
   });
 
-  it("OBS-03, GEN-09: per kind of request, how many needed a repair, and passed the host's and staging's checks first time", () => {
+  it("OBS-03, GEN-09: per kind of request, how many needed a repair, and of those reaching them, passed the host's and staging's checks first time", () => {
     const parts = (name: string) => [`${name}@abc123`];
     const metrics = metricsOf([
       {
         report: {
           steps: [
-            step("say"),
-            step("say"),
-            step("say"),
+            step("say", "passed", made),
+            step("say", "passed", made),
+            step("say", "passed", changed),
             step("say"),
             step("say"),
             step("cancel"),
@@ -108,10 +113,68 @@ describe("a live evaluation's metrics (OBS-03)", () => {
       },
     ]);
     expect(metrics.requests).toEqual({
-      create: { requests: 2, repaired: 1, hostChecksPassed: 1, stagingChecksPassed: 1 },
-      edit: { requests: 1, repaired: 1, hostChecksPassed: 1, stagingChecksPassed: 0 },
+      create: {
+        requests: 2,
+        repaired: 1,
+        hostChecks: { reached: 2, passed: 1, unknown: 0 },
+        stagingChecks: { reached: 2, passed: 1, unknown: 0 },
+      },
+      edit: {
+        requests: 1,
+        repaired: 1,
+        hostChecks: { reached: 1, passed: 1, unknown: 0 },
+        stagingChecks: { reached: 1, passed: 0, unknown: 0 },
+      },
     });
     expect(metrics.unmatched).toBe(0);
+  });
+
+  it("OBS-03: a check counts only once reached: none after a failed stage, staging's none after the host's checks gave up (#385 review)", () => {
+    const parts = (name: string) => [`${name}@abc123`];
+    const metrics = metricsOf([
+      {
+        report: {
+          steps: [step("say", "failed", failed), step("say", "failed", failed)],
+        },
+        calls: [
+          // The stage itself failed: no answer, so no check was reached.
+          call("intent", 2),
+          call("create", 180, undefined, { outcome: "failed" }),
+          // The static check failed, and so did its repair: staging was never reached.
+          call("intent", 2),
+          call("create", 20),
+          call("repair", 30, undefined, { parts: parts("repair-static") }),
+        ],
+      },
+    ]);
+    expect(metrics.requests.create).toEqual({
+      requests: 2,
+      repaired: 1,
+      hostChecks: { reached: 1, passed: 0, unknown: 0 },
+      stagingChecks: { reached: 0, passed: 0, unknown: 0 },
+    });
+    expect(metricsMarkdown(metrics)).toContain(
+      "| New tools | 2 | 1 of 2 (50%) | 0 of 1 (0%) | – |",
+    );
+  });
+
+  it("OBS-03: a repair whose ledger line doesn't say what it repaired leaves its checks unknown, never passed (#385 review)", () => {
+    const metrics = metricsOf([
+      {
+        report: { steps: [step("say", "passed", made)] },
+        // An older ledger: no prompt parts on the repair.
+        calls: [call("intent", 2), call("create", 20), call("repair", 30)],
+      },
+    ]);
+    expect(metrics.requests.create).toEqual({
+      requests: 1,
+      repaired: 1,
+      hostChecks: { reached: 0, passed: 0, unknown: 1 },
+      stagingChecks: { reached: 0, passed: 0, unknown: 1 },
+    });
+    expect(metricsMarkdown(metrics)).toContain(
+      "| New tools | 1 | 1 of 1 (100%) | –; 1 unknown | –; 1 unknown |",
+    );
   });
 
   it("OBS-03: says plainly what it couldn't count, and what each figure is", () => {

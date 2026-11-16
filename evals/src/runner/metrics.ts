@@ -6,6 +6,7 @@
 // node evals/src/runner/metrics.ts <run folder>... prints the metrics as Markdown.
 import { pathToFileURL } from "node:url";
 import type { LedgerEntry } from "@tessera/contracts";
+import { outcomeOf } from "./messages.ts";
 import { callsBySay, figures, readRun, type Figures, type Run } from "./speed.ts";
 
 /** A stage's calls, as the ledgers kept them. */
@@ -23,15 +24,25 @@ export type StageMetrics = {
   unknownUsage: number;
 };
 
+/**
+ * How one kind of check fared, over the requests with evidence it ran (#385 review): `reached`
+ * of them reached it, and `passed` passed at the first try. `unknown` requests had a repair whose
+ * ledger line doesn't say what it repaired, as in an older ledger: they are counted in neither.
+ */
+export type CheckMetrics = { reached: number; passed: number; unknown: number };
+
 /** Requests of one kind that make a tool, and how their tools fared before they opened. */
 export type RequestMetrics = {
   requests: number;
   /** Requests that needed at least one repair call. */
   repaired: number;
-  /** Requests whose tool passed the host's checks (data shape, static) at the first try. */
-  hostChecksPassed: number;
-  /** Requests whose tool passed staging's checks (smoke, first sight, behavior) at the first try. */
-  stagingChecksPassed: number;
+  /** The host's checks (data shape, static): reached once the stage answered. */
+  hostChecks: CheckMetrics;
+  /**
+   * Staging's checks (smoke, first sight, behavior): reached when a staging repair was asked for,
+   * or the host said the tool was made or changed, which only a tool that passed them is.
+   */
+  stagingChecks: CheckMetrics;
 };
 
 export type Metrics = {
@@ -42,8 +53,8 @@ export type Metrics = {
   unmatched: number;
 };
 
-// The repair parts by the checks whose failure they repair (GEN-09), by name; a repair whose
-// ledger line doesn't name its parts, as in an older ledger, is counted as a repair of neither.
+// The repair parts by the checks whose failure they repair (GEN-09), by name. A repair whose
+// ledger line doesn't name its parts, as in an older ledger, can't be told apart: see `unclear`.
 const HOST_REPAIRS = ["repair-schema-shape", "repair-static", "repair-data-plan"];
 const STAGING_REPAIRS = [
   "repair-smoke",
@@ -58,15 +69,36 @@ const repairs = (calls: readonly LedgerEntry[], parts: readonly string[]) =>
       (call.promptParts ?? []).some((part) => parts.includes(part.split("@")[0]!)),
   );
 
+/** Whether a repair among `calls` doesn't say which checks it repaired (#385 review). */
+const unclear = (calls: readonly LedgerEntry[]) =>
+  calls.some(
+    (call) =>
+      call.stage === "repair" &&
+      !(call.promptParts ?? []).some((part) =>
+        [...HOST_REPAIRS, ...STAGING_REPAIRS].includes(part.split("@")[0]!),
+      ),
+  );
+
 const known = (calls: readonly LedgerEntry[], pick: (call: LedgerEntry) => number | null) =>
   figures(calls.map(pick).filter((value): value is number => value !== null));
 
+const noChecks = (): CheckMetrics => ({ reached: 0, passed: 0, unknown: 0 });
 const none = (): RequestMetrics => ({
   requests: 0,
   repaired: 0,
-  hostChecksPassed: 0,
-  stagingChecksPassed: 0,
+  hostChecks: noChecks(),
+  stagingChecks: noChecks(),
 });
+
+/** Counts one request's checks of one kind: unknown, or reached and passed or not. */
+function count(checks: CheckMetrics, reached: boolean, failed: boolean, unsure: boolean): void {
+  if (unsure) {
+    checks.unknown += 1;
+  } else if (reached) {
+    checks.reached += 1;
+    if (!failed) checks.passed += 1;
+  }
+}
 
 /** The metrics of one or more runs. A request sent only to be cancelled isn't counted. */
 export function metricsOf(runs: readonly Run[]): Metrics {
@@ -94,8 +126,16 @@ export function metricsOf(runs: readonly Run[]): Metrics {
       const counted = requests[kind];
       counted.requests += 1;
       if (stages.has("repair")) counted.repaired += 1;
-      if (!repairs(mine, HOST_REPAIRS)) counted.hostChecksPassed += 1;
-      if (!repairs(mine, STAGING_REPAIRS)) counted.stagingChecksPassed += 1;
+      const unsure = unclear(mine);
+      // The host's checks run on the stage's answer: none when the stage failed (#385 review).
+      const answered = mine.some((call) => call.stage === kind && call.outcome.kind === "ok");
+      const hostFailed = repairs(mine, HOST_REPAIRS);
+      count(counted.hostChecks, answered || hostFailed, hostFailed, unsure);
+      // Staging's run only on a tool the host's checks let through: known by a staging repair, or
+      // by the host saying the tool was made or changed, which a tool failing them never is.
+      const stagingFailed = repairs(mine, STAGING_REPAIRS);
+      const made = outcomeOf(step.notice).claim !== "none";
+      count(counted.stagingChecks, stagingFailed || made, stagingFailed, unsure);
     });
   }
   const stages = Object.fromEntries(
@@ -138,8 +178,10 @@ const share = (part: number, whole: number) =>
 
 /** The metrics as Markdown, for a live evaluation's report (OBS-03). */
 export function metricsMarkdown(metrics: Metrics): string {
+  const checks = (c: CheckMetrics) =>
+    `${share(c.passed, c.reached)}${c.unknown > 0 ? `; ${c.unknown} unknown` : ""}`;
   const request = (name: string, r: RequestMetrics) =>
-    `| ${name} | ${r.requests} | ${share(r.repaired, r.requests)} | ${share(r.hostChecksPassed, r.requests)} | ${share(r.stagingChecksPassed, r.requests)} |`;
+    `| ${name} | ${r.requests} | ${share(r.repaired, r.requests)} | ${checks(r.hostChecks)} | ${checks(r.stagingChecks)} |`;
   return [
     "## Per stage",
     "",
@@ -154,7 +196,7 @@ export function metricsMarkdown(metrics: Metrics): string {
     "",
     "## Repairs and checks",
     "",
-    "Of the requests that made or changed a tool: how many needed a repair, and how many tools passed the host's checks (data shape, static) and staging's (smoke, first sight, behavior) at the first try.",
+    "Of the requests that made or changed a tool: how many needed a repair, and, of those that reached them, how many passed the host's checks (data shape, static) and staging's (smoke, first sight, behavior) at the first try. The host's are reached once the stage answers; staging's once a tool gets past the host's, known by a staging repair or the host saying the tool was made or changed. A request whose repair doesn't say what it repaired, as in an older ledger, is counted as unknown.",
     "",
     ...(metrics.unmatched > 0
       ? [
