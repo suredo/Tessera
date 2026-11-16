@@ -44,7 +44,9 @@ const step = (kind: StepResult["kind"], outcome: StepResult["outcome"] = "passed
 // What the host says when a tool was made or changed: only a tool past staging's checks is.
 const made = say("request.made", { name: "List", summary: "A list." });
 const changed = say("request.edited", { name: "List", summary: "A list." });
-const failed = say("request.checkFailed");
+// What it says when a stage failed, and when staging's checks failed with no repair left.
+const failed = say("request.failed", { message: "It took too long." });
+const checkFailed = say("request.checkFailed");
 
 describe("a live evaluation's metrics (OBS-03)", () => {
   it("OBS-03, CLI-04: per stage, calls, failures, time and tokens, with unknown usage counted apart, never as 0", () => {
@@ -156,6 +158,37 @@ describe("a live evaluation's metrics (OBS-03)", () => {
     expect(metricsMarkdown(metrics)).toContain(
       "| New tools | 2 | 1 of 2 (50%) | 0 of 1 (0%) | – |",
     );
+  });
+
+  it("OBS-03: an answer that it can't make the tool reaches no check; staging's failing with no repair left is reached and failed (#385 second review)", () => {
+    const metrics = metricsOf([
+      {
+        report: {
+          steps: [
+            step(
+              "say",
+              "passed",
+              say("request.cannot", { reason: "No tool here can book flights." }),
+            ),
+            step("say", "failed", checkFailed),
+          ],
+        },
+        calls: [
+          // The stage answered, but that it can't make the tool: no code, so no check ran.
+          call("intent", 2),
+          call("create", 20),
+          // A tool past the host's checks, whose staging checks failed with no repair left.
+          call("intent", 2),
+          call("create", 20),
+        ],
+      },
+    ]);
+    expect(metrics.requests.create).toEqual({
+      requests: 2,
+      repaired: 0,
+      hostChecks: { reached: 1, passed: 1, unknown: 0 },
+      stagingChecks: { reached: 1, passed: 0, unknown: 0 },
+    });
   });
 
   it("OBS-03: a repair whose ledger line doesn't say what it repaired leaves its checks unknown, never passed (#385 review)", () => {

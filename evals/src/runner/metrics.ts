@@ -6,7 +6,7 @@
 // node evals/src/runner/metrics.ts <run folder>... prints the metrics as Markdown.
 import { pathToFileURL } from "node:url";
 import type { LedgerEntry } from "@tessera/contracts";
-import { outcomeOf } from "./messages.ts";
+import { outcomeOf, say } from "./messages.ts";
 import { callsBySay, figures, readRun, type Figures, type Run } from "./speed.ts";
 
 /** A stage's calls, as the ledgers kept them. */
@@ -69,6 +69,9 @@ const repairs = (calls: readonly LedgerEntry[], parts: readonly string[]) =>
       (call.promptParts ?? []).some((part) => parts.includes(part.split("@")[0]!)),
   );
 
+/** What the host says when staging's checks failed and no repair is left, a new tool's or a change's. */
+const STAGING_GAVE_UP = [say("request.checkFailed"), say("request.editCheckFailed")];
+
 /** Whether a repair among `calls` doesn't say which checks it repaired (#385 review). */
 const unclear = (calls: readonly LedgerEntry[]) =>
   calls.some(
@@ -128,14 +131,18 @@ export function metricsOf(runs: readonly Run[]): Metrics {
       if (stages.has("repair")) counted.repaired += 1;
       const unsure = unclear(mine);
       // The host's checks run on the stage's answer: none when the stage failed (#385 review).
-      const answered = mine.some((call) => call.stage === kind && call.outcome.kind === "ok");
-      const hostFailed = repairs(mine, HOST_REPAIRS);
-      count(counted.hostChecks, answered || hostFailed, hostFailed, unsure);
-      // Staging's run only on a tool the host's checks let through: known by a staging repair, or
-      // by the host saying the tool was made or changed, which a tool failing them never is.
-      const stagingFailed = repairs(mine, STAGING_REPAIRS);
+      // Each check counts only on evidence it ran (#385 reviews), never because a stage answered:
+      // a stage may answer that it can't make the tool. Staging's ran when a staging repair was
+      // asked for, when the host said they failed with no repair left, or when it said the tool
+      // was made or changed, which a tool failing them never is.
+      const gaveUp = STAGING_GAVE_UP.some((said) => step.notice.includes(said));
+      const stagingFailed = repairs(mine, STAGING_REPAIRS) || gaveUp;
       const made = outcomeOf(step.notice).claim !== "none";
-      count(counted.stagingChecks, stagingFailed || made, stagingFailed, unsure);
+      const stagingReached = stagingFailed || made;
+      // The host's ran when a host repair was asked for, or before staging's, which they let through.
+      const hostFailed = repairs(mine, HOST_REPAIRS);
+      count(counted.hostChecks, hostFailed || stagingReached, hostFailed, unsure);
+      count(counted.stagingChecks, stagingReached, stagingFailed, unsure);
     });
   }
   const stages = Object.fromEntries(
