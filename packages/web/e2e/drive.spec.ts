@@ -243,7 +243,7 @@ test("VER-03, L-91: a check that can't see the tool, its frame still without a s
     {
       ok: false,
       problem: expect.stringMatching(
-        /^Tessera couldn't see the tool: its frame still had no size after 5 seconds \(it waited \d+\.\d s, the frame drew \d+ times, and its page was (visible|hidden)\)\. This is Tessera's problem, not the tool's\.$/,
+        /^Tessera couldn't see the tool: its frame still had no size 5 seconds after it was first drawn \(it waited \d+\.\d s in all, the frame drew [1-9]\d* times, and its page was (visible|hidden)\)\. This is Tessera's problem, not the tool's\.$/,
       ),
     },
   ]);

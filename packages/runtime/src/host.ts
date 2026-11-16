@@ -222,8 +222,10 @@ export function mountTool(
             eventListeners.add(listen);
             return () => eventListeners.delete(listen);
           },
-          inspect: (timeoutMs = 10_000) => ask((id) => ({ inspect: id }), timeoutMs),
-          drive: (steps, timeoutMs = 30_000) => ask((id) => ({ drive: { id, steps } }), timeoutMs),
+          // Long enough for the frame's own wait for its first draw, up to 30 s on a cold browser,
+          // and its size and settling after it (#337).
+          inspect: (timeoutMs = 45_000) => ask((id) => ({ inspect: id }), timeoutMs),
+          drive: (steps, timeoutMs = 60_000) => ask((id) => ({ drive: { id, steps } }), timeoutMs),
           unmount: () => {
             eventListeners.clear();
             reports.clear();

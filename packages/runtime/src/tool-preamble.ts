@@ -119,9 +119,16 @@ import type { BridgeMethodName } from "@tessera/contracts";
   // What the last wait saw, so a frame left without its size says why (#337): how long it really
   // waited, how many times the frame drew meanwhile (none means Chrome held its rendering back;
   // some means it rendered but its size never came), and whether its page was visible.
+  // A frame Chrome hasn't drawn even once yet isn't the tool's doing: on a cold browser, its
+  // rendering can start seconds late while the tool's code already runs (#337, the owner's choice
+  // of 2026-11-16). So the 5 seconds for its size start at its first draw, waited for up to
+  // FIRST_DRAW_MS; a frame drawn but still without its size, or never drawn, still fails plainly.
+  const FIRST_DRAW_MS = 30_000;
   let sizeWait = { ms: 0, frames: 0 };
   const noSize = () =>
-    `Tessera couldn't see the tool: its frame still had no size after 5 seconds (it waited ${(sizeWait.ms / 1000).toFixed(1)} s, the frame drew ${sizeWait.frames} times, and its page was ${document.visibilityState}). This is Tessera's problem, not the tool's.`;
+    sizeWait.frames === 0
+      ? `Tessera couldn't see the tool: the browser didn't draw its frame at all in ${FIRST_DRAW_MS / 1000} seconds (its page was ${document.visibilityState}). This is Tessera's problem, not the tool's.`
+      : `Tessera couldn't see the tool: its frame still had no size 5 seconds after it was first drawn (it waited ${(sizeWait.ms / 1000).toFixed(1)} s in all, the frame drew ${sizeWait.frames} times, and its page was ${document.visibilityState}). This is Tessera's problem, not the tool's.`;
   const sized = async () => {
     if (window.innerWidth !== 0) return;
     const started = performance.now();
@@ -133,7 +140,16 @@ import type { BridgeMethodName } from "@tessera/contracts";
       requestAnimationFrame(count);
     };
     requestAnimationFrame(count);
-    for (let waited = 0; window.innerWidth === 0 && waited < 5000; waited += 50) await wait(50);
+    for (
+      let waited = 0;
+      frames === 0 && window.innerWidth === 0 && waited < FIRST_DRAW_MS;
+      waited += 50
+    ) {
+      await wait(50);
+    }
+    if (frames > 0) {
+      for (let waited = 0; window.innerWidth === 0 && waited < 5000; waited += 50) await wait(50);
+    }
     counting = false;
     sizeWait = { ms: performance.now() - started, frames };
   };

@@ -299,9 +299,100 @@ test("VER-02, L-91: a frame that never gets its width fails as Tessera's problem
     outcome: "check-failed",
     check: "smoke",
     reason: expect.stringMatching(
-      /^Tessera couldn't see the tool: its frame still had no size after 5 seconds \(it waited \d+\.\d s, the frame drew \d+ times, and its page was (visible|hidden)\)\. This is Tessera's problem, not the tool's\.$/,
+      /^Tessera couldn't see the tool: its frame still had no size 5 seconds after it was first drawn \(it waited \d+\.\d s in all, the frame drew [1-9]\d* times, and its page was (visible|hidden)\)\. This is Tessera's problem, not the tool's\.$/,
     ),
   });
+});
+
+test("VER-02, L-91: a frame the browser never draws fails after 30 seconds, as Tessera's problem (#337)", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.goto(host.url);
+  await ready(page, "stageCandidate");
+  const result = await page.evaluate(async () => {
+    const w = window as unknown as {
+      stageCandidate(options: unknown): Promise<Result>;
+      smokeCheck(): unknown;
+    };
+    new MutationObserver((changes, observer) => {
+      for (const change of changes) {
+        for (const node of change.addedNodes) {
+          if (!(node instanceof HTMLIFrameElement)) continue;
+          if (!node.closest("[data-tessera=staging]")) continue;
+          observer.disconnect();
+          setTimeout(() => (node.style.width = "0px"), 500);
+          setTimeout(() => (node.style.display = "none"), 800);
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+    return w.stageCandidate({
+      candidate: {
+        mountId: "good",
+        hash: "a".repeat(64),
+        capabilities: [],
+        syntheticData: { tasks: [{ id: "d-1", title: "A starting task" }] },
+      },
+      workspaceId: "00000000-0000-4000-8000-000000000000",
+      expectedDataRevision: 0,
+      activationToken: "00000000-0000-4000-8000-000000000001",
+      checks: [w.smokeCheck()],
+      activate: () =>
+        Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
+    });
+  });
+  expect(result).toEqual({
+    outcome: "check-failed",
+    check: "smoke",
+    reason:
+      "Tessera couldn't see the tool: the browser didn't draw its frame at all in 30 seconds (its page was visible). This is Tessera's problem, not the tool's.",
+  });
+});
+
+test("VER-02, ENG-20: a frame the browser doesn't draw for seconds, as on a cold browser, is waited for, and the tool passes (#337)", async ({
+  page,
+}) => {
+  await page.goto(host.url);
+  await ready(page, "stageCandidate");
+  const result = await page.evaluate(async () => {
+    const w = window as unknown as {
+      stageCandidate(options: unknown): Promise<Result>;
+      smokeCheck(): unknown;
+    };
+    // The staging panel's frame isn't drawn for about 9 seconds, its code running meanwhile: more than
+    // the 5 seconds a frame has for its size once drawn, which on its own failed the check (#337).
+    new MutationObserver((changes, observer) => {
+      for (const change of changes) {
+        for (const node of change.addedNodes) {
+          if (!(node instanceof HTMLIFrameElement)) continue;
+          if (!node.closest("[data-tessera=staging]")) continue;
+          observer.disconnect();
+          // No width first, then not drawn at all: a frame left hidden keeps its last width.
+          setTimeout(() => (node.style.width = "0px"), 500);
+          setTimeout(() => (node.style.display = "none"), 800);
+          setTimeout(() => {
+            node.style.display = "";
+            node.style.width = "320px";
+          }, 9500);
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+    return w.stageCandidate({
+      candidate: {
+        mountId: "good",
+        hash: "a".repeat(64),
+        capabilities: [],
+        syntheticData: { tasks: [{ id: "d-1", title: "A starting task" }] },
+      },
+      workspaceId: "00000000-0000-4000-8000-000000000000",
+      expectedDataRevision: 0,
+      activationToken: "00000000-0000-4000-8000-000000000001",
+      checks: [w.smokeCheck()],
+      activate: () =>
+        Promise.resolve({ ok: false, reason: "stale", message: "Passed the checks." }),
+    });
+  });
+  expect(result).toEqual({ outcome: "refused", reason: "stale", message: "Passed the checks." });
 });
 
 test("VER-02: a tool that scrolls sideways at 320 px fails, saying by how much", async ({
