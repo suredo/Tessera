@@ -339,6 +339,34 @@ export function atLeast(version: string, minimum: string): boolean {
 export type ClaudeStatus = ClaudeCheck;
 
 /**
+ * How a person installs Claude Code's own program, exactly, on `platform`: Anthropic's installer,
+ * which puts the program itself (not npm's claude.cmd) in the person's .local/bin (PLAT-03, #325).
+ */
+export const installClaude = (platform: NodeJS.Platform): string =>
+  platform === "win32"
+    ? "open PowerShell and run `irm https://claude.ai/install.ps1 | iex`"
+    : "open a terminal and run `curl -fsSL https://claude.ai/install.sh | bash`";
+
+/**
+ * What to do once a program is installed (PLAT-03, #325). Tessera finds it then without starting
+ * again: Claude Code where Anthropic's installer puts it, whatever the PATH, and Codex in npm's
+ * folder, which the Node.js installer put on the PATH before Tessera started.
+ */
+export const AFTER_INSTALL = "Then try again.";
+
+/**
+ * Where Anthropic's installer puts Claude Code, if it is there: .local/bin in the person's home
+ * folder, as `env` names it. The installer doesn't add that folder to the PATH, so a fresh
+ * account's Claude Code would otherwise not be found (#388 review).
+ */
+export function installedClaude(env: NodeJS.ProcessEnv, platform: NodeJS.Platform): string | null {
+  const home = platform === "win32" ? env["USERPROFILE"] : env["HOME"];
+  if (!home) return null;
+  const file = path.join(home, ".local", "bin", platform === "win32" ? "claude.exe" : "claude");
+  return fs.existsSync(file) ? file : null;
+}
+
+/**
  * Finds the real Claude Code and checks it, without spending a model call (CLI-02): it is on the
  * PATH as a program (not npm's `claude.cmd`, which can't be started without a shell, L-45), at
  * least the tested version, and signed in, from `claude auth status`, which reaches no model.
@@ -349,21 +377,24 @@ export async function findClaude(
   run: typeof runProcess = runProcess,
 ): Promise<ClaudeStatus> {
   // On Windows the program itself first: npm's claude.cmd, earlier on the PATH, would hide it.
-  const executable =
+  const onPath =
     (platform === "win32" ? findExecutable("claude.exe", env, platform) : null) ??
     findExecutable("claude", env, platform);
+  // Not on the PATH as a program: where Anthropic's installer puts it (#388 review).
+  const executable =
+    onPath && !/\.(cmd|bat)$/i.test(onPath) ? onPath : (installedClaude(env, platform) ?? onPath);
   if (!executable) {
     return {
       ok: false,
       problem: "missing",
-      message: "Claude Code isn't installed, or isn't on the PATH. Install it, then try again.",
+      message: `Claude Code isn't installed, or isn't on the PATH. To install it, ${installClaude(platform)}. ${AFTER_INSTALL}`,
     };
   }
   if (/\.(cmd|bat)$/i.test(executable)) {
     return {
       ok: false,
       problem: "batch-file",
-      message: `Claude Code was found as ${executable}, which Tessera can't start. Install Claude Code's own program (claude.exe), then try again.`,
+      message: `Claude Code was found as ${executable}, npm's launcher, which Tessera can't start. Install Claude Code's own program instead: ${installClaude(platform)}. ${AFTER_INSTALL}`,
     };
   }
   const clean = cleanEnvironment(env);
@@ -372,7 +403,7 @@ export async function findClaude(
   const cantStart: ClaudeStatus = {
     ok: false,
     problem: "broken",
-    message: `Tessera found Claude Code at ${executable} but couldn't start it. Reinstall Claude Code, or check that your account may run it, then try again.`,
+    message: `Tessera found Claude Code at ${executable} but couldn't start it. Check that your account may run it, or install it again: ${installClaude(platform)}. ${AFTER_INSTALL}`,
   };
   let answer: Awaited<ReturnType<typeof runProcess>>;
   try {
@@ -412,6 +443,29 @@ export async function findClaude(
     // An answer that isn't JSON is no sign-in.
     signedIn = false;
   }
-  if (!signedIn) return { ok: false, problem: "signed-out", message: FAILURE_MESSAGES.sign_in };
+  if (!signedIn) {
+    // Found outside the PATH, as Anthropic's installer leaves it, the person's terminal can't find
+    // `claude` either, so the sign-in names the program by its full path (#388 review).
+    const message =
+      executable === onPath ? FAILURE_MESSAGES.sign_in : signInWith(executable, platform);
+    return { ok: false, problem: "signed-out", message };
+  }
   return { ok: true, executable, version };
 }
+
+/**
+ * The sign-in fix for a Claude Code found outside the PATH: the program by its full path, as the
+ * terminal named runs it (PLAT-03, #388 review).
+ */
+export const signInWith = (executable: string, platform: NodeJS.Platform): string =>
+  platform === "win32"
+    ? `Claude Code isn't signed in. Open PowerShell, run \`& ${shellQuote(executable, platform)} auth login\`, then try again.`
+    : `Claude Code isn't signed in. Open a terminal, run \`${shellQuote(executable, platform)} auth login\`, then try again.`;
+
+/**
+ * A path quoted literally for the terminal named on `platform`, so nothing in it is expanded, such
+ * as a `$` in a home folder's name (#388 third review): single quotes, with one inside doubled in
+ * PowerShell, and closed, escaped and reopened in a POSIX shell.
+ */
+export const shellQuote = (text: string, platform: NodeJS.Platform): string =>
+  platform === "win32" ? `'${text.replaceAll("'", "''")}'` : `'${text.replaceAll("'", "'\\''")}'`;

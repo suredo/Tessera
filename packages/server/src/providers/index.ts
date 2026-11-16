@@ -16,6 +16,7 @@ export {
   type ScriptedProvider,
 } from "./scripted.ts";
 export {
+  AFTER_INSTALL,
   ANSWER_KEY,
   atLeast,
   buildArgs,
@@ -25,6 +26,10 @@ export {
   failureKind,
   findClaude,
   imageMessage,
+  installedClaude,
+  shellQuote,
+  signInWith,
+  installClaude,
   MAX_TURNS,
   resultEnvelopeSchema,
   resultOf,
@@ -48,6 +53,7 @@ export {
   createCodexProvider,
   findCodex,
   HOME_INSTRUCTION_FILES,
+  INSTALL_CODEX,
   inputText as codexInputText,
   MODEL_CATALOG_FILE,
   OUTPUT_SCHEMA_FILE,
