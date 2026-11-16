@@ -4,7 +4,7 @@ title: "Live evaluation protocol"
 description: "How live model calls are planned, rehearsed, run, stopped and recorded (ENG-07)."
 tags: [practices, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T03:26:18Z }
 ---
 # Live evaluation protocol
 
@@ -20,7 +20,7 @@ generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
    - **A step fails twice:** stop that step, fix the cause offline, and ask before spending more.
    - **Provider errors** (sign-in, unavailable model): stop.
    - **Usage limit reached:** pause. Resume the remaining scenarios after the limit resets, without re-running scenarios that already finished.
-5. **Record:** keep the call ledger, request log, diagnostics, screenshots, video and a short written result, with the cost: calls, input tokens (cached), output tokens and model seconds.
+5. **Record:** keep the call ledger, request log, diagnostics, screenshots, video and a short written result, with the cost: calls, input tokens (cached), output tokens and model seconds. The result includes the run's metrics (`OBS-03`), from `node evals/src/runner/metrics.ts <run folder>...`: per stage, calls, failures, p50 and p95 model time and tokens, usage nobody reported counted apart; and of the requests that made or changed a tool, how many needed a repair and how many passed the host's and staging's checks at the first try. Its speed against the targets (`OBS-04`) comes from `node evals/src/runner/speed.ts <run folder>...`.
 6. **Learn:** every defect gets a lessons entry, a replay test (`ENG-13`) and a fix.
 
 Reference costs from the POC (Claude Sonnet 5.5, medium effort):
