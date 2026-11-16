@@ -459,5 +459,13 @@ export async function findClaude(
  */
 export const signInWith = (executable: string, platform: NodeJS.Platform): string =>
   platform === "win32"
-    ? `Claude Code isn't signed in. Open PowerShell, run \`& "${executable}" auth login\`, then try again.`
-    : `Claude Code isn't signed in. Open a terminal, run \`"${executable}" auth login\`, then try again.`;
+    ? `Claude Code isn't signed in. Open PowerShell, run \`& ${shellQuote(executable, platform)} auth login\`, then try again.`
+    : `Claude Code isn't signed in. Open a terminal, run \`${shellQuote(executable, platform)} auth login\`, then try again.`;
+
+/**
+ * A path quoted literally for the terminal named on `platform`, so nothing in it is expanded, such
+ * as a `$` in a home folder's name (#388 third review): single quotes, with one inside doubled in
+ * PowerShell, and closed, escaped and reopened in a POSIX shell.
+ */
+export const shellQuote = (text: string, platform: NodeJS.Platform): string =>
+  platform === "win32" ? `'${text.replaceAll("'", "''")}'` : `'${text.replaceAll("'", "'\\''")}'`;

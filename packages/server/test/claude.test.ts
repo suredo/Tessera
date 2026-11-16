@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -10,6 +11,7 @@ import {
   buildArgs,
   createClaudeProvider,
   FAILURE_MESSAGES,
+  shellQuote,
   findClaude,
   ProviderError,
   TESTED_CLI_VERSION,
@@ -470,8 +472,8 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
         problem: "signed-out",
         message:
           platform === "win32"
-            ? `Claude Code isn't signed in. Open PowerShell, run \`& "${installed}" auth login\`, then try again.`
-            : `Claude Code isn't signed in. Open a terminal, run \`"${installed}" auth login\`, then try again.`,
+            ? `Claude Code isn't signed in. Open PowerShell, run \`& '${installed}' auth login\`, then try again.`
+            : `Claude Code isn't signed in. Open a terminal, run \`'${installed}' auth login\`, then try again.`,
       });
       // Only npm's launcher on the PATH: the installed program is taken instead.
       if (platform === "win32") {
@@ -486,6 +488,34 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
     expect(await findClaude({ PATH: tempDir() }, "win32", signedIn)).toMatchObject({
       problem: "missing",
     });
+  });
+
+  it("PLAT-03: a path in a command is quoted literally, so a shell expands nothing in it (#388 third review)", () => {
+    const windows = "C:\\Users\\Pat$Dev O'Neil\\.local\\bin\\claude.exe";
+    const posix = "/home/pat$dev o'neil/.local/bin/claude";
+    expect(shellQuote(windows, "win32")).toBe(
+      "'C:\\Users\\Pat$Dev O''Neil\\.local\\bin\\claude.exe'",
+    );
+    expect(shellQuote(posix, "linux")).toBe("'/home/pat$dev o'\\''neil/.local/bin/claude'");
+    // The shell itself gives back the exact path: PowerShell where Windows is, sh elsewhere.
+    if (process.platform === "win32") {
+      const echoed = execFileSync(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-NonInteractive",
+          "-Command",
+          `Write-Output ${shellQuote(windows, "win32")}`,
+        ],
+        { encoding: "utf8" },
+      );
+      expect(echoed.trimEnd()).toBe(windows);
+    } else {
+      const echoed = execFileSync("sh", ["-c", `printf %s ${shellQuote(posix, "linux")}`], {
+        encoding: "utf8",
+      });
+      expect(echoed).toBe(posix);
+    }
   });
 
   it("CLI-02: refuses a version older than the tested one, and checks sign-in without a model call", async () => {
