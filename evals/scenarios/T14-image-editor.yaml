@@ -1,0 +1,37 @@
+# T14, image editor (docs/testing/app-catalogue.md), the first editing app tested (A26), in its M4
+# form: checked by the editing-with-files profile (VER-03, A83) before it opens. The person opens a
+# photo the scenario keeps in evals/scenarios/files, picking it in the browser's own picker (A80);
+# crops it with the tool's own controls (EVAL-01); saves it, saying Save when Tessera asks (A81);
+# asks for a black-and-white button, a change to the tool; and, asked to save again, says Don't
+# save. Whether the arrows, text and crop look right is the AI review's.
+id: T14-image-editor
+tier: advanced
+language: en
+person: "Someone sharing a photo with a friend"
+goal: "Open a photo, crop it, point at something with an arrow and a note, and save it"
+clock: { start: "2026-11-15T21:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 8 }
+profiles: [editing-with-files]
+steps:
+  - say: "Let me open a photo, crop it, add arrows and text, and save it."
+    expect: { created: true, workspace: new }
+  - do: { click: image-open, pick: beach.png }
+    expect: { version: unchanged, downloaded: false }
+  - do: { click: image-edit }
+    expect: { version: unchanged, downloaded: false }
+  - do: { click: image-save, answer: save }
+    expect: { version: unchanged, downloaded: true }
+  - say: "Add a button that makes the photo black and white."
+    expect: { version: new }
+  - do: { click: image-open, pick: beach.png }
+  - do: { click: image-save, answer: dont-save }
+    expect: { downloaded: false }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence

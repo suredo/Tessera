@@ -41,6 +41,7 @@ describe("scenario files (EVAL-01)", () => {
       "T1-shopping-list",
       "T10-study-planner",
       "T13-drawing-board",
+      "T14-image-editor",
       "T2-reading-list",
       "T3-spending-chart",
       "T4-habit-tracker",
@@ -63,6 +64,8 @@ describe("scenario files (EVAL-01)", () => {
       "T1-shopping-list": 10,
       "T10-study-planner": 14,
       "T13-drawing-board": 7,
+      // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
+      "T14-image-editor": 8,
       "T2-reading-list": 8,
       "T3-spending-chart": 10,
       // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
@@ -141,6 +144,36 @@ describe("scenario files (EVAL-01)", () => {
     );
     refused("T87-unknown-profile", "profiles: [todo]\nsteps:\n  - say: hi\n", /profiles/);
   });
+
+  it("EVAL-01, CAP-03: a click may open the picker for a file the scenario keeps, or be answered Save or Don't save", () => {
+    const scenario = loadScenario(
+      scenarioFile(
+        "T95-files",
+        "profiles: [editing-with-files]\nsteps:\n  - say: hi\n" +
+          "  - do: { click: image-open, pick: beach.png }\n" +
+          "  - do: { click: image-save, answer: save }\n    expect: { downloaded: true }\n" +
+          "  - do: { click: image-save, answer: dont-save }\n    expect: { downloaded: false }\n" +
+          "  - do: { click: image-save, answer: save }\n    expect: { downloaded: beach-edited.png }\n",
+      ),
+    );
+    expect(scenario.steps.slice(1).map((s) => ["do" in s && s.do, s.expect?.downloaded])).toEqual([
+      [{ click: "image-open", pick: "beach.png" }, undefined],
+      [{ click: "image-save", answer: "save" }, true],
+      [{ click: "image-save", answer: "dont-save" }, false],
+      [{ click: "image-save", answer: "save" }, "beach-edited.png"],
+    ]);
+    const refused = (id: string, step: string) =>
+      expect(() =>
+        loadScenario(
+          scenarioFile(id, "profiles: [editing-with-files]\nsteps:\n  - say: hi\n" + step),
+        ),
+      ).toThrow(/steps\.1/);
+    // A file is only a name in evals/scenarios/files, never a path; a fill picks nothing.
+    refused("T94-path", "  - do: { click: image-open, pick: ../secret.png }\n");
+    refused("T93-absolute", "  - do: { click: image-open, pick: C:/Users/me/photo.jpg }\n");
+    refused("T92-fill-pick", "  - do: { fill: image-open, value: x, pick: beach.png }\n");
+    refused("T91-answer", "  - do: { click: image-save, answer: maybe }\n");
+  });
 });
 
 describe("host facts (EVAL-02)", () => {
@@ -152,6 +185,21 @@ describe("host facts (EVAL-02)", () => {
     open,
   });
   const none: StepOutcome = { claim: "none" };
+
+  it("EVAL-02, CAP-03: a file saved, none, or one by its name, as expected", () => {
+    const open = state("w1", list);
+    const saved: StepOutcome = { claim: "none", downloaded: ["beach-edited.png"] };
+    expect(checkFacts(open, open, saved, { downloaded: true })).toEqual([]);
+    expect(checkFacts(open, open, saved, { downloaded: "beach-edited.png" })).toEqual([]);
+    expect(checkFacts(open, open, none, { downloaded: false })).toEqual([]);
+    expect(checkFacts(open, open, none, { downloaded: true })).toEqual(["No file was saved."]);
+    expect(checkFacts(open, open, saved, { downloaded: false })).toEqual([
+      "A file was saved when none was expected: beach-edited.png.",
+    ]);
+    expect(checkFacts(open, open, saved, { downloaded: "beach.png" })).toEqual([
+      "beach.png wasn't saved; beach-edited.png was.",
+    ]);
+  });
 
   it("EVAL-02: a new tool, and a request that makes none", () => {
     const empty = state(null);

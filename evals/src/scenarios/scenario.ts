@@ -44,6 +44,12 @@ export const expectationSchema = z
       .enum(["clarify", "unsupported", "stopped"])
       .optional()
       .describe("The host answered instead of making or changing a tool."),
+    downloaded: z
+      .union([z.boolean(), z.string().min(1).max(255)])
+      .optional()
+      .describe(
+        "The browser saved a file during the step (true), none (false), or one with this name (CAP-03).",
+      ),
   })
   .describe("Host facts a step expects; each one left out isn't checked.");
 export type Expectation = z.infer<typeof expectationSchema>;
@@ -66,6 +72,15 @@ const label = z
   .max(200)
   .describe("Of the elements marked with the hook, the one whose label shows this text.");
 
+/** A file the scenario keeps in evals/scenarios/files, by its name, for the person to pick. */
+export const scenarioFileSchema = z
+  .string()
+  .regex(
+    /^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$/,
+    "a file name in evals/scenarios/files, such as beach.png",
+  )
+  .describe("A file in evals/scenarios/files the person picks, by its name.");
+
 /**
  * Using one of the tool's own controls, as the person would (EVAL-01, from M3): clicking the
  * element marked with a hook, or typing a value into it (a select takes the choice it names), the
@@ -73,7 +88,20 @@ const label = z
  * `label`, as a person finds one field of a form.
  */
 const doSchema = z.union([
-  z.strictObject({ click: hookName, in: within.optional(), label: label.optional() }),
+  z.strictObject({
+    click: hookName,
+    in: within.optional(),
+    label: label.optional(),
+    pick: scenarioFileSchema
+      .optional()
+      .describe(
+        "The click opens the browser's file picker, where the person picks this file (A80).",
+      ),
+    answer: z
+      .enum(["save", "dont-save"])
+      .optional()
+      .describe("The click makes Tessera ask about saving a file, which the person answers (A81)."),
+  }),
   z.strictObject({
     fill: hookName,
     value: z.string().max(2000),

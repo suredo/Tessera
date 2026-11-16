@@ -4,7 +4,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium, expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import {
+  chromium,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Download,
+  type Page,
+} from "@playwright/test";
 import {
   createWorkspace,
   getWorkspace,
@@ -37,6 +44,8 @@ import { startServices, type Services } from "./services.ts";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = path.resolve(here, "../../../packages/web/dist");
+/** The files a scenario's person may pick (A80): only these, never the real ones. */
+const SCENARIO_FILES = path.resolve(here, "../../scenarios/files");
 /** How long one request may take before the step fails (GEN-11's limits are the pipeline's). */
 export const STEP_LIMIT_MS = 8 * 60_000;
 const DAY_MS = 24 * 60 * 60_000;
@@ -420,13 +429,60 @@ async function useControl(page: Page, action: DoAction): Promise<void> {
     );
   }
   if ("click" in action) {
-    await control.click();
+    // A click that opens the browser's picker: the person picks the scenario's file (A80).
+    const file = action.pick ? path.join(SCENARIO_FILES, action.pick) : undefined;
+    if (file && !fs.existsSync(file))
+      throw new Error(`The scenario's file ${action.pick} isn't in evals/scenarios/files.`);
+    if (file) {
+      await clickAndPick(
+        () => page.waitForEvent("filechooser", { timeout: 15_000 }),
+        () => control.click(),
+        file,
+        action.pick!,
+      );
+    } else {
+      await control.click();
+    }
+    // A click that makes Tessera ask about saving a file: the person answers (A81).
+    if (action.answer) {
+      const question = page.getByRole("alertdialog", { name: say("save.label") });
+      await question.waitFor({ timeout: 15_000 }).catch(() => {
+        throw new Error("Tessera didn't ask about saving a file.");
+      });
+      await question
+        .getByRole("button", {
+          name: say(action.answer === "save" ? "save.save" : "save.dontSave"),
+          exact: true,
+        })
+        .click();
+    }
   } else if ((await control.and(tool.locator("select")).count()) === 1) {
     // Playwright picks the choice whose value or text is the value, or fails saying it has none.
     await control.selectOption(action.value);
   } else {
     await control.fill(action.value);
   }
+}
+
+/**
+ * Clicks, and picks `file` in the browser's file picker the click opens (A80). The wait for the
+ * picker is watched from the start, so a click slower than it, or one that fails, never leaves it
+ * unhandled (#382 review). No picker after the click fails plainly, naming the file.
+ */
+export async function clickAndPick(
+  chooser: () => Promise<{ setFiles(file: string): Promise<void> }>,
+  click: () => Promise<void>,
+  file: string,
+  name: string,
+): Promise<void> {
+  const opened = chooser().then(
+    (picker) => picker,
+    () => undefined,
+  );
+  await click();
+  const picker = await opened;
+  if (!picker) throw new Error(`No file picker opened for ${name}.`);
+  await picker.setFiles(file);
 }
 
 /** Tessera's newest reply in the chat, where a request's outcome is said (APP-01), as text. */
@@ -593,9 +649,23 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
   if ("do" in s) {
     const id = await openWorkspace(page);
     if (!id) throw new Error("No tool is open to use.");
-    await useControl(page, s.do);
-    await dataSettled(() => getWorkspace(store, id)?.dataRevision);
-    return { claim: "none" };
+    // Every file the browser saves during the step, by the name it was saved under (CAP-03).
+    const downloaded: string[] = [];
+    const saved = (download: Download) => downloaded.push(download.suggestedFilename());
+    page.on("download", saved);
+    try {
+      await useControl(page, s.do);
+      if ("answer" in s.do && s.do.answer === "save") {
+        await expect
+          .poll(() => downloaded.length, { timeout: 15_000 })
+          .toBeGreaterThan(0)
+          .catch(() => {});
+      }
+      await dataSettled(() => getWorkspace(store, id)?.dataRevision);
+    } finally {
+      page.off("download", saved);
+    }
+    return { claim: "none", ...(downloaded.length ? { downloaded } : {}) };
   }
   throw new Error(`The runner doesn't play ${stepKind(s)} steps.`);
 }

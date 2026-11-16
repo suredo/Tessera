@@ -1,0 +1,89 @@
+{
+  "about": "A rehearsal of T14-image-editor, written by hand: no model answered these.",
+  "scenario": "T14-image-editor",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": false,
+          "targetsCurrentTool": false,
+          "kind": "create",
+          "profile": "editing-with-files",
+          "usesFiles": true
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Photo editor",
+          "summary": "Opens a photo from your computer, crops it, adds an arrow and text, and saves it.",
+          "code": {
+            "html": "<h1>Photo editor</h1>\n<div class=\"tools\">\n  <button type=\"button\" data-hook=\"image-open\">Open a photo</button>\n  <button type=\"button\" data-hook=\"image-edit\">Crop to the middle</button>\n  <button type=\"button\" id=\"arrow\">Add an arrow</button>\n  <label for=\"caption\">Text</label> <input id=\"caption\" value=\"Look here\">\n  <button type=\"button\" id=\"text\">Add the text</button>\n  <button type=\"button\" data-hook=\"image-save\">Save the photo</button>\n</div>\n<p id=\"status\" role=\"status\">Open a photo to start.</p>\n<canvas data-hook=\"image-view\" aria-label=\"The photo being edited\"></canvas>",
+            "css": ".tools { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }\ncanvas { display: block; max-width: 100%; height: auto; border: 1px solid #c8c8c8; border-radius: 0.25rem; }",
+            "js": "const canvas = document.querySelector(\"[data-hook=image-view]\");\nconst pen = canvas.getContext(\"2d\");\nconst status = document.getElementById(\"status\");\nlet name = \"photo\";\nlet opened = false;\nconst load = (url) => new Promise((resolve, reject) => {\n  const image = new Image();\n  image.onload = () => resolve(image);\n  image.onerror = reject;\n  image.src = url;\n});\nconst say = (text) => { status.textContent = text; };\nconst needsPhoto = () => { if (!opened) say(\"Open a photo first.\"); return !opened; };\ndocument.querySelector(\"[data-hook=image-open]\").addEventListener(\"click\", async () => {\n  try {\n    const file = await tessera.pickFile();\n    if (!file) return say(\"No photo was picked.\");\n    const image = await load(await tessera.assetUrl(file.id));\n    canvas.width = image.naturalWidth;\n    canvas.height = image.naturalHeight;\n    pen.drawImage(image, 0, 0);\n    name = file.name.replace(/\\.[A-Za-z0-9]+$/, \"\");\n    opened = true;\n    say(\"Opened \" + file.name + \", \" + file.widthPx + \" by \" + file.heightPx + \" pixels.\");\n  } catch (error) {\n    say(error.message);\n  }\n});\n// Keeps the middle of the photo, four fifths of each side.\ndocument.querySelector(\"[data-hook=image-edit]\").addEventListener(\"click\", () => {\n  if (needsPhoto()) return;\n  const width = Math.max(1, Math.round(canvas.width * 0.8));\n  const height = Math.max(1, Math.round(canvas.height * 0.8));\n  const copy = document.createElement(\"canvas\");\n  copy.width = canvas.width;\n  copy.height = canvas.height;\n  copy.getContext(\"2d\").drawImage(canvas, 0, 0);\n  canvas.width = width;\n  canvas.height = height;\n  pen.drawImage(copy, (copy.width - width) / 2, (copy.height - height) / 2, width, height, 0, 0, width, height);\n  say(\"Cropped to \" + width + \" by \" + height + \" pixels.\");\n});\ndocument.getElementById(\"arrow\").addEventListener(\"click\", () => {\n  if (needsPhoto()) return;\n  const size = Math.min(canvas.width, canvas.height);\n  const [x, y] = [canvas.width / 2, canvas.height / 2];\n  pen.strokeStyle = \"#d62828\";\n  pen.fillStyle = \"#d62828\";\n  pen.lineWidth = Math.max(2, size / 20);\n  pen.beginPath();\n  pen.moveTo(x - size / 3, y + size / 3);\n  pen.lineTo(x, y);\n  pen.stroke();\n  pen.beginPath();\n  pen.moveTo(x, y);\n  pen.lineTo(x - size / 8, y);\n  pen.lineTo(x, y + size / 8);\n  pen.closePath();\n  pen.fill();\n  say(\"Added an arrow.\");\n});\ndocument.getElementById(\"text\").addEventListener(\"click\", () => {\n  if (needsPhoto()) return;\n  const text = document.getElementById(\"caption\").value.trim();\n  if (!text) return say(\"Write the text first.\");\n  pen.fillStyle = \"#ffffff\";\n  pen.strokeStyle = \"#000000\";\n  pen.font = \"bold \" + Math.max(10, Math.round(canvas.height / 6)) + \"px sans-serif\";\n  pen.lineWidth = 2;\n  pen.strokeText(text, 4, canvas.height - 6);\n  pen.fillText(text, 4, canvas.height - 6);\n  say(\"Added the text.\");\n});\ndocument.querySelector(\"[data-hook=image-save]\").addEventListener(\"click\", async () => {\n  if (needsPhoto()) return;\n  try {\n    const saved = await tessera.saveFile({\n      name: name + \"-edited.png\",\n      type: \"image/png\",\n      bytesBase64: canvas.toDataURL(\"image/png\").split(\",\")[1],\n    });\n    say(saved ? \"Saved \" + name + \"-edited.png.\" : \"Not saved.\");\n  } catch (error) {\n    say(error.message);\n  }\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {}
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "capabilities": ["files"],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": true,
+          "targetsCurrentTool": true,
+          "kind": "edit",
+          "profile": "editing-with-files",
+          "usesFiles": true
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Adds a button that makes the photo black and white.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Photo editor</h1>\n<div class=\"tools\">\n  <button type=\"button\" data-hook=\"image-open\">Open a photo</button>\n  <button type=\"button\" data-hook=\"image-edit\">Crop to the middle</button>\n  <button type=\"button\" id=\"arrow\">Add an arrow</button>\n  <label for=\"caption\">Text</label> <input id=\"caption\" value=\"Look here\">\n  <button type=\"button\" id=\"text\">Add the text</button>\n  <button type=\"button\" id=\"gray\">Black and white</button>\n  <button type=\"button\" data-hook=\"image-save\">Save the photo</button>\n</div>\n<p id=\"status\" role=\"status\">Open a photo to start.</p>\n<canvas data-hook=\"image-view\" aria-label=\"The photo being edited\"></canvas>",
+              "css": ".tools { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }\ncanvas { display: block; max-width: 100%; height: auto; border: 1px solid #c8c8c8; border-radius: 0.25rem; }",
+              "js": "const canvas = document.querySelector(\"[data-hook=image-view]\");\nconst pen = canvas.getContext(\"2d\");\nconst status = document.getElementById(\"status\");\nlet name = \"photo\";\nlet opened = false;\nconst load = (url) => new Promise((resolve, reject) => {\n  const image = new Image();\n  image.onload = () => resolve(image);\n  image.onerror = reject;\n  image.src = url;\n});\nconst say = (text) => { status.textContent = text; };\nconst needsPhoto = () => { if (!opened) say(\"Open a photo first.\"); return !opened; };\ndocument.querySelector(\"[data-hook=image-open]\").addEventListener(\"click\", async () => {\n  try {\n    const file = await tessera.pickFile();\n    if (!file) return say(\"No photo was picked.\");\n    const image = await load(await tessera.assetUrl(file.id));\n    canvas.width = image.naturalWidth;\n    canvas.height = image.naturalHeight;\n    pen.drawImage(image, 0, 0);\n    name = file.name.replace(/\\.[A-Za-z0-9]+$/, \"\");\n    opened = true;\n    say(\"Opened \" + file.name + \", \" + file.widthPx + \" by \" + file.heightPx + \" pixels.\");\n  } catch (error) {\n    say(error.message);\n  }\n});\n// Keeps the middle of the photo, four fifths of each side.\ndocument.querySelector(\"[data-hook=image-edit]\").addEventListener(\"click\", () => {\n  if (needsPhoto()) return;\n  const width = Math.max(1, Math.round(canvas.width * 0.8));\n  const height = Math.max(1, Math.round(canvas.height * 0.8));\n  const copy = document.createElement(\"canvas\");\n  copy.width = canvas.width;\n  copy.height = canvas.height;\n  copy.getContext(\"2d\").drawImage(canvas, 0, 0);\n  canvas.width = width;\n  canvas.height = height;\n  pen.drawImage(copy, (copy.width - width) / 2, (copy.height - height) / 2, width, height, 0, 0, width, height);\n  say(\"Cropped to \" + width + \" by \" + height + \" pixels.\");\n});\ndocument.getElementById(\"arrow\").addEventListener(\"click\", () => {\n  if (needsPhoto()) return;\n  const size = Math.min(canvas.width, canvas.height);\n  const [x, y] = [canvas.width / 2, canvas.height / 2];\n  pen.strokeStyle = \"#d62828\";\n  pen.fillStyle = \"#d62828\";\n  pen.lineWidth = Math.max(2, size / 20);\n  pen.beginPath();\n  pen.moveTo(x - size / 3, y + size / 3);\n  pen.lineTo(x, y);\n  pen.stroke();\n  pen.beginPath();\n  pen.moveTo(x, y);\n  pen.lineTo(x - size / 8, y);\n  pen.lineTo(x, y + size / 8);\n  pen.closePath();\n  pen.fill();\n  say(\"Added an arrow.\");\n});\ndocument.getElementById(\"text\").addEventListener(\"click\", () => {\n  if (needsPhoto()) return;\n  const text = document.getElementById(\"caption\").value.trim();\n  if (!text) return say(\"Write the text first.\");\n  pen.fillStyle = \"#ffffff\";\n  pen.strokeStyle = \"#000000\";\n  pen.font = \"bold \" + Math.max(10, Math.round(canvas.height / 6)) + \"px sans-serif\";\n  pen.lineWidth = 2;\n  pen.strokeText(text, 4, canvas.height - 6);\n  pen.fillText(text, 4, canvas.height - 6);\n  say(\"Added the text.\");\n});\ndocument.getElementById(\"gray\").addEventListener(\"click\", () => {\n  if (needsPhoto()) return;\n  const pixels = pen.getImageData(0, 0, canvas.width, canvas.height);\n  for (let i = 0; i < pixels.data.length; i += 4) {\n    const level = 0.3 * pixels.data[i] + 0.59 * pixels.data[i + 1] + 0.11 * pixels.data[i + 2];\n    pixels.data[i] = pixels.data[i + 1] = pixels.data[i + 2] = level;\n  }\n  pen.putImageData(pixels, 0, 0);\n  say(\"Made it black and white.\");\n});\ndocument.querySelector(\"[data-hook=image-save]\").addEventListener(\"click\", async () => {\n  if (needsPhoto()) return;\n  try {\n    const saved = await tessera.saveFile({\n      name: name + \"-edited.png\",\n      type: \"image/png\",\n      bytesBase64: canvas.toDataURL(\"image/png\").split(\",\")[1],\n    });\n    say(saved ? \"Saved \" + name + \"-edited.png.\" : \"Not saved.\");\n  } catch (error) {\n    say(error.message);\n  }\n});"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
+    }
+  ]
+}
