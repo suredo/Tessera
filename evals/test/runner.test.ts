@@ -164,6 +164,7 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
       "T1-shopping-list",
       "T10-study-planner",
       "T13-drawing-board",
+      "T14-image-editor",
       "T2-reading-list",
       "T3-spending-chart",
       "T4-habit-tracker",

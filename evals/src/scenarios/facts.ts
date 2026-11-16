@@ -33,6 +33,8 @@ export type StepOutcome = {
   claim: "created" | "changed" | "none";
   /** An answer instead of a tool: clarify, unsupported, or a stop after Cancel. */
   answer?: "clarify" | "unsupported" | "stopped";
+  /** The files the browser saved during the step, by name (CAP-03). */
+  downloaded?: string[];
 };
 
 /**
@@ -152,6 +154,17 @@ export function checkFacts(
   }
   if (expected.offered === undefined && outcome.offered !== undefined) {
     problems.push("A saved tool was offered when none was expected.");
+  }
+  if (expected.downloaded !== undefined) {
+    const saved = outcome.downloaded ?? [];
+    const wanted = expected.downloaded;
+    if (wanted === false && saved.length > 0) {
+      problems.push(`A file was saved when none was expected: ${saved.join(", ")}.`);
+    } else if (wanted === true && saved.length === 0) {
+      problems.push("No file was saved.");
+    } else if (typeof wanted === "string" && !saved.includes(wanted)) {
+      problems.push(`${wanted} wasn't saved${saved.length ? `; ${saved.join(", ")} was` : ""}.`);
+    }
   }
   if (expected.savedTool !== undefined) {
     const offered = after.savedTools.find((t) => t.id === outcome.offered);

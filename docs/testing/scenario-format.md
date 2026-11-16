@@ -4,7 +4,7 @@ title: "Scenario file format"
 description: "The scenario file format, step types and fields, with a full example."
 tags: [testing, scenario-format]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T15:53:14Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T01:44:53Z }
 ---
 # Scenario file format
 
@@ -44,7 +44,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 
 **Step types:**
 - `say`: a chat request
-- `do`: use one of the tool's controls, through a hook of one of the scenario's profiles (from M3): `{ click: <hook> }` or `{ fill: <hook>, value: <text> }` (a select takes the choice with that text or value), acting on the one shown element with that hook, or with `in: { hook: <hook>, text: <text> }` on the one inside the one shown element with that hook showing that text, such as one item; with `label: <text>`, of several elements with that hook, the one whose label shows that text, such as one field of a form. A hook none of the scenario's profiles has is refused when the file loads.
+- `do`: use one of the tool's controls, through a hook of one of the scenario's profiles (from M3): `{ click: <hook> }` or `{ fill: <hook>, value: <text> }` (a select takes the choice with that text or value), acting on the one shown element with that hook, or with `in: { hook: <hook>, text: <text> }` on the one inside the one shown element with that hook showing that text, such as one item; with `label: <text>`, of several elements with that hook, the one whose label shows that text, such as one field of a form. A hook none of the scenario's profiles has is refused when the file loads. A click may also say what the person does next (`CAP-03`): with `pick: <file>`, it opens the browser's file picker, where the person picks that file from `evals/scenarios/files`, by its name and never a path (A80); with `answer: save` or `answer: dont-save`, Tessera asks about saving a file the tool offers, and the person answers (A81).
 - `next-day`: move the host clock and reload
 - `reload`
 - `save`, `continue`, `use-again`: save the tool, or open a saved one in its two ways
@@ -63,6 +63,6 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 
 **Answers.** A rehearsal (`evals/scenarios/rehearsals/<id>.json`, written by hand) or a replay (a live run's recording) gives the answers each stage asks for, in order. A saved tool is named as `{{saved:<name>}}`, since its ID is new on every run, and an answer can take its time (`delayMs`) so a `cancel` has something to stop. The [runner](../code/evals/runner.md) plays them.
 
-**Expectations** are host-verified facts ([automatic host facts](judging.md#automatic-host-facts-every-step)): `created` (true or false), `version` (`new` or `unchanged`), `data` (`changed`, `unchanged`, or `kept`: every earlier value is still there, and fields or items may have been added), `workspace` (`new`, `same` or `original`, the one the saved tool's Continue opens), `offered: saved` with `savedTool` (its name), and `answer` (`clarify`, `unsupported` or `stopped`). Each one left out isn't checked; every step also checks that nothing unrelated changed and that no success was claimed that wasn't applied. For tools that match no profile, data expectations are limited to "unchanged", "changed" or "kept", compared by content, plus the smoke check.
+**Expectations** are host-verified facts ([automatic host facts](judging.md#automatic-host-facts-every-step)): `created` (true or false), `version` (`new` or `unchanged`), `data` (`changed`, `unchanged`, or `kept`: every earlier value is still there, and fields or items may have been added), `workspace` (`new`, `same` or `original`, the one the saved tool's Continue opens), `offered: saved` with `savedTool` (its name), `answer` (`clarify`, `unsupported` or `stopped`), and `downloaded`: `true` when the browser saved a file during the step, `false` when it saved none, or a file's name when it saved that one (`CAP-03`). Each one left out isn't checked; every step also checks that nothing unrelated changed and that no success was claimed that wasn't applied. For tools that match no profile, data expectations are limited to "unchanged", "changed" or "kept", compared by content, plus the smoke check.
 
 T1 entries came from the original session request, so Use again excludes them. Add a defaults fixture with categories/units that survive reuse, while entries, completed flags and examples do not. M1 scripted restore cases also cover: compatible old code retaining today's data; incompatible conversion previewing affected fields/records; cancellation retaining everything; confirmation keeping a recovery snapshot; failed migration; and a write/crash during activation (`DATA-10`). M1 asset cases also cover replacing a photo with a cropped copy, running cleanup and restarting, then undoing the crop: the original must come back (`DATA-04`, `DATA-11`).
