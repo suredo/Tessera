@@ -19,7 +19,10 @@ import { startLocalServer } from "../src/http/index.ts";
 import { partText } from "../src/prompts/index.ts";
 import {
   createClaudeProvider,
+  AFTER_INSTALL,
   FAILURE_MESSAGES,
+  installClaude,
+  INSTALL_CODEX,
   PROVIDER_FILE,
   readProviderChoice,
   ROUTES_FILE,
@@ -53,7 +56,7 @@ const CODEX_READY: ClaudeCheck = { ok: true, executable: "/usr/bin/codex", versi
 const CODEX_MISSING: ClaudeCheck = {
   ok: false,
   problem: "missing",
-  message: "Codex isn't installed, or isn't on the PATH. Install it, then try again.",
+  message: `Codex isn't installed, or isn't on the PATH. To install it, ${INSTALL_CODEX}. ${AFTER_INSTALL}`,
 };
 /** Codex as the check sees it unless a test says otherwise: never the real one (ENG-11). */
 const noCodex = () => Promise.resolve(CODEX_MISSING);
@@ -343,7 +346,7 @@ describe("the setup routes (APP-07)", () => {
           claude: {
             ok: false,
             problem: "broken",
-            message: "Tessera couldn't check Claude Code. Reinstall Claude Code, then try again.",
+            message: `Tessera couldn't check Claude Code. Install it again: ${installClaude(process.platform)}. ${AFTER_INSTALL}`,
           },
         });
       }

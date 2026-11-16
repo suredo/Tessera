@@ -339,6 +339,21 @@ export function atLeast(version: string, minimum: string): boolean {
 export type ClaudeStatus = ClaudeCheck;
 
 /**
+ * How a person installs Claude Code's own program, exactly, on `platform`: Anthropic's installer,
+ * which puts a program (not npm's claude.cmd) on the PATH (PLAT-03, #325).
+ */
+export const installClaude = (platform: NodeJS.Platform): string =>
+  platform === "win32"
+    ? "open PowerShell and run `irm https://claude.ai/install.ps1 | iex`"
+    : "open a terminal and run `curl -fsSL https://claude.ai/install.sh | bash`";
+
+/**
+ * What to do once a program is installed: Tessera reads the PATH it started with, so it finds a
+ * new program only when started again (PLAT-03, #325).
+ */
+export const AFTER_INSTALL = "Then close Tessera and start it again, so it finds the new program.";
+
+/**
  * Finds the real Claude Code and checks it, without spending a model call (CLI-02): it is on the
  * PATH as a program (not npm's `claude.cmd`, which can't be started without a shell, L-45), at
  * least the tested version, and signed in, from `claude auth status`, which reaches no model.
@@ -356,14 +371,14 @@ export async function findClaude(
     return {
       ok: false,
       problem: "missing",
-      message: "Claude Code isn't installed, or isn't on the PATH. Install it, then try again.",
+      message: `Claude Code isn't installed, or isn't on the PATH. To install it, ${installClaude(platform)}. ${AFTER_INSTALL}`,
     };
   }
   if (/\.(cmd|bat)$/i.test(executable)) {
     return {
       ok: false,
       problem: "batch-file",
-      message: `Claude Code was found as ${executable}, which Tessera can't start. Install Claude Code's own program (claude.exe), then try again.`,
+      message: `Claude Code was found as ${executable}, npm's launcher, which Tessera can't start. Install Claude Code's own program instead: ${installClaude(platform)}. ${AFTER_INSTALL}`,
     };
   }
   const clean = cleanEnvironment(env);
@@ -372,7 +387,7 @@ export async function findClaude(
   const cantStart: ClaudeStatus = {
     ok: false,
     problem: "broken",
-    message: `Tessera found Claude Code at ${executable} but couldn't start it. Reinstall Claude Code, or check that your account may run it, then try again.`,
+    message: `Tessera found Claude Code at ${executable} but couldn't start it. Check that your account may run it, or install it again: ${installClaude(platform)}. ${AFTER_INSTALL}`,
   };
   let answer: Awaited<ReturnType<typeof runProcess>>;
   try {

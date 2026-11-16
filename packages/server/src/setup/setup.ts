@@ -19,11 +19,14 @@ import { json, readJson, text } from "../http/body.ts";
 import type { Handler } from "../http/server.ts";
 import { fixedPart } from "../prompts/index.ts";
 import {
+  AFTER_INSTALL,
   atLeast,
   codexHome,
   createClaudeProvider,
   findClaude,
   findCodex,
+  INSTALL_CODEX,
+  installClaude,
   liveCodexProvider,
   loadProviderRoutes,
   ProviderError,
@@ -66,10 +69,14 @@ const NAMES: Readonly<Record<ProviderName, string>> = {
   codex: "Codex",
 };
 
+/** How to install each program, exactly, on this computer (PLAT-03, #325). */
+const installing = (provider: ProviderName): string =>
+  provider === "codex" ? INSTALL_CODEX : installClaude(process.platform);
+
 const couldntCheck = (provider: ProviderName): ClaudeCheck => ({
   ok: false,
   problem: "broken",
-  message: `Tessera couldn't check ${NAMES[provider]}. Reinstall ${NAMES[provider]}, then try again.`,
+  message: `Tessera couldn't check ${NAMES[provider]}. Install it again: ${installing(provider)}. ${AFTER_INSTALL}`,
 });
 
 /** One program's check, as the options give it. It explains what it finds; it never fails itself. */

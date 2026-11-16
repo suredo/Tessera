@@ -426,15 +426,24 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
   });
 
   it("CLI-02: says plainly when Claude Code is missing, or only npm's batch file is found", async () => {
-    expect(await findClaude({ PATH: tempDir() }, "win32")).toMatchObject({
+    // The exact fix, with the command for this computer (PLAT-03, #325).
+    expect(await findClaude({ PATH: tempDir() }, "win32")).toEqual({
       ok: false,
       problem: "missing",
+      message:
+        "Claude Code isn't installed, or isn't on the PATH. To install it, open PowerShell and run `irm https://claude.ai/install.ps1 | iex`. Then close Tessera and start it again, so it finds the new program.",
     });
-    expect(await findClaude(pathWith("claude.CMD"), "win32")).toMatchObject({
-      ok: false,
-      problem: "batch-file",
-      message: expect.stringContaining("claude.exe") as unknown,
+    expect(await findClaude({ PATH: tempDir() }, "linux")).toMatchObject({
+      problem: "missing",
+      message: expect.stringContaining(
+        "open a terminal and run `curl -fsSL https://claude.ai/install.sh | bash`",
+      ) as unknown,
     });
+    const npm = await findClaude(pathWith("claude.CMD"), "win32");
+    expect(npm).toMatchObject({ ok: false, problem: "batch-file" });
+    expect(npm.ok ? "" : npm.message).toMatch(
+      /^Claude Code was found as .+claude\.CMD, npm's launcher, which Tessera can't start\. Install Claude Code's own program instead: open PowerShell and run `irm https:\/\/claude\.ai\/install\.ps1 \| iex`\. Then close Tessera and start it again, so it finds the new program\.$/,
+    );
   });
 
   it("CLI-02: refuses a version older than the tested one, and checks sign-in without a model call", async () => {
@@ -467,7 +476,7 @@ describe("finding Claude Code (CLI-02, PLAT-03)", () => {
       ok: false,
       problem: "broken",
       message: expect.stringMatching(
-        /^Tessera found Claude Code at .+ but couldn't start it\. Reinstall Claude Code, or check that your account may run it, then try again\.$/,
+        /^Tessera found Claude Code at .+ but couldn't start it\. Check that your account may run it, or install it again: (open PowerShell and run `irm https:\/\/claude\.ai\/install\.ps1 \| iex`|open a terminal and run `curl -fsSL https:\/\/claude\.ai\/install\.sh \| bash`)\. Then close Tessera and start it again, so it finds the new program\.$/,
       ) as unknown,
     });
   });

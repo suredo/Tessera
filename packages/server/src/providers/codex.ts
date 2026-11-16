@@ -5,6 +5,7 @@ import { jsonSchemaOf, type ProviderErrorKind, type Usage } from "@tessera/contr
 import { z } from "zod";
 import { findExecutable, runProcess } from "../platform/index.ts";
 import {
+  AFTER_INSTALL,
   ANSWER_KEY,
   atLeast,
   cleanEnvironment,
@@ -492,6 +493,12 @@ export function liveCodexProvider(executable: string, home: string = codexHome()
   return createCodexProvider({ ...codexLaunch(executable), live: true, home });
 }
 
+/**
+ * How a person installs Codex, exactly: with npm, which comes with the Node.js Tessera needs.
+ * Tessera starts npm's Codex through its launcher script (PLAT-03, #325).
+ */
+export const INSTALL_CODEX = "open a terminal and run `npm install -g @openai/codex`";
+
 /** What Tessera found about Codex: the same shape as for Claude Code (the contracts' check). */
 export type CodexStatus = ClaudeStatus;
 
@@ -516,7 +523,7 @@ export async function findCodex(
     return {
       ok: false,
       problem: "missing",
-      message: "Codex isn't installed, or isn't on the PATH. Install it, then try again.",
+      message: `Codex isn't installed, or isn't on the PATH. To install it, ${INSTALL_CODEX}. ${AFTER_INSTALL}`,
     };
   }
   // npm's codex.cmd can't be started without a shell (L-45), but the script it runs, npm's own
@@ -526,7 +533,7 @@ export async function findCodex(
     return {
       ok: false,
       problem: "batch-file",
-      message: `Codex was found as ${executable}, which Tessera can't start. Install Codex's own program (codex.exe), then try again.`,
+      message: `Codex was found as ${executable}, but not the script it starts, so Tessera can't start it. Install it again: ${INSTALL_CODEX}. ${AFTER_INSTALL}`,
     };
   }
   const launch = codexLaunch(found);
@@ -534,7 +541,7 @@ export async function findCodex(
   const cantStart: CodexStatus = {
     ok: false,
     problem: "broken",
-    message: `Tessera found Codex at ${executable} but couldn't start it. Reinstall Codex, or check that your account may run it, then try again.`,
+    message: `Tessera found Codex at ${executable} but couldn't start it. Check that your account may run it, or install it again: ${INSTALL_CODEX}. ${AFTER_INSTALL}`,
   };
   let answer: Awaited<ReturnType<typeof runProcess>>;
   try {
@@ -557,7 +564,7 @@ export async function findCodex(
     return {
       ok: false,
       problem: "old",
-      message: `Codex ${version} is older than ${TESTED_CODEX_VERSION}, the version Tessera is tested with. Update it, then try again.`,
+      message: `Codex ${version} is older than ${TESTED_CODEX_VERSION}, the version Tessera is tested with. To update it, open a terminal and run \`npm install -g @openai/codex@latest\`, then try again.`,
     };
   }
   // Tessera's own home folder: made if new, and never with instructions for every call in it.

@@ -2,6 +2,8 @@
 
 ## 2026-11-16
 
+* **Changed**: The setup check gives the exact fix for a missing program ([#325](https://github.com/suredo/Tessera/issues/325), `PLAT-03`): Anthropic's installer command for Claude Code on this computer, `npm install -g @openai/codex` for Codex, and to start Tessera again afterwards, as it reads the PATH it started with ([providers](code/server/providers.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T10:43:10Z.
+
 * **Changed**: A check waits for a tool's frame to be drawn before giving it 5 seconds for its size ([#337](https://github.com/suredo/Tessera/issues/337), `ENG-20`, L-91, the owner's choice): a frame Chrome hasn't drawn at all, as on a cold Windows runner, is the browser not yet rendering, not the tool, so it is waited for up to 30 seconds; one never drawn still fails plainly. A browser test reproduces CI's failure with the old wait and passes with the new ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T10:26:47Z.
 
 * **Changed**: CI's browser parts count the machine's sockets by state every 10 seconds while the tests run, print the peaks and keep the samples, to find why a run fails with ERR_NO_BUFFER_SPACE ([#216](https://github.com/suredo/Tessera/issues/216), `ENG-20`; [CI workflow](code/ci/workflow.md)). It failed so again on #385. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T08:56:51Z.
