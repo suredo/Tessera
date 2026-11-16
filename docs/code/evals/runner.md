@@ -3,11 +3,11 @@ type: Code Module
 title: "Scenario runner"
 description: "Plays a scenario through the host app in Chrome, step by step, with every call through the harness, checks each step's host facts and writes the report; rehearsal and replay modes call no model."
 resource: ../../../evals/src/runner/
-implements: [EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
-tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
+implements: [OBS-03, EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
+tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../evals/test/metrics.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T01:54:44Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T03:26:18Z }
 ---
 
 # Purpose
@@ -19,6 +19,7 @@ The second part of the scenario runner (#155). It plays a [scenario file](scenar
 - `src/runner/cli.ts`: `node evals/src/runner/cli.ts <scenario-id> [--replay <answers file> | --live --cap <n>] [--two-pass]`, after `pnpm build`. Without a flag it plays the scenario's rehearsal, `evals/scenarios/rehearsals/<id>.json`. `--two-pass` starts Tessera with big tools made in two passes at their starting point (`GEN-17`), plays `<id>.two-pass.json` as the rehearsal, names the run's folder and report so, and records it in the report. `--live` is LIVE: it needs the owner's approved cap (`ENG-07`), runs Claude Code's free checks first (found, recent enough, signed in) and writes the run's answers as `answers.json`. The evidence (report, screenshots, video, ledger, answers) goes to `test-output/evals/scenarios/`: the command always records the run's video, as an evaluation's evidence. The browser specs that play scenarios record one only with `TESSERA_E2E_RECORD=1`, like every browser test (A56).
 - `src/runner/run.ts`: a click step with pick waits for the browser's file picker and picks that file from `evals/scenarios/files`, through `clickAndPick`, which watches the wait for the picker from the start, so a slow or failed click never leaves it unhandled, and one with answer answers Tessera's question about saving a file (A80, A81); every file the browser saves during a do step is recorded by name, for the downloaded fact. `runScenario` plays one scenario (`RunReport`, `StepResult`, `RunMode`); `zonedInstant` is a wall time's instant in a zone. `STEP_LIMIT_MS` is how long a request may take; `NEW_WORKSPACE` is the title of the empty workspace a `switch: new` step opens.
 - `src/runner/script.ts`: `answersProvider` answers each call from an answers file (`answersSchema`, `loadAnswers`, `Answers`), one at a time through the scripted provider, so each answer must be for the stage called, and keeps each call they didn't fit and each stale one (`AnswersProvider`). `mapStrings` changes an answer's strings, never its JSON text, so a saved tool's name with quotes or backslashes stays whole.
+- `src/runner/metrics.ts`: a live evaluation's metrics (`OBS-03`). `metricsOf` takes runs as `readRun` reads them and gives `Metrics`: per stage (`StageMetrics`), its calls, failed calls, model time of the calls that ended well and tokens per call, as `figures` gives them, with the calls whose usage nobody reported counted apart, never as 0 (`CLI-04`); a refused call never started, so isn't counted. Per kind of request that makes a tool (`RequestMetrics`), matched to its calls as `callsBySay` matches them, how many needed a repair, and how many passed the host's checks (no schema-shape, static or data-plan repair) and staging's (no smoke or behavior repair) at the first try, each repair known by the prompt part it used. `metricsMarkdown` writes them for the evaluation's report, run as `node evals/src/runner/metrics.ts <run folder>...`.
 - `src/runner/speed.ts`: how fast a run was against the speed targets (`OBS-04`). `speedOf` takes runs as `readRun` reads them from a run folder (its report and harness ledger) and gives `Speed`: each stage's model time and each kind of request's time as the person waited (`RequestKind`), as `figures` (count, p50, p95 and slowest, by nearest rank), and each of `SPEED_TARGETS` met, missed or not measured. `speedMarkdown` writes them as tables. `node evals/src/runner/speed.ts <run folder>...` prints them; the [M2 speed report](../../../evals/reports/2026-11-07-m2-speed.md) is its first use.
 - `src/runner/messages.ts`: `outcomeOf` reads what a notice claims, in the app's own words from `en.ts`, where a line break may be read back as any whitespace; `say` fills one of them.
 - `src/runner/replay.ts`: `replayScenario` plays a scenario from an answers file, a rehearsal or a recorded live run, with no call: the command's rehearsal and replay modes use it, and so does `packages/web/e2e/scenario-replays.spec.ts`, which replays every file in `evals/scenarios/replays/` in CI and expects each run's steps to pass or fail as listed there, with their problems, and a run whose first step failed to stop there with every later step blocked (`EVAL-07`, `TEST-04`). The list follows today's scenario files, so after a scenario's expectation is corrected it can differ from the live report, whose score stays frozen. A new recording needs its expected failed steps listed there.
@@ -65,10 +66,11 @@ Depends on the [harness](harness.md), the [scenario files and host facts](scenar
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
 - `messages.ts`: `outcomeOf`, `featuresMissed`, `say`
+- `metrics.ts`: `StageMetrics` (type), `RequestMetrics` (type), `Metrics` (type), `metricsOf`, `metricsMarkdown`
 - `record.ts`: `CANCELLED_WAIT_MS`, `recordAnswers`
 - `replay.ts`: `replayScenario`
 - `report.ts`: `reportMarkdown`
 - `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `Screenshot` (type), `RunReport` (type), `zonedInstant`, `runScenario`, `DO_WAIT`, `dataSettled`, `clickAndPick`
 - `script.ts`: `answersSchema`, `Answers` (type), `loadAnswers`, `mapStrings`, `AnswersProvider` (type), `answersProvider`
 - `services.ts`: `Services` (type), `startServices`
-- `speed.ts`: `SPEED_TARGETS`, `RequestKind` (type), `Figures` (type), `Speed` (type), `figures`, `speedOf`, `speedMarkdown`, `readRun`
+- `speed.ts`: `SPEED_TARGETS`, `RequestKind` (type), `Figures` (type), `Speed` (type), `figures`, `Run` (type), `callsBySay`, `speedOf`, `speedMarkdown`, `readRun`

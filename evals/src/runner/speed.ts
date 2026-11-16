@@ -57,7 +57,7 @@ export function figures(seconds: readonly number[]): Figures | undefined {
   };
 }
 
-type Run = { report: Pick<RunReport, "steps">; calls: readonly LedgerEntry[] };
+export type Run = { report: Pick<RunReport, "steps">; calls: readonly LedgerEntry[] };
 
 /**
  * Each request step's own calls. A report that records each step's calls (`StepResult.calls`) is
@@ -65,7 +65,7 @@ type Run = { report: Pick<RunReport, "steps">; calls: readonly LedgerEntry[] };
  * the next, but only when it has exactly one intent call per request step: an intent retry (a
  * mixed split asked twice) would shift every later request, so such a run is left unmatched.
  */
-function callsBySay(run: Run): (LedgerEntry[] | undefined)[] | undefined {
+export function callsBySay(run: Run): (LedgerEntry[] | undefined)[] | undefined {
   const { report, calls } = run;
   const says = report.steps.filter((step) => step.kind === "say");
   if (says.every((step) => step.calls)) {
