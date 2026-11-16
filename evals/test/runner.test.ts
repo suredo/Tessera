@@ -16,6 +16,7 @@ import {
 import { afterAll, describe, expect, it } from "vitest";
 import { loadScenario, scenarioSchema } from "../src/scenarios/index.ts";
 import { featuresMissed, outcomeOf, say } from "../src/runner/messages.ts";
+import { clickAndPick } from "../src/runner/run.ts";
 import { reportMarkdown } from "../src/runner/report.ts";
 import { startServices } from "../src/runner/services.ts";
 import { dataSettled, runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
@@ -512,5 +513,74 @@ describe("a scenario's outside services (CAP-02, #349 step 5)", () => {
       folder.close();
       fs.rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("picking a file a click opens the picker for (A80, CAP-03)", () => {
+  /** Collects any rejection nothing handled while `run` goes, a step's or the process's. */
+  async function unhandled(run: () => Promise<unknown>): Promise<unknown[]> {
+    const seen: unknown[] = [];
+    const listen = (reason: unknown) => seen.push(reason);
+    process.on("unhandledRejection", listen);
+    try {
+      await run().catch(() => {});
+      // Long enough for a rejection nothing awaited to be reported.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    } finally {
+      process.off("unhandledRejection", listen);
+    }
+    return seen;
+  }
+  const late = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const noPicker = () => late(10).then(() => Promise.reject(new Error("filechooser timed out")));
+
+  it("CAP-03: picks the file in the picker the click opens", async () => {
+    const picked: string[] = [];
+    const picker = { setFiles: (file: string) => (picked.push(file), Promise.resolve()) };
+    await clickAndPick(
+      () => Promise.resolve(picker),
+      () => Promise.resolve(),
+      "/files/beach.png",
+      "beach.png",
+    );
+    expect(picked).toEqual(["/files/beach.png"]);
+  });
+
+  it("A80: a click slower than the picker's wait fails the step plainly, with nothing unhandled (#382 review)", async () => {
+    let failure: unknown;
+    const seen = await unhandled(async () => {
+      try {
+        await clickAndPick(
+          noPicker,
+          () => late(40).then(() => {}),
+          "/files/beach.png",
+          "beach.png",
+        );
+      } catch (error) {
+        failure = error;
+        throw error;
+      }
+    });
+    expect((failure as Error).message).toBe("No file picker opened for beach.png.");
+    expect(seen).toEqual([]);
+  });
+
+  it("A80: a click that fails fails the step with its own error, and the picker's wait is still handled", async () => {
+    let failure: unknown;
+    const seen = await unhandled(async () => {
+      try {
+        await clickAndPick(
+          noPicker,
+          () => Promise.reject(new Error("The button is covered.")),
+          "/files/beach.png",
+          "beach.png",
+        );
+      } catch (error) {
+        failure = error;
+        throw error;
+      }
+    });
+    expect((failure as Error).message).toBe("The button is covered.");
+    expect(seen).toEqual([]);
   });
 });

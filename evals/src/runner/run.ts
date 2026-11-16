@@ -433,14 +433,15 @@ async function useControl(page: Page, action: DoAction): Promise<void> {
     const file = action.pick ? path.join(SCENARIO_FILES, action.pick) : undefined;
     if (file && !fs.existsSync(file))
       throw new Error(`The scenario's file ${action.pick} isn't in evals/scenarios/files.`);
-    const chooser = file ? page.waitForEvent("filechooser", { timeout: 15_000 }) : undefined;
-    await control.click();
-    if (chooser && file) {
-      await (
-        await chooser.catch(() => {
-          throw new Error(`No file picker opened for ${action.pick}.`);
-        })
-      ).setFiles(file);
+    if (file) {
+      await clickAndPick(
+        () => page.waitForEvent("filechooser", { timeout: 15_000 }),
+        () => control.click(),
+        file,
+        action.pick!,
+      );
+    } else {
+      await control.click();
     }
     // A click that makes Tessera ask about saving a file: the person answers (A81).
     if (action.answer) {
@@ -461,6 +462,27 @@ async function useControl(page: Page, action: DoAction): Promise<void> {
   } else {
     await control.fill(action.value);
   }
+}
+
+/**
+ * Clicks, and picks `file` in the browser's file picker the click opens (A80). The wait for the
+ * picker is watched from the start, so a click slower than it, or one that fails, never leaves it
+ * unhandled (#382 review). No picker after the click fails plainly, naming the file.
+ */
+export async function clickAndPick(
+  chooser: () => Promise<{ setFiles(file: string): Promise<void> }>,
+  click: () => Promise<void>,
+  file: string,
+  name: string,
+): Promise<void> {
+  const opened = chooser().then(
+    (picker) => picker,
+    () => undefined,
+  );
+  await click();
+  const picker = await opened;
+  if (!picker) throw new Error(`No file picker opened for ${name}.`);
+  await picker.setFiles(file);
 }
 
 /** Tessera's newest reply in the chat, where a request's outcome is said (APP-01), as text. */
