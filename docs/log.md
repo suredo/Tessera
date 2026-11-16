@@ -2,6 +2,8 @@
 
 ## 2026-11-16
 
+* **New**: T11's tutor bookings and T12's family chores board as scenarios, for M4's live set ([milestone sets](testing/milestone-sets.md)): T11 checked by the scheduling profile, its booking moved in words; T12 by the filtering profile, narrowed to "only mine" and given a weekly chore in words. Their rehearsals, written by hand, pass every step ([scenarios](code/evals/scenarios.md), [runner](code/evals/runner.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T23:47:33Z.
+
 * **Changed**: The setup check gives the exact fix for a missing program ([#325](https://github.com/suredo/Tessera/issues/325), `PLAT-03`): Anthropic's installer command for Claude Code on this computer, `npm install -g @openai/codex` for Codex, then to try again: Claude Code is found where Anthropic's installer puts it, which isn't on the PATH, and Codex in npm's folder, which is ([providers](code/server/providers.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T10:43:10Z.
 
 * **Changed**: A check waits for a tool's frame to be drawn before giving it 5 seconds for its size ([#337](https://github.com/suredo/Tessera/issues/337), `ENG-20`, L-91, the owner's choice): a frame Chrome hasn't drawn at all, as on a cold Windows runner, is the browser not yet rendering, not the tool, so it is waited for up to 30 seconds; one never drawn still fails plainly. A browser test reproduces CI's failure with the old wait and passes with the new ([runtime](code/runtime/package.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T10:26:47Z.

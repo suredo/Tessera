@@ -1,0 +1,147 @@
+{
+  "about": "A rehearsal of T11-tutor-bookings, written by hand: no model answered these.",
+  "scenario": "T11-tutor-bookings",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": false,
+          "targetsCurrentTool": false,
+          "kind": "create",
+          "profile": "scheduling"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Tutoring bookings",
+          "summary": "One-hour tutoring sessions, Monday to Thursday from 2 to 7 pm, never double-booked, starting with João on Monday at 3 pm.",
+          "code": {
+            "html": "<h1>Tutoring bookings</h1>\n<p>One-hour sessions, Monday to Thursday, 2 to 7 pm. A slot is never booked twice.</p>\n<label for=\"student\">Student</label> <input id=\"student\" data-hook=\"task-name\" autocomplete=\"off\">\n<button type=\"button\" data-hook=\"task-add\">Book the next free slot</button>\n<p id=\"status\" role=\"status\"></p>\n<h2>Bookings</h2>\n<ul id=\"sessions\" aria-label=\"Bookings\"></ul>\n<h2>Days I don't teach</h2>\n<ul id=\"rules\" aria-label=\"Days I don't teach\"></ul>\n<label for=\"day\">Don't teach on</label> <select id=\"day\" data-hook=\"rule-day\">\n<option value=\"0\">Sunday</option><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option>\n<option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\">Friday</option>\n<option value=\"6\">Saturday</option></select>\n<button type=\"button\" data-hook=\"rule-add\">Add</button>",
+            "css": "#sessions, #rules { padding-left: 1.25rem; }\n#sessions li, #rules li { margin: 0.25rem 0; }",
+            "js": "const DAYS = [\"Sunday\", \"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\"];\nconst HOURS = [14, 15, 16, 17, 18];\nconst status = document.getElementById(\"status\");\nlet state;\nlet today;\nconst pad = (n) => String(n).padStart(2, \"0\");\n// The day offset days from today, as YYYY-MM-DD with its weekday.\nconst dayAt = (offset) => {\n  const [y, m, d] = today.split(\"-\").map(Number);\n  const at = new Date(Date.UTC(y, m - 1, d + offset));\n  return { date: at.toISOString().slice(0, 10), weekday: at.getUTCDay() };\n};\n// Every slot in the next three weeks, Monday to Thursday, kept off the days the rules rule out.\nconst slots = () => {\n  const ruled = new Set(state.data.rules.map((rule) => rule.weekday));\n  const all = [];\n  for (let i = 0; i < 21; i += 1) {\n    const day = dayAt(i);\n    if (day.weekday < 1 || day.weekday > 4 || ruled.has(day.weekday)) continue;\n    for (const hour of HOURS) all.push({ at: day.date + \"T\" + pad(hour) + \":00\", weekday: day.weekday });\n  }\n  return all;\n};\n// Each booking in its slot: a fixed one where it asked, if that slot is open; the rest in the\n// first free slots, in the order they were booked. No slot holds two.\nconst placed = () => {\n  const available = slots();\n  const free = new Set(available.map((slot) => slot.at));\n  const where = new Map();\n  for (const booking of state.data.bookings) {\n    if (booking.at && free.has(booking.at)) {\n      where.set(booking.id, booking.at);\n      free.delete(booking.at);\n    }\n  }\n  for (const booking of state.data.bookings) {\n    if (where.has(booking.id)) continue;\n    const next = available.find((slot) => free.has(slot.at));\n    if (!next) continue;\n    where.set(booking.id, next.at);\n    free.delete(next.at);\n  }\n  return where;\n};\nconst label = (at) => {\n  const [date, time] = at.split(\"T\");\n  const [y, m, d] = date.split(\"-\").map(Number);\n  return DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] + \" \" + date + \", \" + time;\n};\nconst render = () => {\n  const where = placed();\n  const booked = state.data.bookings\n    .filter((booking) => where.has(booking.id))\n    .sort((a, b) => where.get(a.id).localeCompare(where.get(b.id)));\n  document.getElementById(\"sessions\").replaceChildren(...booked.map((booking) => {\n    const item = document.createElement(\"li\");\n    item.dataset.hook = \"session\";\n    const time = document.createElement(\"time\");\n    time.dateTime = where.get(booking.id);\n    time.textContent = label(where.get(booking.id));\n    const name = document.createElement(\"span\");\n    name.dataset.hook = \"session-task\";\n    name.textContent = booking.name;\n    item.append(time, \" \", name);\n    return item;\n  }));\n  document.getElementById(\"rules\").replaceChildren(...state.data.rules.map((rule) => {\n    const item = document.createElement(\"li\");\n    item.dataset.hook = \"rule\";\n    item.textContent = DAYS[rule.weekday] + \" \";\n    const remove = document.createElement(\"button\");\n    remove.type = \"button\";\n    remove.dataset.hook = \"rule-remove\";\n    remove.textContent = \"Teach on \" + DAYS[rule.weekday] + \" again\";\n    remove.addEventListener(\"click\", () =>\n      save([{ op: \"remove\", collection: \"rules\", id: rule.id, revisionCount: state.revisions.rules[rule.id] }], \"Removed.\"),\n    );\n    item.append(remove);\n    return item;\n  }));\n};\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; render(); });\nconst save = (operations, said) =>\n  tessera.call(\"data.patch\", { operations }).then(load).then(\n    () => { status.textContent = said; },\n    () => { status.textContent = \"That wasn't saved. Try again.\"; return load(); },\n  );\ntessera.call(\"clock.now\").then((now) => { today = now.date; return load(); });\ndocument.querySelector(\"[data-hook=task-add]\").addEventListener(\"click\", () => {\n  const field = document.querySelector(\"[data-hook=task-name]\");\n  const name = field.value.trim();\n  if (!name) { status.textContent = \"Write the student's name first.\"; return; }\n  field.value = \"\";\n  save([{ op: \"add\", collection: \"bookings\", record: { name } }], name + \" is booked.\");\n});\ndocument.querySelector(\"[data-hook=rule-add]\").addEventListener(\"click\", () => {\n  const weekday = Number(document.querySelector(\"[data-hook=rule-day]\").value);\n  if (state.data.rules.some((rule) => rule.weekday === weekday)) return;\n  save([{ op: \"add\", collection: \"rules\", record: { weekday } }], \"Added.\");\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "required": ["bookings", "rules"],
+              "properties": {
+                "bookings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "name"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "at": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "weekday"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "bookings": [],
+              "rules": [
+                {
+                  "id": "r-5",
+                  "weekday": 5
+                },
+                {
+                  "id": "r-6",
+                  "weekday": 6
+                },
+                {
+                  "id": "r-0",
+                  "weekday": 0
+                }
+              ]
+            },
+            "initialState": {
+              "bookings": [
+                {
+                  "id": "b-1",
+                  "name": "João",
+                  "at": "2026-11-09T15:00"
+                }
+              ]
+            }
+          },
+          "capabilities": ["clock"],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": false,
+          "targetsCurrentTool": true,
+          "kind": "data"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "João's session moves to Thursday at 4 pm.",
+          "patch": {
+            "operations": [
+              {
+                "op": "replace",
+                "collection": "bookings",
+                "id": "b-1",
+                "revisionCount": 1,
+                "fields": {
+                  "at": "2026-11-12T16:00"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

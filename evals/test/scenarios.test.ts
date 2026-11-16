@@ -40,6 +40,8 @@ describe("scenario files (EVAL-01)", () => {
       "J6-limits",
       "T1-shopping-list",
       "T10-study-planner",
+      "T11-tutor-bookings",
+      "T12-family-chores",
       "T13-drawing-board",
       "T14-image-editor",
       "T2-reading-list",
@@ -63,6 +65,9 @@ describe("scenario files (EVAL-01)", () => {
       "J6-limits": 5,
       "T1-shopping-list": 10,
       "T10-study-planner": 14,
+      // Two requests each, intent and create or data, with a repair in reserve, and the review's.
+      "T11-tutor-bookings": 8,
+      "T12-family-chores": 8,
       "T13-drawing-board": 7,
       // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
       "T14-image-editor": 8,

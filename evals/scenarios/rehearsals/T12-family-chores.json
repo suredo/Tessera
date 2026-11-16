@@ -1,0 +1,128 @@
+{
+  "about": "A rehearsal of T12-family-chores, written by hand: no model answered these.",
+  "scenario": "T12-family-chores",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": false,
+          "targetsCurrentTool": false,
+          "kind": "create",
+          "profile": "filtering"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Family chores",
+          "summary": "A chores board for Ana, Leo and you, starting with Ana's laundry every Saturday, filtered by who does them and checked off when done.",
+          "code": {
+            "html": "<h1>Family chores</h1>\n<div class=\"add\">\n  <label for=\"chore\">Chore</label> <input id=\"chore\" data-hook=\"item-name\" autocomplete=\"off\">\n  <label for=\"who\">Who</label> <input id=\"who\" data-hook=\"item-category\" list=\"people\" autocomplete=\"off\">\n  <datalist id=\"people\"><option value=\"Ana\"><option value=\"Leo\"><option value=\"Me\"></datalist>\n  <button type=\"button\" data-hook=\"item-add\">Add chore</button>\n</div>\n<label for=\"filter\">Show</label> <select id=\"filter\" data-hook=\"filter\"></select>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"chores\" aria-label=\"Chores\"></ul>",
+            "css": ".add { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }\n#chores { list-style: none; padding: 0; display: grid; gap: 0.5rem; }\n#chores li { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.5rem; border: 1px solid #c8c8c8; border-radius: 0.5rem; }\n.done { text-decoration: line-through; }",
+            "js": "const DAYS = [\"Sunday\", \"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\"];\nconst list = document.getElementById(\"chores\");\nconst filter = document.querySelector(\"[data-hook=filter]\");\nconst status = document.getElementById(\"status\");\nlet state;\nlet today = \"\";\nlet weekday = 0;\nconst fold = (text) => text.trim().split(\" \").filter(Boolean).join(\" \");\n// The next day on or after today that falls on the chore's weekday.\nconst nextOn = (every) => {\n  const [y, m, d] = today.split(\"-\").map(Number);\n  const at = new Date(Date.UTC(y, m - 1, d + ((every - weekday + 7) % 7)));\n  return at.toISOString().slice(0, 10);\n};\nconst dueOf = (chore) => (typeof chore.every === \"number\" ? nextOn(chore.every) : today);\nconst render = () => {\n  const people = [...new Set(state.data.chores.map((chore) => fold(chore.who)))].sort();\n  const chosen = filter.value;\n  filter.replaceChildren(\n    new Option(\"Everyone\", \"\"),\n    ...people.map((who) => new Option(who === \"Me\" ? \"Only mine\" : who, who)),\n  );\n  filter.value = people.includes(chosen) ? chosen : \"\";\n  const shown = state.data.chores.filter((chore) => !filter.value || fold(chore.who) === filter.value);\n  list.replaceChildren(...shown.map((chore) => {\n    const item = document.createElement(\"li\");\n    item.dataset.hook = \"item\";\n    const due = dueOf(chore);\n    const done = (chore.doneOn ?? []).includes(due);\n    const box = document.createElement(\"input\");\n    box.type = \"checkbox\";\n    box.id = \"done-\" + chore.id;\n    box.checked = done;\n    box.addEventListener(\"change\", () => {\n      const doneOn = box.checked\n        ? [...(chore.doneOn ?? []), due]\n        : (chore.doneOn ?? []).filter((day) => day !== due);\n      save([{ op: \"replace\", collection: \"chores\", id: chore.id, revisionCount: state.revisions.chores[chore.id], fields: { doneOn } }], box.checked ? \"Done.\" : \"Not done yet.\");\n    });\n    const label = document.createElement(\"label\");\n    label.htmlFor = box.id;\n    label.textContent = chore.name;\n    if (done) label.className = \"done\";\n    const who = document.createElement(\"span\");\n    who.dataset.hook = \"category\";\n    who.textContent = chore.who;\n    const when = document.createElement(\"time\");\n    when.dateTime = due;\n    when.textContent = typeof chore.every === \"number\" ? \"every \" + DAYS[chore.every] + \", next \" + due : \"today\";\n    const remove = document.createElement(\"button\");\n    remove.type = \"button\";\n    remove.dataset.hook = \"item-remove\";\n    remove.textContent = \"Remove \" + chore.name;\n    remove.addEventListener(\"click\", () =>\n      save([{ op: \"remove\", collection: \"chores\", id: chore.id, revisionCount: state.revisions.chores[chore.id] }], \"Removed.\"),\n    );\n    item.append(box, label, who, when, remove);\n    return item;\n  }));\n};\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; render(); });\nconst save = (operations, said) =>\n  tessera.call(\"data.patch\", { operations }).then(load).then(\n    () => { status.textContent = said; },\n    () => { status.textContent = \"That wasn't saved. Try again.\"; return load(); },\n  );\nfilter.addEventListener(\"change\", render);\ntessera.call(\"clock.now\").then((now) => {\n  today = now.date;\n  const [y, m, d] = today.split(\"-\").map(Number);\n  weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();\n  return load();\n});\ndocument.querySelector(\"[data-hook=item-add]\").addEventListener(\"click\", () => {\n  const name = document.querySelector(\"[data-hook=item-name]\").value.trim();\n  const who = fold(document.querySelector(\"[data-hook=item-category]\").value);\n  if (!name || !who) { status.textContent = \"Write the chore and who does it.\"; return; }\n  document.querySelector(\"[data-hook=item-name]\").value = \"\";\n  save([{ op: \"add\", collection: \"chores\", record: { name, who } }], name + \" is on the board.\");\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "required": ["chores"],
+              "properties": {
+                "chores": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "name", "who"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "who": {
+                        "type": "string"
+                      },
+                      "every": {
+                        "type": "number"
+                      },
+                      "doneOn": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "chores": []
+            },
+            "initialState": {
+              "chores": [
+                {
+                  "id": "c-1",
+                  "name": "Laundry",
+                  "who": "Ana",
+                  "every": 6
+                }
+              ]
+            }
+          },
+          "capabilities": ["clock"],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": false,
+          "targetsCurrentTool": true,
+          "kind": "data"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Leo takes out the trash every Tuesday.",
+          "patch": {
+            "operations": [
+              {
+                "op": "add",
+                "collection": "chores",
+                "record": {
+                  "name": "Take out the trash",
+                  "who": "Leo",
+                  "every": 2
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

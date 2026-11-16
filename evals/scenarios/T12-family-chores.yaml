@@ -1,0 +1,38 @@
+# T12, family chores board (docs/testing/app-catalogue.md), in its M4 form: a board checked by the
+# filtering profile (VER-03) before it opens, each chore's person its category. The request gives
+# a recurring chore, Ana's laundry every Saturday, shown by its next date by the host's clock
+# (RUN-07). The person adds a chore of their own with the board's controls (EVAL-01), narrows the
+# board to theirs, adds another recurring chore in words (a change to the data, not the board),
+# and finds it as they left it the next day. Whether chores can be checked off, and whether the
+# recurring ones read right, is the AI review's.
+id: T12-family-chores
+tier: advanced
+language: en
+person: "A parent sharing chores with two children"
+goal: "A chores board for the family, with weekly chores, filtered to each person and checked off"
+clock: { start: "2026-11-13T18:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 8 }
+profiles: [filtering]
+steps:
+  - say: "A chores board for my family: Ana, Leo and me. Ana does laundry every Saturday."
+    expect: { created: true, workspace: new }
+  - do: { fill: item-name, value: Dishes }
+  - do: { fill: item-category, value: Me }
+  - do: { click: item-add }
+    expect: { version: unchanged, data: changed }
+  - do: { fill: filter, value: Me }
+    expect: { version: unchanged, data: unchanged }
+  # A chore in words: a change to the data the board keeps, not to the board.
+  - say: "Leo takes out the trash every Tuesday."
+    expect: { version: unchanged, data: changed }
+  - next-day: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence
