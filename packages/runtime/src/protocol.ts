@@ -51,7 +51,8 @@ export type DriveStep =
   | { do: "find"; hook: string; value: string; start?: number; loose?: boolean }
   | { do: "fields"; hook: string }
   | { do: "chart"; hook: string }
-  | { do: "dates"; hook: string; start?: number };
+  | { do: "dates"; hook: string; start?: number }
+  | { do: "page" };
 
 /**
  * A field a fields step describes, so a check can fill it with a value it takes: its element and

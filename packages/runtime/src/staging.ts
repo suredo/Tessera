@@ -35,6 +35,11 @@ export type Candidate = {
   /** What it runs against in the panel: its reusable defaults, never the person's data. */
   syntheticData: Record<string, JsonValue>;
   /**
+   * A new tool's starting data, its defaults and the request's entries: what the first-sight
+   * check opens it on, on a throwaway copy never stored (UX-01, A85). None for an edit.
+   */
+  startingData?: Record<string, JsonValue>;
+  /**
    * The connections its version uses, with the sample answers its requests get in the panel, in
    * place of the service's (A69); none when left out.
    */
@@ -251,6 +256,9 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
       };
       const rehearse = (daysAhead = 0): Promise<MountedTool> =>
         replace((copy ??= throwawayData(candidate.syntheticData)), daysAhead);
+      // As the person will first see it: on a fresh throwaway copy of its starting data.
+      const opening = (): Promise<MountedTool> =>
+        replace(throwawayData(candidate.startingData ?? candidate.syntheticData));
       try {
         for (const check of options.checks) {
           copy = undefined;
@@ -263,6 +271,8 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
               panel,
               signal: controller.signal,
               rehearse,
+              opening,
+              ...(candidate.startingData ? { startingData: candidate.startingData } : {}),
               picks: () => record.picks,
               offered: () => [...record.offers],
             });

@@ -274,6 +274,8 @@ export async function generate(
     capabilities: created.artifact.capabilities,
     connections: created.artifact.connections,
     syntheticData: created.artifact.data.defaults,
+    // What the person will see when it opens, for the first-sight check (UX-01, A85).
+    startingData: created.startingData,
     profile: decision.intent.profile ?? null,
     acceptance: acceptance ?? null,
     expectedDataRevision: workspace.dataRevision,
