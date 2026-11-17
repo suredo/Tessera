@@ -486,7 +486,10 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
     );
     if (candidate.kind !== "candidate" || !context) throw new Error("Expected continuation");
     const prompts: string[] = [];
-    const { capabilities: _left, ...leftOut } = saving;
+    // The repair leaves its capabilities out.
+    const leftOut = Object.fromEntries(
+      Object.entries(saving).filter(([key]) => key !== "capabilities"),
+    );
     const scripted = provider(reply(leftOut, "repair"));
     const watched: Provider = {
       ...scripted,
