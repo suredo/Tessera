@@ -7,6 +7,7 @@ export {
   type DataShape,
   type MigrationRefusal,
   type MigrationResult,
+  withNewLists,
 } from "./migrate.ts";
 export { projectData, stepFor, type Loss } from "./project.ts";
 export {

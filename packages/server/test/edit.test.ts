@@ -186,6 +186,39 @@ describe("edit contracts and host validation (CON-02, GEN-07)", () => {
     ).toMatchObject({ kind: "candidate" });
   });
 
+  it("L-104: an edit that keeps the data keeps it exactly, an optional list left absent", () => {
+    const cardsSchema = {
+      type: "object",
+      properties: {
+        cards: {
+          type: "array",
+          items: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+        },
+      },
+    };
+    const made = candidateFrom({
+      outcome: "tool",
+      name: "Flashcards",
+      summary: "Cards to learn from.",
+      code: { html: "<h1>Flashcards</h1>", css: "", js: "" },
+      data: { schema: cardsSchema, reusableDefaults: {}, initialState: {} },
+      capabilities: [],
+      uiMode: "standard",
+    });
+    if (made.kind !== "candidate") throw new Error("The fixture must be valid");
+    const look = { ...input, intent: { ...intent, lookOnly: true, behaviorChange: false } };
+    const result = editedCandidate(
+      { ...look, artifact: made.artifact, data: {} },
+      {
+        outcome: "edit",
+        summary: "Made it blue.",
+        files: { mode: "style", css: "body{color:blue}" },
+        data: { mode: "unchanged" },
+      },
+    );
+    expect(result).toMatchObject({ kind: "candidate", artifact: { data: made.artifact.data } });
+  });
+
   it("GEN-14: a style answer changes only the CSS: the HTML and JavaScript stay as they were, by construction", () => {
     const look = { ...input, intent: { ...intent, lookOnly: true, behaviorChange: false } };
     const result = editedCandidate(look, {

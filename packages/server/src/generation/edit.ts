@@ -8,7 +8,7 @@ import {
   type Intent,
 } from "@tessera/contracts";
 import { staticCheck } from "../checks/index.ts";
-import { migrateData } from "../data-shape/index.ts";
+import { migrateData, withNewLists } from "../data-shape/index.ts";
 import { assemblePrompt, type RepairClass } from "../prompts/index.ts";
 import { ProviderError, runStage, type Provider, type Routes } from "../providers/index.ts";
 import type { StageTimeLimits } from "./time-limits.ts";
@@ -73,7 +73,9 @@ export function editedCandidate(input: EditInput, answer: Answer): EditResult {
     // behavior: refusing it sent the repair to drop the data change and keep the code that relies
     // on it, so a kanban showed an "In review" column its data didn't allow (L-97). The migration
     // checks below still refuse any that would lose or change a value.
-    const { migration, schema, defaults } = answer.data;
+    // A list the new shape adds starts empty in the defaults too, as in the migrated data.
+    const { migration, schema } = answer.data;
+    const defaults = withNewLists(schema, answer.data.defaults);
     const problems = dataProblems(schema, defaults, defaults);
     if (problems.length) return shapeFailure(problems);
     if (
