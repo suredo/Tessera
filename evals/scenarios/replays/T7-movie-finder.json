@@ -1,0 +1,276 @@
+{
+  "about": "A live run of T7-movie-finder, recorded for replay.",
+  "scenario": "T7-movie-finder",
+  "recorded": {
+    "head": "27f047ad15a0f999c48abc0177c28f26b0ddfe19",
+    "at": "2026-11-17T01:53:18.059Z",
+    "cliVersion": "2.1.326"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "find old science-fiction films",
+              "request": "Find old science-fiction films I can watch"
+            },
+            {
+              "name": "watchlist",
+              "request": "let me keep a watchlist"
+            }
+          ],
+          "profile": "search-results",
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": ["movies"]
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-connections@3d650990b136",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Old Sci-Fi Watchlist",
+          "summary": "Search for classic science-fiction films, choose how old they should be, and keep the ones you want to watch on a watchlist.",
+          "uiMode": "standard",
+          "capabilities": ["connection"],
+          "connections": {
+            "movies": {
+              "samples": {
+                "/search/movie": {
+                  "statusCode": 200,
+                  "contentType": "application/json",
+                  "body": "{\"results\":[{\"id\":101,\"title\":\"Voyage to the Silver Moon\",\"release_date\":\"1954-05-12\",\"overview\":\"A small crew sails a clumsy rocket to the Moon and finds a hidden city.\"},{\"id\":102,\"title\":\"The Last Robot of Mars\",\"release_date\":\"1968-09-03\",\"overview\":\"A lone robot guards a dying colony.\"},{\"id\":103,\"title\":\"Signals from Tomorrow\",\"release_date\":\"1975-02-20\",\"overview\":\"A radio operator receives messages from the future.\"}]}"
+                }
+              }
+            }
+          },
+          "code": {
+            "html": "<h1>Old Sci-Fi Watchlist</h1>\n<section aria-labelledby=\"s-h\">\n<h2 id=\"s-h\">Find films</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"q\">Search</label><input id=\"q\" type=\"text\" value=\"science fiction\" data-hook=\"search-query\"></div>\n<div class=\"field\"><label for=\"yr\">Released before</label>\n<select id=\"yr\"><option value=\"1960\">1960</option><option value=\"1970\">1970</option><option value=\"1980\" selected>1980</option><option value=\"1990\">1990</option><option value=\"2000\">2000</option><option value=\"9999\">Any year</option></select></div>\n<button id=\"go\" type=\"button\" data-hook=\"search-go\">Search</button>\n</div>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"results\" class=\"list\" aria-label=\"Search results\"></ul>\n</section>\n<section aria-labelledby=\"w-h\">\n<h2 id=\"w-h\">My watchlist</h2>\n<p id=\"empty\">Nothing kept yet. Search for a film and press Keep.</p>\n<ul id=\"kept\" class=\"list\"></ul>\n</section>",
+            "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}h2{font-size:var(--ui-size-section);margin:var(--ui-space-4) 0 var(--ui-space-2)}.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 160px}input,select{min-height:var(--ui-target);padding:0 var(--ui-space-2);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}button{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}button.sec{background:var(--ui-surface);color:var(--ui-accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);justify-content:space-between;align-items:center;border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface);padding:var(--ui-space-3)}.info{flex:1 1 200px}.t{font-weight:600}.meta,.ov{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.ov{margin:var(--ui-space-1) 0 0}#status.err{color:var(--ui-error)}",
+            "js": "const q=document.getElementById('q'),yr=document.getElementById('yr'),go=document.getElementById('go'),st=document.getElementById('status'),resEl=document.getElementById('results'),keptEl=document.getElementById('kept'),emptyEl=document.getElementById('empty');\nlet kept=[],revs={},results=[];\nfunction setStatus(t,err){st.textContent=t;st.className=err?'err':'';}\nfunction isKept(m){for(const k of kept){if((k.movieId&&k.movieId===m.movieId)||(k.title===m.title&&k.year===m.year))return true;}return false;}\nasync function load(){const r=await tessera.call('data.read',{});kept=(r.data.watchlist||[]);revs=(r.revisions.watchlist||{});renderKept();}\nfunction info(m){const d=document.createElement('div');d.className='info';const t=document.createElement('div');t.className='t';t.textContent=m.title;const mt=document.createElement('div');mt.className='meta';mt.textContent=m.year?String(m.year):'Year unknown';d.appendChild(t);d.appendChild(mt);return [d,t];}\nfunction renderKept(){keptEl.textContent='';emptyEl.hidden=kept.length>0;for(const k of kept){const li=document.createElement('li');li.setAttribute('data-hook','kept');const [d]=info(k);if(k.overview){const p=document.createElement('p');p.className='ov';p.textContent=k.overview;d.appendChild(p);}const b=document.createElement('button');b.type='button';b.className='sec';b.textContent='Remove';b.setAttribute('aria-label','Remove '+k.title+' from watchlist');b.addEventListener('click',()=>removeIt(k));li.appendChild(d);li.appendChild(b);keptEl.appendChild(li);}renderResults();}\nfunction renderResults(){resEl.textContent='';for(const m of results){const li=document.createElement('li');li.setAttribute('data-hook','result');const [d,t]=info(m);t.setAttribute('data-hook','result-title');if(m.overview){const p=document.createElement('p');p.className='ov';p.textContent=m.overview;d.appendChild(p);}const b=document.createElement('button');b.type='button';b.setAttribute('data-hook','result-keep');const was=isKept(m);b.textContent=was?'Kept':'Keep';b.setAttribute('aria-label',(was?'Already kept: ':'Keep ')+m.title);if(was)b.className='sec';b.addEventListener('click',()=>keep(m));li.appendChild(d);li.appendChild(b);resEl.appendChild(li);}}\nasync function keep(m){if(isKept(m)){setStatus('\"'+m.title+'\" is already on your watchlist.');return;}try{await tessera.call('data.patch',{operations:[{op:'add',collection:'watchlist',record:{movieId:m.movieId,title:m.title,year:m.year,overview:m.overview}}]});await load();setStatus('Kept \"'+m.title+'\".');}catch(e){setStatus('Could not keep it: '+(e&&e.message?e.message:'try again.'),true);}}\nasync function removeIt(k){try{await tessera.call('data.patch',{operations:[{op:'remove',collection:'watchlist',id:k.id,revisionCount:revs[k.id]}]});await load();setStatus('Removed \"'+k.title+'\".');}catch(e){setStatus('Could not remove it: '+(e&&e.message?e.message:'try again.'),true);}}\nfunction parse(body){let j;try{j=JSON.parse(body);}catch(e){return null;}const arr=Array.isArray(j)?j:(Array.isArray(j.results)?j.results:null);if(!arr)return null;const out=[];for(const x of arr){if(!x||typeof x!=='object')continue;const title=String(x.title||x.name||'').trim();if(!title)continue;const ds=String(x.release_date||x.year||'');const y=parseInt(ds.slice(0,4),10);out.push({movieId:String(x.id!==undefined?x.id:''),title:title,year:isNaN(y)?null:y,overview:typeof x.overview==='string'?x.overview:''});}return out;}\nasync function search(){const term=q.value.trim();if(!term){setStatus('Type a title or topic to search for.',true);q.focus();return;}setStatus('Searching…');go.disabled=true;try{const r=await tessera.call('connection.request',{connection:'movies',method:'GET',path:'/search/movie?query='+encodeURIComponent(term)});if(r.statusCode<200||r.statusCode>=300){results=[];renderResults();setStatus('The film service answered with an error ('+r.statusCode+'). Try again later.',true);return;}const all=parse(r.body);if(!all){results=[];renderResults();setStatus('The film service gave an answer this tool could not read.',true);return;}const max=parseInt(yr.value,10);results=all.filter(m=>m.year===null||m.year<max);renderResults();setStatus(results.length?results.length+' film'+(results.length===1?'':'s')+' found. Source: movies service.':'No films found before that year. Try another search or a later year.');}catch(e){results=[];renderResults();setStatus('Could not reach the film service: '+(e&&e.message?e.message:'try again.'),true);}finally{go.disabled=false;}}\ngo.addEventListener('click',search);\nq.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search();}});\nload().catch(()=>setStatus('Could not load your watchlist.',true));"
+          },
+          "data": {
+            "schema": {
+              "watchlist": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "movieId": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "year": {
+                      "type": ["integer", "null"]
+                    },
+                    "overview": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["id", "title"]
+                }
+              }
+            },
+            "reusableDefaults": {
+              "watchlist": []
+            },
+            "initialState": {}
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "connections@e0b5744230a6",
+        "profile@c47ce6ce5691",
+        "create@95fdc23aa768",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "connections-quoted@014e515b1152"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "tool",
+          "name": "Old Sci-Fi Watchlist",
+          "summary": "Search for classic science-fiction films, choose how old they should be, and keep the ones you want to watch on a watchlist.",
+          "code": {
+            "html": "<h1>Old Sci-Fi Watchlist</h1>\n<section aria-labelledby=\"s-h\">\n<h2 id=\"s-h\">Find films</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"q\">Search</label><input id=\"q\" type=\"text\" value=\"science fiction\" data-hook=\"search-query\"></div>\n<div class=\"field\"><label for=\"yr\">Released before</label>\n<select id=\"yr\"><option value=\"1960\">1960</option><option value=\"1970\">1970</option><option value=\"1980\" selected>1980</option><option value=\"1990\">1990</option><option value=\"2000\">2000</option><option value=\"9999\">Any year</option></select></div>\n<button id=\"go\" type=\"button\" data-hook=\"search-go\">Search</button>\n</div>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"results\" class=\"list\" aria-label=\"Search results\"></ul>\n</section>\n<section aria-labelledby=\"w-h\">\n<h2 id=\"w-h\">My watchlist</h2>\n<p id=\"empty\">Nothing kept yet. Search for a film and press Keep.</p>\n<ul id=\"kept\" class=\"list\"></ul>\n</section>",
+            "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}h2{font-size:var(--ui-size-section);margin:var(--ui-space-4) 0 var(--ui-space-2)}.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 160px}input,select{min-height:var(--ui-target);padding:0 var(--ui-space-2);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}button{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}button.sec{background:var(--ui-surface);color:var(--ui-accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);justify-content:space-between;align-items:center;border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface);padding:var(--ui-space-3)}.info{flex:1 1 200px}.t{font-weight:600}.meta,.ov{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.ov{margin:var(--ui-space-1) 0 0}#status.err{color:var(--ui-error)}",
+            "js": "const q=document.getElementById('q'),yr=document.getElementById('yr'),go=document.getElementById('go'),st=document.getElementById('status'),resEl=document.getElementById('results'),keptEl=document.getElementById('kept'),emptyEl=document.getElementById('empty');\nlet kept=[],revs={},results=[];\nfunction setStatus(t,err){st.textContent=t;st.className=err?'err':'';}\nfunction isKept(m){for(const k of kept){if((k.movieId&&k.movieId===m.movieId)||(k.title===m.title&&k.year===m.year))return true;}return false;}\nasync function load(){const r=await tessera.call('data.read',{});kept=(r.data.watchlist||[]);revs=(r.revisions.watchlist||{});renderKept();}\nfunction info(m){const d=document.createElement('div');d.className='info';const t=document.createElement('div');t.className='t';t.textContent=m.title;const mt=document.createElement('div');mt.className='meta';mt.textContent=m.year?String(m.year):'Year unknown';d.appendChild(t);d.appendChild(mt);return [d,t];}\nfunction renderKept(){keptEl.textContent='';emptyEl.hidden=kept.length>0;for(const k of kept){const li=document.createElement('li');li.setAttribute('data-hook','kept');const [d]=info(k);if(k.overview){const p=document.createElement('p');p.className='ov';p.textContent=k.overview;d.appendChild(p);}const b=document.createElement('button');b.type='button';b.className='sec';b.textContent='Remove';b.setAttribute('aria-label','Remove '+k.title+' from watchlist');b.addEventListener('click',()=>removeIt(k));li.appendChild(d);li.appendChild(b);keptEl.appendChild(li);}renderResults();}\nfunction renderResults(){resEl.textContent='';for(const m of results){const li=document.createElement('li');li.setAttribute('data-hook','result');const [d,t]=info(m);t.setAttribute('data-hook','result-title');if(m.overview){const p=document.createElement('p');p.className='ov';p.textContent=m.overview;d.appendChild(p);}const b=document.createElement('button');b.type='button';b.setAttribute('data-hook','result-keep');const was=isKept(m);b.textContent=was?'Kept':'Keep';b.setAttribute('aria-label',(was?'Already kept: ':'Keep ')+m.title);if(was)b.className='sec';b.addEventListener('click',()=>keep(m));li.appendChild(d);li.appendChild(b);resEl.appendChild(li);}}\nasync function keep(m){if(isKept(m)){setStatus('\"'+m.title+'\" is already on your watchlist.');return;}try{await tessera.call('data.patch',{operations:[{op:'add',collection:'watchlist',record:{movieId:m.movieId,title:m.title,year:m.year,overview:m.overview}}]});await load();setStatus('Kept \"'+m.title+'\".');}catch(e){setStatus('Could not keep it: '+(e&&e.message?e.message:'try again.'),true);}}\nasync function removeIt(k){try{await tessera.call('data.patch',{operations:[{op:'remove',collection:'watchlist',id:k.id,revisionCount:revs[k.id]}]});await load();setStatus('Removed \"'+k.title+'\".');}catch(e){setStatus('Could not remove it: '+(e&&e.message?e.message:'try again.'),true);}}\nfunction parse(body){let j;try{j=JSON.parse(body);}catch(e){return null;}const arr=Array.isArray(j)?j:(Array.isArray(j.results)?j.results:null);if(!arr)return null;const out=[];for(const x of arr){if(!x||typeof x!=='object')continue;const title=String(x.title||x.name||'').trim();if(!title)continue;const ds=String(x.release_date||x.year||'');const y=parseInt(ds.slice(0,4),10);out.push({movieId:String(x.id!==undefined?x.id:''),title:title,year:isNaN(y)?null:y,overview:typeof x.overview==='string'?x.overview:''});}return out;}\nasync function search(){const term=q.value.trim();if(!term){setStatus('Type a title or topic to search for.',true);q.focus();return;}setStatus('Searching…');go.disabled=true;try{const r=await tessera.call('connection.request',{connection:'movies',method:'GET',path:'/search/movie?query='+encodeURIComponent(term)});if(r.statusCode<200||r.statusCode>=300){results=[];renderResults();setStatus('The film service answered with an error ('+r.statusCode+'). Try again later.',true);return;}const all=parse(r.body);if(!all){results=[];renderResults();setStatus('The film service gave an answer this tool could not read.',true);return;}const max=parseInt(yr.value,10);results=all.filter(m=>m.year===null||m.year<max);renderResults();setStatus(results.length?results.length+' film'+(results.length===1?'':'s')+' found. Source: movies service.':'No films found before that year. Try another search or a later year.');}catch(e){results=[];renderResults();setStatus('Could not reach the film service: '+(e&&e.message?e.message:'try again.'),true);}finally{go.disabled=false;}}\ngo.addEventListener('click',search);\nq.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search();}});\nload().catch(()=>setStatus('Could not load your watchlist.',true));"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "watchlist": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "movieId": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "year": {
+                        "type": ["integer", "null"]
+                      },
+                      "overview": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "title"]
+                  }
+                }
+              },
+              "required": ["watchlist"]
+            },
+            "reusableDefaults": {
+              "watchlist": []
+            },
+            "initialState": {}
+          },
+          "capabilities": ["connection"],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "connections@e0b5744230a6",
+        "connections-repair@01f33883e52a",
+        "profile@c47ce6ce5691",
+        "create@95fdc23aa768",
+        "repair-schema-shape@1fdc6c120869",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "connections-quoted@014e515b1152",
+        "attempt@db8c6b71b427",
+        "diagnostics@0b26a00a48fd"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": "Sort the films by year, oldest first.",
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "Sort by year",
+              "request": "Sort the films by year, oldest first."
+            }
+          ],
+          "profile": "search-results",
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": ["movies"]
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-connections@3d650990b136",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Search results and your watchlist are now sorted by year, oldest first. Films with no known year come last.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Old Sci-Fi Watchlist</h1>\n<section aria-labelledby=\"s-h\">\n<h2 id=\"s-h\">Find films</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"q\">Search</label><input id=\"q\" type=\"text\" value=\"science fiction\" data-hook=\"search-query\"></div>\n<div class=\"field\"><label for=\"yr\">Released before</label>\n<select id=\"yr\"><option value=\"1960\">1960</option><option value=\"1970\">1970</option><option value=\"1980\" selected>1980</option><option value=\"1990\">1990</option><option value=\"2000\">2000</option><option value=\"9999\">Any year</option></select></div>\n<button id=\"go\" type=\"button\" data-hook=\"search-go\">Search</button>\n</div>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"results\" class=\"list\" aria-label=\"Search results\"></ul>\n</section>\n<section aria-labelledby=\"w-h\">\n<h2 id=\"w-h\">My watchlist</h2>\n<p id=\"empty\">Nothing kept yet. Search for a film and press Keep.</p>\n<ul id=\"kept\" class=\"list\"></ul>\n</section>",
+              "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}h2{font-size:var(--ui-size-section);margin:var(--ui-space-4) 0 var(--ui-space-2)}.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 160px}input,select{min-height:var(--ui-target);padding:0 var(--ui-space-2);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}button{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}button.sec{background:var(--ui-surface);color:var(--ui-accent)}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);justify-content:space-between;align-items:center;border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface);padding:var(--ui-space-3)}.info{flex:1 1 200px}.t{font-weight:600}.meta,.ov{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.ov{margin:var(--ui-space-1) 0 0}#status.err{color:var(--ui-error)}",
+              "js": "const q=document.getElementById('q'),yr=document.getElementById('yr'),go=document.getElementById('go'),st=document.getElementById('status'),resEl=document.getElementById('results'),keptEl=document.getElementById('kept'),emptyEl=document.getElementById('empty');\nlet kept=[],revs={},results=[];\nfunction byYear(a,b){const x=(a.year===null||a.year===undefined)?Infinity:a.year;const y=(b.year===null||b.year===undefined)?Infinity:b.year;return x===y?0:(x<y?-1:1);}\nfunction setStatus(t,err){st.textContent=t;st.className=err?'err':'';}\nfunction isKept(m){for(const k of kept){if((k.movieId&&k.movieId===m.movieId)||(k.title===m.title&&k.year===m.year))return true;}return false;}\nasync function load(){const r=await tessera.call('data.read',{});kept=(r.data.watchlist||[]);revs=(r.revisions.watchlist||{});renderKept();}\nfunction info(m){const d=document.createElement('div');d.className='info';const t=document.createElement('div');t.className='t';t.textContent=m.title;const mt=document.createElement('div');mt.className='meta';mt.textContent=m.year?String(m.year):'Year unknown';d.appendChild(t);d.appendChild(mt);return [d,t];}\nfunction renderKept(){keptEl.textContent='';emptyEl.hidden=kept.length>0;for(const k of kept.slice().sort(byYear)){const li=document.createElement('li');li.setAttribute('data-hook','kept');const [d]=info(k);if(k.overview){const p=document.createElement('p');p.className='ov';p.textContent=k.overview;d.appendChild(p);}const b=document.createElement('button');b.type='button';b.className='sec';b.textContent='Remove';b.setAttribute('aria-label','Remove '+k.title+' from watchlist');b.addEventListener('click',()=>removeIt(k));li.appendChild(d);li.appendChild(b);keptEl.appendChild(li);}renderResults();}\nfunction renderResults(){resEl.textContent='';for(const m of results){const li=document.createElement('li');li.setAttribute('data-hook','result');const [d,t]=info(m);t.setAttribute('data-hook','result-title');if(m.overview){const p=document.createElement('p');p.className='ov';p.textContent=m.overview;d.appendChild(p);}const b=document.createElement('button');b.type='button';b.setAttribute('data-hook','result-keep');const was=isKept(m);b.textContent=was?'Kept':'Keep';b.setAttribute('aria-label',(was?'Already kept: ':'Keep ')+m.title);if(was)b.className='sec';b.addEventListener('click',()=>keep(m));li.appendChild(d);li.appendChild(b);resEl.appendChild(li);}}\nasync function keep(m){if(isKept(m)){setStatus('\"'+m.title+'\" is already on your watchlist.');return;}try{await tessera.call('data.patch',{operations:[{op:'add',collection:'watchlist',record:{movieId:m.movieId,title:m.title,year:m.year,overview:m.overview}}]});await load();setStatus('Kept \"'+m.title+'\".');}catch(e){setStatus('Could not keep it: '+(e&&e.message?e.message:'try again.'),true);}}\nasync function removeIt(k){try{await tessera.call('data.patch',{operations:[{op:'remove',collection:'watchlist',id:k.id,revisionCount:revs[k.id]}]});await load();setStatus('Removed \"'+k.title+'\".');}catch(e){setStatus('Could not remove it: '+(e&&e.message?e.message:'try again.'),true);}}\nfunction parse(body){let j;try{j=JSON.parse(body);}catch(e){return null;}const arr=Array.isArray(j)?j:(Array.isArray(j.results)?j.results:null);if(!arr)return null;const out=[];for(const x of arr){if(!x||typeof x!=='object')continue;const title=String(x.title||x.name||'').trim();if(!title)continue;const ds=String(x.release_date||x.year||'');const y=parseInt(ds.slice(0,4),10);out.push({movieId:String(x.id!==undefined?x.id:''),title:title,year:isNaN(y)?null:y,overview:typeof x.overview==='string'?x.overview:''});}return out;}\nasync function search(){const term=q.value.trim();if(!term){setStatus('Type a title or topic to search for.',true);q.focus();return;}setStatus('Searching…');go.disabled=true;try{const r=await tessera.call('connection.request',{connection:'movies',method:'GET',path:'/search/movie?query='+encodeURIComponent(term)});if(r.statusCode<200||r.statusCode>=300){results=[];renderResults();setStatus('The film service answered with an error ('+r.statusCode+'). Try again later.',true);return;}const all=parse(r.body);if(!all){results=[];renderResults();setStatus('The film service gave an answer this tool could not read.',true);return;}const max=parseInt(yr.value,10);results=all.filter(m=>m.year===null||m.year<max).sort(byYear);renderResults();setStatus(results.length?results.length+' film'+(results.length===1?'':'s')+' found, oldest first. Source: movies service.':'No films found before that year. Try another search or a later year.');}catch(e){results=[];renderResults();setStatus('Could not reach the film service: '+(e&&e.message?e.message:'try again.'),true);}finally{go.disabled=false;}}\ngo.addEventListener('click',search);\nq.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();search();}});\nload().catch(()=>setStatus('Could not load your watchlist.',true));"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          },
+          "connections": {
+            "mode": "replace",
+            "connections": {
+              "movies": {
+                "samples": {
+                  "/search/movie": {
+                    "statusCode": 200,
+                    "contentType": "application/json",
+                    "body": "{\"results\":[{\"id\":1,\"title\":\"Metropolis\",\"release_date\":\"1927-01-10\",\"overview\":\"A futuristic city divided between workers and planners.\"},{\"id\":2,\"title\":\"Forbidden Planet\",\"release_date\":\"1956-03-15\",\"overview\":\"A crew visits a planet with a dark secret.\"}]}"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "connections@e0b5744230a6",
+        "connections-edit@1c8fc9b92791",
+        "profile@c47ce6ce5691",
+        "edit@a204f4d753be",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "conversation@55efc5121fcd",
+        "style-notes@6fbe89c62e1f",
+        "connections-quoted@014e515b1152",
+        "source@0eae49d84708",
+        "edit-declarations@7eb300505e9f"
+      ]
+    }
+  ]
+}

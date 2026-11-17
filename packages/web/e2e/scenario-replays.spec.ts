@@ -17,49 +17,39 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const scenarios = path.resolve(here, "../../../evals/scenarios");
 const replays = path.join(scenarios, "replays");
 
-// The steps each recorded run fails against today's scenario files; every other step passes. The
-// M2 run's two failures were the scenario's expectation, not the model, and the files were
-// corrected after it (T1 step 2 expects its data kept, T13 step 3 no new version), so they pass
-// now. The run's score stays as its report froze it (evals/reports/2026-11-05-m2-live-run.md).
-// T1 and T6 are the M3 live run's recordings, and so are T2, T3, T5 and T10
-// (evals/reports/2026-11-09-m3-live-run.md); T10's is its rerun after L-89, which passed. V9 is the
-// acceptance-check experiment's (evals/reports/2026-11-10-acceptance-run.md). A run
-// whose first step failed would be listed in stoppedLive, with every later step blocked.
+// The steps each recorded run fails against today's scenario files; every other step passes. J6
+// is the M2 live run's recording (evals/reports/2026-11-05-m2-live-run.md); T6 and V9 are M3's
+// (evals/reports/2026-11-09-m3-live-run.md, evals/reports/2026-11-10-acceptance-run.md). The
+// rest are M4's (evals/reports/2026-11-17-m4-live-run.md), each failing as it did live: T3 at its
+// first request (L-103), T10 in Portuguese at its flashcards (L-104), T12's board with no filter,
+// and T14's two buttons marked as the edit. A run whose first step failed is listed in
+// stoppedLive, with every later step blocked.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "J6-limits": [],
   "T1-shopping-list": [],
   "T2-reading-list": [],
-  "T3-spending-chart": [],
-  // T5's export came in M4, after its M3 recording, which has no answer for it: until M4's live
-  // run records T5 again, its request fails and its save button isn't there.
-  "T5-rsvp-form": [
-    [
-      7,
-      [
-        "The tool didn't change.",
-        `The answers don't fit this run, so it needs a new live run: Script "T5-rsvp-form" has no reply left for the intent call.`,
-      ],
-    ],
-    [8, ["The tool shows 0 elements marked file-save; the step needs one."]],
-  ],
+  "T3-spending-chart": [[1, ["No tool was created.", "No new workspace is open."]]],
+  "T4-habit-tracker": [],
+  "T5-rsvp-form": [],
   "T6-tip-calculator": [],
+  "T7-movie-finder": [],
   "T10-study-planner": [],
-  // T13 runs with the checks from the request on since M4's plan (A57), and its M2 recording has
-  // no answer for their stage: until M4's live run records T13 again, its first request fails.
-  "T13-drawing-board": [
-    [
-      1,
-      [
-        "No tool was created.",
-        "No new workspace is open.",
-        `The answers don't fit this run, so it needs a new live run: Script "T13-drawing-board" has a create reply next, but the call is for acceptance.`,
-      ],
-    ],
+  "T10-study-planner-pt": [
+    [6, ["No tool was created.", "No new workspace is open."]],
+    [7, ["The tool shows 0 elements marked notes; the step needs one."]],
+    [8, ["The tool shows 0 elements marked cards-make; the step needs one."]],
   ],
+  "T11-tutor-bookings": [],
+  "T12-family-chores": [
+    [3, ["The tool shows 0 elements marked item-category; the step needs one."]],
+    [5, ["The tool shows 0 elements marked filter; the step needs one."]],
+  ],
+  "T13-drawing-board": [],
+  "T14-image-editor": [[3, ["The tool shows 2 elements marked image-edit; the step needs one."]]],
   "V9-acceptance-checks": [],
 };
 // The recorded runs whose first step failed, so the runner stopped there (the stop rule).
-const stoppedLive = new Set<string>(["T13-drawing-board"]);
+const stoppedLive = new Set<string>(["T3-spending-chart"]);
 
 test("EVAL-07: every recorded live run has its expected steps listed here", () => {
   const recorded = fs.readdirSync(replays).map((f) => path.basename(f, ".json"));
