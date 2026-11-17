@@ -123,6 +123,45 @@
           }
         }
       }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "interfacePart": null,
+          "dataPart": null,
+          "lookOnly": false,
+          "language": "en",
+          "features": [],
+          "behaviorChange": false,
+          "targetsCurrentTool": true,
+          "kind": "data"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Ana's laundry is done for this Saturday.",
+          "patch": {
+            "operations": [
+              {
+                "op": "replace",
+                "collection": "chores",
+                "id": "c-1",
+                "revisionCount": 1,
+                "fields": {
+                  "doneOn": ["2026-11-14"]
+                }
+              }
+            ]
+          }
+        }
+      }
     }
   ]
 }

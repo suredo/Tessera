@@ -10,6 +10,7 @@ person: "Someone building three daily habits"
 goal: "Mark habits done each day and see the streaks and the week at a glance"
 clock: { start: "2026-11-02T19:00:00", zone: "Europe/Lisbon" }
 budget: { calls: 8 }
+acceptanceChecks: true
 profiles: [items-over-time]
 steps:
   - say: "Help me track three habits every day: walk, read, drink water. Show my streaks."
