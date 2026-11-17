@@ -366,8 +366,11 @@ export function migrateData(
   let first: ToolData;
   let second: ToolData;
   try {
-    first = withNewLists(to.schema, run(data, steps, log));
-    second = withNewLists(to.schema, run(data, steps));
+    // Only a migration adds lists: with no step, the data stays exactly as it is.
+    const fill = (migrated: ToolData) =>
+      steps.length > 0 ? withNewLists(to.schema, migrated) : migrated;
+    first = fill(run(data, steps, log));
+    second = fill(run(data, steps));
   } catch (error) {
     if (error instanceof MigrationFailed) {
       return refuse("failed", `the migration stopped: ${error.message}`);

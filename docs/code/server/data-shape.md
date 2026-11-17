@@ -7,7 +7,7 @@ implements: [DATA-03, MIG-03, MIG-04, MIG-05]
 tests: [../../../packages/server/test/data-shape.test.ts]
 tags: [code, server, data]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T10:52:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T11:08:52Z }
 ---
 
 # Purpose
@@ -38,7 +38,7 @@ Depends on the contracts and Ajv (draft-07, the owner's choice on #50). Used by 
 # Pitfalls
 
 - **Draft-07 only.** Ajv runs in its draft-07 mode, the draft the contracts' schemas use (`CON-01`); a tool schema using a newer draft's keywords is refused as unknown keywords.
-- **A new list starts empty** (L-104). No declarative operation adds a list, so after the migration `withNewLists` gives each top-level list the new schema declares and the data lacks an empty list; an edit's defaults get the same. Records can then be added to it at once, by the tool or an entry change; nothing present is touched.
+- **A new list starts empty** (L-104). No declarative operation adds a list, so after a migration with at least one step, `withNewLists` gives each top-level list the new schema declares and the data lacks an empty list; an edit's defaults get the same. Records can then be added to it at once, by the tool or an entry change; nothing present is touched, and with no step the data stays exactly as it is.
 - **A misplaced list is told where it goes** (L-103, `VER-07`). A key holding what looks like a schema, where only keywords go, as `{ "entries": { "type": "array" } }`, is told it belongs under `properties`, with the shape, rather than that its name is refused.
 - **The keyword list is deliberately short.** Richer keywords (patterns, combinators, references) can be added later only with a bound on their cost and a test that tries to break it. Ajv's stricter style checks, such as requiring every required property to be listed, would refuse valid schemas, so they are off.
 - **An enum or constant is compared by value.** Its cost is bounded by the schema's size limit and the data's.

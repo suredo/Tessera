@@ -113,6 +113,14 @@ describe("migrating a tool's data (DATA-03)", () => {
       target(3, withCards, [toV2, addCards]),
     );
     expect(result).toMatchObject({ ok: true, data: { ...tasks, cards: [] } });
+    // With no migration, nothing is added: an optional list stays absent (#394 review).
+    const optional = { ...withCards, required: ["tasks"] };
+    const unchanged = { schemaVersion: 3, schema: optional };
+    expect(migrateData(tasks, unchanged, target(3, optional, [toV2, addCards]))).toMatchObject({
+      ok: true,
+      data: tasks,
+      steps: 0,
+    });
     // Only lists: a field of another kind is left out, and nothing present changes.
     expect(withNewLists(withCards, { cards: [{ id: "c-1" }] })).toEqual({
       cards: [{ id: "c-1" }],
