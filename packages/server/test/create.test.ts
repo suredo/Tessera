@@ -97,6 +97,10 @@ describe("starting data (GEN-05)", () => {
     expect(startingDataOf({ rules: [friday] }, { rules: [{ id: "r-1", weekday: 4 }] })).toEqual({
       rules: [friday, { id: "r-1", weekday: 4 }],
     });
+    // A list of plain values keeps every one it is given, repeated or not (#397 review).
+    expect(startingDataOf({ tags: ["a"] }, { tags: ["a", "a"] })).toEqual({
+      tags: ["a", "a", "a"],
+    });
     const result = candidateFrom(tool());
     expect(result.kind).toBe("candidate");
     if (result.kind !== "candidate") return;

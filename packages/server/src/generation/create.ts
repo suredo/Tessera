@@ -91,8 +91,14 @@ export function startingDataOf(defaults: ToolData, initialState: ToolData): Tool
       data[key] = value;
       continue;
     }
-    const kept = new Set(before.map((record) => canonicalJson(record)));
-    data[key] = [...before, ...value.filter((record) => !kept.has(canonicalJson(record)))];
+    // Only records, objects with an id: a list of plain values may hold the same one twice.
+    const isRecord = (item: unknown) =>
+      item !== null && typeof item === "object" && !Array.isArray(item) && "id" in item;
+    const kept = new Set(before.filter(isRecord).map((record) => canonicalJson(record)));
+    data[key] = [
+      ...before,
+      ...value.filter((item) => !isRecord(item) || !kept.has(canonicalJson(item))),
+    ];
   }
   return data;
 }
