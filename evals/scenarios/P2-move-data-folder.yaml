@@ -1,0 +1,36 @@
+# P2, move to another data folder (docs/testing/app-catalogue.md): the person makes a list, saves
+# it to my tools, and moves to another computer: the workspace is exported with the host's own
+# button and imported into Tessera started again on a new, empty data folder (DATA-05, APP-06).
+# The move keeps the same workspace, version and data, which the facts compare across the two
+# folders. Then the person carries on, a change in words, and uses the saved tool again, which
+# came along with the workspace. Whether the moved list reads as it did is the AI review's.
+id: P2-move-data-folder
+tier: intermediate
+language: en
+person: "Someone moving to a new laptop"
+goal: "Take a packing list to another computer and keep using it"
+clock: { start: "2026-11-16T09:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 8 }
+acceptanceChecks: true
+profiles: [item-list]
+steps:
+  - say: "A packing list for my trip: passport, charger and socks."
+    expect: { created: true, workspace: new }
+  - save: "Trip packing"
+    expect: { version: unchanged, data: unchanged }
+  # Another computer: the same workspace, version and data, read from the new data folder.
+  - move: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+  - say: "Add sunscreen."
+    expect: { version: unchanged, data: changed }
+  - use-again: "Trip packing"
+    expect: { workspace: new }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence

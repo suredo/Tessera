@@ -201,8 +201,8 @@ export async function runScenario(
   const started = Date.now();
   let offset = 0;
   const now = () => new Date(start + offset + (Date.now() - started));
-  const app = await launch({
-    dataDir,
+  const launchOn = (dir: string) => ({
+    dataDir: dir,
     port: 0,
     webRoot,
     provider: harness.provider,
@@ -223,8 +223,10 @@ export async function runScenario(
           },
         }),
   });
-  if (app.status !== "started") throw new Error(`Tessera didn't start: ${app.status}`);
-  const store = app.dataFolder;
+  const first = await launch(launchOn(dataDir));
+  if (first.status !== "started") throw new Error(`Tessera didn't start: ${first.status}`);
+  let app = first;
+  let store = app.dataFolder;
   let services: Services | undefined;
   options.onStarted?.(store);
   const results: StepResult[] = scenario.steps.map((s, index) => ({
@@ -277,6 +279,20 @@ export async function runScenario(
           nextDay: async () => {
             offset += DAY_MS;
             await context!.clock.setSystemTime(now());
+          },
+          // Another computer: Tessera started on a new, empty data folder, the same clock and
+          // provider, and the page opened on it; the old one stops (DATA-05, P2).
+          move: async () => {
+            const movedDir = path.join(folder, "tessera-moved");
+            refuseRealDataFolder(movedDir);
+            const moved = await launch(launchOn(movedDir));
+            if (moved.status !== "started")
+              throw new Error(`Tessera didn't start: ${moved.status}`);
+            await app.stop();
+            app = moved;
+            store = moved.dataFolder;
+            await page.goto(app.url);
+            return store;
           },
         });
         const after = readHostState(store, await openWorkspace(page));
@@ -509,6 +525,8 @@ type Play = {
   target: StepTarget;
   cancelledNext: boolean;
   nextDay: () => Promise<void>;
+  /** Starts Tessera again on a new, empty data folder and opens the page on it. */
+  move: () => Promise<Store>;
 };
 
 /** Does one step in the host app, as the person would, and reads what the host showed. */
@@ -637,6 +655,29 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     await button(page, say("nav.trash")).click();
     await button(page, say("trash.restoreLabel", { name: s.restore })).click();
     await page.getByText(say("trash.restored", { name: s.restore })).waitFor();
+    return { claim: "none" };
+  }
+  if ("move" in s) {
+    const id = await openWorkspace(page);
+    if (!id) throw new Error("No workspace is open to move.");
+    // Exported as the person would, with the host's own button, and imported on the new folder's
+    // first screen from that file (APP-06, DATA-05).
+    const [download] = await Promise.all([
+      page.waitForEvent("download"),
+      button(page, say("workspaces.export", { name: workspaceTitle(id) })).click(),
+    ]);
+    const file = {
+      name: download.suggestedFilename(),
+      bytes: fs.readFileSync(await download.path()),
+    };
+    await run.move();
+    await requestBox(page).waitFor();
+    await page
+      .getByLabel(say("archive.importLabel"))
+      .setInputFiles({ name: file.name, mimeType: "application/octet-stream", buffer: file.bytes });
+    await page
+      .locator(`.tool-panel[data-workspace-id="${id}"]`)
+      .waitFor({ timeout: STEP_LIMIT_MS });
     return { claim: "none" };
   }
   if ("reload" in s || "next-day" in s) {

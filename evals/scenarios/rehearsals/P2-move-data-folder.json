@@ -1,0 +1,122 @@
+{
+  "about": "A rehearsal of P2-move-data-folder, written by hand: no model answered these.",
+  "scenario": "P2-move-data-folder",
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [],
+          "profile": "item-list"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Trip packing",
+          "summary": "A packing list for your trip, starting with your passport, charger and socks.",
+          "code": {
+            "html": "<h1>Packing list</h1>\n<div class=\"add\">\n  <label for=\"name\">Item</label> <input id=\"name\" data-hook=\"item-name\" autocomplete=\"off\">\n  <button type=\"button\" data-hook=\"item-add\">Add</button>\n</div>\n<p id=\"status\" role=\"status\"></p>\n<div id=\"list\"></div>",
+            "css": ".add { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }\nul { list-style: none; padding: 0; display: grid; gap: 0.5rem; }\nli { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }\n.done { text-decoration: line-through; }",
+            "js": "const AISLES = { milk: \"Dairy\", eggs: \"Dairy\", cheese: \"Dairy\", bread: \"Bakery\", apples: \"Fruit and vegetables\" };\nconst status = document.getElementById(\"status\");\nlet state;\nconst groupOf = () => \"\";\nconst row = (item) => {\n  const li = document.createElement(\"li\");\n  li.dataset.hook = \"item\";\n  const box = document.createElement(\"input\");\n  box.type = \"checkbox\";\n  box.id = \"got-\" + item.id;\n  box.checked = item.done === true;\n  box.addEventListener(\"change\", () =>\n    save([{ op: \"replace\", collection: \"items\", id: item.id, revisionCount: state.revisions.items[item.id], fields: { done: box.checked } }], box.checked ? item.title + \" is ticked off.\" : item.title + \" is back on the list.\"),\n  );\n  const label = document.createElement(\"label\");\n  label.htmlFor = box.id;\n  label.textContent = item.title;\n  if (item.done) label.className = \"done\";\n  const remove = document.createElement(\"button\");\n  remove.type = \"button\";\n  remove.dataset.hook = \"item-remove\";\n  remove.textContent = \"Remove \" + item.title;\n  remove.addEventListener(\"click\", () =>\n    save([{ op: \"remove\", collection: \"items\", id: item.id, revisionCount: state.revisions.items[item.id] }], item.title + \" is off the list.\"),\n  );\n  li.append(box, label, remove);\n  return li;\n};\nconst render = () => {\n  const groups = new Map();\n  for (const item of state.data.items) {\n    const group = groupOf(item);\n    if (!groups.has(group)) groups.set(group, []);\n    groups.get(group).push(item);\n  }\n  document.getElementById(\"list\").replaceChildren(...[...groups].flatMap(([group, items]) => {\n    const list = document.createElement(\"ul\");\n    list.setAttribute(\"aria-label\", group || \"Items\");\n    list.append(...items.map(row));\n    if (!group) return [list];\n    const heading = document.createElement(\"h3\");\n    heading.textContent = group;\n    return [heading, list];\n  }));\n};\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; render(); });\nconst save = (operations, said) =>\n  tessera.call(\"data.patch\", { operations }).then(load).then(\n    () => { status.textContent = said; },\n    () => { status.textContent = \"That wasn't saved. Try again.\"; return load(); },\n  );\nload();\ndocument.querySelector(\"[data-hook=item-add]\").addEventListener(\"click\", () => {\n  const field = document.querySelector(\"[data-hook=item-name]\");\n  const title = field.value.trim();\n  if (!title) { status.textContent = \"Write what to buy first.\"; return; }\n  field.value = \"\";\n  save([{ op: \"add\", collection: \"items\", record: { title } }], title + \" is on the list.\");\n});"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["id", "title"],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "done": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {
+              "items": []
+            },
+            "initialState": {
+              "items": [
+                {
+                  "id": "i-1",
+                  "title": "Passport"
+                },
+                {
+                  "id": "i-2",
+                  "title": "Charger"
+                },
+                {
+                  "id": "i-3",
+                  "title": "Socks"
+                }
+              ]
+            }
+          },
+          "capabilities": [],
+          "uiMode": "standard"
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "data",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": []
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Sunscreen is on the list.",
+          "patch": {
+            "operations": [
+              {
+                "op": "add",
+                "collection": "items",
+                "record": {
+                  "title": "Sunscreen"
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
