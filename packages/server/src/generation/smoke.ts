@@ -96,6 +96,12 @@ export async function repairSmoke(
                 canonicalJson(artifact.connections) === canonicalJson(original.artifact.connections)
                   ? { mode: "unchanged" }
                   : { mode: "replace", connections: artifact.connections },
+              // Kept as the edit declared them, so the repair doesn't lose what it needs (A86).
+              capabilities:
+                canonicalJson(artifact.capabilities) ===
+                canonicalJson(original.artifact.capabilities)
+                  ? { mode: "unchanged" }
+                  : { mode: "replace", capabilities: artifact.capabilities },
               data:
                 canonicalJson(artifact.data) === canonicalJson(original.artifact.data)
                   ? { mode: "unchanged" }

@@ -2,7 +2,7 @@
 
 ## 2026-11-17
 
-* **Changed**: An edit can declare a capability the change needs (A86, `CAP-01`, `GEN-13`): its answer may replace the tool's capabilities with every one the changed tool uses, so a form that gains a save button, or a tracker a chart, can declare files or chart instead of failing the static check on every repair; the host keeps the connection capability in step with the connections, and a look-only edit keeps them ([decision log](decisions/decision-log.md), [generation](code/server/generation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T00:09:20Z.
+* **Changed**: An edit can declare a capability the change needs (A86, `CAP-01`, `GEN-13`): its answer may replace the tool's capabilities with every one the changed tool uses, so a form that gains a save button, or a tracker a chart, can declare files or chart instead of failing the static check on every repair; the host keeps the connection capability in step with the connections, a repair keeps the ones the failed edit declared, and a look-only edit keeps them ([decision log](decisions/decision-log.md), [generation](code/server/generation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T00:09:20Z.
 
 ## 2026-11-16
 

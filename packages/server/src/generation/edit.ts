@@ -241,12 +241,18 @@ export async function editTool(
         result = plainRefusal(response.value.reason, input.request);
       else {
         // A repair that leaves its connections out keeps the failed attempt's replacement, samples
-        // and all, which its prompt names by path only (#368 review).
-        const failed = repair?.attempt?.connections;
-        attempt =
-          response.value.connections === undefined && failed?.mode === "replace"
-            ? { ...response.value, connections: failed }
-            : response.value;
+        // and all, which its prompt names by path only (#368 review); and so with its capabilities,
+        // so a repair doesn't lose one the change needs (A86).
+        const failed = repair?.attempt;
+        attempt = {
+          ...response.value,
+          ...(response.value.connections === undefined && failed?.connections?.mode === "replace"
+            ? { connections: failed.connections }
+            : {}),
+          ...(response.value.capabilities === undefined && failed?.capabilities?.mode === "replace"
+            ? { capabilities: failed.capabilities }
+            : {}),
+        };
         // The summary the person reads is in plain words too (GEN-12).
         const words = [
           ...plainWordProblems("The change's summary", attempt.summary, input.request),
