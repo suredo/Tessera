@@ -1,0 +1,217 @@
+{
+  "about": "A live run of P2-move-data-folder, recorded for replay.",
+  "scenario": "P2-move-data-folder",
+  "recorded": {
+    "head": "5a5d6d1f7e5bc1c95a93ea7616db2ff7cab8cdbc",
+    "at": "2026-11-17T13:30:37.909Z",
+    "cliVersion": "2.1.326"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": "passport, charger and socks",
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "packing list",
+              "request": "A packing list for my trip"
+            },
+            {
+              "name": "starting items",
+              "request": "passport, charger and socks"
+            }
+          ],
+          "profile": "item-list",
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Packing list",
+          "summary": "A packing list for your trip with passport, charger and socks. Add items, tick them off as you pack, and remove ones you don't need.",
+          "uiMode": "standard",
+          "capabilities": [],
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "packed": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": ["id", "name", "packed"]
+                  }
+                }
+              },
+              "required": ["items"]
+            },
+            "reusableDefaults": {
+              "items": []
+            },
+            "initialState": {
+              "items": [
+                {
+                  "id": "i-passport",
+                  "name": "Passport",
+                  "packed": false
+                },
+                {
+                  "id": "i-charger",
+                  "name": "Charger",
+                  "packed": false
+                },
+                {
+                  "id": "i-socks",
+                  "name": "Socks",
+                  "packed": false
+                }
+              ]
+            }
+          },
+          "code": {
+            "html": "<main class=\"wrap\"><h1>Packing list</h1><p id=\"count\" class=\"muted\" aria-live=\"polite\"></p><div class=\"row\"><label for=\"name\">New item</label><input id=\"name\" data-hook=\"item-name\" type=\"text\" autocomplete=\"off\" placeholder=\"e.g. Toothbrush\"><button id=\"add\" data-hook=\"item-add\" type=\"button\">Add</button></div><p id=\"msg\" class=\"msg\" role=\"status\"></p><ul id=\"list\"></ul><p id=\"empty\" class=\"muted\" hidden>Nothing on the list yet. Add your first item above.</p></main>",
+            "css": ".wrap{max-width:560px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text)}h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;margin:var(--ui-space-3) 0}.row label{width:100%;font-size:var(--ui-size-secondary)}.row input{flex:1 1 180px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}button{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}#add{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}button:focus-visible,input:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}ul{list-style:none;padding:0;margin:0}li{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);background:var(--ui-surface);margin-bottom:var(--ui-space-2)}li label{flex:1;display:flex;align-items:center;gap:var(--ui-space-2);min-height:var(--ui-target)}li input{width:20px;height:20px}li.done .nm{text-decoration:line-through;color:var(--ui-text-secondary)}.msg{min-height:1.2em;color:var(--ui-error);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-2)}",
+            "js": "const listEl=document.getElementById('list');const nameEl=document.getElementById('name');const msg=document.getElementById('msg');const emptyEl=document.getElementById('empty');const countEl=document.getElementById('count');let items=[];let revs={};\nasync function load(){const r=await tessera.call('data.read',{});items=r.data.items||[];revs=r.revisions.items||{};render();}\nasync function patch(ops){msg.textContent='';try{await tessera.call('data.patch',{operations:ops});await load();return true;}catch(e){msg.textContent='That change could not be saved. Please try again.';await load();return false;}}\nfunction render(){listEl.textContent='';for(const it of items){const li=document.createElement('li');li.setAttribute('data-hook','item');if(it.packed)li.className='done';const lab=document.createElement('label');const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!it.packed;cb.addEventListener('change',()=>{patch([{op:'replace',collection:'items',id:it.id,revisionCount:revs[it.id],fields:{packed:cb.checked}}]);});const nm=document.createElement('span');nm.className='nm';nm.textContent=it.name;lab.appendChild(cb);lab.appendChild(nm);const rm=document.createElement('button');rm.type='button';rm.setAttribute('data-hook','item-remove');rm.textContent='Remove';rm.setAttribute('aria-label','Remove '+it.name);rm.addEventListener('click',()=>{patch([{op:'remove',collection:'items',id:it.id,revisionCount:revs[it.id]}]);});li.appendChild(lab);li.appendChild(rm);listEl.appendChild(li);}\nemptyEl.hidden=items.length>0;const p=items.filter(i=>i.packed).length;countEl.textContent=items.length?p+' of '+items.length+' packed':'';}\nasync function add(){const v=nameEl.value.trim();if(!v){msg.textContent='Type an item name first.';nameEl.focus();return;}const ok=await patch([{op:'add',collection:'items',record:{name:v,packed:false}}]);if(ok){nameEl.value='';}nameEl.focus();}\ndocument.getElementById('add').addEventListener('click',add);nameEl.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add();}});\nload();"
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@a230baa738e0",
+        "create@6849cfbe5453",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "data",
+          "interfacePart": null,
+          "dataPart": "Add sunscreen.",
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "add item",
+              "request": "Add sunscreen."
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-saved@fce66cce20d3",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Adds a new item named \"Sunscreen\" to the packing list, unpacked by default.",
+          "patch": {
+            "operations": [
+              {
+                "op": "add",
+                "collection": "items",
+                "record": {
+                  "name": "Sunscreen",
+                  "packed": false
+                }
+              }
+            ]
+          }
+        }
+      },
+      "parts": [
+        "data-plan@2ce101112867",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "data-context@f23d03154e01"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "open_saved",
+          "savedToolId": "{{saved:Trip packing}}",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "open saved tool",
+              "request": "Open my trip packing list"
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-saved@fce66cce20d3",
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    }
+  ]
+}
