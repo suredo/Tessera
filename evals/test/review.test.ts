@@ -215,6 +215,23 @@ describe("what the review reads (EVAL-03, ENG-19)", () => {
     ]);
   });
 
+  it("DATA-05, EVAL-03: after a move, reads the new data folder too: the versions and data made there", async () => {
+    const folder = await run({});
+    // What a move step leaves (P2): a second Tessera beside the first, with a tool made after it.
+    const moved = await openDataFolder(path.join(folder, "tessera-moved"));
+    try {
+      const { id } = createWorkspace(moved, "Packing list");
+      const done = activateVersion(moved, id, saveVersion(moved.db, tool), 0);
+      if (!done.ok) throw new Error(done.message);
+    } finally {
+      moved.close();
+    }
+    const { versions, data } = await gatherRun(folder);
+    // The same version in both is listed once; each folder's tools are there.
+    expect(versions.map((v) => v.tool)).toEqual(["Party guest form"]);
+    expect(data.map((d) => d.tool)).toEqual(["Party guest form", "Packing list"]);
+  });
+
   it("L-92, EVAL-03: shows each tool's data at the end and its recorded changes, with what a removed entry held", async () => {
     const folder = await run({ ruleRemoved: true });
     const { data } = await gatherRun(folder);

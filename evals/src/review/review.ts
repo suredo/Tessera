@@ -145,61 +145,70 @@ export async function gatherRun(folder: string): Promise<RunEvidence> {
   // version into another workspace. A workspace moved to the trash during the run keeps its
   // versions, which the review reads too, marked so, without restoring or changing anything.
   const versions: ReviewVersion[] = [];
-  const data: ReviewData[] = [];
-  const tessera = path.join(folder, "tessera");
-  // The run's own Tessera, never the person's (ENG-19): refused before anything opens it.
-  refuseRealDataFolder(tessera);
-  const store = await openDataFolder(tessera);
-  try {
-    const seen = new Set<string>();
-    const rows = store.db.all(
-      versionRow,
-      `SELECT w.title, w.deleted_at, v.number, v.hash, v.summary, v.checks, v.profile
+  const byWorkspace = new Map<string, ReviewData>();
+  // The run's own Tessera, and the one a move step started on a new data folder (DATA-05), in
+  // that order: a version is listed once, and a tool's data at the end is where it ended, with
+  // the changes recorded in each.
+  const seen = new Set<string>();
+  const folders = ["tessera", "tessera-moved"]
+    .map((name) => path.join(folder, name))
+    .filter((dir, index) => index === 0 || fs.existsSync(dir));
+  for (const tessera of folders) {
+    // The run's own Tessera, never the person's (ENG-19): refused before anything opens it.
+    refuseRealDataFolder(tessera);
+    const store = await openDataFolder(tessera);
+    try {
+      const rows = store.db.all(
+        versionRow,
+        `SELECT w.title, w.deleted_at, v.number, v.hash, v.summary, v.checks, v.profile
         FROM workspace_versions v JOIN workspaces w ON w.id = v.workspace_id
         ORDER BY v.created_at, w.id, v.number`,
-    );
-    for (const row of rows) {
-      if (seen.has(row.hash)) continue;
-      seen.add(row.hash);
-      const read = loadVersion(store.db, row.hash);
-      if (read?.kind !== "ok") continue;
-      const { html, css, js } = read.artifact.code;
-      versions.push({
-        tool: row.deleted_at ? `${row.title} (moved to the trash)` : row.title,
-        version: row.number,
-        summary: row.summary ?? "",
-        checks: JSON.parse(row.checks) as string[],
-        profile: row.profile,
-        html,
-        css,
-        js,
-      });
-    }
-    // Each tool's data: its entries at the end, and the changes the run recorded, oldest first.
-    // Undoing a change uses its entry up, so an undone change isn't listed (L-92).
-    for (const workspace of store.db.all(
-      workspaceRow,
-      "SELECT id, title, deleted_at, data FROM workspaces ORDER BY created_at, id",
-    )) {
-      const atEnd = workspace.data ?? "{}";
-      data.push({
-        tool: workspace.deleted_at ? `${workspace.title} (moved to the trash)` : workspace.title,
-        atEnd:
-          atEnd.length > DATA_QUOTE_LIMIT
-            ? `${atEnd.slice(0, DATA_QUOTE_LIMIT)}… (cut short)`
-            : atEnd,
-        changes: store.db
+      );
+      for (const row of rows) {
+        if (seen.has(row.hash)) continue;
+        seen.add(row.hash);
+        const read = loadVersion(store.db, row.hash);
+        if (read?.kind !== "ok") continue;
+        const { html, css, js } = read.artifact.code;
+        versions.push({
+          tool: row.deleted_at ? `${row.title} (moved to the trash)` : row.title,
+          version: row.number,
+          summary: row.summary ?? "",
+          checks: JSON.parse(row.checks) as string[],
+          profile: row.profile,
+          html,
+          css,
+          js,
+        });
+      }
+      // Each tool's data: its entries at the end, and the changes the run recorded, oldest first.
+      // Undoing a change uses its entry up, so an undone change isn't listed (L-92).
+      for (const workspace of store.db.all(
+        workspaceRow,
+        "SELECT id, title, deleted_at, data FROM workspaces ORDER BY created_at, id",
+      )) {
+        const atEnd = workspace.data ?? "{}";
+        const changes = store.db
           .all(
             undoRow,
             "SELECT change FROM data_undo WHERE workspace_id = ? ORDER BY number",
             workspace.id,
           )
-          .map((row) => describeChange(row.change)),
-      });
+          .map((row) => describeChange(row.change));
+        byWorkspace.set(workspace.id, {
+          tool: workspace.deleted_at ? `${workspace.title} (moved to the trash)` : workspace.title,
+          atEnd:
+            atEnd.length > DATA_QUOTE_LIMIT
+              ? `${atEnd.slice(0, DATA_QUOTE_LIMIT)}… (cut short)`
+              : atEnd,
+          changes: [...(byWorkspace.get(workspace.id)?.changes ?? []), ...changes],
+        });
+      }
+    } finally {
+      store.close();
     }
-  } finally {
-    store.close();
   }
+  const data = [...byWorkspace.values()];
   return { scenario: report.scenario, items, steps, versions, data, screenshots };
 }
 

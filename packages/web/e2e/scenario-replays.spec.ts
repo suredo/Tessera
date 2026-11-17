@@ -27,6 +27,7 @@ const replays = path.join(scenarios, "replays");
 // step blocked.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "J6-limits": [],
+  "P2-move-data-folder": [],
   "T1-shopping-list": [],
   "T2-reading-list": [],
   "T3-spending-chart": [],
