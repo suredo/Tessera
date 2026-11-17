@@ -117,6 +117,23 @@
           }
         }
       }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "open_saved",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [],
+          "savedToolId": "{{saved:Trip packing}}"
+        }
+      }
     }
   ]
 }

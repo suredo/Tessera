@@ -3,7 +3,7 @@
 # button and imported into Tessera started again on a new, empty data folder (DATA-05, APP-06).
 # The move keeps the same workspace, version and data, which the facts compare across the two
 # folders. Then the person carries on, a change in words, and uses the saved tool again, which
-# came along with the workspace. Whether the moved list reads as it did is the AI review's.
+# came along with the workspace, asked for by name. Whether the moved list reads as it did is the AI review's.
 id: P2-move-data-folder
 tier: intermediate
 language: en
@@ -23,6 +23,9 @@ steps:
     expect: { workspace: same, version: unchanged, data: unchanged }
   - say: "Add sunscreen."
     expect: { version: unchanged, data: changed }
+  # The saved tool came along: asked for by name, it is offered from the new folder's tools.
+  - say: "Open my trip packing list"
+    expect: { offered: saved, savedTool: "Trip packing", created: false }
   - use-again: "Trip packing"
     expect: { workspace: new }
 review:

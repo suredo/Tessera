@@ -291,6 +291,8 @@ export async function runScenario(
             await app.stop();
             app = moved;
             store = moved.dataFolder;
+            // Whoever follows the run's Tessera, as replay's saved-tool lookup does, follows it here.
+            options.onStarted?.(store);
             await page.goto(app.url);
             return store;
           },
