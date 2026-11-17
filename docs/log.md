@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-17
+
+* **New**: T10 in Brazilian Portuguese as a scenario, for M4's live set ([milestone sets](testing/milestone-sets.md), the catalogue's PT variant): T10's steps in Portuguese, the planner checked by the scheduling profile and the flashcards by the cards profile, with the checks from the request on (A57). Its rehearsal, written by hand, is T10's with the tools' words in Portuguese ([scenarios](code/evals/scenarios.md), [runner](code/evals/runner.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T00:15:16Z.
+
 ## 2026-11-16
 
 * **New**: T11's tutor bookings and T12's family chores board as scenarios, for M4's live set ([milestone sets](testing/milestone-sets.md)): T11 checked by the scheduling profile, asked in words to move a booking into a slot another holds; T12 by the filtering profile, narrowed to "only mine", given a weekly chore and a chore marked done in words, while checking one off in the board stays unverified, as no hook names it (`EVAL-03`). The scenarios first recorded in M4, T4, T7, T11, T12 and T14, turn on the checks from the request (A57). Their rehearsals, written by hand, pass every step ([scenarios](code/evals/scenarios.md), [runner](code/evals/runner.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T00:03:02Z.

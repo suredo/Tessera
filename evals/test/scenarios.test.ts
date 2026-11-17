@@ -39,6 +39,7 @@ describe("scenario files (EVAL-01)", () => {
       "B4-habit-tracker",
       "J6-limits",
       "T1-shopping-list",
+      "T10-study-planner-pt",
       "T10-study-planner",
       "T11-tutor-bookings",
       "T12-family-chores",
@@ -65,6 +66,8 @@ describe("scenario files (EVAL-01)", () => {
       "J6-limits": 5,
       "T1-shopping-list": 10,
       "T10-study-planner": 14,
+      // T10 in Portuguese: the same steps and budget.
+      "T10-study-planner-pt": 14,
       // Two requests, intent and create or data, with a repair in reserve, and the review's.
       "T11-tutor-bookings": 8,
       // Three requests, intent and create or data, with a repair in reserve, and the review's.
@@ -86,6 +89,7 @@ describe("scenario files (EVAL-01)", () => {
     // The acceptance-check experiment's scenario turns it on, and so does each scenario first
     // recorded in M4, to measure Tessera as it ships (A57).
     expect(all.filter((s) => s.acceptanceChecks).map((s) => s.id)).toEqual([
+      "T10-study-planner-pt",
       "T11-tutor-bookings",
       "T12-family-chores",
       "T14-image-editor",
