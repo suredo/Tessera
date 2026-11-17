@@ -62,6 +62,13 @@ export type SaveType = (typeof SAVE_IMAGE_TYPES)[number] | (typeof SAVE_TEXT_TYP
 /** The largest file a tool may offer. */
 export const SAVE_LIMIT_BYTES = 25 * 1024 * 1024;
 
+/**
+ * The hook a tool that saves files gives the button that does (A86), whatever else it marks, so a
+ * scenario can press it as the person would (EVAL-01) in a tool no files profile checks, as T5's
+ * export of its answers.
+ */
+export const FILE_SAVE_HOOK = "file-save";
+
 /** The extension a saved file's name always ends with, by its kind. */
 export const SAVE_EXTENSIONS: Readonly<Record<SaveType, string>> = {
   "image/png": "png",

@@ -5,6 +5,7 @@ import {
   bridgeManifest,
   type BridgeCapability,
   CHART_LIMITS,
+  FILE_SAVE_HOOK,
   SAVE_LIMIT_BYTES,
   CHART_TYPES,
   CONNECTION_ANSWER_LIMIT_BYTES,
@@ -425,7 +426,10 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     input.editArtifact?.capabilities.includes("files") ||
     input.attempt?.capabilities.includes("files")
   ) {
-    addSystem("files", { limit: String(SAVE_LIMIT_BYTES / (1024 * 1024)) });
+    addSystem("files", {
+      limit: String(SAVE_LIMIT_BYTES / (1024 * 1024)),
+      saveHook: FILE_SAVE_HOOK,
+    });
   }
   // How to reach a connection and write its samples, from the contracts' limits, for a tool that
   // may use one (CAP-02, A74): only then, so every other prompt keeps its budget.

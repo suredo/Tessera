@@ -70,6 +70,49 @@
           "uiMode": "standard"
         }
       }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [],
+          "profile": "form",
+          "usesFiles": true
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Adds a button that saves the answers as a spreadsheet file.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Party RSVP</h1>\n<form>\n<label for=\"name\">Name</label> <input id=\"name\" name=\"name\" data-hook=\"form-field\" required>\n<label for=\"people\">How many people</label> <input id=\"people\" name=\"people\" type=\"number\" min=\"1\" max=\"20\" data-hook=\"form-field\" required>\n<label for=\"allergies\">Food allergies</label> <textarea id=\"allergies\" name=\"allergies\" data-hook=\"form-field\"></textarea>\n<button type=\"button\" data-hook=\"form-submit\">Send</button>\n<p data-hook=\"form-error\" role=\"alert\"></p>\n</form>\n<h2>Answers</h2>\n<button type=\"button\" data-hook=\"file-save\">Save the answers as a spreadsheet</button>\n<p id=\"saved\" role=\"status\"></p>\n<ul id=\"answers\" aria-label=\"Answers\"></ul>",
+              "css": "",
+              "js": "let state;\nconst form = document.querySelector(\"form\");\nconst error = document.querySelector(\"[data-hook=form-error]\");\nconst list = document.getElementById(\"answers\");\nconst render = () => list.replaceChildren(...state.data.answers.map((answer) => {\n  const item = document.createElement(\"li\");\n  item.dataset.hook = \"answer\";\n  item.textContent = [answer.name, answer.people + (answer.people === 1 ? \" person\" : \" people\"), answer.allergies].filter(Boolean).join(\", \");\n  return item;\n}));\nconst load = () => tessera.call(\"data.read\").then((read) => { state = read; render(); });\nload();\n// A form never submits in Tessera, so the button's click sends it.\ndocument.querySelector(\"[data-hook=form-submit]\").addEventListener(\"click\", () => {\n  const missing = [...form.elements].filter((field) => field.required && !field.value.trim());\n  if (missing.length > 0) {\n    error.textContent = \"Please fill in: \" + missing.map((field) => field.labels[0].textContent.trim()).join(\", \") + \".\";\n    return;\n  }\n  error.textContent = \"\";\n  const record = {\n    name: form.elements.name.value.trim(),\n    people: Number(form.elements.people.value),\n    allergies: form.elements.allergies.value.trim(),\n  };\n  tessera.call(\"data.patch\", { operations: [{ op: \"add\", collection: \"answers\", record }] }).then(() => {\n    form.reset();\n    return load();\n  });\n});\n// The answers as a CSV file the person saves, one row an answer, after a row of headings.\nconst cell = (value) => '\"' + String(value).split('\"').join('\"\"') + '\"';\ndocument.querySelector(\"[data-hook~=file-save]\").addEventListener(\"click\", async () => {\n  const said = document.getElementById(\"saved\");\n  const rows = [[\"Name\", \"How many people\", \"Food allergies\"]].concat(\n    state.data.answers.map((answer) => [answer.name, answer.people, answer.allergies]),\n  );\n  const text = rows.map((row) => row.map(cell).join(\",\")).join(String.fromCharCode(10));\n  try {\n    const saved = await tessera.saveFile({ name: \"party-answers.csv\", type: \"text/csv\", text });\n    said.textContent = saved ? \"The answers are saved.\" : \"Nothing was saved.\";\n  } catch (error) {\n    said.textContent = error.message;\n  }\n});"
+            }
+          },
+          "capabilities": {
+            "mode": "replace",
+            "capabilities": ["files"]
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      }
     }
   ]
 }

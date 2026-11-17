@@ -6,6 +6,7 @@ import { z } from "zod";
 import {
   connectionInputSchema,
   connectionNameSchema,
+  FILE_SAVE_HOOK,
   PROFILES,
   profileIdSchema,
   reviewItemSchema,
@@ -264,14 +265,17 @@ export const scenarioSchema = z
       }
     });
     // A do step drives the tool through hooks its profiles name, which the prompt asked it to
-    // mark (VER-04); any other name would be guessing at the tool's markup.
+    // mark (VER-04); any other name would be guessing at the tool's markup. A click answered as
+    // a save may also press the save button, which the files part asks a saving tool to mark (A86).
     const hooks = new Set<string>(
       scenario.profiles.flatMap((id) => PROFILES[id].hooks.map((h) => h.name)),
     );
     scenario.steps.forEach((s, index) => {
       if (!("do" in s)) return;
+      const allowed = (hook: string) =>
+        hooks.has(hook) || ("click" in s.do && s.do.answer !== undefined && hook === FILE_SAVE_HOOK);
       const used = ["click" in s.do ? s.do.click : s.do.fill, ...(s.do.in ? [s.do.in.hook] : [])];
-      for (const hook of used.filter((each) => !hooks.has(each))) {
+      for (const hook of used.filter((each) => !allowed(each))) {
         context.addIssue({
           code: "custom",
           path: ["steps", index, "do"],
