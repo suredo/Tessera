@@ -273,7 +273,8 @@ export const scenarioSchema = z
     scenario.steps.forEach((s, index) => {
       if (!("do" in s)) return;
       const allowed = (hook: string) =>
-        hooks.has(hook) || ("click" in s.do && s.do.answer !== undefined && hook === FILE_SAVE_HOOK);
+        hooks.has(hook) ||
+        ("click" in s.do && s.do.answer !== undefined && hook === FILE_SAVE_HOOK);
       const used = ["click" in s.do ? s.do.click : s.do.fill, ...(s.do.in ? [s.do.in.hook] : [])];
       for (const hook of used.filter((each) => !allowed(each))) {
         context.addIssue({
