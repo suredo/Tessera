@@ -5,6 +5,7 @@ import {
   checkToolData,
   compileToolSchema,
   migrateData,
+  withNewLists,
   type DataShape,
 } from "../src/data-shape/index.ts";
 import type { ToolData } from "../src/patches/index.ts";
@@ -88,6 +89,37 @@ const before: ToolData = {
 const SLOW_MACHINE = { timeout: 30_000 };
 
 describe("migrating a tool's data (DATA-03)", () => {
+  it("DATA-03: a list the new shape adds starts empty, required or not, so records can be added to it", () => {
+    // T10 in Portuguese, M4's live run: flashcards added to a study plan, their list declared and
+    // never present, so adding the pasted cards was refused (L-104).
+    const withCards = {
+      type: "object",
+      required: ["tasks", "cards"],
+      properties: {
+        tasks: { type: "array", items: task },
+        cards: { type: "array", items: { type: "object", properties: { id: { type: "string" } } } },
+        title: { type: "string" },
+      },
+    };
+    const addCards: Migration = {
+      fromVersion: 2,
+      toVersion: 3,
+      operations: [{ op: "addField", collection: "tasks", fields: { done: false } }],
+    };
+    const tasks = { tasks: [{ id: "t-1", title: "Buy milk", done: true }] };
+    const result = migrateData(
+      tasks,
+      { schemaVersion: 2, schema: v2Schema },
+      target(3, withCards, [toV2, addCards]),
+    );
+    expect(result).toMatchObject({ ok: true, data: { ...tasks, cards: [] } });
+    // Only lists: a field of another kind is left out, and nothing present changes.
+    expect(withNewLists(withCards, { cards: [{ id: "c-1" }] })).toEqual({
+      cards: [{ id: "c-1" }],
+      tasks: [],
+    });
+  });
+
   it("runs every operation on a copy, and the result fits the new shape", () => {
     const result = migrateData(before, v1, target(2, v2Schema, [toV2]), { trackLosses: true });
     expect(result).toEqual({
@@ -390,6 +422,11 @@ describe("a tool's declared schema (DATA-03)", () => {
       /lists items by position/,
     );
     expect(refused({ type: "object", madeUpKeyword: true })).toMatch(/uses "madeUpKeyword"/);
+    // A list written where only keywords go, as T3's creation and its repair did in M4's live
+    // run, is told where it belongs, not that its name is refused (L-103, VER-07).
+    expect(refused({ entries: { type: "array", items: { type: "object" } } })).toBe(
+      `The tool's data schema has "entries" where only schema keywords go. A list or field goes under "properties": { "type": "object", "properties": { "entries": … } }.`,
+    );
     expect(refused({ $schema: "https://json-schema.org/draft/2020-12/schema" })).toMatch(
       /draft-07/,
     );

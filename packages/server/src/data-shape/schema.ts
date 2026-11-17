@@ -78,6 +78,11 @@ function outsideSubset(schema: unknown, depth: number, at: string): string | und
   }
   for (const [keyword, value] of Object.entries(schema)) {
     if (!TOOL_SCHEMA_KEYWORDS.has(keyword)) {
+      // A list or field written where only keywords go reads as a forbidden name, and a repair
+      // just renamed it (L-103, T3 in M4's live run): say where it belongs.
+      if (isPlainObject(value) && "type" in value) {
+        return `${at} has "${keyword}" where only schema keywords go. A list or field goes under "properties": { "type": "object", "properties": { "${keyword}": … } }.`;
+      }
       return `${at} uses "${keyword}", which a tool's data schema can't use.`;
     }
     if (keyword === "$schema" && value !== DRAFT_07)

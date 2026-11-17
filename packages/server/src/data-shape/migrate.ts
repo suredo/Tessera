@@ -324,6 +324,23 @@ const sizeBytes = (data: ToolData) => Buffer.byteLength(JSON.stringify(data), "u
  * lists what the migrations remove or replace, within a bounded preview; activation doesn't need
  * it. `run` is the migration step itself; tests replace it to show what is refused.
  */
+/**
+ * The data with an empty list for each top-level list the schema declares that it lacks (L-104): a
+ * change that adds a list, such as cards beside a study plan, starts it empty, as no declarative
+ * operation adds one, and records can then be added to it. Nothing present is touched.
+ */
+export function withNewLists(schema: object, data: ToolData): ToolData {
+  const properties = (schema as { properties?: unknown }).properties;
+  if (!isPlainObject(properties)) return data;
+  const added = Object.entries(properties)
+    .filter(([name, property]) => {
+      if (Object.hasOwn(data, name) || !isPlainObject(property)) return false;
+      return property["type"] === "array";
+    })
+    .map(([name]) => [name, []] as const);
+  return added.length ? { ...data, ...Object.fromEntries(added) } : data;
+}
+
 export function migrateData(
   data: ToolData,
   from: DataShape,
@@ -349,8 +366,8 @@ export function migrateData(
   let first: ToolData;
   let second: ToolData;
   try {
-    first = run(data, steps, log);
-    second = run(data, steps);
+    first = withNewLists(to.schema, run(data, steps, log));
+    second = withNewLists(to.schema, run(data, steps));
   } catch (error) {
     if (error instanceof MigrationFailed) {
       return refuse("failed", `the migration stopped: ${error.message}`);
