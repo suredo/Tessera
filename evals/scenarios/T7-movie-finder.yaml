@@ -13,6 +13,7 @@ person: "Someone who likes old science-fiction films"
 goal: "Find old science-fiction films to watch, keep a watchlist, and watch a trailer"
 clock: { start: "2026-11-14T20:00:00", zone: "Europe/Lisbon" }
 budget: { calls: 8 }
+acceptanceChecks: true
 profiles: [search-results]
 services:
   - connection: movies

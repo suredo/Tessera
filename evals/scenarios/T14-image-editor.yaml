@@ -11,6 +11,7 @@ person: "Someone sharing a photo with a friend"
 goal: "Open a photo, crop it, point at something with an arrow and a note, and save it"
 clock: { start: "2026-11-15T21:00:00", zone: "Europe/Lisbon" }
 budget: { calls: 8 }
+acceptanceChecks: true
 profiles: [editing-with-files]
 steps:
   - say: "Let me open a photo, crop it, add arrows and text, and save it."

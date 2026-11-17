@@ -1,0 +1,37 @@
+# T11, tutor bookings (docs/testing/app-catalogue.md), in its M4 form: a booking sheet checked by
+# the scheduling profile (VER-03) before it opens, its slots by the host's clock (RUN-07). The
+# request gives two bookings, João on Monday at 3 pm and Maria on Thursday at 4 pm. The person
+# books a third student with the sheet's own controls (EVAL-01), then asks in words to move João
+# to Thursday at 4 pm, Maria's slot: the catalogue's taken slot, a request about the data and not
+# the tool, which may be answered by moving João elsewhere, swapping or asking, but never by
+# putting two in one slot; and finds the sheet as they left it the next day. How the taken slot
+# was answered, from the reply and the sheet shown after it, is the AI review's.
+id: T11-tutor-bookings
+tier: advanced
+language: en
+person: "A tutor who teaches after school"
+goal: "Book students into one-hour slots, Monday to Thursday afternoons, never two in one slot"
+clock: { start: "2026-11-09T10:00:00", zone: "Europe/Lisbon" }
+budget: { calls: 8 }
+acceptanceChecks: true
+profiles: [scheduling]
+steps:
+  - say: "A booking sheet for my tutoring: Monday to Thursday 2–7 pm, one-hour sessions, never double-booked. João already has Monday at 3 pm and Maria has Thursday at 4 pm."
+    expect: { created: true, workspace: new }
+  - do: { fill: task-name, value: Leo }
+  - do: { click: task-add }
+    expect: { version: unchanged, data: changed }
+  # Maria's slot: whether the data changes depends on how the sheet's keeper answers it.
+  - say: "Move João to Thursday at 4 pm."
+    expect: { version: unchanged }
+  - next-day: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence
