@@ -7,7 +7,7 @@ implements: [EVAL-01, EVAL-02]
 tests: [../../../evals/test/scenarios.test.ts]
 tags: [code, evals, scenarios]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T00:39:46Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T00:58:54Z }
 ---
 
 # Purpose
@@ -22,7 +22,7 @@ The first part of the scenario runner (#155). Scenarios are data files (`EVAL-01
   - `loadScenario` reads and checks one file, whose name must be its ID, and `loadScenarios` every file in a folder; a file that isn't a scenario raises `ScenarioError` with each problem in plain words.
   - `stepKind` names a step's kind, one of `STEPS`, the kinds the runner plays.
   - A scenario's services (`CAP-02`, #349 step 5) are the outside services its tools reach: each a fake by the connection's name, with a made-up key or none, and its answers by path, a body or an image, at most three, each connection once; none by default.
-  - A do step (`DoAction`) clicks the element marked with a hook, or fills it with a value, perhaps inside the one element its in field names by a hook and the text it shows, or of several, the one whose label shows its label text, as a person finds one field of a form. The scenario lists its verification profiles, by their IDs in the registry, and each hook a do step names must be one of theirs: any other name would be guessing at the tool's markup (`VER-04`).
+  - A do step (`DoAction`) clicks the element marked with a hook, or fills it with a value, perhaps inside the one element its in field names by a hook and the text it shows, or of several, the one whose label shows its label text, as a person finds one field of a form. The scenario lists its verification profiles, by their IDs in the registry, and each hook a do step names must be one of theirs, any other name guessing at the tool's markup (`VER-04`), except `file-save` in a click answered as a save, the save button the files part asks a saving tool to mark (A87).
 - `src/scenarios/facts.ts`:
   - `readHostState` reads what Tessera stored (each workspace's tool version and a hash of its data, the saved tools) with the workspace the host app has open (`HostState`, `WorkspaceFacts`).
   - `checkFacts` compares the state before and after a step, with what the host app showed (`StepOutcome`) and what the step acts on by name (`StepTarget`: the saved tool a Continue or Use again opens, by name, and the one workspace a delete moves to the trash, by ID, since titles repeat), against the step's expectation, and gives each difference in plain words.
