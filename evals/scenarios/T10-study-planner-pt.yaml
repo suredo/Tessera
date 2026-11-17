@@ -1,0 +1,41 @@
+# T10 in Portuguese (docs/testing/app-catalogue.md, the PT variant), T10-study-planner's steps in
+# Brazilian Portuguese: a planner checked by the scheduling profile (VER-03) before it opens, kept
+# off the weekday the person rules out, then flashcards from pasted notes, checked by the cards
+# profile. The person adds a topic with the planner's own controls (EVAL-01); changes the rule in
+# words ("Sexta pode agora"), which changes the data, not the tool; and the next day finds it as
+# they left it. Whether both tools speak Portuguese, and sessions fall in the evenings, is the AI
+# review's.
+id: T10-study-planner-pt
+tier: advanced
+language: pt-BR
+person: "Uma estudante a duas semanas de uma prova"
+goal: "Um plano de estudos que siga as regras dela, e cartões de memorização das anotações"
+clock: { start: "2026-11-05T19:30:00", zone: "America/Sao_Paulo" }
+budget: { calls: 14 }
+acceptanceChecks: true
+profiles: [scheduling, cards]
+steps:
+  - say: "Minha prova é daqui a duas semanas. Me ajuda a organizar os assuntos; estudo à noite, nunca às sextas. Depois vou colar anotações para fazer cartões de memorização."
+    expect: { created: true, workspace: new }
+  - do: { fill: task-name, value: Estatística }
+  - do: { click: task-add }
+    expect: { version: unchanged, data: changed }
+  # The rule changes in words: a change to the data the tool keeps, not to the tool.
+  - say: "Sexta pode agora."
+    expect: { version: unchanged, data: changed }
+  - next-day: true
+    expect: { workspace: same, version: unchanged, data: unchanged }
+  - say: "Faz cartões de memorização destas anotações: Média: a soma dos valores dividida pela quantidade. Mediana: o valor do meio."
+    expect: { created: true, workspace: new }
+  - do: { fill: notes, value: "Moda: o valor que mais aparece" }
+  - do: { click: cards-make }
+    expect: { version: unchanged, data: changed }
+review:
+  - fulfilment
+  - useful-at-first-sight
+  - standard-style
+  - controls-work
+  - accessibility
+  - messages
+  - code-red-flags
+  - coherence
