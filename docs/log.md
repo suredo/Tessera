@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-17
+
+* **Changed**: An edit can declare a capability the change needs (A86, `CAP-01`, `GEN-13`): its answer may replace the tool's capabilities with every one the changed tool uses, so a form that gains a save button, or a tracker a chart, can declare files or chart instead of failing the static check on every repair; the host keeps the connection capability in step with the connections, and a look-only edit keeps them ([decision log](decisions/decision-log.md), [generation](code/server/generation.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T00:09:20Z.
+
 ## 2026-11-16
 
 * **Changed**: The setup check gives the exact fix for a missing program ([#325](https://github.com/suredo/Tessera/issues/325), `PLAT-03`): Anthropic's installer command for Claude Code on this computer, `npm install -g @openai/codex` for Codex, then to try again: Claude Code is found where Anthropic's installer puts it, which isn't on the PATH, and Codex in npm's folder, which is ([providers](code/server/providers.md)). No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-16T10:43:10Z.

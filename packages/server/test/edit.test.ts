@@ -559,6 +559,55 @@ describe("an edited tool's connections (CAP-02, A66, A74)", () => {
     expect(dropped.kind === "candidate" && dropped.artifact.capabilities).toEqual([]);
   });
 
+  it("A86: an edit replaces the capabilities when the change needs one, the connection capability following the connections", () => {
+    const save =
+      "button.onclick = () => tessera.saveFile({ name: 'a', type: 'text/csv', text: 'a' });";
+    const saving = {
+      ...quantity,
+      files: {
+        mode: "replace" as const,
+        code: { ...artifact.code, js: `const button = document.body; ${save}` },
+      },
+    };
+    // Without the capability, the static check says to declare it, which the edit now can.
+    expect(editedCandidate(input, saving)).toMatchObject({ kind: "failed", failure: "static" });
+    const declared = editedCandidate(input, {
+      ...saving,
+      capabilities: { mode: "replace", capabilities: ["files"] },
+    });
+    expect(declared.kind === "candidate" && declared.artifact.capabilities).toEqual(["files"]);
+    // Left out or unchanged, they are kept exactly; connection follows the connections, whatever
+    // the list says.
+    expect(
+      editedCandidate(withMovies, { ...quantity, capabilities: { mode: "unchanged" } }),
+    ).toMatchObject({ kind: "candidate", artifact: { capabilities: ["connection"] } });
+    const listed = editedCandidate(withMovies, {
+      ...quantity,
+      capabilities: { mode: "replace", capabilities: ["clock"] },
+    });
+    expect(listed.kind === "candidate" && listed.artifact.capabilities).toEqual([
+      "clock",
+      "connection",
+    ]);
+    const claimed = editedCandidate(input, {
+      ...quantity,
+      capabilities: { mode: "replace", capabilities: ["connection", "clock"] },
+    });
+    expect(claimed.kind === "candidate" && claimed.artifact.capabilities).toEqual(["clock"]);
+    // A look-only edit keeps them.
+    const look = { ...input, intent: { ...intent, lookOnly: true, behaviorChange: false } };
+    expect(
+      editedCandidate(look, {
+        ...style,
+        capabilities: { mode: "replace", capabilities: ["files"] },
+      }),
+    ).toEqual({
+      kind: "failed",
+      failure: "schema-shape",
+      findings: ["A style edit must keep the capabilities."],
+    });
+  });
+
   it("A66 A74: a connection the request doesn't allow is refused; by default only the ones it uses", () => {
     expect(
       editedCandidate(withMovies, {
