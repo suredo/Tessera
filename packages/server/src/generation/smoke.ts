@@ -1,6 +1,11 @@
 import type { Intent, LedgerTold, SmokeRepairRequest } from "@tessera/contracts";
 import type { GenerationResult } from "./result.ts";
-import { canonicalJson, creationSchema } from "@tessera/contracts";
+import {
+  BRIDGE_CAPABILITIES,
+  type BridgeCapability,
+  canonicalJson,
+  creationSchema,
+} from "@tessera/contracts";
 import { candidateMount } from "../host/index.ts";
 import type { RepairClass } from "../prompts/index.ts";
 import type { Provider, Routes } from "../providers/index.ts";
@@ -101,7 +106,13 @@ export async function repairSmoke(
                 canonicalJson(artifact.capabilities) ===
                 canonicalJson(original.artifact.capabilities)
                   ? { mode: "unchanged" }
-                  : { mode: "replace", capabilities: artifact.capabilities },
+                  : {
+                      mode: "replace",
+                      // Every one a version holds is the bridge's: creation and edits allow no other.
+                      capabilities: artifact.capabilities.filter((each): each is BridgeCapability =>
+                        Object.hasOwn(BRIDGE_CAPABILITIES, each),
+                      ),
+                    },
               data:
                 canonicalJson(artifact.data) === canonicalJson(original.artifact.data)
                   ? { mode: "unchanged" }
