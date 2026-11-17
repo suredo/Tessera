@@ -34,8 +34,32 @@ const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "T5-rsvp-form": [],
   "T6-tip-calculator": [],
   "T7-movie-finder": [],
-  "T10-study-planner": [],
-  "T10-study-planner-pt": [],
+  // T10 and T10 in Portuguese answered a repair for a rule given twice, which L-105 no longer
+  // asks for: until they are recorded again, their replays stop fitting at that repair.
+  "T10-study-planner": [
+    [
+      4,
+      [
+        "The data didn't change.",
+        `The answers don't fit this run, so it needs a new live run: Script "T10-study-planner" has a repair reply next, but the call is for intent.`,
+      ],
+    ],
+    [6, ["No tool was created.", "No new workspace is open."]],
+    [7, ["The tool shows 0 elements marked notes; the step needs one."]],
+    [8, ["The tool shows 0 elements marked cards-make; the step needs one."]],
+  ],
+  "T10-study-planner-pt": [
+    [
+      4,
+      [
+        "The data didn't change.",
+        `The answers don't fit this run, so it needs a new live run: Script "T10-study-planner-pt" has a repair reply next, but the call is for intent.`,
+      ],
+    ],
+    [6, ["No tool was created.", "No new workspace is open."]],
+    [7, ["The tool shows 0 elements marked notes; the step needs one."]],
+    [8, ["The tool shows 0 elements marked cards-make; the step needs one."]],
+  ],
   "T11-tutor-bookings": [],
   "T12-family-chores": [
     [2, ["The tool shows 0 elements marked item-name; the step needs one."]],
