@@ -2,8 +2,8 @@
   "about": "A live run of T12-family-chores, recorded for replay.",
   "scenario": "T12-family-chores",
   "recorded": {
-    "head": "27f047ad15a0f999c48abc0177c28f26b0ddfe19",
-    "at": "2026-11-17T02:05:44.274Z",
+    "head": "accbc600335f26f2ee053b1b394ad75ad09fe284",
+    "at": "2026-11-17T11:52:36.452Z",
     "cliVersion": "2.1.326"
   },
   "answers": [
@@ -13,8 +13,8 @@
         "stage": "intent",
         "value": {
           "kind": "create",
-          "interfacePart": "A chores board for my family: Ana, Leo and me.",
-          "dataPart": "Ana does laundry every Saturday.",
+          "interfacePart": "A chores board for my family",
+          "dataPart": "Family members Ana, Leo and me; Ana does laundry every Saturday",
           "behaviorChange": true,
           "lookOnly": false,
           "targetsCurrentTool": false,
@@ -29,11 +29,11 @@
               "request": "Ana, Leo and me"
             },
             {
-              "name": "Recurring laundry for Ana",
+              "name": "Recurring laundry chore",
               "request": "Ana does laundry every Saturday"
             }
           ],
-          "profile": "item-list",
+          "profile": "scheduling",
           "drawsCharts": false,
           "usesFiles": false,
           "connections": []
@@ -54,17 +54,16 @@
         "value": {
           "outcome": "tool",
           "name": "Family chores board",
-          "summary": "A shared list of chores for Ana, Leo and you, each with who does it and when. Ana's Saturday laundry is already on it; add more, tick them off, or remove them.",
+          "summary": "Shows upcoming chores for Ana, Leo and you, starting with Ana's laundry every Saturday. Add chores and pick who does them and on which weekday, and block weekdays when no chore should happen.",
           "uiMode": "standard",
-          "capabilities": [],
+          "capabilities": ["clock"],
           "code": {
-            "html": "<main class=\"wrap\">\n<h1>Family chores</h1>\n<p class=\"hint\">Who does what, and when.</p>\n<div class=\"add\" role=\"group\" aria-label=\"Add a chore\">\n<div class=\"field grow\"><label for=\"name\">Chore</label><input id=\"name\" type=\"text\" data-hook=\"item-name\" placeholder=\"e.g. Take out the trash\" autocomplete=\"off\"></div>\n<div class=\"field\"><label for=\"who\">Who</label><select id=\"who\"></select></div>\n<div class=\"field\"><label for=\"day\">When</label><select id=\"day\"></select></div>\n<button id=\"add\" type=\"button\" data-hook=\"item-add\">Add chore</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n<h2>Chores</h2>\n<p id=\"empty\" hidden>No chores yet. Add the first one above.</p>\n<ul id=\"list\"></ul>\n<button id=\"reset\" type=\"button\" class=\"secondary\">Clear all ticks for a new week</button>\n</main>",
-            "css": ".wrap{max-width:720px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-1);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 var(--ui-space-2)}\n.hint{margin:0 0 var(--ui-space-4);color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.add{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1)}\n.grow{flex:1 1 200px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput[type=text],select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;width:100%}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary,button.remove{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\n#reset{margin-top:var(--ui-space-4)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\nli{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel)}\nli input[type=checkbox]{width:24px;height:24px;accent-color:var(--ui-accent)}\n.txt{flex:1 1 160px;display:flex;flex-direction:column}\n.meta{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\nli.done .nm{text-decoration:line-through}\n#msg{min-height:1.5em;margin:var(--ui-space-2) 0 0;font-size:var(--ui-size-secondary)}\n#msg.err{color:var(--ui-error)}\n#msg.ok{color:var(--ui-success)}",
-            "js": "const DAYS=['Every day','Every Monday','Every Tuesday','Every Wednesday','Every Thursday','Every Friday','Every Saturday','Every Sunday','Any day'];\nlet chores=[],members=[],revs={};\nconst $=id=>document.getElementById(id);\nfunction say(t,k){const m=$('msg');m.textContent=t;m.className=k||'';}\nfunction fill(sel,vals,keep){const cur=keep?sel.value:'';sel.textContent='';for(const v of vals){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}if(cur&&vals.includes(cur))sel.value=cur;}\nfunction render(){\nfill($('who'),members.length?members:['Me'],true);\nconst ul=$('list');ul.textContent='';\n$('empty').hidden=chores.length>0;\nfor(const c of chores){\nconst li=document.createElement('li');li.setAttribute('data-hook','item');if(c.done)li.className='done';\nconst cb=document.createElement('input');cb.type='checkbox';cb.checked=!!c.done;cb.setAttribute('aria-label','Done: '+c.name);\ncb.addEventListener('change',()=>toggle(c.id,cb.checked));\nconst t=document.createElement('span');t.className='txt';\nconst n=document.createElement('span');n.className='nm';n.textContent=c.name;\nconst m=document.createElement('span');m.className='meta';m.textContent=c.assignee+' · '+c.day+(c.done?' · done':'');\nt.appendChild(n);t.appendChild(m);\nconst b=document.createElement('button');b.type='button';b.className='remove';b.setAttribute('data-hook','item-remove');b.textContent='Remove';b.setAttribute('aria-label','Remove '+c.name);\nb.addEventListener('click',()=>remove(c.id));\nli.appendChild(cb);li.appendChild(t);li.appendChild(b);ul.appendChild(li);}\n}\nasync function load(){\nconst r=await tessera.call('data.read',{});\nchores=r.data.chores||[];members=(r.data.members||[]).map(x=>x.name);revs=r.revisions.chores||{};render();}\nasync function patch(ops,okMsg){\ntry{await tessera.call('data.patch',{operations:ops});await load();say(okMsg,'ok');return true;}\ncatch(e){say('That did not work and nothing was changed. Please try again.','err');return false;}}\nasync function add(){\nconst name=$('name').value.trim();\nif(!name){say('Type the chore first.','err');$('name').focus();return;}\nconst ok=await patch([{op:'add',collection:'chores',record:{name:name,assignee:$('who').value,day:$('day').value,done:false}}],'Added “'+name+'”.');\nif(ok){$('name').value='';$('name').focus();}}\nfunction toggle(id,v){patch([{op:'replace',collection:'chores',id:id,revisionCount:revs[id],fields:{done:v}}],v?'Marked done.':'Marked not done.');}\nfunction remove(id){const c=chores.find(x=>x.id===id);patch([{op:'remove',collection:'chores',id:id,revisionCount:revs[id]}],'Removed “'+(c?c.name:'chore')+'”.');}\nfunction reset(){const ops=chores.filter(c=>c.done).map(c=>({op:'replace',collection:'chores',id:c.id,revisionCount:revs[c.id],fields:{done:false}}));\nif(!ops.length){say('No ticks to clear.');return;}patch(ops,'All ticks cleared.');}\n$('add').addEventListener('click',add);\n$('name').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add();}});\n$('reset').addEventListener('click',reset);\nfill($('day'),DAYS);\nload().catch(()=>say('Could not load the chores.','err'));"
+            "html": "<main>\n<h1>Family chores</h1>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a chore</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"tname\">Chore</label><input id=\"tname\" data-hook=\"task-name\" type=\"text\" placeholder=\"e.g. Dishes\"></div>\n<div class=\"f\"><label for=\"twho\">Who does it</label><select id=\"twho\"></select></div>\n<div class=\"f\"><label for=\"tday\">Repeats every</label><select id=\"tday\"></select></div>\n<button id=\"tadd\" data-hook=\"task-add\" type=\"button\">Add chore</button>\n</div>\n<p id=\"terr\" class=\"err\" role=\"alert\"></p>\n</section>\n<section aria-labelledby=\"h-s\">\n<h2 id=\"h-s\">Coming up (next 4 weeks)</h2>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"sessions\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-c\">\n<h2 id=\"h-c\">Chores</h2>\n<ul id=\"tasks\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-r\">\n<h2 id=\"h-r\">Days with no chores</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"rday\">Weekday</label><select id=\"rday\" data-hook=\"rule-day\"></select></div>\n<button id=\"radd\" data-hook=\"rule-add\" type=\"button\">Block this day</button>\n</div>\n<p id=\"rerr\" class=\"err\" role=\"alert\"></p>\n<ul id=\"rules\" class=\"list\"></ul>\n<p id=\"rempty\">No days blocked. Chores happen on their usual weekday.</p>\n</section>\n</main>",
+            "css": "main{max-width:720px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 150px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select,button{min-height:var(--ui-target);font:inherit;border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text)}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.meta{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.err{color:var(--ui-error);margin:var(--ui-space-2) 0 0;min-height:0}\n.ok{color:var(--ui-success)}",
+            "js": "const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nlet data={tasks:[],rules:[],members:[]};\nlet rev={};\nlet today=null;\nconst $=id=>document.getElementById(id);\nfunction parse(s){const p=s.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2]);}\nfunction fmt(ms){const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}\nfunction wd(ms){return new Date(ms).getUTCDay();}\nfunction names(){const m=(data.members||[]).map(x=>x.name);return m.length?m:['Ana','Leo','Me'];}\nfunction blocked(){return (data.rules||[]).map(r=>r.weekday);}\nfunction buildSessions(){\n const out=[];if(!today)return out;\n const b=blocked();const t0=parse(today);\n for(const t of data.tasks||[]){\n  let first=t0;while(wd(first)!==t.weekday)first+=86400000;\n  for(let k=0;k<4;k++){\n   let d=first+k*7*86400000;let n=0;\n   while(b.includes(wd(d))&&n<7){d+=86400000;n++;}\n   out.push({task:t,date:fmt(d)});\n  }\n }\n out.sort((a,c)=>a.date<c.date?-1:a.date>c.date?1:0);\n return out;\n}\nfunction el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}\nfunction render(){\n const sl=$('sessions');sl.textContent='';\n const ss=buildSessions();\n $('status').textContent=ss.length?'':'Nothing planned yet. Add a chore above.';\n for(const s of ss){\n  const li=el('li');li.setAttribute('data-hook','session');\n  const left=el('span');\n  const tm=el('time',fmt0(s.date));tm.setAttribute('datetime',s.date);\n  left.appendChild(tm);left.appendChild(document.createTextNode(' · '));\n  const nm=el('strong','');nm.textContent=s.task.name;nm.style.fontWeight='400';nm.setAttribute('data-hook','session-task');\n  left.appendChild(nm);\n  li.appendChild(left);li.appendChild(el('span','Who: '+s.task.assignee,'meta'));\n  sl.appendChild(li);\n }\n const tl=$('tasks');tl.textContent='';\n for(const t of data.tasks||[]){\n  const li=el('li');\n  li.appendChild(el('span',t.name+' — '+t.assignee+', every '+DAYS[t.weekday]));\n  const b=el('button','Remove','sec');b.type='button';b.setAttribute('aria-label','Remove chore '+t.name);\n  b.addEventListener('click',()=>removeTask(t.id));\n  li.appendChild(b);tl.appendChild(li);\n }\n if(!(data.tasks||[]).length)tl.appendChild(el('li','No chores yet.'));\n const rl=$('rules');rl.textContent='';\n for(const r of data.rules||[]){\n  const li=el('li');li.setAttribute('data-hook','rule');\n  li.appendChild(el('span','No chores on '+DAYS[r.weekday]+'s'));\n  const b=el('button','Remove','sec');b.type='button';b.setAttribute('data-hook','rule-remove');b.setAttribute('aria-label','Remove the rule for '+DAYS[r.weekday]);\n  b.addEventListener('click',()=>removeRule(r.id));\n  li.appendChild(b);rl.appendChild(li);\n }\n $('rempty').hidden=(data.rules||[]).length>0;\n}\nfunction fmt0(s){const ms=parse(s);const d=new Date(ms);return DAYS[d.getUTCDay()]+' '+s;}\nasync function load(){\n const r=await tessera.call('data.read',{});\n data=r.data;rev=r.revisions;\n if(!data.tasks)data.tasks=[];if(!data.rules)data.rules=[];\n render();\n}\nasync function patch(ops){\n try{await tessera.call('data.patch',{operations:ops});await load();return true;}\n catch(e){return false;}\n}\nasync function addTask(){\n const name=$('tname').value.trim();\n $('terr').textContent='';\n if(!name){$('terr').textContent='Type the chore’s name first.';$('tname').focus();return;}\n const ok=await patch([{op:'add',collection:'tasks',record:{name:name,assignee:$('twho').value,weekday:Number($('tday').value)}}]);\n if(ok){$('tname').value='';$('tname').focus();}else $('terr').textContent='Could not save the chore. Your text is still here; try again.';\n}\nasync function addRule(){\n const d=Number($('rday').value);$('rerr').textContent='';\n if(blocked().includes(d)){$('rerr').textContent=DAYS[d]+' is already blocked.';return;}\n if(blocked().length>=6){$('rerr').textContent='At least one weekday must stay open for chores.';return;}\n const ok=await patch([{op:'add',collection:'rules',record:{weekday:d}}]);\n if(!ok)$('rerr').textContent='Could not save the rule. Try again.';\n}\nasync function removeRule(id){\n const ok=await patch([{op:'remove',collection:'rules',id:id,revisionCount:(rev.rules||{})[id]||1}]);\n if(!ok)$('rerr').textContent='Could not remove the rule. Try again.';\n}\nasync function removeTask(id){\n const ok=await patch([{op:'remove',collection:'tasks',id:id,revisionCount:(rev.tasks||{})[id]||1}]);\n if(!ok)$('terr').textContent='Could not remove the chore. Try again.';\n}\nfunction fillSelects(){\n for(const n of names()){const o=el('option',n);o.value=n;$('twho').appendChild(o);}\n for(let i=0;i<7;i++){\n  const o=el('option',DAYS[i]);o.value=String(i);$('tday').appendChild(o);\n  const p=el('option',DAYS[i]);p.value=String(i);$('rday').appendChild(p);\n }\n}\n$('tadd').addEventListener('click',addTask);\n$('tname').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTask();}});\n$('radd').addEventListener('click',addRule);\n(async()=>{\n const c=await tessera.call('clock.now',{});today=c.date;\n await load();\n fillSelects();\n $('tday').value=String(wd(parse(today)));\n})();"
           },
           "data": {
             "schema": {
-              "$schema": "http://json-schema.org/draft-07/schema#",
               "type": "object",
               "properties": {
                 "members": {
@@ -76,14 +75,13 @@
                         "type": "string"
                       },
                       "name": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                       }
                     },
                     "required": ["id", "name"]
                   }
                 },
-                "chores": {
+                "tasks": {
                   "type": "array",
                   "items": {
                     "type": "object",
@@ -92,24 +90,39 @@
                         "type": "string"
                       },
                       "name": {
-                        "type": "string",
-                        "minLength": 1
+                        "type": "string"
                       },
                       "assignee": {
                         "type": "string"
                       },
-                      "day": {
-                        "type": "string"
-                      },
-                      "done": {
-                        "type": "boolean"
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
                       }
                     },
-                    "required": ["id", "name", "assignee", "day", "done"]
+                    "required": ["id", "name", "assignee", "weekday"]
+                  }
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      }
+                    },
+                    "required": ["id", "weekday"]
                   }
                 }
               },
-              "required": ["members", "chores"]
+              "required": ["members", "tasks", "rules"]
             },
             "reusableDefaults": {
               "members": [
@@ -126,16 +139,16 @@
                   "name": "Me"
                 }
               ],
-              "chores": []
+              "tasks": [],
+              "rules": []
             },
             "initialState": {
-              "chores": [
+              "tasks": [
                 {
-                  "id": "c-laundry",
+                  "id": "t-laundry",
                   "name": "Laundry",
                   "assignee": "Ana",
-                  "day": "Every Saturday",
-                  "done": false
+                  "weekday": 6
                 }
               ]
             }
@@ -147,10 +160,132 @@
         "bridge@2ae6fa4b9337",
         "ui-standard@5953c402b1d6",
         "accessibility@bd63b2577331",
-        "profile@a230baa738e0",
-        "create@95fdc23aa768",
+        "profile@3877bf3c212e",
+        "create@6849cfbe5453",
         "request@47a51319da7d",
         "language@2a8e10d77d23"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "tool",
+          "name": "Family chores board",
+          "summary": "Shows upcoming chores for Ana, Leo and you, starting with Ana's laundry every Saturday. Add chores and pick who does them and on which weekday, and block weekdays when no chore should happen.",
+          "uiMode": "standard",
+          "capabilities": ["clock"],
+          "code": {
+            "html": "<main>\n<h1>Family chores</h1>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a chore</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"tname\">Chore</label><input id=\"tname\" data-hook=\"task-name\" type=\"text\" placeholder=\"e.g. Dishes\"></div>\n<div class=\"f\"><label for=\"twho\">Who does it</label><select id=\"twho\"></select></div>\n<div class=\"f\"><label for=\"tday\">Repeats every</label><select id=\"tday\"></select></div>\n<button id=\"tadd\" data-hook=\"task-add\" type=\"button\">Add chore</button>\n</div>\n<p id=\"terr\" class=\"err\" role=\"alert\"></p>\n</section>\n<section aria-labelledby=\"h-s\">\n<h2 id=\"h-s\">Coming up (next 4 weeks)</h2>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"sessions\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-c\">\n<h2 id=\"h-c\">Chores</h2>\n<ul id=\"tasks\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-r\">\n<h2 id=\"h-r\">Days with no chores</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"rday\">Weekday</label><select id=\"rday\" data-hook=\"rule-day\"></select></div>\n<button id=\"radd\" data-hook=\"rule-add\" type=\"button\">Block this day</button>\n</div>\n<p id=\"rerr\" class=\"err\" role=\"alert\"></p>\n<ul id=\"rules\" class=\"list\"></ul>\n<p id=\"rempty\">No days blocked. Chores happen on their usual weekday.</p>\n</section>\n</main>",
+            "css": "main{max-width:720px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 150px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select,button{min-height:var(--ui-target);font:inherit;border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text)}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.meta{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.err{color:var(--ui-error);margin:var(--ui-space-2) 0 0;min-height:0}\n.ok{color:var(--ui-success)}",
+            "js": "const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nlet data={tasks:[],rules:[],members:[]};\nlet rev={};\nlet today=null;\nconst $=id=>document.getElementById(id);\nfunction parse(s){const p=s.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2]);}\nfunction fmt(ms){const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}\nfunction wd(ms){return new Date(ms).getUTCDay();}\nfunction names(){const m=(data.members||[]).map(x=>x.name);return m.length?m:['Ana','Leo','Me'];}\nfunction blocked(){return (data.rules||[]).map(r=>r.weekday);}\nfunction buildSessions(){\n const out=[];if(!today)return out;\n const b=blocked();const t0=parse(today);\n for(const t of data.tasks||[]){\n  let first=t0;while(wd(first)!==t.weekday)first+=86400000;\n  for(let k=0;k<4;k++){\n   let d=first+k*7*86400000;let n=0;\n   while(b.includes(wd(d))&&n<7){d+=86400000;n++;}\n   out.push({task:t,date:fmt(d)});\n  }\n }\n out.sort((a,c)=>a.date<c.date?-1:a.date>c.date?1:0);\n return out;\n}\nfunction make(tag){\n if(tag==='li')return document.createElement('li');\n if(tag==='span')return document.createElement('span');\n if(tag==='strong')return document.createElement('strong');\n if(tag==='time')return document.createElement('time');\n if(tag==='button')return document.createElement('button');\n return document.createElement('option');\n}\nfunction el(tag,text,cls){const e=make(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}\nfunction render(){\n const sl=$('sessions');sl.textContent='';\n const ss=buildSessions();\n $('status').textContent=ss.length?'':'Nothing planned yet. Add a chore above.';\n for(const s of ss){\n  const li=el('li');li.setAttribute('data-hook','session');\n  const left=el('span');\n  const tm=el('time',fmt0(s.date));tm.setAttribute('datetime',s.date);\n  left.appendChild(tm);left.appendChild(document.createTextNode(' · '));\n  const nm=el('strong','');nm.textContent=s.task.name;nm.style.fontWeight='400';nm.setAttribute('data-hook','session-task');\n  left.appendChild(nm);\n  li.appendChild(left);li.appendChild(el('span','Who: '+s.task.assignee,'meta'));\n  sl.appendChild(li);\n }\n const tl=$('tasks');tl.textContent='';\n for(const t of data.tasks||[]){\n  const li=el('li');\n  li.appendChild(el('span',t.name+' — '+t.assignee+', every '+DAYS[t.weekday]));\n  const b=el('button','Remove','sec');b.type='button';b.setAttribute('aria-label','Remove chore '+t.name);\n  b.addEventListener('click',()=>removeTask(t.id));\n  li.appendChild(b);tl.appendChild(li);\n }\n if(!(data.tasks||[]).length)tl.appendChild(el('li','No chores yet.'));\n const rl=$('rules');rl.textContent='';\n for(const r of data.rules||[]){\n  const li=el('li');li.setAttribute('data-hook','rule');\n  li.appendChild(el('span','No chores on '+DAYS[r.weekday]+'s'));\n  const b=el('button','Remove','sec');b.type='button';b.setAttribute('data-hook','rule-remove');b.setAttribute('aria-label','Remove the rule for '+DAYS[r.weekday]);\n  b.addEventListener('click',()=>removeRule(r.id));\n  li.appendChild(b);rl.appendChild(li);\n }\n $('rempty').hidden=(data.rules||[]).length>0;\n}\nfunction fmt0(s){const ms=parse(s);const d=new Date(ms);return DAYS[d.getUTCDay()]+' '+s;}\nasync function load(){\n const r=await tessera.call('data.read',{});\n data=r.data;rev=r.revisions;\n if(!data.tasks)data.tasks=[];if(!data.rules)data.rules=[];\n render();\n}\nasync function patch(ops){\n try{await tessera.call('data.patch',{operations:ops});await load();return true;}\n catch(e){return false;}\n}\nasync function addTask(){\n const name=$('tname').value.trim();\n $('terr').textContent='';\n if(!name){$('terr').textContent='Type the chore’s name first.';$('tname').focus();return;}\n const ok=await patch([{op:'add',collection:'tasks',record:{name:name,assignee:$('twho').value,weekday:Number($('tday').value)}}]);\n if(ok){$('tname').value='';$('tname').focus();}else $('terr').textContent='Could not save the chore. Your text is still here; try again.';\n}\nasync function addRule(){\n const d=Number($('rday').value);$('rerr').textContent='';\n if(blocked().includes(d)){$('rerr').textContent=DAYS[d]+' is already blocked.';return;}\n if(blocked().length>=6){$('rerr').textContent='At least one weekday must stay open for chores.';return;}\n const ok=await patch([{op:'add',collection:'rules',record:{weekday:d}}]);\n if(!ok)$('rerr').textContent='Could not save the rule. Try again.';\n}\nasync function removeRule(id){\n const ok=await patch([{op:'remove',collection:'rules',id:id,revisionCount:(rev.rules||{})[id]||1}]);\n if(!ok)$('rerr').textContent='Could not remove the rule. Try again.';\n}\nasync function removeTask(id){\n const ok=await patch([{op:'remove',collection:'tasks',id:id,revisionCount:(rev.tasks||{})[id]||1}]);\n if(!ok)$('terr').textContent='Could not remove the chore. Try again.';\n}\nfunction fillSelects(){\n for(const n of names()){const o=el('option',n);o.value=n;$('twho').appendChild(o);}\n for(let i=0;i<7;i++){\n  const o=el('option',DAYS[i]);o.value=String(i);$('tday').appendChild(o);\n  const p=el('option',DAYS[i]);p.value=String(i);$('rday').appendChild(p);\n }\n}\n$('tadd').addEventListener('click',addTask);\n$('tname').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTask();}});\n$('radd').addEventListener('click',addRule);\n(async()=>{\n const c=await tessera.call('clock.now',{});today=c.date;\n await load();\n fillSelects();\n $('tday').value=String(wd(parse(today)));\n})();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "members": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "name"]
+                  }
+                },
+                "tasks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "assignee": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      }
+                    },
+                    "required": ["id", "name", "assignee", "weekday"]
+                  }
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      }
+                    },
+                    "required": ["id", "weekday"]
+                  }
+                }
+              },
+              "required": ["members", "tasks", "rules"]
+            },
+            "reusableDefaults": {
+              "members": [
+                {
+                  "id": "m-ana",
+                  "name": "Ana"
+                },
+                {
+                  "id": "m-leo",
+                  "name": "Leo"
+                },
+                {
+                  "id": "m-me",
+                  "name": "Me"
+                }
+              ],
+              "tasks": [],
+              "rules": []
+            },
+            "initialState": {
+              "tasks": [
+                {
+                  "id": "t-laundry",
+                  "name": "Laundry",
+                  "assignee": "Ana",
+                  "weekday": 6
+                }
+              ]
+            }
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@3877bf3c212e",
+        "create@6849cfbe5453",
+        "repair-static@a49fe96d58a7",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "attempt@db8c6b71b427",
+        "diagnostics@0b26a00a48fd"
       ]
     },
     {
@@ -167,7 +302,7 @@
           "language": "en",
           "features": [
             {
-              "name": "Trash chore for Leo",
+              "name": "Add Leo's trash chore",
               "request": "Leo takes out the trash every Tuesday."
             }
           ],
@@ -192,17 +327,16 @@
         "stage": "data",
         "value": {
           "outcome": "patch",
-          "summary": "Adds a new chore, \"Take out trash\", assigned to Leo every Tuesday and not yet done. No existing chores are changed.",
+          "summary": "Adds a recurring chore, Take out trash, assigned to Leo on Tuesdays. Existing entries stay as they are.",
           "patch": {
             "operations": [
               {
                 "op": "add",
-                "collection": "chores",
+                "collection": "tasks",
                 "record": {
                   "name": "Take out trash",
                   "assignee": "Leo",
-                  "day": "Every Tuesday",
-                  "done": false
+                  "weekday": 2
                 }
               }
             ]
@@ -231,7 +365,7 @@
           "language": "en",
           "features": [
             {
-              "name": "Mark laundry done",
+              "name": "log laundry done",
               "request": "Ana did the laundry."
             }
           ],
@@ -255,21 +389,8 @@
         "kind": "value",
         "stage": "data",
         "value": {
-          "outcome": "patch",
-          "summary": "Mark Ana's Saturday laundry chore as done. No other chores or members will change.",
-          "patch": {
-            "operations": [
-              {
-                "op": "replace",
-                "collection": "chores",
-                "id": "c-laundry",
-                "revisionCount": 2,
-                "fields": {
-                  "done": true
-                }
-              }
-            ]
-          }
+          "outcome": "cannot",
+          "reason": "This chores board has no field for marking a chore as done, so I can't record that Ana did the laundry. Her laundry chore stays as it is: every Saturday, assigned to Ana."
         }
       },
       "parts": [

@@ -20,36 +20,36 @@ const replays = path.join(scenarios, "replays");
 // The steps each recorded run fails against today's scenario files; every other step passes. J6
 // is the M2 live run's recording (evals/reports/2026-11-05-m2-live-run.md); T6 and V9 are M3's
 // (evals/reports/2026-11-09-m3-live-run.md, evals/reports/2026-11-10-acceptance-run.md). The
-// rest are M4's (evals/reports/2026-11-17-m4-live-run.md), each failing as it did live: T3 at its
-// first request (L-103), T10 in Portuguese at its flashcards (L-104), T12's board with no filter,
-// and T14's two buttons marked as the edit. A run whose first step failed is listed in
-// stoppedLive, with every later step blocked.
+// rest are M4's (evals/reports/2026-11-17-m4-live-run.md), each failing as it did live; T3, T10
+// in Portuguese, T12 and T14 are their reruns after L-103 and L-104: T12's board was made as a
+// planner, with none of its steps' hooks and no way to mark a chore done, and T14 marked two
+// buttons as the edit. A run whose first step failed is listed in stoppedLive, with every later
+// step blocked.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "J6-limits": [],
   "T1-shopping-list": [],
   "T2-reading-list": [],
-  "T3-spending-chart": [[1, ["No tool was created.", "No new workspace is open."]]],
+  "T3-spending-chart": [],
   "T4-habit-tracker": [],
   "T5-rsvp-form": [],
   "T6-tip-calculator": [],
   "T7-movie-finder": [],
   "T10-study-planner": [],
-  "T10-study-planner-pt": [
-    [6, ["No tool was created.", "No new workspace is open."]],
-    [7, ["The tool shows 0 elements marked notes; the step needs one."]],
-    [8, ["The tool shows 0 elements marked cards-make; the step needs one."]],
-  ],
+  "T10-study-planner-pt": [],
   "T11-tutor-bookings": [],
   "T12-family-chores": [
+    [2, ["The tool shows 0 elements marked item-name; the step needs one."]],
     [3, ["The tool shows 0 elements marked item-category; the step needs one."]],
+    [4, ["The tool shows 0 elements marked item-add; the step needs one."]],
     [5, ["The tool shows 0 elements marked filter; the step needs one."]],
+    [7, ["The data didn't change."]],
   ],
   "T13-drawing-board": [],
   "T14-image-editor": [[3, ["The tool shows 2 elements marked image-edit; the step needs one."]]],
   "V9-acceptance-checks": [],
 };
 // The recorded runs whose first step failed, so the runner stopped there (the stop rule).
-const stoppedLive = new Set<string>(["T3-spending-chart"]);
+const stoppedLive = new Set<string>();
 
 test("EVAL-07: every recorded live run has its expected steps listed here", () => {
   const recorded = fs.readdirSync(replays).map((f) => path.basename(f, ".json"));

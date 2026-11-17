@@ -2,8 +2,8 @@
   "about": "A live run of T3-spending-chart, recorded for replay.",
   "scenario": "T3-spending-chart",
   "recorded": {
-    "head": "27f047ad15a0f999c48abc0177c28f26b0ddfe19",
-    "at": "2026-11-17T01:46:22.614Z",
+    "head": "accbc600335f26f2ee053b1b394ad75ad09fe284",
+    "at": "2026-11-17T11:47:14.134Z",
     "cliVersion": "2.1.326"
   },
   "answers": [
@@ -21,11 +21,11 @@
           "language": "en",
           "features": [
             {
-              "name": "Monthly spending chart",
+              "name": "Spending chart",
               "request": "Show my spending this month as a chart"
             },
             {
-              "name": "Spending amounts",
+              "name": "Spending entries",
               "request": "rent 1200, food 450, transport 120, fun 200"
             }
           ],
@@ -49,10 +49,15 @@
         "stage": "create",
         "value": {
           "outcome": "tool",
-          "name": "Monthly spending",
-          "summary": "Shows this month's spending as a chart with a total. It starts with rent, food, transport and fun, and you can add or remove items.",
+          "name": "Monthly spending chart",
+          "summary": "Shows this month's spending as a chart with a total. Your rent, food, transport and fun amounts are already in; add or remove entries as you go.",
           "uiMode": "standard",
           "capabilities": ["chart"],
+          "code": {
+            "html": "<main>\n<h1>Spending this month</h1>\n<p class=\"sec\">Total: <strong data-hook=\"total\" id=\"total\">0</strong></p>\n<div id=\"chartbox\" data-hook=\"chart\" aria-label=\"Spending chart\"></div>\n<p id=\"empty\" hidden>No entries yet. Add one below to see the chart.</p>\n<h2>Entries</h2>\n<ul id=\"list\"></ul>\n<h2>Add an entry</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"nm\">Name</label><input id=\"nm\" data-hook=\"entry-name\" type=\"text\" autocomplete=\"off\"></div>\n<div class=\"f\"><label for=\"vl\">Amount</label><input id=\"vl\" data-hook=\"entry-value\" type=\"number\" step=\"any\" min=\"0\" inputmode=\"decimal\"></div>\n<button id=\"add\" data-hook=\"entry-add\" type=\"button\">Add</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n</main>",
+            "css": "main{max-width:640px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.sec{color:var(--ui-text-secondary);margin:0 0 var(--ui-space-4)}\n.sec strong{color:var(--ui-text);font-weight:600}\nul{list-style:none;margin:0;padding:0}\nli{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\nli .n{flex:1;overflow-wrap:anywhere}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\n#add{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n#msg{min-height:1.5em;color:var(--ui-text-secondary)}\n#msg.err{color:var(--ui-error)}",
+            "js": "let entries=[],revs={};\nconst $=id=>document.getElementById(id);\nfunction say(t,err){const m=$('msg');m.textContent=t;m.className=err?'err':'';}\nfunction fmt(n){return String(Math.round(n*100)/100);}\nfunction render(){\n const list=$('list');list.textContent='';\n let sum=0;\n for(const e of entries){\n  sum+=e.amount;\n  const li=document.createElement('li');\n  const n=document.createElement('span');n.className='n';n.textContent=e.name;\n  const a=document.createElement('span');a.textContent=fmt(e.amount);\n  const b=document.createElement('button');b.type='button';b.textContent='Remove';\n  b.setAttribute('aria-label','Remove '+e.name);\n  b.addEventListener('click',()=>remove(e.id));\n  li.append(n,a,b);list.appendChild(li);\n }\n $('total').textContent=fmt(sum);\n const has=entries.length>0;\n $('empty').hidden=has;$('chartbox').hidden=!has;\n if(has){tessera.chart($('chartbox'),{type:'pie',title:'Spending this month',labels:entries.map(e=>e.name.slice(0,80)),series:[{name:'Spending',values:entries.map(e=>e.amount)}]});}\n}\nasync function load(){\n const r=await tessera.call('data.read',{});\n entries=(r.data.entries||[]);revs=(r.revisions.entries||{});\n render();\n}\nasync function add(){\n const name=$('nm').value.trim();const raw=$('vl').value;const v=Number(raw);\n if(!name){say('Type a name for the entry.',true);$('nm').focus();return;}\n if(raw===''||!isFinite(v)||v<0){say('Type an amount of 0 or more.',true);$('vl').focus();return;}\n try{\n  await tessera.call('data.patch',{operations:[{op:'add',collection:'entries',record:{name:name,amount:v}}]});\n  $('nm').value='';$('vl').value='';\n  await load();say('Added '+name+'.');$('nm').focus();\n }catch(e){say('Could not add the entry. Your text is still here; try again.',true);}\n}\nasync function remove(id){\n const e=entries.find(x=>x.id===id);\n try{\n  await tessera.call('data.patch',{operations:[{op:'remove',collection:'entries',id:id,revisionCount:revs[id]}]});\n  await load();say('Removed '+(e?e.name:'entry')+'.');$('nm').focus();\n }catch(err){say('Could not remove the entry. Try again.',true);}\n}\n$('add').addEventListener('click',add);\nfor(const id of ['nm','vl']){$(id).addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();add();}});}\nload().catch(()=>say('Could not load your entries.',true));"
+          },
           "data": {
             "schema": {
               "entries": {
@@ -67,11 +72,12 @@
                       "type": "string",
                       "maxLength": 80
                     },
-                    "value": {
-                      "type": "number"
+                    "amount": {
+                      "type": "number",
+                      "minimum": 0
                     }
                   },
-                  "required": ["id", "name", "value"]
+                  "required": ["id", "name", "amount"]
                 }
               }
             },
@@ -83,30 +89,25 @@
                 {
                   "id": "rent",
                   "name": "Rent",
-                  "value": 1200
+                  "amount": 1200
                 },
                 {
                   "id": "food",
                   "name": "Food",
-                  "value": 450
+                  "amount": 450
                 },
                 {
                   "id": "transport",
                   "name": "Transport",
-                  "value": 120
+                  "amount": 120
                 },
                 {
                   "id": "fun",
                   "name": "Fun",
-                  "value": 200
+                  "amount": 200
                 }
               ]
             }
-          },
-          "code": {
-            "html": "<h1>Spending this month</h1>\n<p class=\"total-line\">Total: <strong data-hook=\"total\" id=\"total\">0</strong></p>\n<div data-hook=\"chart\" id=\"chart\" aria-label=\"Spending chart\"></div>\n<p id=\"empty\" hidden>No spending yet. Add an item below.</p>\n<h2>Items</h2>\n<ul id=\"list\"></ul>\n<div class=\"row\">\n<div class=\"field\"><label for=\"name\">Name</label><input id=\"name\" data-hook=\"entry-name\" type=\"text\" maxlength=\"80\"></div>\n<div class=\"field\"><label for=\"value\">Amount</label><input id=\"value\" data-hook=\"entry-value\" type=\"number\" step=\"0.01\" min=\"0\"></div>\n<button id=\"add\" data-hook=\"entry-add\" type=\"button\">Add</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>",
-            "css": "body{font-family:var(--ui-font);color:var(--ui-text);background:var(--ui-background);}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 var(--ui-space-2)}\n.total-line{margin:0 0 var(--ui-space-3)}\nul{list-style:none;padding:0;margin:0}\nli{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-2);padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end;margin-top:var(--ui-space-4)}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-2);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton#add{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n#msg{min-height:1.5em;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n#msg.error{color:var(--ui-error)}",
-            "js": "let entries=[];let revs={};\nconst $=id=>document.getElementById(id);\nfunction fmt(n){return String(Math.round(n*100)/100);}\nfunction say(t,err){const m=$('msg');m.textContent=t;m.className=err?'error':'';}\nfunction render(){\n  let total=0;for(const e of entries){total+=e.value;}\n  $('total').textContent=fmt(total);\n  const list=$('list');list.textContent='';\n  for(const e of entries){\n    const li=document.createElement('li');\n    const s=document.createElement('span');s.textContent=e.name+': '+fmt(e.value);\n    const b=document.createElement('button');b.type='button';b.textContent='Remove';\n    b.setAttribute('aria-label','Remove '+e.name);\n    b.addEventListener('click',()=>removeEntry(e.id));\n    li.appendChild(s);li.appendChild(b);list.appendChild(li);\n  }\n  const has=entries.length>0;\n  $('empty').hidden=has;$('chart').hidden=!has;\n  if(has){\n    tessera.chart($('chart'),{type:'pie',title:'Spending this month',labels:entries.map(e=>e.name.slice(0,80)),series:[{name:'Spending',values:entries.map(e=>e.value)}]});\n  }\n}\nasync function load(){\n  const r=await tessera.call('data.read',{});\n  entries=Array.isArray(r.data.entries)?r.data.entries:[];\n  revs=(r.revisions&&r.revisions.entries)||{};\n  render();\n}\nasync function addEntry(){\n  const name=$('name').value.trim();\n  const raw=$('value').value;\n  const value=Number(raw);\n  if(!name){say('Type a name for the item.',true);$('name').focus();return;}\n  if(raw===''||!isFinite(value)||value<0){say('Type an amount of 0 or more.',true);$('value').focus();return;}\n  try{\n    await tessera.call('data.patch',{operations:[{op:'add',collection:'entries',record:{name:name,value:value}}]});\n    $('name').value='';$('value').value='';\n    await load();\n    say('Added '+name+'.');\n    $('name').focus();\n  }catch(e){say('Could not save the item. Your entry is still here; try again.',true);}\n}\nasync function removeEntry(id){\n  const rc=revs[id];\n  const e=entries.find(x=>x.id===id);\n  try{\n    await tessera.call('data.patch',{operations:[{op:'remove',collection:'entries',id:id,revisionCount:rc}]});\n    await load();\n    say('Removed '+(e?e.name:'item')+'.');\n    $('name').focus();\n  }catch(err){say('Could not remove the item. Try again.',true);}\n}\n$('add').addEventListener('click',addEntry);\n$('value').addEventListener('keydown',ev=>{if(ev.key==='Enter'){addEntry();}});\n$('name').addEventListener('keydown',ev=>{if(ev.key==='Enter'){addEntry();}});\nload().catch(()=>say('Could not load your spending.',true));"
           }
         }
       },
@@ -117,7 +118,7 @@
         "accessibility@bd63b2577331",
         "chart@4c5b56cace80",
         "profile@20cd0c9c7df0",
-        "create@95fdc23aa768",
+        "create@6849cfbe5453",
         "request@47a51319da7d",
         "language@2a8e10d77d23"
       ]
@@ -128,59 +129,64 @@
         "stage": "repair",
         "value": {
           "outcome": "tool",
-          "name": "Monthly spending",
-          "summary": "Shows this month's spending as a chart with a total. It starts with rent, food, transport and fun, and you can add or remove items.",
+          "name": "Monthly spending chart",
+          "summary": "Shows this month's spending as a chart with a total. Your rent, food, transport and fun amounts are already in; add or remove entries as you go.",
           "code": {
-            "html": "<h1>Spending this month</h1>\n<p class=\"total-line\">Total: <strong data-hook=\"total\" id=\"total\">0</strong></p>\n<div data-hook=\"chart\" id=\"chart\" aria-label=\"Spending chart\"></div>\n<p id=\"empty\" hidden>No spending yet. Add an item below.</p>\n<h2>Items</h2>\n<ul id=\"list\"></ul>\n<div class=\"row\">\n<div class=\"field\"><label for=\"name\">Name</label><input id=\"name\" data-hook=\"entry-name\" type=\"text\" maxlength=\"80\"></div>\n<div class=\"field\"><label for=\"value\">Amount</label><input id=\"value\" data-hook=\"entry-value\" type=\"number\" step=\"0.01\" min=\"0\"></div>\n<button id=\"add\" data-hook=\"entry-add\" type=\"button\">Add</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>",
-            "css": "body{font-family:var(--ui-font);color:var(--ui-text);background:var(--ui-background);}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 var(--ui-space-2)}\n.total-line{margin:0 0 var(--ui-space-3)}\nul{list-style:none;padding:0;margin:0}\nli{display:flex;align-items:center;justify-content:space-between;gap:var(--ui-space-2);padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end;margin-top:var(--ui-space-4)}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-2);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton#add{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n#msg{min-height:1.5em;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n#msg.error{color:var(--ui-error)}",
-            "js": "let entries=[];let revs={};\nconst $=id=>document.getElementById(id);\nfunction fmt(n){return String(Math.round(n*100)/100);}\nfunction say(t,err){const m=$('msg');m.textContent=t;m.className=err?'error':'';}\nfunction render(){\n  let total=0;for(const e of entries){total+=e.value;}\n  $('total').textContent=fmt(total);\n  const list=$('list');list.textContent='';\n  for(const e of entries){\n    const li=document.createElement('li');\n    const s=document.createElement('span');s.textContent=e.name+': '+fmt(e.value);\n    const b=document.createElement('button');b.type='button';b.textContent='Remove';\n    b.setAttribute('aria-label','Remove '+e.name);\n    b.addEventListener('click',()=>removeEntry(e.id));\n    li.appendChild(s);li.appendChild(b);list.appendChild(li);\n  }\n  const has=entries.length>0;\n  $('empty').hidden=has;$('chart').hidden=!has;\n  if(has){\n    tessera.chart($('chart'),{type:'pie',title:'Spending this month',labels:entries.map(e=>e.name.slice(0,80)),series:[{name:'Spending',values:entries.map(e=>e.value)}]});\n  }\n}\nasync function load(){\n  const r=await tessera.call('data.read',{});\n  entries=Array.isArray(r.data.expenses)?r.data.expenses:[];\n  revs=(r.revisions&&r.revisions.expenses)||{};\n  render();\n}\nasync function addEntry(){\n  const name=$('name').value.trim();\n  const raw=$('value').value;\n  const value=Number(raw);\n  if(!name){say('Type a name for the item.',true);$('name').focus();return;}\n  if(raw===''||!isFinite(value)||value<0){say('Type an amount of 0 or more.',true);$('value').focus();return;}\n  try{\n    await tessera.call('data.patch',{operations:[{op:'add',collection:'expenses',record:{name:name,value:value}}]});\n    $('name').value='';$('value').value='';\n    await load();\n    say('Added '+name+'.');\n    $('name').focus();\n  }catch(e){say('Could not save the item. Your entry is still here; try again.',true);}\n}\nasync function removeEntry(id){\n  const rc=revs[id];\n  const e=entries.find(x=>x.id===id);\n  try{\n    await tessera.call('data.patch',{operations:[{op:'remove',collection:'expenses',id:id,revisionCount:rc}]});\n    await load();\n    say('Removed '+(e?e.name:'item')+'.');\n    $('name').focus();\n  }catch(err){say('Could not remove the item. Try again.',true);}\n}\n$('add').addEventListener('click',addEntry);\n$('value').addEventListener('keydown',ev=>{if(ev.key==='Enter'){addEntry();}});\n$('name').addEventListener('keydown',ev=>{if(ev.key==='Enter'){addEntry();}});\nload().catch(()=>say('Could not load your spending.',true));"
+            "html": "<main>\n<h1>Spending this month</h1>\n<p class=\"sec\">Total: <strong data-hook=\"total\" id=\"total\">0</strong></p>\n<div id=\"chartbox\" data-hook=\"chart\" aria-label=\"Spending chart\"></div>\n<p id=\"empty\" hidden>No entries yet. Add one below to see the chart.</p>\n<h2>Entries</h2>\n<ul id=\"list\"></ul>\n<h2>Add an entry</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"nm\">Name</label><input id=\"nm\" data-hook=\"entry-name\" type=\"text\" autocomplete=\"off\"></div>\n<div class=\"f\"><label for=\"vl\">Amount</label><input id=\"vl\" data-hook=\"entry-value\" type=\"number\" step=\"any\" min=\"0\" inputmode=\"decimal\"></div>\n<button id=\"add\" data-hook=\"entry-add\" type=\"button\">Add</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n</main>",
+            "css": "main{max-width:640px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.sec{color:var(--ui-text-secondary);margin:0 0 var(--ui-space-4)}\n.sec strong{color:var(--ui-text);font-weight:600}\nul{list-style:none;margin:0;padding:0}\nli{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\nli .n{flex:1;overflow-wrap:anywhere}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\n#add{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n#msg{min-height:1.5em;color:var(--ui-text-secondary)}\n#msg.err{color:var(--ui-error)}",
+            "js": "let entries=[],revs={};\nconst $=id=>document.getElementById(id);\nfunction say(t,err){const m=$('msg');m.textContent=t;m.className=err?'err':'';}\nfunction fmt(n){return String(Math.round(n*100)/100);}\nfunction render(){\n const list=$('list');list.textContent='';\n let sum=0;\n for(const e of entries){\n  sum+=e.amount;\n  const li=document.createElement('li');\n  const n=document.createElement('span');n.className='n';n.textContent=e.name;\n  const a=document.createElement('span');a.textContent=fmt(e.amount);\n  const b=document.createElement('button');b.type='button';b.textContent='Remove';\n  b.setAttribute('aria-label','Remove '+e.name);\n  b.addEventListener('click',()=>remove(e.id));\n  li.append(n,a,b);list.appendChild(li);\n }\n $('total').textContent=fmt(sum);\n const has=entries.length>0;\n $('empty').hidden=has;$('chartbox').hidden=!has;\n if(has){tessera.chart($('chartbox'),{type:'pie',title:'Spending this month',labels:entries.map(e=>e.name.slice(0,80)),series:[{name:'Spending',values:entries.map(e=>e.amount)}]});}\n}\nasync function load(){\n const r=await tessera.call('data.read',{});\n entries=(r.data.entries||[]);revs=(r.revisions.entries||{});\n render();\n}\nasync function add(){\n const name=$('nm').value.trim();const raw=$('vl').value;const v=Number(raw);\n if(!name){say('Type a name for the entry.',true);$('nm').focus();return;}\n if(raw===''||!isFinite(v)||v<0){say('Type an amount of 0 or more.',true);$('vl').focus();return;}\n try{\n  await tessera.call('data.patch',{operations:[{op:'add',collection:'entries',record:{name:name,amount:v}}]});\n  $('nm').value='';$('vl').value='';\n  await load();say('Added '+name+'.');$('nm').focus();\n }catch(e){say('Could not add the entry. Your text is still here; try again.',true);}\n}\nasync function remove(id){\n const e=entries.find(x=>x.id===id);\n try{\n  await tessera.call('data.patch',{operations:[{op:'remove',collection:'entries',id:id,revisionCount:revs[id]}]});\n  await load();say('Removed '+(e?e.name:'entry')+'.');$('nm').focus();\n }catch(err){say('Could not remove the entry. Try again.',true);}\n}\n$('add').addEventListener('click',add);\nfor(const id of ['nm','vl']){$(id).addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();add();}});}\nload().catch(()=>say('Could not load your entries.',true));"
           },
           "data": {
             "schema": {
-              "expenses": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
+              "type": "object",
+              "properties": {
+                "entries": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "amount": {
+                        "type": "number",
+                        "minimum": 0
+                      }
                     },
-                    "name": {
-                      "type": "string",
-                      "maxLength": 80
-                    },
-                    "value": {
-                      "type": "number"
-                    }
-                  },
-                  "required": ["id", "name", "value"]
+                    "required": ["id", "name", "amount"]
+                  }
                 }
-              }
+              },
+              "required": ["entries"]
             },
             "reusableDefaults": {
-              "expenses": []
+              "entries": []
             },
             "initialState": {
-              "expenses": [
+              "entries": [
                 {
                   "id": "rent",
                   "name": "Rent",
-                  "value": 1200
+                  "amount": 1200
                 },
                 {
                   "id": "food",
                   "name": "Food",
-                  "value": 450
+                  "amount": 450
                 },
                 {
                   "id": "transport",
                   "name": "Transport",
-                  "value": 120
+                  "amount": 120
                 },
                 {
                   "id": "fun",
                   "name": "Fun",
-                  "value": 200
+                  "amount": 200
                 }
               ]
             }
@@ -196,13 +202,120 @@
         "accessibility@bd63b2577331",
         "chart@4c5b56cace80",
         "profile@20cd0c9c7df0",
-        "create@95fdc23aa768",
+        "create@6849cfbe5453",
         "repair-schema-shape@1fdc6c120869",
         "request@47a51319da7d",
         "language@2a8e10d77d23",
         "attempt@db8c6b71b427",
         "diagnostics@0b26a00a48fd"
       ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "tool",
+          "name": "Monthly spending chart",
+          "summary": "Shows this month's spending as a chart with a total. Your rent, food, transport and fun amounts are already in; add or remove entries as you go.",
+          "code": {
+            "html": "<main>\n<h1>Spending this month</h1>\n<p class=\"sec\">Total: <strong data-hook=\"total\" id=\"total\">0</strong></p>\n<div id=\"chartbox\" data-hook=\"chart\" aria-label=\"Spending chart\"></div>\n<p id=\"empty\" hidden>No entries yet. Add one below to see the chart.</p>\n<h2>Entries</h2>\n<ul id=\"list\"></ul>\n<h2>Add an entry</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"nm\">Name</label><input id=\"nm\" data-hook=\"entry-name\" type=\"text\" autocomplete=\"off\"></div>\n<div class=\"f\"><label for=\"vl\">Amount</label><input id=\"vl\" data-hook=\"entry-value\" type=\"number\" step=\"any\" min=\"0\" inputmode=\"decimal\"></div>\n<button id=\"add\" data-hook=\"entry-add\" type=\"button\">Add</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n</main>",
+            "css": "main{max-width:640px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.sec{color:var(--ui-text-secondary);margin:0 0 var(--ui-space-4)}\n.sec strong{color:var(--ui-text);font-weight:600}\nul{list-style:none;margin:0;padding:0}\nli{display:flex;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\nli .n{flex:1;overflow-wrap:anywhere}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 140px}\ninput{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\n#add{background:var(--ui-accent);border-color:var(--ui-accent);color:#fff}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n#msg{min-height:1.5em;color:var(--ui-text-secondary)}\n#msg.err{color:var(--ui-error)}\n#chartbox{min-height:1px}",
+            "js": "let entries=[],revs={};\nconst $=id=>document.getElementById(id);\nfunction say(t,err){const m=$('msg');m.textContent=t;m.className=err?'err':'';}\nfunction fmt(n){return String(Math.round(n*100)/100);}\nfunction render(){\n const list=$('list');list.textContent='';\n let sum=0;\n for(const e of entries){\n  sum+=e.amount;\n  const li=document.createElement('li');\n  const n=document.createElement('span');n.className='n';n.textContent=e.name;\n  const a=document.createElement('span');a.textContent=fmt(e.amount);\n  const b=document.createElement('button');b.type='button';b.textContent='Remove';\n  b.setAttribute('aria-label','Remove '+e.name);\n  b.addEventListener('click',()=>remove(e.id));\n  li.append(n,a,b);list.appendChild(li);\n }\n $('total').textContent=fmt(sum);\n const has=entries.length>0;\n $('empty').hidden=has;\n if(has){tessera.chart($('chartbox'),{type:'pie',title:'Spending this month',labels:entries.map(e=>e.name.slice(0,80)),series:[{name:'Spending',values:entries.map(e=>e.amount)}]});}\n else{$('chartbox').textContent='';}\n}\nasync function load(){\n const r=await tessera.call('data.read',{});\n entries=(r.data.entries||[]);revs=(r.revisions.entries||{});\n render();\n}\nasync function add(){\n const name=$('nm').value.trim();const raw=$('vl').value;const v=Number(raw);\n if(!name){say('Type a name for the entry.',true);$('nm').focus();return;}\n if(raw===''||!isFinite(v)||v<0){say('Type an amount of 0 or more.',true);$('vl').focus();return;}\n try{\n  await tessera.call('data.patch',{operations:[{op:'add',collection:'entries',record:{name:name,amount:v}}]});\n  $('nm').value='';$('vl').value='';\n  await load();say('Added '+name+'.');$('nm').focus();\n }catch(e){say('Could not add the entry. Your text is still here; try again.',true);}\n}\nasync function remove(id){\n const e=entries.find(x=>x.id===id);\n try{\n  await tessera.call('data.patch',{operations:[{op:'remove',collection:'entries',id:id,revisionCount:revs[id]}]});\n  await load();say('Removed '+(e?e.name:'entry')+'.');$('nm').focus();\n }catch(err){say('Could not remove the entry. Try again.',true);}\n}\n$('add').addEventListener('click',add);\nfor(const id of ['nm','vl']){$(id).addEventListener('keydown',ev=>{if(ev.key==='Enter'){ev.preventDefault();add();}});}\nload().catch(()=>say('Could not load your entries.',true));"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "entries": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 80
+                      },
+                      "amount": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": ["id", "name", "amount"]
+                  }
+                }
+              },
+              "required": ["entries"]
+            },
+            "reusableDefaults": {
+              "entries": []
+            },
+            "initialState": {}
+          },
+          "capabilities": ["chart"],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "chart@4c5b56cace80",
+        "profile@20cd0c9c7df0",
+        "create@6849cfbe5453",
+        "repair-behavior@753b4c0deca3",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "attempt@db8c6b71b427",
+        "diagnostics@0b26a00a48fd"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "discuss",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "hypothetical food reduction",
+              "request": "What if food was 20% less?"
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "discuss",
+        "value": {
+          "answer": "Yes, this can work. The tool already has amounts and names, so it could total your entries, find the food ones, and show what the month would be with food 20% lower.\n\nWhat it would need:\n- A way to tell food entries apart. Right now there's no category field, so it would match words in the name (such as \"grocery\" or \"restaurant\"). That breaks if names are inconsistent.\n- A cleaner option is adding a category field to each entry, so food can be picked exactly.\n\nWith that, the tool could show the actual total, the food total, the 20% saving, and the new total side by side in a chart. It can't pull in outside data or prices, so it only works with the entries you record."
+        }
+      },
+      "parts": ["discuss@fe4300ae6cb8", "intent-open@ad363d62acd6", "discuss-request@dc8ebe64a764"]
     }
   ]
 }
