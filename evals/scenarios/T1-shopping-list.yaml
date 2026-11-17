@@ -8,6 +8,7 @@ person: "A busy parent who shops once a week"
 goal: "A shopping list to tick off at the store, used again every week"
 clock: { start: "2026-10-12T09:00:00", zone: "America/Sao_Paulo" }
 budget: { calls: 10 }
+acceptanceChecks: true
 profiles: [item-list]
 steps:
   - say: "I need a shopping list I can tick off at the store. We need milk, eggs, bread and apples."

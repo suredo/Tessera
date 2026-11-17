@@ -11,6 +11,7 @@ person: "Someone checking where the month's money went"
 goal: "See this month's spending as a chart, add to it, and ask what if"
 clock: { start: "2026-11-02T18:30:00", zone: "Europe/Lisbon" }
 budget: { calls: 10 }
+acceptanceChecks: true
 profiles: [chart]
 steps:
   - say: "Show my spending this month as a chart: rent 1200, food 450, transport 120, fun 200."

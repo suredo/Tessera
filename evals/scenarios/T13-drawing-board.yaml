@@ -1,12 +1,14 @@
-# T13, drawing board (docs/testing/app-catalogue.md), in its M2 form: smoke-checked only, as no
-# profile covers drawing. Sketching with the mouse needs the tool's own controls (M3).
+# T13, drawing board (docs/testing/app-catalogue.md), in its M2 form: no profile covers drawing,
+# so besides the smoke check it gets the checks written from the request (VER-09), on as Tessera
+# ships (A57) since M4. Sketching with the mouse needs the tool's own controls (M3).
 id: T13-drawing-board
 tier: advanced
 language: en
 person: "A student who wants to sketch ideas quickly"
 goal: "A drawing board to sketch on with the mouse"
 clock: { start: "2026-10-15T16:00:00", zone: "Europe/London" }
-budget: { calls: 7 }
+budget: { calls: 9 }
+acceptanceChecks: true
 steps:
   - say: "A simple drawing board where I can sketch with the mouse."
     expect: { created: true, workspace: new }

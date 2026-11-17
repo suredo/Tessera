@@ -12,6 +12,7 @@ person: "A student two weeks from an exam"
 goal: "A study plan that keeps to their rules, and flashcards from their notes"
 clock: { start: "2026-11-05T19:30:00", zone: "Europe/Lisbon" }
 budget: { calls: 14 }
+acceptanceChecks: true
 profiles: [scheduling, cards]
 steps:
   - say: "My exam is in two weeks. Help me organize topics; I study evenings, never Fridays. Later I'll paste notes to make flashcards."
