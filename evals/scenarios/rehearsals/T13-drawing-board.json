@@ -21,6 +21,16 @@
     {
       "reply": {
         "kind": "value",
+        "stage": "acceptance",
+        "value": {
+          "outcome": "none",
+          "reason": "Sketching is done by dragging the mouse, which no click or typed value can show."
+        }
+      }
+    },
+    {
+      "reply": {
+        "kind": "value",
         "stage": "create",
         "value": {
           "outcome": "tool",

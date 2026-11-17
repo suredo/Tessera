@@ -182,6 +182,17 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
       const scenario = loadScenario(path.join(scenarios, `${id.replace(/\.two-pass$/, "")}.yaml`));
       expect(rehearsal.scenario).toBe(scenario.id);
       expect(rehearsal.answers.length).toBeLessThanOrEqual(scenario.budget.calls);
+      // With the checks from the request on, a new tool no profile fits, made in one pass, is
+      // preceded by the acceptance stage (VER-09), so its rehearsal must answer it next.
+      if (!scenario.acceptanceChecks || id.endsWith(".two-pass")) continue;
+      rehearsal.answers.forEach((answer, index) => {
+        const reply = answer.reply as { stage?: string; value?: Record<string, unknown> };
+        const value = reply.value ?? {};
+        const makes = value["kind"] === "create" || value["kind"] === "new_tool";
+        if (reply.stage !== "intent" || !makes || value["profile"]) return;
+        const next = rehearsal.answers[index + 1]?.reply as { stage?: string } | undefined;
+        expect(next?.stage, `${id}, answer ${index + 1}`).toBe("acceptance");
+      });
     }
   });
 });
