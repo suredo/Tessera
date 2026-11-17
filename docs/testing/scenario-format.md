@@ -4,7 +4,7 @@ title: "Scenario file format"
 description: "The scenario file format, step types and fields, with a full example."
 tags: [testing, scenario-format]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T00:58:54Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T13:08:31Z }
 ---
 # Scenario file format
 
@@ -52,6 +52,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 - `cancel`: cancel the request the step before started; that `say` step expects nothing of its own
 - `switch`: move to another workspace, or a new empty one (until the app has a control for one, #132, the runner makes it through the store, then opens it in the app)
 - `delete`, `restore`: move a workspace or saved tool to the trash and back
+- `move: true`: the person moves to another computer (`DATA-05`, P2): the open workspace is exported with the host's own button, with the tools saved from it, Tessera starts again on a new, empty data folder with the same clock, and the file is imported on its first screen; the steps after it use the new folder, so `workspace: same`, `version: unchanged` and `data: unchanged` compare the two
 
 **Scenario fields:**
 - `clock`: the starting date, time and time zone (`RUN-07`)

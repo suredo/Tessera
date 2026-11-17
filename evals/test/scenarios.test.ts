@@ -38,6 +38,7 @@ describe("scenario files (EVAL-01)", () => {
       "B2-reading-list",
       "B4-habit-tracker",
       "J6-limits",
+      "P2-move-data-folder",
       "T1-shopping-list",
       "T10-study-planner-pt",
       "T10-study-planner",
@@ -64,6 +65,8 @@ describe("scenario files (EVAL-01)", () => {
       "B2-reading-list": 7,
       "B4-habit-tracker": 7,
       "J6-limits": 5,
+      // Two requests, intent and create or data, with a repair in reserve, and the review's.
+      "P2-move-data-folder": 8,
       "T1-shopping-list": 10,
       "T10-study-planner": 14,
       // T10 in Portuguese: the same steps and budget.
@@ -91,6 +94,7 @@ describe("scenario files (EVAL-01)", () => {
     // The acceptance-check experiment's scenario turns it on, and so does each scenario of M4's
     // set, to measure Tessera as it ships (A57).
     expect(all.filter((s) => s.acceptanceChecks).map((s) => s.id)).toEqual([
+      "P2-move-data-folder",
       "T1-shopping-list",
       "T10-study-planner-pt",
       "T10-study-planner",

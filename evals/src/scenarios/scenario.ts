@@ -155,6 +155,14 @@ export const stepSchema = z.union([
     restore: name.describe("Restore the workspace with this name from the trash."),
     expect,
   }),
+  z.strictObject({
+    move: z
+      .literal(true)
+      .describe(
+        "The person moves to another computer (DATA-05, P2): the open workspace is exported to a file, with the tools saved from it, and imported into Tessera started again on a new, empty data folder.",
+      ),
+    expect,
+  }),
 ]);
 export type Step = z.infer<typeof stepSchema>;
 
@@ -172,6 +180,7 @@ export const STEPS = [
   "switch",
   "delete",
   "restore",
+  "move",
 ] as const;
 
 /**

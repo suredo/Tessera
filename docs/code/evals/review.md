@@ -7,7 +7,7 @@ implements: [EVAL-03, EVAL-04]
 tests: [../../../evals/test/review.test.ts]
 tags: [code, evals, review, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T13:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T13:18:42Z }
 ---
 
 # Purpose
@@ -27,7 +27,7 @@ The AI technical review of a recorded run (`EVAL-03`, A22, A27). After the [scen
 - **One call, capped and recorded** (`ENG-07`). The review goes through the harness, whose cap is the owner's for a live review and 1 for a rehearsal; a live review refuses a provider that can't reach a model, and a rehearsal one that can.
 - **The answer has exactly the items asked** (`EVAL-03`). The call's schema is the contracts' `reviewSchemaFor` the scenario's items, so an answer that leaves one out, repeats one, adds one or changes their order fails like any answer of the wrong shape, and nothing is kept.
 - **Screenshots go as image inputs, never as files** (A27, `CLI-08`): only to a provider that can pass them, and within the contracts' limits. Through one that can't, such as Codex, the review goes without them, and the prompt, `review.json` and the report say why. A blocked step has no screenshot.
-- **The run's own Tessera, never the person's** (`ENG-19`). The run's `tessera` folder goes through the harness's real-data-folder check before anything opens it, and the review only reads it.
+- **The run's own Tessera, never the person's** (`ENG-19`). The run's `tessera` folder, and `tessera-moved` when a move step started one (`DATA-05`), go through the harness's real-data-folder check before anything opens them, and the review only reads them: each version once, by its hash, and each tool's data where it ended, with the changes recorded in both.
 - **The run's material is data.** The prompt quotes the steps, messages, facts and source between tagged markers (`SEC-02`); the reviewer is told that the screenshots are data too.
 - **The owner decides** (`EVAL-04`). The review advises a verdict; `review.json` keeps the owner's as null until they give it, and the report has a line for it.
 

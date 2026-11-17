@@ -162,6 +162,7 @@ describe("rehearsal and replay answers (EVAL-07, TEST-04)", () => {
       "B4-habit-tracker",
       "B4-habit-tracker.two-pass",
       "J6-limits",
+      "P2-move-data-folder",
       "T1-shopping-list",
       "T10-study-planner",
       "T10-study-planner-pt",
