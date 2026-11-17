@@ -2,9 +2,9 @@
   "about": "A live run of T13-drawing-board, recorded for replay.",
   "scenario": "T13-drawing-board",
   "recorded": {
-    "head": "19d7056fe3a0b175b4df668085ba2b98ed0e4a7f",
-    "at": "2026-11-05T21:17:22.434Z",
-    "cliVersion": "2.1.318"
+    "head": "27f047ad15a0f999c48abc0177c28f26b0ddfe19",
+    "at": "2026-11-17T02:07:19.825Z",
+    "cliVersion": "2.1.326"
   },
   "answers": [
     {
@@ -15,7 +15,7 @@
           "kind": "create",
           "interfacePart": "A simple drawing board where I can sketch with the mouse.",
           "dataPart": null,
-          "behaviorChange": false,
+          "behaviorChange": true,
           "lookOnly": false,
           "targetsCurrentTool": false,
           "language": "en",
@@ -28,14 +28,34 @@
               "name": "Mouse sketching",
               "request": "where I can sketch with the mouse"
             }
-          ]
+          ],
+          "profile": null,
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
         }
       },
       "parts": [
-        "intent@3222248e8a6e",
+        "intent@606fb79ccc38",
         "intent-none@a47602c1d680",
         "intent-no-saved@62b6b33152f8",
-        "intent-request@29adbd896fc4"
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "acceptance",
+        "value": {
+          "outcome": "none",
+          "reason": "Sketching with the mouse cannot be done by typing or pressing controls, so no check can show a result."
+        }
+      },
+      "parts": [
+        "acceptance@854dcf83049b",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
       ]
     },
     {
@@ -45,17 +65,14 @@
         "value": {
           "outcome": "tool",
           "name": "Drawing board",
-          "summary": "Sketch with the mouse, pen or finger. Pick a color and brush size, use the eraser, or clear the board.",
-          "code": {
-            "html": "<h1>Drawing board</h1>\n<div class=\"bar\" role=\"toolbar\" aria-label=\"Drawing controls\">\n<label>Color <input type=\"color\" id=\"color\" value=\"#28312b\"></label>\n<label>Size <input type=\"range\" id=\"size\" min=\"1\" max=\"40\" value=\"4\"></label>\n<span id=\"sizeOut\" aria-live=\"polite\">4 px</span>\n<button type=\"button\" id=\"pen\" aria-pressed=\"true\">Pen</button>\n<button type=\"button\" id=\"eraser\" aria-pressed=\"false\">Eraser</button>\n<button type=\"button\" id=\"clear\">Clear board</button>\n</div>\n<p id=\"msg\" class=\"note\">Press and drag on the board to draw.</p>\n<canvas id=\"board\" width=\"900\" height=\"560\" aria-label=\"Drawing board. Draw with the mouse.\"></canvas>",
-            "css": "h1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-3)}\n.bar{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;margin-bottom:var(--ui-space-2)}\nlabel{display:flex;align-items:center;gap:var(--ui-space-2)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton[aria-pressed=\"true\"]{background:var(--ui-accent-soft);border-color:var(--ui-accent);font-weight:600}\nbutton:focus-visible,input:focus-visible,canvas:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\ninput[type=color]{width:var(--ui-target);height:var(--ui-target)}\n.note{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0}\ncanvas{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);touch-action:none;cursor:crosshair}",
-            "js": "const cv=document.getElementById('board');\nconst ctx=cv.getContext('2d');\nctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);\nconst color=document.getElementById('color');\nconst size=document.getElementById('size');\nconst sizeOut=document.getElementById('sizeOut');\nconst pen=document.getElementById('pen');\nconst eraser=document.getElementById('eraser');\nconst msg=document.getElementById('msg');\nlet erasing=false,drawing=false,lx=0,ly=0;\nfunction pos(e){const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height];}\nfunction setMode(er){erasing=er;pen.setAttribute('aria-pressed',String(!er));eraser.setAttribute('aria-pressed',String(er));msg.textContent=er?'Eraser on. Drag to rub out.':'Pen on. Drag to draw.';}\nfunction style(){ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=Number(size.value);ctx.strokeStyle=erasing?'#fff':color.value;ctx.fillStyle=ctx.strokeStyle;}\ncv.addEventListener('pointerdown',e=>{drawing=true;cv.setPointerCapture(e.pointerId);const p=pos(e);lx=p[0];ly=p[1];style();ctx.beginPath();ctx.arc(lx,ly,ctx.lineWidth/2,0,Math.PI*2);ctx.fill();});\ncv.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);style();ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p[0],p[1]);ctx.stroke();lx=p[0];ly=p[1];});\nfunction stop(){drawing=false;}\ncv.addEventListener('pointerup',stop);\ncv.addEventListener('pointercancel',stop);\nsize.addEventListener('input',()=>{sizeOut.textContent=size.value+' px';});\npen.addEventListener('click',()=>setMode(false));\neraser.addEventListener('click',()=>setMode(true));\ncolor.addEventListener('input',()=>setMode(false));\ndocument.getElementById('clear').addEventListener('click',()=>{if(!confirm('Clear the whole board? This removes your drawing.'))return;ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);msg.textContent='Board cleared.';});"
-          },
+          "summary": "Sketch freehand with the mouse, touch or pen. Pick a color and brush size, use the eraser, or clear the board.",
+          "uiMode": "standard",
+          "capabilities": [],
           "data": {
             "schema": {
               "type": "object",
               "properties": {
-                "notes": {
+                "strokes": {
                   "type": "array",
                   "items": {
                     "type": "object",
@@ -64,26 +81,34 @@
                         "type": "string"
                       }
                     },
-                    "required": ["id"]
+                    "required": [
+                      "id"
+                    ]
                   }
                 }
-              }
+              },
+              "required": [
+                "strokes"
+              ]
             },
             "reusableDefaults": {
-              "notes": []
+              "strokes": []
             },
             "initialState": {}
           },
-          "capabilities": [],
-          "uiMode": "standard"
+          "code": {
+            "html": "<h1>Drawing board</h1>\n<div class=\"bar\">\n<label>Color <input type=\"color\" id=\"color\" value=\"#28312b\"></label>\n<label>Size <input type=\"range\" id=\"size\" min=\"1\" max=\"40\" value=\"4\"></label>\n<label><input type=\"checkbox\" id=\"erase\"> Eraser</label>\n<button id=\"clear\" type=\"button\">Clear board</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n<canvas id=\"board\" width=\"800\" height=\"500\" aria-label=\"Drawing area. Draw with the mouse, touch or pen.\"></canvas>",
+            "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}\n.bar{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;margin-bottom:var(--ui-space-2)}\nlabel{display:flex;gap:var(--ui-space-2);align-items:center}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton:focus-visible,input:focus-visible,canvas:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\ninput[type=color]{min-height:var(--ui-target);width:56px}\ninput[type=checkbox]{width:20px;height:20px}\n#msg{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-2);min-height:1.5em}\ncanvas{width:100%;max-width:800px;height:auto;aspect-ratio:8/5;background:#fff;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);touch-action:none;cursor:crosshair;display:block}",
+            "js": "const c=document.getElementById('board');const x=c.getContext('2d');\nconst msg=document.getElementById('msg');\nx.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);\nx.lineCap='round';x.lineJoin='round';\nlet drawing=false,last=null,dirty=false;\nfunction pos(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};}\nfunction style(){x.strokeStyle=document.getElementById('erase').checked?'#fff':document.getElementById('color').value;x.fillStyle=x.strokeStyle;x.lineWidth=Number(document.getElementById('size').value);}\nc.addEventListener('pointerdown',e=>{drawing=true;c.setPointerCapture(e.pointerId);last=pos(e);style();x.beginPath();x.arc(last.x,last.y,x.lineWidth/2,0,Math.PI*2);x.fill();dirty=true;msg.textContent='';});\nc.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);style();x.beginPath();x.moveTo(last.x,last.y);x.lineTo(p.x,p.y);x.stroke();last=p;});\nfunction stop(){drawing=false;}\nc.addEventListener('pointerup',stop);c.addEventListener('pointercancel',stop);\ndocument.getElementById('clear').addEventListener('click',()=>{x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);msg.textContent=dirty?'Board cleared.':'The board is already empty.';dirty=false;});\nmsg.textContent='Press and drag on the board to draw. The drawing is not kept when you close this tool.';"
+          }
         }
       },
       "parts": [
-        "base@425d17c8b071",
-        "bridge@63eefdc4fb28",
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
         "ui-standard@5953c402b1d6",
         "accessibility@bd63b2577331",
-        "create@9705683faa8f",
+        "create@95fdc23aa768",
         "request@47a51319da7d",
         "language@2a8e10d77d23"
       ]
@@ -96,8 +121,8 @@
           "kind": "edit",
           "interfacePart": "Make the brush thicker and add a red colour.",
           "dataPart": null,
-          "behaviorChange": true,
-          "lookOnly": false,
+          "behaviorChange": false,
+          "lookOnly": true,
           "targetsCurrentTool": true,
           "language": "en",
           "features": [
@@ -109,14 +134,42 @@
               "name": "Red colour",
               "request": "add a red colour"
             }
-          ]
+          ],
+          "profile": null,
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
         }
       },
       "parts": [
-        "intent@3222248e8a6e",
+        "intent@606fb79ccc38",
         "intent-open@ad363d62acd6",
         "intent-no-saved@62b6b33152f8",
-        "intent-request@29adbd896fc4"
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "cannot",
+          "reason": "A thicker brush and a red colour option need changes to the tool's controls and code, and a change to how it looks can't do that. For now, you can drag the Size slider up to 40 and pick red with the Color control."
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "edit@a204f4d753be",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "conversation@55efc5121fcd",
+        "style-notes@6fbe89c62e1f",
+        "source-style@99d7eef49591",
+        "edit-declarations@7eb300505e9f"
       ]
     },
     {
@@ -125,13 +178,13 @@
         "stage": "edit",
         "value": {
           "outcome": "edit",
-          "summary": "The brush is now thicker: it starts at 8 px and can go up to 80 px. A new Red button sets the pen colour to red.",
+          "summary": "The brush is thicker: it starts at 8 and can go up to 80. A new Red button picks red with one click.",
           "files": {
             "mode": "replace",
             "code": {
-              "html": "<h1>Drawing board</h1>\n<div class=\"bar\" role=\"toolbar\" aria-label=\"Drawing controls\">\n<label>Color <input type=\"color\" id=\"color\" value=\"#28312b\"></label>\n<button type=\"button\" id=\"red\">Red</button>\n<label>Size <input type=\"range\" id=\"size\" min=\"1\" max=\"80\" value=\"8\"></label>\n<span id=\"sizeOut\" aria-live=\"polite\">8 px</span>\n<button type=\"button\" id=\"pen\" aria-pressed=\"true\">Pen</button>\n<button type=\"button\" id=\"eraser\" aria-pressed=\"false\">Eraser</button>\n<button type=\"button\" id=\"clear\">Clear board</button>\n</div>\n<p id=\"msg\" class=\"note\">Press and drag on the board to draw.</p>\n<canvas id=\"board\" width=\"900\" height=\"560\" aria-label=\"Drawing board. Draw with the mouse.\"></canvas>",
-              "css": "h1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-3)}\n.bar{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;margin-bottom:var(--ui-space-2)}\nlabel{display:flex;align-items:center;gap:var(--ui-space-2)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton[aria-pressed=\"true\"]{background:var(--ui-accent-soft);border-color:var(--ui-accent);font-weight:600}\nbutton:focus-visible,input:focus-visible,canvas:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\ninput[type=color]{width:var(--ui-target);height:var(--ui-target)}\n.note{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0}\ncanvas{display:block;width:100%;height:auto;background:#fff;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);touch-action:none;cursor:crosshair}",
-              "js": "const cv=document.getElementById('board');\nconst ctx=cv.getContext('2d');\nctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);\nconst color=document.getElementById('color');\nconst size=document.getElementById('size');\nconst sizeOut=document.getElementById('sizeOut');\nconst pen=document.getElementById('pen');\nconst eraser=document.getElementById('eraser');\nconst msg=document.getElementById('msg');\nlet erasing=false,drawing=false,lx=0,ly=0;\nfunction pos(e){const r=cv.getBoundingClientRect();return [(e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height];}\nfunction setMode(er){erasing=er;pen.setAttribute('aria-pressed',String(!er));eraser.setAttribute('aria-pressed',String(er));msg.textContent=er?'Eraser on. Drag to rub out.':'Pen on. Drag to draw.';}\nfunction style(){ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=Number(size.value);ctx.strokeStyle=erasing?'#fff':color.value;ctx.fillStyle=ctx.strokeStyle;}\ncv.addEventListener('pointerdown',e=>{drawing=true;cv.setPointerCapture(e.pointerId);const p=pos(e);lx=p[0];ly=p[1];style();ctx.beginPath();ctx.arc(lx,ly,ctx.lineWidth/2,0,Math.PI*2);ctx.fill();});\ncv.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);style();ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p[0],p[1]);ctx.stroke();lx=p[0];ly=p[1];});\nfunction stop(){drawing=false;}\ncv.addEventListener('pointerup',stop);\ncv.addEventListener('pointercancel',stop);\nsize.addEventListener('input',()=>{sizeOut.textContent=size.value+' px';});\npen.addEventListener('click',()=>setMode(false));\neraser.addEventListener('click',()=>setMode(true));\ncolor.addEventListener('input',()=>setMode(false));\ndocument.getElementById('red').addEventListener('click',()=>{color.value='#d00000';setMode(false);msg.textContent='Pen on, colour red. Drag to draw.';});\ndocument.getElementById('clear').addEventListener('click',()=>{if(!confirm('Clear the whole board? This removes your drawing.'))return;ctx.fillStyle='#fff';ctx.fillRect(0,0,cv.width,cv.height);msg.textContent='Board cleared.';});"
+              "html": "<h1>Drawing board</h1>\n<div class=\"bar\">\n<label>Color <input type=\"color\" id=\"color\" value=\"#28312b\"></label>\n<button id=\"red\" type=\"button\"><span class=\"sw\" aria-hidden=\"true\"></span>Red</button>\n<label>Size <input type=\"range\" id=\"size\" min=\"1\" max=\"80\" value=\"8\"></label>\n<label><input type=\"checkbox\" id=\"erase\"> Eraser</label>\n<button id=\"clear\" type=\"button\">Clear board</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n<canvas id=\"board\" width=\"800\" height=\"500\" aria-label=\"Drawing area. Draw with the mouse, touch or pen.\"></canvas>",
+              "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}\n.bar{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;margin-bottom:var(--ui-space-2)}\nlabel{display:flex;gap:var(--ui-space-2);align-items:center}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton:focus-visible,input:focus-visible,canvas:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\ninput[type=color]{min-height:var(--ui-target);width:56px}\ninput[type=checkbox]{width:20px;height:20px}\n#red{display:inline-flex;align-items:center;gap:var(--ui-space-2)}\n.sw{width:16px;height:16px;border-radius:50%;background:#d32f2f;border:1px solid var(--ui-text)}\n#msg{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-2);min-height:1.5em}\ncanvas{width:100%;max-width:800px;height:auto;aspect-ratio:8/5;background:#fff;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);touch-action:none;cursor:crosshair;display:block}",
+              "js": "const c=document.getElementById('board');const x=c.getContext('2d');\nconst msg=document.getElementById('msg');\nx.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);\nx.lineCap='round';x.lineJoin='round';\nlet drawing=false,last=null,dirty=false;\nfunction pos(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};}\nfunction style(){x.strokeStyle=document.getElementById('erase').checked?'#fff':document.getElementById('color').value;x.fillStyle=x.strokeStyle;x.lineWidth=Number(document.getElementById('size').value);}\nc.addEventListener('pointerdown',e=>{drawing=true;c.setPointerCapture(e.pointerId);last=pos(e);style();x.beginPath();x.arc(last.x,last.y,x.lineWidth/2,0,Math.PI*2);x.fill();dirty=true;msg.textContent='';});\nc.addEventListener('pointermove',e=>{if(!drawing)return;const p=pos(e);style();x.beginPath();x.moveTo(last.x,last.y);x.lineTo(p.x,p.y);x.stroke();last=p;});\nfunction stop(){drawing=false;}\nc.addEventListener('pointerup',stop);c.addEventListener('pointercancel',stop);\ndocument.getElementById('red').addEventListener('click',()=>{document.getElementById('color').value='#d32f2f';document.getElementById('erase').checked=false;msg.textContent='Red color selected.';});\ndocument.getElementById('clear').addEventListener('click',()=>{x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);msg.textContent=dirty?'Board cleared.':'The board is already empty.';dirty=false;});\nmsg.textContent='Press and drag on the board to draw. The drawing is not kept when you close this tool.';"
             }
           },
           "data": {
@@ -140,69 +193,32 @@
         }
       },
       "parts": [
-        "base@425d17c8b071",
-        "bridge@63eefdc4fb28",
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
         "ui-edit@722f0daf16a5",
         "accessibility@bd63b2577331",
-        "edit@2e80b2067d6d",
+        "edit@a204f4d753be",
         "request@47a51319da7d",
         "language@2a8e10d77d23",
-        "source@cd07cc0c84ce",
+        "conversation@55efc5121fcd",
+        "style-notes@6fbe89c62e1f",
+        "source@0eae49d84708",
         "edit-declarations@7eb300505e9f"
       ]
     },
     {
       "reply": {
-        "kind": "value",
+        "kind": "error",
         "stage": "intent",
-        "value": {
-          "kind": "edit",
-          "interfacePart": "Add an eraser",
-          "dataPart": null,
-          "behaviorChange": true,
-          "lookOnly": false,
-          "targetsCurrentTool": true,
-          "language": "en",
-          "features": [
-            {
-              "name": "Eraser",
-              "request": "Add an eraser"
-            }
-          ]
-        }
+        "error": "usage_limit"
       },
       "parts": [
-        "intent@3222248e8a6e",
+        "intent@606fb79ccc38",
         "intent-open@ad363d62acd6",
         "intent-no-saved@62b6b33152f8",
-        "intent-request@29adbd896fc4"
-      ]
-    },
-    {
-      "reply": {
-        "kind": "value",
-        "stage": "edit",
-        "value": {
-          "outcome": "edit",
-          "summary": "This drawing board already has an eraser. Press the Eraser button, then drag on the board to rub out. Press Pen to draw again. I changed nothing.",
-          "files": {
-            "mode": "unchanged"
-          },
-          "data": {
-            "mode": "unchanged"
-          }
-        }
-      },
-      "parts": [
-        "base@425d17c8b071",
-        "bridge@63eefdc4fb28",
-        "ui-edit@722f0daf16a5",
-        "accessibility@bd63b2577331",
-        "edit@2e80b2067d6d",
-        "request@47a51319da7d",
-        "language@2a8e10d77d23",
-        "source@cd07cc0c84ce",
-        "edit-declarations@7eb300505e9f"
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
       ]
     }
   ]

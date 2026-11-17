@@ -1,0 +1,214 @@
+{
+  "about": "A live run of T4-habit-tracker, recorded for replay.",
+  "scenario": "T4-habit-tracker",
+  "recorded": {
+    "head": "27f047ad15a0f999c48abc0177c28f26b0ddfe19",
+    "at": "2026-11-17T01:48:30.118Z",
+    "cliVersion": "2.1.326"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Daily habit tracking",
+              "request": "Help me track three habits every day: walk, read, drink water."
+            },
+            {
+              "name": "Streaks",
+              "request": "Show my streaks."
+            }
+          ],
+          "profile": "items-over-time",
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Daily Habits",
+          "summary": "Track walk, read and drink water each day. Mark a habit done today and see how many days in a row you've kept it up. You can add more habits.",
+          "uiMode": "standard",
+          "capabilities": [
+            "clock"
+          ],
+          "code": {
+            "html": "<main class=\"wrap\"><h1>Daily habits</h1><p class=\"sub\" id=\"today\"></p><p id=\"msg\" role=\"status\" aria-live=\"polite\"></p><ul id=\"list\" class=\"list\" aria-label=\"Habits\"></ul><p id=\"empty\" hidden>No habits yet. Add one below.</p><div class=\"add\"><label for=\"name\">New habit</label><div class=\"row\"><input id=\"name\" type=\"text\" data-hook=\"habit-name\" maxlength=\"80\" autocomplete=\"off\"><button id=\"add\" type=\"button\" data-hook=\"habit-add\">Add habit</button></div></div></main>",
+            "css": ".wrap{max-width:560px;margin:0 auto;padding:var(--ui-padding)}h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-1)}.sub{margin:0 0 var(--ui-space-3);color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.list{list-style:none;margin:0 0 var(--ui-space-5);padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}.list li{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-space-3);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3) var(--ui-space-4)}.hname{flex:1 1 140px;font-weight:600}.streak{flex:0 1 auto;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.streak .n{color:var(--ui-text);font-size:var(--ui-size-section);font-weight:600}button{min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}button.done{background:var(--ui-accent-soft);color:var(--ui-text)}button:focus-visible,input:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}label{display:block;margin-bottom:var(--ui-space-1);font-size:var(--ui-size-secondary)}.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2)}input{flex:1 1 180px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}#msg{min-height:1.5em;margin:0 0 var(--ui-space-2);color:var(--ui-error);font-size:var(--ui-size-secondary)}",
+            "js": "let today='';let habits=[];let revs={};\nconst list=document.getElementById('list');\nconst msg=document.getElementById('msg');\nconst nameIn=document.getElementById('name');\nfunction prev(d){const p=d.split('-').map(Number);const t=new Date(Date.UTC(p[0],p[1]-1,p[2]-1));return t.toISOString().slice(0,10);}\nfunction streak(dates){const s=new Set(dates);if(!s.has(today))return 0;let n=0,d=today;while(s.has(d)){n++;d=prev(d);}return n;}\nfunction render(focusId){\n list.textContent='';\n document.getElementById('empty').hidden=habits.length>0;\n for(const h of habits){\n  const dates=Array.isArray(h.doneDates)?h.doneDates:[];\n  const isDone=dates.includes(today);\n  const li=document.createElement('li');\n  li.setAttribute('data-hook','habit');\n  const nm=document.createElement('span');nm.className='hname';nm.textContent=h.name;\n  const st=document.createElement('span');st.className='streak';\n  const n=document.createElement('span');n.className='n';n.setAttribute('data-hook','habit-streak');n.textContent=String(streak(dates));\n  st.appendChild(n);st.appendChild(document.createTextNode(isDone?' day streak':' day streak · not done yet today'));\n  const b=document.createElement('button');b.type='button';b.setAttribute('data-hook','habit-done');b.dataset.id=h.id;\n  b.textContent=isDone?'Done today ✓':'Mark done today';\n  if(isDone){b.className='done';b.setAttribute('aria-label','Done today: '+h.name);}else{b.setAttribute('aria-label','Mark done today: '+h.name);}\n  b.addEventListener('click',()=>markDone(h.id));\n  li.appendChild(nm);li.appendChild(st);li.appendChild(b);list.appendChild(li);\n  if(focusId===h.id)b.focus();\n }\n}\nasync function load(focusId){\n const r=await tessera.call('data.read',{});\n habits=Array.isArray(r.data.habits)?r.data.habits:[];\n revs=(r.revisions&&r.revisions.habits)||{};\n render(focusId);\n}\nasync function markDone(id){\n msg.textContent='';\n const h=habits.find(x=>x.id===id);if(!h)return;\n const dates=Array.isArray(h.doneDates)?h.doneDates:[];\n if(dates.includes(today))return;\n try{\n  await tessera.call('data.patch',{operations:[{op:'replace',collection:'habits',id:id,revisionCount:revs[id],fields:{doneDates:dates.concat([today])}}]});\n  await load(id);\n }catch(e){msg.textContent='Could not save that. Please try again.';await load(id);}\n}\nasync function addHabit(){\n msg.textContent='';\n const v=nameIn.value.trim();\n if(!v){msg.textContent='Type a name for the habit first.';nameIn.focus();return;}\n try{\n  await tessera.call('data.patch',{operations:[{op:'add',collection:'habits',record:{name:v,doneDates:[]}}]});\n  nameIn.value='';await load();nameIn.focus();\n }catch(e){msg.textContent='Could not add the habit. What you typed is still there.';}\n}\ndocument.getElementById('add').addEventListener('click',addHabit);\nnameIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addHabit();}});\n(async()=>{\n try{\n  const c=await tessera.call('clock.now',{});\n  today=c.date;\n  document.getElementById('today').textContent='Today is '+today+'.';\n  await load();\n }catch(e){msg.textContent='Could not load your habits.';}\n})();"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "habits": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80
+                      },
+                      "doneDates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "doneDates"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "habits"
+              ]
+            },
+            "reusableDefaults": {
+              "habits": []
+            },
+            "initialState": {
+              "habits": [
+                {
+                  "id": "walk",
+                  "name": "Walk",
+                  "doneDates": []
+                },
+                {
+                  "id": "read",
+                  "name": "Read",
+                  "doneDates": []
+                },
+                {
+                  "id": "water",
+                  "name": "Drink water",
+                  "doneDates": []
+                }
+              ]
+            }
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@e4213d1f5b9e",
+        "create@95fdc23aa768",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": "Also show a weekly chart of the days I did each habit.",
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "weekly chart",
+              "request": "Also show a weekly chart of the days I did each habit."
+            }
+          ],
+          "profile": "items-over-time",
+          "drawsCharts": true,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Daily habits now also shows a weekly chart: for each habit, which of the last 7 days you did it.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<main class=\"wrap\"><h1>Daily habits</h1><p class=\"sub\" id=\"today\"></p><p id=\"msg\" role=\"status\" aria-live=\"polite\"></p><ul id=\"list\" class=\"list\" aria-label=\"Habits\"></ul><p id=\"empty\" hidden>No habits yet. Add one below.</p><div class=\"add\"><label for=\"name\">New habit</label><div class=\"row\"><input id=\"name\" type=\"text\" data-hook=\"habit-name\" maxlength=\"80\" autocomplete=\"off\"><button id=\"add\" type=\"button\" data-hook=\"habit-add\">Add habit</button></div></div><section id=\"weekly\" class=\"weekly\" hidden><h2>This week</h2><p class=\"sub\">Days you did each habit over the last 7 days (1 = done).</p><p id=\"chartnote\" class=\"sub\" hidden>The chart shows the first 6 habits.</p><div id=\"chart\"></div></section></main>",
+              "css": ".wrap{max-width:560px;margin:0 auto;padding:var(--ui-padding)}h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-1)}h2{font-size:var(--ui-size-section);margin:0 0 var(--ui-space-1)}.weekly{margin-top:var(--ui-space-5)}.sub{margin:0 0 var(--ui-space-3);color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.list{list-style:none;margin:0 0 var(--ui-space-5);padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}.list li{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-space-3);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3) var(--ui-space-4)}.hname{flex:1 1 140px;font-weight:600}.streak{flex:0 1 auto;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.streak .n{color:var(--ui-text);font-size:var(--ui-size-section);font-weight:600}button{min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}button.done{background:var(--ui-accent-soft);color:var(--ui-text)}button:focus-visible,input:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}label{display:block;margin-bottom:var(--ui-space-1);font-size:var(--ui-size-secondary)}.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2)}input{flex:1 1 180px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}#msg{min-height:1.5em;margin:0 0 var(--ui-space-2);color:var(--ui-error);font-size:var(--ui-size-secondary)}",
+              "js": "let today='';let habits=[];let revs={};\nconst list=document.getElementById('list');\nconst msg=document.getElementById('msg');\nconst nameIn=document.getElementById('name');\nfunction prev(d){const p=d.split('-').map(Number);const t=new Date(Date.UTC(p[0],p[1]-1,p[2]-1));return t.toISOString().slice(0,10);}\nfunction streak(dates){const s=new Set(dates);if(!s.has(today))return 0;let n=0,d=today;while(s.has(d)){n++;d=prev(d);}return n;}\nfunction drawChart(){\n const sec=document.getElementById('weekly');\n sec.hidden=habits.length===0;\n if(!habits.length||!today)return;\n const days=[];let d=today;for(let i=0;i<7;i++){days.unshift(d);d=prev(d);}\n const shown=habits.slice(0,6);\n document.getElementById('chartnote').hidden=habits.length<=6;\n const series=shown.map(h=>{const ds=Array.isArray(h.doneDates)?h.doneDates:[];return{name:String(h.name).slice(0,80),values:days.map(x=>ds.includes(x)?1:0)};});\n try{tessera.chart(document.getElementById('chart'),{type:'bar',title:'Days done in the last 7 days',labels:days,series:series});}catch(e){msg.textContent='Could not draw the weekly chart.';}\n}\nfunction render(focusId){\n list.textContent='';\n document.getElementById('empty').hidden=habits.length>0;\n for(const h of habits){\n  const dates=Array.isArray(h.doneDates)?h.doneDates:[];\n  const isDone=dates.includes(today);\n  const li=document.createElement('li');\n  li.setAttribute('data-hook','habit');\n  const nm=document.createElement('span');nm.className='hname';nm.textContent=h.name;\n  const st=document.createElement('span');st.className='streak';\n  const n=document.createElement('span');n.className='n';n.setAttribute('data-hook','habit-streak');n.textContent=String(streak(dates));\n  st.appendChild(n);st.appendChild(document.createTextNode(isDone?' day streak':' day streak · not done yet today'));\n  const b=document.createElement('button');b.type='button';b.setAttribute('data-hook','habit-done');b.dataset.id=h.id;\n  b.textContent=isDone?'Done today ✓':'Mark done today';\n  if(isDone){b.className='done';b.setAttribute('aria-label','Done today: '+h.name);}else{b.setAttribute('aria-label','Mark done today: '+h.name);}\n  b.addEventListener('click',()=>markDone(h.id));\n  li.appendChild(nm);li.appendChild(st);li.appendChild(b);list.appendChild(li);\n  if(focusId===h.id)b.focus();\n }\n drawChart();\n}\nasync function load(focusId){\n const r=await tessera.call('data.read',{});\n habits=Array.isArray(r.data.habits)?r.data.habits:[];\n revs=(r.revisions&&r.revisions.habits)||{};\n render(focusId);\n}\nasync function markDone(id){\n msg.textContent='';\n const h=habits.find(x=>x.id===id);if(!h)return;\n const dates=Array.isArray(h.doneDates)?h.doneDates:[];\n if(dates.includes(today))return;\n try{\n  await tessera.call('data.patch',{operations:[{op:'replace',collection:'habits',id:id,revisionCount:revs[id],fields:{doneDates:dates.concat([today])}}]});\n  await load(id);\n }catch(e){msg.textContent='Could not save that. Please try again.';await load(id);}\n}\nasync function addHabit(){\n msg.textContent='';\n const v=nameIn.value.trim();\n if(!v){msg.textContent='Type a name for the habit first.';nameIn.focus();return;}\n try{\n  await tessera.call('data.patch',{operations:[{op:'add',collection:'habits',record:{name:v,doneDates:[]}}]});\n  nameIn.value='';await load();nameIn.focus();\n }catch(e){msg.textContent='Could not add the habit. What you typed is still there.';}\n}\ndocument.getElementById('add').addEventListener('click',addHabit);\nnameIn.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addHabit();}});\n(async()=>{\n try{\n  const c=await tessera.call('clock.now',{});\n  today=c.date;\n  document.getElementById('today').textContent='Today is '+today+'.';\n  await load();\n }catch(e){msg.textContent='Could not load your habits.';}\n})();"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          },
+          "capabilities": {
+            "mode": "replace",
+            "capabilities": [
+              "clock",
+              "chart"
+            ]
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "chart@4c5b56cace80",
+        "profile@e4213d1f5b9e",
+        "edit@a204f4d753be",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "conversation@55efc5121fcd",
+        "style-notes@6fbe89c62e1f",
+        "source@0eae49d84708",
+        "edit-declarations@7eb300505e9f"
+      ]
+    }
+  ]
+}

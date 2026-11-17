@@ -1,0 +1,292 @@
+{
+  "about": "A live run of T14-image-editor, recorded for replay.",
+  "scenario": "T14-image-editor",
+  "recorded": {
+    "head": "27f047ad15a0f999c48abc0177c28f26b0ddfe19",
+    "at": "2026-11-17T11:00:54.262Z",
+    "cliVersion": "2.1.326"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": "Let me open a photo, crop it, add arrows and text, and save it.",
+          "dataPart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Open photo",
+              "request": "Let me open a photo"
+            },
+            {
+              "name": "Crop photo",
+              "request": "crop it"
+            },
+            {
+              "name": "Add arrows and text",
+              "request": "add arrows and text"
+            },
+            {
+              "name": "Save photo",
+              "request": "save it"
+            }
+          ],
+          "profile": "editing-with-files",
+          "drawsCharts": false,
+          "usesFiles": true,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Photo Markup",
+          "summary": "Open a photo, crop it, add arrows and text on top, and save the result as a PNG image.",
+          "uiMode": "standard",
+          "capabilities": [
+            "files"
+          ],
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "settings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ]
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "code": {
+            "html": "<h1>Photo Markup</h1>\n<div class=\"bar\">\n<button type=\"button\" id=\"open\" data-hook=\"image-open\">Open a photo</button>\n<button type=\"button\" id=\"save\" data-hook=\"image-save file-save\" disabled>Save as PNG</button>\n<button type=\"button\" id=\"undo\" disabled>Undo last change</button>\n</div>\n<p id=\"status\" role=\"status\" aria-live=\"polite\">Open a photo to start.</p>\n<fieldset class=\"tools\">\n<legend>Tool</legend>\n<label><input type=\"radio\" name=\"mode\" value=\"crop\" checked> Crop</label>\n<label><input type=\"radio\" name=\"mode\" value=\"arrow\"> Arrow</label>\n<label><input type=\"radio\" name=\"mode\" value=\"text\"> Text</label>\n</fieldset>\n<div class=\"bar options\">\n<label>Color <select id=\"color\"><option value=\"#d62828\">Red</option><option value=\"#f4c20d\">Yellow</option><option value=\"#111111\">Black</option><option value=\"#ffffff\">White</option><option value=\"#1d4ed8\">Blue</option></select></label>\n<label>Size <select id=\"size\"><option value=\"0.025\">Small</option><option value=\"0.04\" selected>Medium</option><option value=\"0.07\">Large</option></select></label>\n<label id=\"textLabel\">Text <input type=\"text\" id=\"text\" value=\"Note\"></label>\n</div>\n<p id=\"hint\" class=\"hint\"></p>\n<div class=\"bar\" id=\"actions\">\n<button type=\"button\" id=\"crop\" data-hook=\"image-edit\" disabled>Apply crop</button>\n<button type=\"button\" id=\"rotate\" data-hook=\"image-edit\" disabled>Rotate right</button>\n<button type=\"button\" id=\"midArrow\" data-hook=\"image-edit\" disabled>Add arrow in the middle</button>\n<button type=\"button\" id=\"midText\" data-hook=\"image-edit\" disabled>Add text in the middle</button>\n</div>\n<div class=\"stage\" role=\"group\" aria-label=\"Photo area\">\n<canvas id=\"view\" data-hook=\"image-view\" width=\"600\" height=\"360\" aria-label=\"The photo being edited\"></canvas>\n</div>",
+            "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3);font-weight:600}\n.bar{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:end;margin-bottom:var(--ui-space-3)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton#open{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}\nbutton:disabled{opacity:.55;cursor:default}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nfieldset.tools{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);margin:0 0 var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);display:flex;gap:var(--ui-space-4);flex-wrap:wrap}\nfieldset.tools label{display:flex;align-items:center;gap:var(--ui-space-2);min-height:var(--ui-target)}\n.options label{display:flex;flex-direction:column;font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);gap:2px}\nselect,input[type=text]{min-height:var(--ui-target);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-2);font:inherit;background:var(--ui-surface);color:var(--ui-text);max-width:100%}\n.hint,#status{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);margin:0 0 var(--ui-space-3)}\n#status.error{color:var(--ui-error)}\n.stage{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface);padding:var(--ui-space-2);overflow:auto}\ncanvas{display:block;max-width:100%;height:auto;margin:0 auto;touch-action:none;cursor:crosshair}\n[hidden]{display:none!important}",
+            "js": "const base = document.createElement('canvas');\nconst view = document.getElementById('view');\nconst vctx = view.getContext('2d');\nconst statusEl = document.getElementById('status');\nconst hint = document.getElementById('hint');\nconst ids = ['save','undo','crop','rotate','midArrow','midText'];\nlet loaded = false, mode = 'crop', sel = null, drag = null, history = [], fileName = 'photo';\n\nfunction say(msg, err) { statusEl.textContent = msg; statusEl.className = err ? 'error' : ''; }\nfunction el(id) { return document.getElementById(id); }\nfunction refreshButtons() {\n  for (const id of ids) el(id).disabled = !loaded;\n  el('undo').disabled = !loaded || history.length === 0;\n  el('crop').hidden = mode !== 'crop';\n  el('midArrow').hidden = mode !== 'arrow';\n  el('midText').hidden = mode !== 'text';\n  el('textLabel').hidden = mode !== 'text';\n  hint.textContent = !loaded ? '' : mode === 'crop' ? 'Drag on the photo to choose the part to keep, then press Apply crop.'\n    : mode === 'arrow' ? 'Drag on the photo from the arrow’s tail to its point.' : 'Type your text, then click on the photo where it should go.';\n}\nfunction defaultSel() { const w = base.width, h = base.height; sel = { x: Math.round(w * 0.1), y: Math.round(h * 0.1), w: Math.round(w * 0.8), h: Math.round(h * 0.8) }; }\nfunction render() {\n  if (view.width !== base.width || view.height !== base.height) { view.width = base.width; view.height = base.height; }\n  vctx.clearRect(0, 0, view.width, view.height);\n  vctx.drawImage(base, 0, 0);\n  const lw = Math.max(2, base.width * 0.004);\n  if (!loaded) return;\n  if (mode === 'crop' && sel) {\n    vctx.fillStyle = 'rgba(0,0,0,0.5)';\n    vctx.fillRect(0, 0, view.width, sel.y);\n    vctx.fillRect(0, sel.y + sel.h, view.width, view.height - sel.y - sel.h);\n    vctx.fillRect(0, sel.y, sel.x, sel.h);\n    vctx.fillRect(sel.x + sel.w, sel.y, view.width - sel.x - sel.w, sel.h);\n    vctx.strokeStyle = '#fff'; vctx.lineWidth = lw; vctx.setLineDash([lw * 4, lw * 3]);\n    vctx.strokeRect(sel.x, sel.y, sel.w, sel.h); vctx.setLineDash([]);\n  }\n  if (mode === 'arrow' && drag) drawArrow(vctx, drag.x0, drag.y0, drag.x1, drag.y1);\n}\nfunction drawArrow(ctx, x0, y0, x1, y1) {\n  const lw = Math.max(3, base.width * parseFloat(el('size').value) * 0.2);\n  const head = lw * 4, ang = Math.atan2(y1 - y0, x1 - x0);\n  ctx.strokeStyle = ctx.fillStyle = el('color').value;\n  ctx.lineWidth = lw; ctx.lineCap = 'round';\n  const bx = x1 - Math.cos(ang) * head * 0.8, by = y1 - Math.sin(ang) * head * 0.8;\n  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(bx, by); ctx.stroke();\n  ctx.beginPath(); ctx.moveTo(x1, y1);\n  ctx.lineTo(x1 - head * Math.cos(ang - 0.45), y1 - head * Math.sin(ang - 0.45));\n  ctx.lineTo(x1 - head * Math.cos(ang + 0.45), y1 - head * Math.sin(ang + 0.45));\n  ctx.closePath(); ctx.fill();\n}\nfunction drawText(x, y) {\n  const t = el('text').value.trim();\n  if (!t) { say('Type some text first.', true); el('text').focus(); return false; }\n  const ctx = base.getContext('2d');\n  const px = Math.max(14, Math.round(base.width * parseFloat(el('size').value)));\n  ctx.font = '600 ' + px + 'px \"Segoe UI\", Arial, sans-serif';\n  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';\n  const col = el('color').value;\n  ctx.lineWidth = Math.max(2, px * 0.12); ctx.lineJoin = 'round';\n  ctx.strokeStyle = (col === '#ffffff' || col === '#f4c20d') ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)';\n  ctx.strokeText(t, x, y); ctx.fillStyle = col; ctx.fillText(t, x, y);\n  return true;\n}\nfunction pushHistory() {\n  const c = document.createElement('canvas'); c.width = base.width; c.height = base.height;\n  c.getContext('2d').drawImage(base, 0, 0); history.push(c);\n  if (history.length > 15) history.shift();\n}\nfunction resizeBase(w, h) { base.width = w; base.height = h; }\nfunction pos(ev) {\n  const r = view.getBoundingClientRect();\n  const x = (ev.clientX - r.left) * view.width / r.width, y = (ev.clientY - r.top) * view.height / r.height;\n  return { x: Math.max(0, Math.min(view.width, x)), y: Math.max(0, Math.min(view.height, y)) };\n}\nview.addEventListener('pointerdown', (ev) => {\n  if (!loaded) return;\n  const p = pos(ev);\n  if (mode === 'text') {\n    pushHistory();\n    if (drawText(p.x, p.y)) { say('Text added.'); } else { history.pop(); }\n    refreshButtons(); render(); return;\n  }\n  view.setPointerCapture(ev.pointerId);\n  drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };\n});\nview.addEventListener('pointermove', (ev) => {\n  if (!drag) return;\n  const p = pos(ev); drag.x1 = p.x; drag.y1 = p.y;\n  if (mode === 'crop') sel = { x: Math.round(Math.min(drag.x0, p.x)), y: Math.round(Math.min(drag.y0, p.y)), w: Math.round(Math.abs(p.x - drag.x0)), h: Math.round(Math.abs(p.y - drag.y0)) };\n  render();\n});\nview.addEventListener('pointerup', () => {\n  if (!drag) return;\n  const d = drag; drag = null;\n  if (mode === 'arrow') {\n    if (Math.hypot(d.x1 - d.x0, d.y1 - d.y0) < 10) { say('Drag a little further to make an arrow.', true); render(); return; }\n    pushHistory(); drawArrow(base.getContext('2d'), d.x0, d.y0, d.x1, d.y1); say('Arrow added.');\n  } else if (mode === 'crop') {\n    say(sel && sel.w > 1 ? 'Crop area: ' + sel.w + ' × ' + sel.h + ' pixels. Press Apply crop to keep it.' : 'Drag a larger area to crop.');\n  }\n  refreshButtons(); render();\n});\nfor (const r of document.querySelectorAll('input[name=mode]')) {\n  r.addEventListener('change', () => { mode = r.value; if (loaded && mode === 'crop' && !sel) defaultSel(); refreshButtons(); render(); });\n}\nel('open').addEventListener('click', async () => {\n  try {\n    const f = await tessera.pickFile();\n    if (!f) { say('No photo was chosen.'); return; }\n    const img = new Image();\n    img.src = await tessera.assetUrl(f.id);\n    await img.decode();\n    resizeBase(img.naturalWidth, img.naturalHeight);\n    base.getContext('2d').drawImage(img, 0, 0);\n    fileName = (f.name || 'photo').replace(/\\.[^.]+$/, '') + '-edited';\n    loaded = true; history = []; defaultSel();\n    say('Photo opened: ' + base.width + ' × ' + base.height + ' pixels.');\n    refreshButtons(); render();\n  } catch (e) { say('The photo could not be opened: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nel('crop').addEventListener('click', () => {\n  if (!sel || sel.w < 2 || sel.h < 2) { say('Drag on the photo to choose a crop area first.', true); return; }\n  pushHistory();\n  const c = document.createElement('canvas'); c.width = sel.w; c.height = sel.h;\n  c.getContext('2d').drawImage(base, sel.x, sel.y, sel.w, sel.h, 0, 0, sel.w, sel.h);\n  resizeBase(sel.w, sel.h); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Cropped to ' + base.width + ' × ' + base.height + ' pixels.');\n  refreshButtons(); render();\n});\nel('rotate').addEventListener('click', () => {\n  pushHistory();\n  const c = document.createElement('canvas'); c.width = base.height; c.height = base.width;\n  const x = c.getContext('2d'); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(base, 0, 0);\n  resizeBase(c.width, c.height); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Photo rotated.'); refreshButtons(); render();\n});\nel('midArrow').addEventListener('click', () => {\n  pushHistory();\n  drawArrow(base.getContext('2d'), base.width * 0.3, base.height * 0.7, base.width * 0.5, base.height * 0.5);\n  say('Arrow added in the middle.'); refreshButtons(); render();\n});\nel('midText').addEventListener('click', () => {\n  pushHistory();\n  if (drawText(base.width / 2, base.height / 2)) say('Text added in the middle.'); else history.pop();\n  refreshButtons(); render();\n});\nel('undo').addEventListener('click', () => {\n  const c = history.pop(); if (!c) return;\n  resizeBase(c.width, c.height); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Last change undone.'); refreshButtons(); render();\n});\nel('save').addEventListener('click', async () => {\n  try {\n    const ok = await tessera.saveFile({ name: fileName, type: 'image/png', bytesBase64: base.toDataURL('image/png').split(',')[1] });\n    say(ok ? 'Photo saved.' : 'Not saved: the save was cancelled.', false);\n  } catch (e) { say('The photo could not be saved: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nrefreshButtons(); render();"
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "files@b93298b821fe",
+        "profile@d0760ae0c1f2",
+        "create@95fdc23aa768",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "tool",
+          "name": "Photo Markup",
+          "summary": "Open a photo, crop it, add arrows and text on top, and save the result as a PNG image.",
+          "code": {
+            "html": "<h1>Photo Markup</h1>\n<div class=\"bar\">\n<button type=\"button\" id=\"open\" data-hook=\"image-open\">Open a photo</button>\n<button type=\"button\" id=\"save\" data-hook=\"image-save file-save\" disabled>Save as PNG</button>\n<button type=\"button\" id=\"undo\" disabled>Undo last change</button>\n</div>\n<p id=\"status\" role=\"status\" aria-live=\"polite\">Open a photo to start.</p>\n<fieldset class=\"tools\">\n<legend>Tool</legend>\n<label><input type=\"radio\" name=\"mode\" value=\"crop\" checked> Crop</label>\n<label><input type=\"radio\" name=\"mode\" value=\"arrow\"> Arrow</label>\n<label><input type=\"radio\" name=\"mode\" value=\"text\"> Text</label>\n</fieldset>\n<div class=\"bar options\">\n<label>Color <select id=\"color\"><option value=\"#d62828\">Red</option><option value=\"#f4c20d\">Yellow</option><option value=\"#111111\">Black</option><option value=\"#ffffff\">White</option><option value=\"#1d4ed8\">Blue</option></select></label>\n<label>Size <select id=\"size\"><option value=\"0.025\">Small</option><option value=\"0.04\" selected>Medium</option><option value=\"0.07\">Large</option></select></label>\n<label id=\"textLabel\">Text <input type=\"text\" id=\"text\" value=\"Note\"></label>\n</div>\n<p id=\"hint\" class=\"hint\"></p>\n<div class=\"bar\" id=\"actions\">\n<button type=\"button\" id=\"crop\" data-hook=\"image-edit\" disabled>Apply crop</button>\n<button type=\"button\" id=\"rotate\" data-hook=\"image-edit\" disabled>Rotate right</button>\n<button type=\"button\" id=\"midArrow\" data-hook=\"image-edit\" disabled>Add arrow in the middle</button>\n<button type=\"button\" id=\"midText\" data-hook=\"image-edit\" disabled>Add text in the middle</button>\n</div>\n<div class=\"stage\" role=\"group\" aria-label=\"Photo area\">\n<canvas id=\"view\" data-hook=\"image-view\" width=\"600\" height=\"360\" aria-label=\"The photo being edited\"></canvas>\n</div>",
+            "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3);font-weight:600}\n.bar{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:end;margin-bottom:var(--ui-space-3)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton#open{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}\nbutton:disabled{opacity:.55;cursor:default}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nfieldset.tools{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);margin:0 0 var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);display:flex;gap:var(--ui-space-4);flex-wrap:wrap}\nfieldset.tools label{display:flex;align-items:center;gap:var(--ui-space-2);min-height:var(--ui-target)}\n.options label{display:flex;flex-direction:column;font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);gap:2px}\nselect,input[type=text]{min-height:var(--ui-target);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-2);font:inherit;background:var(--ui-surface);color:var(--ui-text);max-width:100%}\n.hint,#status{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);margin:0 0 var(--ui-space-3)}\n#status.error{color:var(--ui-error)}\n.stage{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface);padding:var(--ui-space-2);overflow:auto}\ncanvas{display:block;max-width:100%;height:auto;margin:0 auto;touch-action:none;cursor:crosshair}\n[hidden]{display:none!important}",
+            "js": "const base = document.createElement('canvas');\nconst view = document.getElementById('view');\nconst vctx = view.getContext('2d');\nconst statusEl = document.getElementById('status');\nconst hint = document.getElementById('hint');\nconst ids = ['save','undo','crop','rotate','midArrow','midText'];\nlet loaded = false, mode = 'crop', sel = null, drag = null, undoStack = [], fileName = 'photo';\n\nfunction say(msg, err) { statusEl.textContent = msg; statusEl.className = err ? 'error' : ''; }\nfunction el(id) { return document.getElementById(id); }\nfunction refreshButtons() {\n  for (const id of ids) el(id).disabled = !loaded;\n  el('undo').disabled = !loaded || undoStack.length === 0;\n  el('crop').hidden = mode !== 'crop';\n  el('midArrow').hidden = mode !== 'arrow';\n  el('midText').hidden = mode !== 'text';\n  el('textLabel').hidden = mode !== 'text';\n  hint.textContent = !loaded ? '' : mode === 'crop' ? 'Drag on the photo to choose the part to keep, then press Apply crop.'\n    : mode === 'arrow' ? 'Drag on the photo from the arrow’s tail to its point.' : 'Type your text, then click on the photo where it should go.';\n}\nfunction defaultSel() { const w = base.width, h = base.height; sel = { x: Math.round(w * 0.1), y: Math.round(h * 0.1), w: Math.round(w * 0.8), h: Math.round(h * 0.8) }; }\nfunction render() {\n  if (view.width !== base.width || view.height !== base.height) { view.width = base.width; view.height = base.height; }\n  vctx.clearRect(0, 0, view.width, view.height);\n  vctx.drawImage(base, 0, 0);\n  const lw = Math.max(2, base.width * 0.004);\n  if (!loaded) return;\n  if (mode === 'crop' && sel) {\n    vctx.fillStyle = 'rgba(0,0,0,0.5)';\n    vctx.fillRect(0, 0, view.width, sel.y);\n    vctx.fillRect(0, sel.y + sel.h, view.width, view.height - sel.y - sel.h);\n    vctx.fillRect(0, sel.y, sel.x, sel.h);\n    vctx.fillRect(sel.x + sel.w, sel.y, view.width - sel.x - sel.w, sel.h);\n    vctx.strokeStyle = '#fff'; vctx.lineWidth = lw; vctx.setLineDash([lw * 4, lw * 3]);\n    vctx.strokeRect(sel.x, sel.y, sel.w, sel.h); vctx.setLineDash([]);\n  }\n  if (mode === 'arrow' && drag) drawArrow(vctx, drag.x0, drag.y0, drag.x1, drag.y1);\n}\nfunction drawArrow(ctx, x0, y0, x1, y1) {\n  const lw = Math.max(3, base.width * parseFloat(el('size').value) * 0.2);\n  const head = lw * 4, ang = Math.atan2(y1 - y0, x1 - x0);\n  ctx.strokeStyle = ctx.fillStyle = el('color').value;\n  ctx.lineWidth = lw; ctx.lineCap = 'round';\n  const bx = x1 - Math.cos(ang) * head * 0.8, by = y1 - Math.sin(ang) * head * 0.8;\n  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(bx, by); ctx.stroke();\n  ctx.beginPath(); ctx.moveTo(x1, y1);\n  ctx.lineTo(x1 - head * Math.cos(ang - 0.45), y1 - head * Math.sin(ang - 0.45));\n  ctx.lineTo(x1 - head * Math.cos(ang + 0.45), y1 - head * Math.sin(ang + 0.45));\n  ctx.closePath(); ctx.fill();\n}\nfunction drawText(x, y) {\n  const t = el('text').value.trim();\n  if (!t) { say('Type some text first.', true); el('text').focus(); return false; }\n  const ctx = base.getContext('2d');\n  const px = Math.max(14, Math.round(base.width * parseFloat(el('size').value)));\n  ctx.font = '600 ' + px + 'px \"Segoe UI\", Arial, sans-serif';\n  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';\n  const col = el('color').value;\n  ctx.lineWidth = Math.max(2, px * 0.12); ctx.lineJoin = 'round';\n  ctx.strokeStyle = (col === '#ffffff' || col === '#f4c20d') ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)';\n  ctx.strokeText(t, x, y); ctx.fillStyle = col; ctx.fillText(t, x, y);\n  return true;\n}\nfunction pushHistory() {\n  const c = document.createElement('canvas'); c.width = base.width; c.height = base.height;\n  c.getContext('2d').drawImage(base, 0, 0); undoStack.push(c);\n  if (undoStack.length > 15) undoStack.shift();\n}\nfunction resizeBase(w, h) { base.width = w; base.height = h; }\nfunction pos(ev) {\n  const r = view.getBoundingClientRect();\n  const x = (ev.clientX - r.left) * view.width / r.width, y = (ev.clientY - r.top) * view.height / r.height;\n  return { x: Math.max(0, Math.min(view.width, x)), y: Math.max(0, Math.min(view.height, y)) };\n}\nview.addEventListener('pointerdown', (ev) => {\n  if (!loaded) return;\n  const p = pos(ev);\n  if (mode === 'text') {\n    pushHistory();\n    if (drawText(p.x, p.y)) { say('Text added.'); } else { undoStack.pop(); }\n    refreshButtons(); render(); return;\n  }\n  view.setPointerCapture(ev.pointerId);\n  drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };\n});\nview.addEventListener('pointermove', (ev) => {\n  if (!drag) return;\n  const p = pos(ev); drag.x1 = p.x; drag.y1 = p.y;\n  if (mode === 'crop') sel = { x: Math.round(Math.min(drag.x0, p.x)), y: Math.round(Math.min(drag.y0, p.y)), w: Math.round(Math.abs(p.x - drag.x0)), h: Math.round(Math.abs(p.y - drag.y0)) };\n  render();\n});\nview.addEventListener('pointerup', () => {\n  if (!drag) return;\n  const d = drag; drag = null;\n  if (mode === 'arrow') {\n    if (Math.hypot(d.x1 - d.x0, d.y1 - d.y0) < 10) { say('Drag a little further to make an arrow.', true); render(); return; }\n    pushHistory(); drawArrow(base.getContext('2d'), d.x0, d.y0, d.x1, d.y1); say('Arrow added.');\n  } else if (mode === 'crop') {\n    say(sel && sel.w > 1 ? 'Crop area: ' + sel.w + ' × ' + sel.h + ' pixels. Press Apply crop to keep it.' : 'Drag a larger area to crop.');\n  }\n  refreshButtons(); render();\n});\nfor (const r of document.querySelectorAll('input[name=mode]')) {\n  r.addEventListener('change', () => { mode = r.value; if (loaded && mode === 'crop' && !sel) defaultSel(); refreshButtons(); render(); });\n}\nel('open').addEventListener('click', async () => {\n  try {\n    const f = await tessera.pickFile();\n    if (!f) { say('No photo was chosen.'); return; }\n    const img = new Image();\n    img.src = await tessera.assetUrl(f.id);\n    await img.decode();\n    resizeBase(img.naturalWidth, img.naturalHeight);\n    base.getContext('2d').drawImage(img, 0, 0);\n    fileName = (f.name || 'photo').replace(/\\.[^.]+$/, '') + '-edited';\n    loaded = true; undoStack = []; defaultSel();\n    say('Photo opened: ' + base.width + ' × ' + base.height + ' pixels.');\n    refreshButtons(); render();\n  } catch (e) { say('The photo could not be opened: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nel('crop').addEventListener('click', () => {\n  if (!sel || sel.w < 2 || sel.h < 2) { say('Drag on the photo to choose a crop area first.', true); return; }\n  pushHistory();\n  const c = document.createElement('canvas'); c.width = sel.w; c.height = sel.h;\n  c.getContext('2d').drawImage(base, sel.x, sel.y, sel.w, sel.h, 0, 0, sel.w, sel.h);\n  resizeBase(sel.w, sel.h); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Cropped to ' + base.width + ' × ' + base.height + ' pixels.');\n  refreshButtons(); render();\n});\nel('rotate').addEventListener('click', () => {\n  pushHistory();\n  const c = document.createElement('canvas'); c.width = base.height; c.height = base.width;\n  const x = c.getContext('2d'); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(base, 0, 0);\n  resizeBase(c.width, c.height); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Photo rotated.'); refreshButtons(); render();\n});\nel('midArrow').addEventListener('click', () => {\n  pushHistory();\n  drawArrow(base.getContext('2d'), base.width * 0.3, base.height * 0.7, base.width * 0.5, base.height * 0.5);\n  say('Arrow added in the middle.'); refreshButtons(); render();\n});\nel('midText').addEventListener('click', () => {\n  pushHistory();\n  if (drawText(base.width / 2, base.height / 2)) say('Text added in the middle.'); else undoStack.pop();\n  refreshButtons(); render();\n});\nel('undo').addEventListener('click', () => {\n  const c = undoStack.pop(); if (!c) return;\n  resizeBase(c.width, c.height); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Last change undone.'); refreshButtons(); render();\n});\nel('save').addEventListener('click', async () => {\n  try {\n    const ok = await tessera.saveFile({ name: fileName, type: 'image/png', bytesBase64: base.toDataURL('image/png').split(',')[1] });\n    say(ok ? 'Photo saved.' : 'Not saved: the save was cancelled.', false);\n  } catch (e) { say('The photo could not be saved: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nrefreshButtons(); render();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "settings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ]
+                  }
+                }
+              }
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "capabilities": [
+            "files"
+          ],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "files@b93298b821fe",
+        "profile@d0760ae0c1f2",
+        "create@95fdc23aa768",
+        "repair-static@a49fe96d58a7",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "attempt@db8c6b71b427",
+        "diagnostics@0b26a00a48fd"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "tool",
+          "name": "Photo Markup",
+          "summary": "Open a photo, crop it, add arrows and text on top, and save the result as a PNG image.",
+          "code": {
+            "html": "<h1>Photo Markup</h1>\n<div class=\"bar\">\n<button type=\"button\" id=\"open\" data-hook=\"image-open\">Open a photo</button>\n<button type=\"button\" id=\"save\" data-hook=\"image-save file-save\" disabled>Save as PNG</button>\n<button type=\"button\" id=\"undo\" disabled>Undo last change</button>\n</div>\n<p id=\"status\" role=\"status\" aria-live=\"polite\">Open a photo to start.</p>\n<fieldset class=\"tools\">\n<legend>Tool</legend>\n<label for=\"modeCrop\"><input type=\"radio\" id=\"modeCrop\" name=\"mode\" value=\"crop\" aria-label=\"Crop\" checked> Crop</label>\n<label for=\"modeArrow\"><input type=\"radio\" id=\"modeArrow\" name=\"mode\" value=\"arrow\" aria-label=\"Arrow\"> Arrow</label>\n<label for=\"modeText\"><input type=\"radio\" id=\"modeText\" name=\"mode\" value=\"text\" aria-label=\"Text\"> Text</label>\n</fieldset>\n<div class=\"bar options\">\n<label for=\"color\">Color <select id=\"color\" aria-label=\"Color\"><option value=\"#d62828\">Red</option><option value=\"#f4c20d\">Yellow</option><option value=\"#111111\">Black</option><option value=\"#ffffff\">White</option><option value=\"#1d4ed8\">Blue</option></select></label>\n<label for=\"size\">Size <select id=\"size\" aria-label=\"Size\"><option value=\"0.025\">Small</option><option value=\"0.04\" selected>Medium</option><option value=\"0.07\">Large</option></select></label>\n<label id=\"textLabel\" for=\"text\">Text <input type=\"text\" id=\"text\" aria-label=\"Text to add\" value=\"Note\"></label>\n</div>\n<p id=\"hint\" class=\"hint\"></p>\n<div class=\"bar\" id=\"actions\">\n<button type=\"button\" id=\"crop\" data-hook=\"image-edit\" disabled>Apply crop</button>\n<button type=\"button\" id=\"rotate\" data-hook=\"image-edit\" disabled>Rotate right</button>\n<button type=\"button\" id=\"midArrow\" data-hook=\"image-edit\" disabled>Add arrow in the middle</button>\n<button type=\"button\" id=\"midText\" data-hook=\"image-edit\" disabled>Add text in the middle</button>\n</div>\n<div class=\"stage\" role=\"group\" aria-label=\"Photo area\">\n<canvas id=\"view\" data-hook=\"image-view\" width=\"600\" height=\"360\" aria-label=\"The photo being edited\"></canvas>\n</div>",
+            "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3);font-weight:600}\n.bar{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:end;margin-bottom:var(--ui-space-3)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton#open{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}\nbutton:disabled{opacity:.55;cursor:default}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nfieldset.tools{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);margin:0 0 var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);display:flex;gap:var(--ui-space-4);flex-wrap:wrap}\nfieldset.tools label{display:flex;align-items:center;gap:var(--ui-space-2);min-height:var(--ui-target)}\n.options label{display:flex;flex-direction:column;font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);gap:2px}\nselect,input[type=text]{min-height:var(--ui-target);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-2);font:inherit;background:var(--ui-surface);color:var(--ui-text);max-width:100%}\n.hint,#status{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);margin:0 0 var(--ui-space-3)}\n#status.error{color:var(--ui-error)}\n.stage{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface);padding:var(--ui-space-2);overflow:auto}\ncanvas{display:block;max-width:100%;height:auto;margin:0 auto;touch-action:none;cursor:crosshair}\n[hidden]{display:none!important}",
+            "js": "const base = document.createElement('canvas');\nconst view = document.getElementById('view');\nconst vctx = view.getContext('2d');\nconst statusEl = document.getElementById('status');\nconst hint = document.getElementById('hint');\nconst ids = ['save','undo','crop','rotate','midArrow','midText'];\nlet loaded = false, mode = 'crop', sel = null, drag = null, undoStack = [], fileName = 'photo';\n\nfunction say(msg, err) { statusEl.textContent = msg; statusEl.className = err ? 'error' : ''; }\nfunction el(id) { return document.getElementById(id); }\nfunction refreshButtons() {\n  for (const id of ids) el(id).disabled = !loaded;\n  el('undo').disabled = !loaded || undoStack.length === 0;\n  el('crop').hidden = mode !== 'crop';\n  el('midArrow').hidden = mode !== 'arrow';\n  el('midText').hidden = mode !== 'text';\n  el('textLabel').hidden = mode !== 'text';\n  hint.textContent = !loaded ? '' : mode === 'crop' ? 'Drag on the photo to choose the part to keep, then press Apply crop.'\n    : mode === 'arrow' ? 'Drag on the photo from the arrow’s tail to its point.' : 'Type your text, then click on the photo where it should go.';\n}\nfunction defaultSel() { const w = base.width, h = base.height; sel = { x: Math.round(w * 0.1), y: Math.round(h * 0.1), w: Math.round(w * 0.8), h: Math.round(h * 0.8) }; }\nfunction render() {\n  if (view.width !== base.width || view.height !== base.height) { view.width = base.width; view.height = base.height; }\n  vctx.clearRect(0, 0, view.width, view.height);\n  vctx.drawImage(base, 0, 0);\n  const lw = Math.max(2, base.width * 0.004);\n  if (!loaded) return;\n  if (mode === 'crop' && sel) {\n    vctx.fillStyle = 'rgba(0,0,0,0.5)';\n    vctx.fillRect(0, 0, view.width, sel.y);\n    vctx.fillRect(0, sel.y + sel.h, view.width, view.height - sel.y - sel.h);\n    vctx.fillRect(0, sel.y, sel.x, sel.h);\n    vctx.fillRect(sel.x + sel.w, sel.y, view.width - sel.x - sel.w, sel.h);\n    vctx.strokeStyle = '#fff'; vctx.lineWidth = lw; vctx.setLineDash([lw * 4, lw * 3]);\n    vctx.strokeRect(sel.x, sel.y, sel.w, sel.h); vctx.setLineDash([]);\n  }\n  if (mode === 'arrow' && drag) drawArrow(vctx, drag.x0, drag.y0, drag.x1, drag.y1);\n}\nfunction drawArrow(ctx, x0, y0, x1, y1) {\n  const lw = Math.max(3, base.width * parseFloat(el('size').value) * 0.2);\n  const head = lw * 4, ang = Math.atan2(y1 - y0, x1 - x0);\n  ctx.strokeStyle = ctx.fillStyle = el('color').value;\n  ctx.lineWidth = lw; ctx.lineCap = 'round';\n  const bx = x1 - Math.cos(ang) * head * 0.8, by = y1 - Math.sin(ang) * head * 0.8;\n  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(bx, by); ctx.stroke();\n  ctx.beginPath(); ctx.moveTo(x1, y1);\n  ctx.lineTo(x1 - head * Math.cos(ang - 0.45), y1 - head * Math.sin(ang - 0.45));\n  ctx.lineTo(x1 - head * Math.cos(ang + 0.45), y1 - head * Math.sin(ang + 0.45));\n  ctx.closePath(); ctx.fill();\n}\nfunction drawText(x, y) {\n  const t = el('text').value.trim();\n  if (!t) { say('Type some text first.', true); el('text').focus(); return false; }\n  const ctx = base.getContext('2d');\n  const px = Math.max(14, Math.round(base.width * parseFloat(el('size').value)));\n  ctx.font = '600 ' + px + 'px \"Segoe UI\", Arial, sans-serif';\n  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';\n  const col = el('color').value;\n  ctx.lineWidth = Math.max(2, px * 0.12); ctx.lineJoin = 'round';\n  ctx.strokeStyle = (col === '#ffffff' || col === '#f4c20d') ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)';\n  ctx.strokeText(t, x, y); ctx.fillStyle = col; ctx.fillText(t, x, y);\n  return true;\n}\nfunction pushHistory() {\n  const c = document.createElement('canvas'); c.width = base.width; c.height = base.height;\n  c.getContext('2d').drawImage(base, 0, 0); undoStack.push(c);\n  if (undoStack.length > 15) undoStack.shift();\n}\nfunction resizeBase(w, h) { base.width = w; base.height = h; }\nfunction pos(ev) {\n  const r = view.getBoundingClientRect();\n  const x = (ev.clientX - r.left) * view.width / r.width, y = (ev.clientY - r.top) * view.height / r.height;\n  return { x: Math.max(0, Math.min(view.width, x)), y: Math.max(0, Math.min(view.height, y)) };\n}\nview.addEventListener('pointerdown', (ev) => {\n  if (!loaded) return;\n  const p = pos(ev);\n  if (mode === 'text') {\n    pushHistory();\n    if (drawText(p.x, p.y)) { say('Text added.'); } else { undoStack.pop(); }\n    refreshButtons(); render(); return;\n  }\n  view.setPointerCapture(ev.pointerId);\n  drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };\n});\nview.addEventListener('pointermove', (ev) => {\n  if (!drag) return;\n  const p = pos(ev); drag.x1 = p.x; drag.y1 = p.y;\n  if (mode === 'crop') sel = { x: Math.round(Math.min(drag.x0, p.x)), y: Math.round(Math.min(drag.y0, p.y)), w: Math.round(Math.abs(p.x - drag.x0)), h: Math.round(Math.abs(p.y - drag.y0)) };\n  render();\n});\nview.addEventListener('pointerup', () => {\n  if (!drag) return;\n  const d = drag; drag = null;\n  if (mode === 'arrow') {\n    if (Math.hypot(d.x1 - d.x0, d.y1 - d.y0) < 10) { say('Drag a little further to make an arrow.', true); render(); return; }\n    pushHistory(); drawArrow(base.getContext('2d'), d.x0, d.y0, d.x1, d.y1); say('Arrow added.');\n  } else if (mode === 'crop') {\n    say(sel && sel.w > 1 ? 'Crop area: ' + sel.w + ' × ' + sel.h + ' pixels. Press Apply crop to keep it.' : 'Drag a larger area to crop.');\n  }\n  refreshButtons(); render();\n});\nfor (const r of document.querySelectorAll('input[name=mode]')) {\n  r.addEventListener('change', () => { mode = r.value; if (loaded && mode === 'crop' && !sel) defaultSel(); refreshButtons(); render(); });\n}\nel('open').addEventListener('click', async () => {\n  try {\n    const f = await tessera.pickFile();\n    if (!f) { say('No photo was chosen.'); return; }\n    const img = new Image();\n    img.src = await tessera.assetUrl(f.id);\n    await img.decode();\n    resizeBase(img.naturalWidth, img.naturalHeight);\n    base.getContext('2d').drawImage(img, 0, 0);\n    fileName = (f.name || 'photo').replace(/\\.[^.]+$/, '') + '-edited';\n    loaded = true; undoStack = []; defaultSel();\n    say('Photo opened: ' + base.width + ' × ' + base.height + ' pixels.');\n    refreshButtons(); render();\n  } catch (e) { say('The photo could not be opened: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nel('crop').addEventListener('click', () => {\n  if (!sel || sel.w < 2 || sel.h < 2) { say('Drag on the photo to choose a crop area first.', true); return; }\n  pushHistory();\n  const c = document.createElement('canvas'); c.width = sel.w; c.height = sel.h;\n  c.getContext('2d').drawImage(base, sel.x, sel.y, sel.w, sel.h, 0, 0, sel.w, sel.h);\n  resizeBase(sel.w, sel.h); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Cropped to ' + base.width + ' × ' + base.height + ' pixels.');\n  refreshButtons(); render();\n});\nel('rotate').addEventListener('click', () => {\n  pushHistory();\n  const c = document.createElement('canvas'); c.width = base.height; c.height = base.width;\n  const x = c.getContext('2d'); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(base, 0, 0);\n  resizeBase(c.width, c.height); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Photo rotated.'); refreshButtons(); render();\n});\nel('midArrow').addEventListener('click', () => {\n  pushHistory();\n  drawArrow(base.getContext('2d'), base.width * 0.3, base.height * 0.7, base.width * 0.5, base.height * 0.5);\n  say('Arrow added in the middle.'); refreshButtons(); render();\n});\nel('midText').addEventListener('click', () => {\n  pushHistory();\n  if (drawText(base.width / 2, base.height / 2)) say('Text added in the middle.'); else undoStack.pop();\n  refreshButtons(); render();\n});\nel('undo').addEventListener('click', () => {\n  const c = undoStack.pop(); if (!c) return;\n  resizeBase(c.width, c.height); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Last change undone.'); refreshButtons(); render();\n});\nel('save').addEventListener('click', async () => {\n  try {\n    const ok = await tessera.saveFile({ name: fileName, type: 'image/png', bytesBase64: base.toDataURL('image/png').split(',')[1] });\n    say(ok ? 'Photo saved.' : 'Not saved: the save was cancelled.', false);\n  } catch (e) { say('The photo could not be saved: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nrefreshButtons(); render();"
+          },
+          "data": {
+            "schema": {
+              "properties": {
+                "settings": {
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            },
+            "reusableDefaults": {},
+            "initialState": {}
+          },
+          "capabilities": [
+            "files"
+          ],
+          "uiMode": "standard"
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "files@b93298b821fe",
+        "profile@d0760ae0c1f2",
+        "create@95fdc23aa768",
+        "repair-smoke@4232866d177a",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "attempt@db8c6b71b427",
+        "diagnostics@0b26a00a48fd"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "edit",
+          "interfacePart": "Add a button that makes the photo black and white.",
+          "dataPart": null,
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "Black and white button",
+              "request": "Add a button that makes the photo black and white."
+            }
+          ],
+          "profile": "editing-with-files",
+          "drawsCharts": false,
+          "usesFiles": true,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "edit",
+        "value": {
+          "outcome": "edit",
+          "summary": "Photo Markup now has a \"Make black and white\" button that turns the photo gray. You can undo it with \"Undo last change\".",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Photo Markup</h1>\n<div class=\"bar\">\n<button type=\"button\" id=\"open\" data-hook=\"image-open\">Open a photo</button>\n<button type=\"button\" id=\"save\" data-hook=\"image-save file-save\" disabled>Save as PNG</button>\n<button type=\"button\" id=\"undo\" disabled>Undo last change</button>\n</div>\n<p id=\"status\" role=\"status\" aria-live=\"polite\">Open a photo to start.</p>\n<fieldset class=\"tools\">\n<legend>Tool</legend>\n<label for=\"modeCrop\"><input type=\"radio\" id=\"modeCrop\" name=\"mode\" value=\"crop\" aria-label=\"Crop\" checked> Crop</label>\n<label for=\"modeArrow\"><input type=\"radio\" id=\"modeArrow\" name=\"mode\" value=\"arrow\" aria-label=\"Arrow\"> Arrow</label>\n<label for=\"modeText\"><input type=\"radio\" id=\"modeText\" name=\"mode\" value=\"text\" aria-label=\"Text\"> Text</label>\n</fieldset>\n<div class=\"bar options\">\n<label for=\"color\">Color <select id=\"color\" aria-label=\"Color\"><option value=\"#d62828\">Red</option><option value=\"#f4c20d\">Yellow</option><option value=\"#111111\">Black</option><option value=\"#ffffff\">White</option><option value=\"#1d4ed8\">Blue</option></select></label>\n<label for=\"size\">Size <select id=\"size\" aria-label=\"Size\"><option value=\"0.025\">Small</option><option value=\"0.04\" selected>Medium</option><option value=\"0.07\">Large</option></select></label>\n<label id=\"textLabel\" for=\"text\">Text <input type=\"text\" id=\"text\" aria-label=\"Text to add\" value=\"Note\"></label>\n</div>\n<p id=\"hint\" class=\"hint\"></p>\n<div class=\"bar\" id=\"actions\">\n<button type=\"button\" id=\"crop\" data-hook=\"image-edit\" disabled>Apply crop</button>\n<button type=\"button\" id=\"rotate\" data-hook=\"image-edit\" disabled>Rotate right</button>\n<button type=\"button\" id=\"gray\" data-hook=\"image-edit\" disabled>Make black and white</button>\n<button type=\"button\" id=\"midArrow\" data-hook=\"image-edit\" disabled>Add arrow in the middle</button>\n<button type=\"button\" id=\"midText\" data-hook=\"image-edit\" disabled>Add text in the middle</button>\n</div>\n<div class=\"stage\" role=\"group\" aria-label=\"Photo area\">\n<canvas id=\"view\" data-hook=\"image-view\" width=\"600\" height=\"360\" aria-label=\"The photo being edited\"></canvas>\n</div>",
+              "css": "h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3);font-weight:600}\n.bar{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:end;margin-bottom:var(--ui-space-3)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\nbutton#open{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}\nbutton:disabled{opacity:.55;cursor:default}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nfieldset.tools{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);margin:0 0 var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);display:flex;gap:var(--ui-space-4);flex-wrap:wrap}\nfieldset.tools label{display:flex;align-items:center;gap:var(--ui-space-2);min-height:var(--ui-target)}\n.options label{display:flex;flex-direction:column;font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);gap:2px}\nselect,input[type=text]{min-height:var(--ui-target);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-2);font:inherit;background:var(--ui-surface);color:var(--ui-text);max-width:100%}\n.hint,#status{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);margin:0 0 var(--ui-space-3)}\n#status.error{color:var(--ui-error)}\n.stage{border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface);padding:var(--ui-space-2);overflow:auto}\ncanvas{display:block;max-width:100%;height:auto;margin:0 auto;touch-action:none;cursor:crosshair}\n[hidden]{display:none!important}",
+              "js": "const base = document.createElement('canvas');\nconst view = document.getElementById('view');\nconst vctx = view.getContext('2d');\nconst statusEl = document.getElementById('status');\nconst hint = document.getElementById('hint');\nconst ids = ['save','undo','crop','rotate','gray','midArrow','midText'];\nlet loaded = false, mode = 'crop', sel = null, drag = null, undoStack = [], fileName = 'photo';\n\nfunction say(msg, err) { statusEl.textContent = msg; statusEl.className = err ? 'error' : ''; }\nfunction el(id) { return document.getElementById(id); }\nfunction refreshButtons() {\n  for (const id of ids) el(id).disabled = !loaded;\n  el('undo').disabled = !loaded || undoStack.length === 0;\n  el('crop').hidden = mode !== 'crop';\n  el('midArrow').hidden = mode !== 'arrow';\n  el('midText').hidden = mode !== 'text';\n  el('textLabel').hidden = mode !== 'text';\n  hint.textContent = !loaded ? '' : mode === 'crop' ? 'Drag on the photo to choose the part to keep, then press Apply crop.'\n    : mode === 'arrow' ? 'Drag on the photo from the arrow’s tail to its point.' : 'Type your text, then click on the photo where it should go.';\n}\nfunction defaultSel() { const w = base.width, h = base.height; sel = { x: Math.round(w * 0.1), y: Math.round(h * 0.1), w: Math.round(w * 0.8), h: Math.round(h * 0.8) }; }\nfunction render() {\n  if (view.width !== base.width || view.height !== base.height) { view.width = base.width; view.height = base.height; }\n  vctx.clearRect(0, 0, view.width, view.height);\n  vctx.drawImage(base, 0, 0);\n  const lw = Math.max(2, base.width * 0.004);\n  if (!loaded) return;\n  if (mode === 'crop' && sel) {\n    vctx.fillStyle = 'rgba(0,0,0,0.5)';\n    vctx.fillRect(0, 0, view.width, sel.y);\n    vctx.fillRect(0, sel.y + sel.h, view.width, view.height - sel.y - sel.h);\n    vctx.fillRect(0, sel.y, sel.x, sel.h);\n    vctx.fillRect(sel.x + sel.w, sel.y, view.width - sel.x - sel.w, sel.h);\n    vctx.strokeStyle = '#fff'; vctx.lineWidth = lw; vctx.setLineDash([lw * 4, lw * 3]);\n    vctx.strokeRect(sel.x, sel.y, sel.w, sel.h); vctx.setLineDash([]);\n  }\n  if (mode === 'arrow' && drag) drawArrow(vctx, drag.x0, drag.y0, drag.x1, drag.y1);\n}\nfunction drawArrow(ctx, x0, y0, x1, y1) {\n  const lw = Math.max(3, base.width * parseFloat(el('size').value) * 0.2);\n  const head = lw * 4, ang = Math.atan2(y1 - y0, x1 - x0);\n  ctx.strokeStyle = ctx.fillStyle = el('color').value;\n  ctx.lineWidth = lw; ctx.lineCap = 'round';\n  const bx = x1 - Math.cos(ang) * head * 0.8, by = y1 - Math.sin(ang) * head * 0.8;\n  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(bx, by); ctx.stroke();\n  ctx.beginPath(); ctx.moveTo(x1, y1);\n  ctx.lineTo(x1 - head * Math.cos(ang - 0.45), y1 - head * Math.sin(ang - 0.45));\n  ctx.lineTo(x1 - head * Math.cos(ang + 0.45), y1 - head * Math.sin(ang + 0.45));\n  ctx.closePath(); ctx.fill();\n}\nfunction drawText(x, y) {\n  const t = el('text').value.trim();\n  if (!t) { say('Type some text first.', true); el('text').focus(); return false; }\n  const ctx = base.getContext('2d');\n  const px = Math.max(14, Math.round(base.width * parseFloat(el('size').value)));\n  ctx.font = '600 ' + px + 'px \"Segoe UI\", Arial, sans-serif';\n  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';\n  const col = el('color').value;\n  ctx.lineWidth = Math.max(2, px * 0.12); ctx.lineJoin = 'round';\n  ctx.strokeStyle = (col === '#ffffff' || col === '#f4c20d') ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)';\n  ctx.strokeText(t, x, y); ctx.fillStyle = col; ctx.fillText(t, x, y);\n  return true;\n}\nfunction pushHistory() {\n  const c = document.createElement('canvas'); c.width = base.width; c.height = base.height;\n  c.getContext('2d').drawImage(base, 0, 0); undoStack.push(c);\n  if (undoStack.length > 15) undoStack.shift();\n}\nfunction resizeBase(w, h) { base.width = w; base.height = h; }\nfunction pos(ev) {\n  const r = view.getBoundingClientRect();\n  const x = (ev.clientX - r.left) * view.width / r.width, y = (ev.clientY - r.top) * view.height / r.height;\n  return { x: Math.max(0, Math.min(view.width, x)), y: Math.max(0, Math.min(view.height, y)) };\n}\nview.addEventListener('pointerdown', (ev) => {\n  if (!loaded) return;\n  const p = pos(ev);\n  if (mode === 'text') {\n    pushHistory();\n    if (drawText(p.x, p.y)) { say('Text added.'); } else { undoStack.pop(); }\n    refreshButtons(); render(); return;\n  }\n  view.setPointerCapture(ev.pointerId);\n  drag = { x0: p.x, y0: p.y, x1: p.x, y1: p.y };\n});\nview.addEventListener('pointermove', (ev) => {\n  if (!drag) return;\n  const p = pos(ev); drag.x1 = p.x; drag.y1 = p.y;\n  if (mode === 'crop') sel = { x: Math.round(Math.min(drag.x0, p.x)), y: Math.round(Math.min(drag.y0, p.y)), w: Math.round(Math.abs(p.x - drag.x0)), h: Math.round(Math.abs(p.y - drag.y0)) };\n  render();\n});\nview.addEventListener('pointerup', () => {\n  if (!drag) return;\n  const d = drag; drag = null;\n  if (mode === 'arrow') {\n    if (Math.hypot(d.x1 - d.x0, d.y1 - d.y0) < 10) { say('Drag a little further to make an arrow.', true); render(); return; }\n    pushHistory(); drawArrow(base.getContext('2d'), d.x0, d.y0, d.x1, d.y1); say('Arrow added.');\n  } else if (mode === 'crop') {\n    say(sel && sel.w > 1 ? 'Crop area: ' + sel.w + ' × ' + sel.h + ' pixels. Press Apply crop to keep it.' : 'Drag a larger area to crop.');\n  }\n  refreshButtons(); render();\n});\nfor (const r of document.querySelectorAll('input[name=mode]')) {\n  r.addEventListener('change', () => { mode = r.value; if (loaded && mode === 'crop' && !sel) defaultSel(); refreshButtons(); render(); });\n}\nel('open').addEventListener('click', async () => {\n  try {\n    const f = await tessera.pickFile();\n    if (!f) { say('No photo was chosen.'); return; }\n    const img = new Image();\n    img.src = await tessera.assetUrl(f.id);\n    await img.decode();\n    resizeBase(img.naturalWidth, img.naturalHeight);\n    base.getContext('2d').drawImage(img, 0, 0);\n    fileName = (f.name || 'photo').replace(/\\.[^.]+$/, '') + '-edited';\n    loaded = true; undoStack = []; defaultSel();\n    say('Photo opened: ' + base.width + ' × ' + base.height + ' pixels.');\n    refreshButtons(); render();\n  } catch (e) { say('The photo could not be opened: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nel('crop').addEventListener('click', () => {\n  if (!sel || sel.w < 2 || sel.h < 2) { say('Drag on the photo to choose a crop area first.', true); return; }\n  pushHistory();\n  const c = document.createElement('canvas'); c.width = sel.w; c.height = sel.h;\n  c.getContext('2d').drawImage(base, sel.x, sel.y, sel.w, sel.h, 0, 0, sel.w, sel.h);\n  resizeBase(sel.w, sel.h); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Cropped to ' + base.width + ' × ' + base.height + ' pixels.');\n  refreshButtons(); render();\n});\nel('rotate').addEventListener('click', () => {\n  pushHistory();\n  const c = document.createElement('canvas'); c.width = base.height; c.height = base.width;\n  const x = c.getContext('2d'); x.translate(c.width, 0); x.rotate(Math.PI / 2); x.drawImage(base, 0, 0);\n  resizeBase(c.width, c.height); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Photo rotated.'); refreshButtons(); render();\n});\nel('gray').addEventListener('click', () => {\n  try {\n    const ctx = base.getContext('2d');\n    const im = ctx.getImageData(0, 0, base.width, base.height);\n    const d = im.data;\n    pushHistory();\n    for (let i = 0; i < d.length; i += 4) {\n      const g = Math.round(d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114);\n      d[i] = d[i + 1] = d[i + 2] = g;\n    }\n    ctx.putImageData(im, 0, 0);\n    say('Photo is now black and white.');\n    refreshButtons(); render();\n  } catch (e) { say('The photo could not be changed to black and white: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nel('midArrow').addEventListener('click', () => {\n  pushHistory();\n  drawArrow(base.getContext('2d'), base.width * 0.3, base.height * 0.7, base.width * 0.5, base.height * 0.5);\n  say('Arrow added in the middle.'); refreshButtons(); render();\n});\nel('midText').addEventListener('click', () => {\n  pushHistory();\n  if (drawText(base.width / 2, base.height / 2)) say('Text added in the middle.'); else undoStack.pop();\n  refreshButtons(); render();\n});\nel('undo').addEventListener('click', () => {\n  const c = undoStack.pop(); if (!c) return;\n  resizeBase(c.width, c.height); base.getContext('2d').drawImage(c, 0, 0);\n  defaultSel(); say('Last change undone.'); refreshButtons(); render();\n});\nel('save').addEventListener('click', async () => {\n  try {\n    const ok = await tessera.saveFile({ name: fileName, type: 'image/png', bytesBase64: base.toDataURL('image/png').split(',')[1] });\n    say(ok ? 'Photo saved.' : 'Not saved: the save was cancelled.', false);\n  } catch (e) { say('The photo could not be saved: ' + (e && e.message ? e.message : 'unknown problem'), true); }\n});\nrefreshButtons(); render();"
+            }
+          },
+          "data": {
+            "mode": "unchanged"
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "files@b93298b821fe",
+        "profile@d0760ae0c1f2",
+        "edit@a204f4d753be",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "conversation@55efc5121fcd",
+        "style-notes@6fbe89c62e1f",
+        "source@0eae49d84708",
+        "edit-declarations@7eb300505e9f"
+      ]
+    }
+  ]
+}

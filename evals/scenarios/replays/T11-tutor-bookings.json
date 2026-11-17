@@ -1,0 +1,226 @@
+{
+  "about": "A live run of T11-tutor-bookings, recorded for replay.",
+  "scenario": "T11-tutor-bookings",
+  "recorded": {
+    "head": "27f047ad15a0f999c48abc0177c28f26b0ddfe19",
+    "at": "2026-11-17T02:03:41.000Z",
+    "cliVersion": "2.1.326"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": null,
+          "dataPart": "João already has Monday at 3 pm and Maria has Thursday at 4 pm",
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Booking sheet",
+              "request": "A booking sheet for my tutoring"
+            },
+            {
+              "name": "Weekly availability",
+              "request": "Monday to Thursday 2–7 pm"
+            },
+            {
+              "name": "One-hour sessions",
+              "request": "one-hour sessions"
+            },
+            {
+              "name": "No double-booking",
+              "request": "never double-booked"
+            },
+            {
+              "name": "Existing bookings",
+              "request": "João already has Monday at 3 pm and Maria has Thursday at 4 pm"
+            }
+          ],
+          "profile": "scheduling",
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Tutoring booking sheet",
+          "summary": "Book one-hour tutoring sessions Monday to Thursday, 2–7 pm, never two at the same time. João (Monday 3 pm) and Maria (Thursday 4 pm) are already in. You can also block a weekday, and sessions on it move to other free times.",
+          "uiMode": "standard",
+          "capabilities": [
+            "clock"
+          ],
+          "code": {
+            "html": "<h1>Tutoring bookings</h1>\n<p class=\"hint\">Monday to Thursday, 2–7 pm, one-hour sessions. Each time slot holds one student. Sessions repeat weekly; dates show the next one.</p>\n<div id=\"status\" role=\"status\" aria-live=\"polite\"></div>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Book a student</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"task-name\">Student name</label><input id=\"task-name\" data-hook=\"task-name\" type=\"text\" autocomplete=\"off\"></div>\n<button id=\"task-add\" data-hook=\"task-add\" type=\"button\">Book first free time</button>\n</div>\n</section>\n<section aria-labelledby=\"h-sessions\">\n<h2 id=\"h-sessions\">Sessions</h2>\n<p id=\"empty\" hidden>No sessions yet. Add a student above.</p>\n<ul id=\"sessions\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days off</h2>\n<p class=\"hint\">Blocking a weekday moves its sessions to other free times.</p>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rule-day\">Weekday with no sessions</label>\n<select id=\"rule-day\" data-hook=\"rule-day\"><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option><option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\">Friday</option><option value=\"6\">Saturday</option><option value=\"0\">Sunday</option></select></div>\n<button id=\"rule-add\" data-hook=\"rule-add\" type=\"button\">Block this day</button>\n</div>\n<p id=\"no-rules\" hidden>No days blocked.</p>\n<ul id=\"rules\" class=\"list\"></ul>\n</section>",
+            "css": "body{font-family:var(--ui-font);color:var(--ui-text);background:var(--ui-background);font-size:var(--ui-size-body);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2);font-weight:600}\n.hint{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-3)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 200px}\nlabel{font-size:var(--ui-size-secondary)}\ninput,select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;width:100%}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent)}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.when{color:var(--ui-text-secondary)}\n.who{font-weight:600}\n#status{min-height:1.5em;margin-bottom:var(--ui-space-2)}\n#status.error{color:var(--ui-error)}\n#status.ok{color:var(--ui-success)}",
+            "js": "const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nconst OPEN=[1,2,3,4];const HOURS=[14,15,16,17,18];\nlet today=null,sessions=[],rules=[],revs={};\nconst $=id=>document.getElementById(id);\nfunction say(t,kind){const s=$('status');s.textContent=t;s.className=kind||'';}\nfunction pad(n){return String(n).padStart(2,'0');}\nfunction dayOffset(wd){const p=today.split('-').map(Number);const dow=new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay();return (wd-dow+7)%7;}\nfunction dateFor(wd){const p=today.split('-').map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2]+dayOffset(wd)));return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());}\nfunction hourText(h){return (h>12?h-12:h)+':00 '+(h>=12?'pm':'am');}\nfunction banned(extra){const s=new Set(rules.map(r=>r.weekday));if(extra!==undefined)s.add(extra);return s;}\nfunction slotsInOrder(ban){const out=[];const days=OPEN.filter(d=>!ban.has(d)).sort((a,b)=>dayOffset(a)-dayOffset(b));for(const d of days)for(const h of HOURS)out.push({weekday:d,hour:h});return out;}\nfunction key(wd,h){return wd+'-'+h;}\nasync function load(){const r=await tessera.call('data.read',{});sessions=r.data.sessions||[];rules=r.data.rules||[];revs=r.revisions||{};}\nfunction render(){\n const ul=$('sessions');ul.textContent='';\n const list=sessions.slice().sort((a,b)=>dayOffset(a.weekday)-dayOffset(b.weekday)||a.hour-b.hour||a.weekday-b.weekday);\n $('empty').hidden=list.length>0;\n for(const s of list){\n  const li=document.createElement('li');li.setAttribute('data-hook','session');\n  const left=document.createElement('span');\n  const who=document.createElement('span');who.className='who';who.setAttribute('data-hook','session-task');who.textContent=s.student;\n  const when=document.createElement('span');when.className='when';\n  const t=document.createElement('time');t.setAttribute('datetime',dateFor(s.weekday));t.textContent=DAYS[s.weekday]+' '+dateFor(s.weekday);\n  when.append(' · ',t,', '+hourText(s.hour)+'–'+hourText(s.hour+1));\n  left.append(who,when);\n  const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Cancel';b.setAttribute('aria-label','Cancel session for '+s.student);\n  b.addEventListener('click',()=>cancel(s));\n  li.append(left,b);ul.append(li);\n }\n const rl=$('rules');rl.textContent='';$('no-rules').hidden=rules.length>0;\n for(const r of rules){\n  const li=document.createElement('li');li.setAttribute('data-hook','rule');\n  const sp=document.createElement('span');sp.textContent='No sessions on '+DAYS[r.weekday]+'s';\n  const b=document.createElement('button');b.type='button';b.className='secondary';b.setAttribute('data-hook','rule-remove');b.textContent='Remove';b.setAttribute('aria-label','Remove the rule for '+DAYS[r.weekday]);\n  b.addEventListener('click',()=>removeRule(r));\n  li.append(sp,b);rl.append(li);\n }\n}\nasync function guard(fn){try{await fn();}catch(e){say('That did not work and nothing was changed. Please try again.','error');try{await load();render();}catch(_){}}}\nasync function addTask(){\n const inp=$('task-name');const name=inp.value.trim();\n if(!name){say('Type the student\\'s name first.','error');inp.focus();return;}\n const taken=new Set(sessions.map(s=>key(s.weekday,s.hour)));\n const slot=slotsInOrder(banned()).find(x=>!taken.has(key(x.weekday,x.hour)));\n if(!slot){say('There is no free time left.','error');return;}\n await tessera.call('data.patch',{operations:[{op:'add',collection:'sessions',record:{student:name,weekday:slot.weekday,hour:slot.hour}}]});\n inp.value='';await load();render();\n say(name+' is booked on '+DAYS[slot.weekday]+' at '+hourText(slot.hour)+'.','ok');inp.focus();\n}\nasync function addRule(){\n const wd=Number($('rule-day').value);\n if(rules.some(r=>r.weekday===wd)){say(DAYS[wd]+' is already blocked.','error');return;}\n const ban=banned(wd);\n const ops=[];const taken=new Set(sessions.filter(s=>!ban.has(s.weekday)).map(s=>key(s.weekday,s.hour)));\n const slots=slotsInOrder(ban);\n const moving=sessions.filter(s=>s.weekday===wd);\n let moved=0;\n for(const s of moving){\n  let pick=slots.find(x=>x.hour===s.hour&&!taken.has(key(x.weekday,x.hour)));\n  if(!pick)pick=slots.slice().sort((a,b)=>Math.abs(a.hour-s.hour)-Math.abs(b.hour-s.hour)).find(x=>!taken.has(key(x.weekday,x.hour)));\n  if(!pick){say('Not enough free times to block '+DAYS[wd]+'. Nothing was changed.','error');return;}\n  taken.add(key(pick.weekday,pick.hour));\n  ops.push({op:'replace',collection:'sessions',id:s.id,revisionCount:(revs.sessions||{})[s.id]||1,fields:{weekday:pick.weekday,hour:pick.hour}});moved++;\n }\n ops.push({op:'add',collection:'rules',record:{weekday:wd}});\n await tessera.call('data.patch',{operations:ops});\n await load();render();\n say(DAYS[wd]+' is blocked.'+(moved?' '+moved+' session'+(moved>1?'s were':' was')+' moved to other days.':''),'ok');\n}\nasync function removeRule(r){\n await tessera.call('data.patch',{operations:[{op:'remove',collection:'rules',id:r.id,revisionCount:(revs.rules||{})[r.id]||1}]});\n await load();render();say(DAYS[r.weekday]+' is open again. Existing sessions stay where they are.','ok');$('rule-day').focus();\n}\nasync function cancel(s){\n await tessera.call('data.patch',{operations:[{op:'remove',collection:'sessions',id:s.id,revisionCount:(revs.sessions||{})[s.id]||1}]});\n await load();render();say('Session for '+s.student+' cancelled.','ok');$('task-name').focus();\n}\n$('task-add').addEventListener('click',()=>guard(addTask));\n$('task-name').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();guard(addTask);}});\n$('rule-add').addEventListener('click',()=>guard(addRule));\n(async()=>{try{const c=await tessera.call('clock.now',{});today=c.date;await load();render();}catch(e){say('The sheet could not be opened. Please try again.','error');}})();"
+          },
+          "data": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "sessions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "student": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      },
+                      "hour": {
+                        "type": "integer",
+                        "minimum": 14,
+                        "maximum": 18
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "student",
+                      "weekday",
+                      "hour"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "rules": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 6
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "weekday"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "sessions",
+                "rules"
+              ],
+              "additionalProperties": false
+            },
+            "reusableDefaults": {
+              "sessions": [],
+              "rules": []
+            },
+            "initialState": {
+              "sessions": [
+                {
+                  "id": "s-joao",
+                  "student": "João",
+                  "weekday": 1,
+                  "hour": 15
+                },
+                {
+                  "id": "s-maria",
+                  "student": "Maria",
+                  "weekday": 4,
+                  "hour": 16
+                }
+              ],
+              "rules": []
+            }
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@3877bf3c212e",
+        "create@95fdc23aa768",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "data",
+          "interfacePart": null,
+          "dataPart": "Move João to Thursday at 4 pm.",
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "Move João's session",
+              "request": "Move João to Thursday at 4 pm."
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "cannot",
+          "reason": "Thursday at 4 pm is already taken by Maria, and this booking sheet never allows two sessions at the same time. João can't be moved there. Choose another Thursday time between 2 and 7 pm, or move Maria first."
+        }
+      },
+      "parts": [
+        "data-plan@2ce101112867",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "conversation@55efc5121fcd",
+        "data-context@f23d03154e01"
+      ]
+    }
+  ]
+}

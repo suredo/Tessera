@@ -1,0 +1,296 @@
+{
+  "about": "A live run of T12-family-chores, recorded for replay.",
+  "scenario": "T12-family-chores",
+  "recorded": {
+    "head": "27f047ad15a0f999c48abc0177c28f26b0ddfe19",
+    "at": "2026-11-17T02:05:44.274Z",
+    "cliVersion": "2.1.326"
+  },
+  "answers": [
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "create",
+          "interfacePart": "A chores board for my family: Ana, Leo and me.",
+          "dataPart": "Ana does laundry every Saturday.",
+          "behaviorChange": true,
+          "lookOnly": false,
+          "targetsCurrentTool": false,
+          "language": "en",
+          "features": [
+            {
+              "name": "Chores board",
+              "request": "A chores board for my family"
+            },
+            {
+              "name": "Family members",
+              "request": "Ana, Leo and me"
+            },
+            {
+              "name": "Recurring laundry for Ana",
+              "request": "Ana does laundry every Saturday"
+            }
+          ],
+          "profile": "item-list",
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-none@a47602c1d680",
+        "intent-no-saved@62b6b33152f8",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "create",
+        "value": {
+          "outcome": "tool",
+          "name": "Family chores board",
+          "summary": "A shared list of chores for Ana, Leo and you, each with who does it and when. Ana's Saturday laundry is already on it; add more, tick them off, or remove them.",
+          "uiMode": "standard",
+          "capabilities": [],
+          "code": {
+            "html": "<main class=\"wrap\">\n<h1>Family chores</h1>\n<p class=\"hint\">Who does what, and when.</p>\n<div class=\"add\" role=\"group\" aria-label=\"Add a chore\">\n<div class=\"field grow\"><label for=\"name\">Chore</label><input id=\"name\" type=\"text\" data-hook=\"item-name\" placeholder=\"e.g. Take out the trash\" autocomplete=\"off\"></div>\n<div class=\"field\"><label for=\"who\">Who</label><select id=\"who\"></select></div>\n<div class=\"field\"><label for=\"day\">When</label><select id=\"day\"></select></div>\n<button id=\"add\" type=\"button\" data-hook=\"item-add\">Add chore</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n<h2>Chores</h2>\n<p id=\"empty\" hidden>No chores yet. Add the first one above.</p>\n<ul id=\"list\"></ul>\n<button id=\"reset\" type=\"button\" class=\"secondary\">Clear all ticks for a new week</button>\n</main>",
+            "css": ".wrap{max-width:720px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-1);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 var(--ui-space-2)}\n.hint{margin:0 0 var(--ui-space-4);color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.add{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1)}\n.grow{flex:1 1 200px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput[type=text],select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;width:100%}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary,button.remove{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\n#reset{margin-top:var(--ui-space-4)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\nli{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-2) var(--ui-space-3);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel)}\nli input[type=checkbox]{width:24px;height:24px;accent-color:var(--ui-accent)}\n.txt{flex:1 1 160px;display:flex;flex-direction:column}\n.meta{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\nli.done .nm{text-decoration:line-through}\n#msg{min-height:1.5em;margin:var(--ui-space-2) 0 0;font-size:var(--ui-size-secondary)}\n#msg.err{color:var(--ui-error)}\n#msg.ok{color:var(--ui-success)}",
+            "js": "const DAYS=['Every day','Every Monday','Every Tuesday','Every Wednesday','Every Thursday','Every Friday','Every Saturday','Every Sunday','Any day'];\nlet chores=[],members=[],revs={};\nconst $=id=>document.getElementById(id);\nfunction say(t,k){const m=$('msg');m.textContent=t;m.className=k||'';}\nfunction fill(sel,vals,keep){const cur=keep?sel.value:'';sel.textContent='';for(const v of vals){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}if(cur&&vals.includes(cur))sel.value=cur;}\nfunction render(){\nfill($('who'),members.length?members:['Me'],true);\nconst ul=$('list');ul.textContent='';\n$('empty').hidden=chores.length>0;\nfor(const c of chores){\nconst li=document.createElement('li');li.setAttribute('data-hook','item');if(c.done)li.className='done';\nconst cb=document.createElement('input');cb.type='checkbox';cb.checked=!!c.done;cb.setAttribute('aria-label','Done: '+c.name);\ncb.addEventListener('change',()=>toggle(c.id,cb.checked));\nconst t=document.createElement('span');t.className='txt';\nconst n=document.createElement('span');n.className='nm';n.textContent=c.name;\nconst m=document.createElement('span');m.className='meta';m.textContent=c.assignee+' · '+c.day+(c.done?' · done':'');\nt.appendChild(n);t.appendChild(m);\nconst b=document.createElement('button');b.type='button';b.className='remove';b.setAttribute('data-hook','item-remove');b.textContent='Remove';b.setAttribute('aria-label','Remove '+c.name);\nb.addEventListener('click',()=>remove(c.id));\nli.appendChild(cb);li.appendChild(t);li.appendChild(b);ul.appendChild(li);}\n}\nasync function load(){\nconst r=await tessera.call('data.read',{});\nchores=r.data.chores||[];members=(r.data.members||[]).map(x=>x.name);revs=r.revisions.chores||{};render();}\nasync function patch(ops,okMsg){\ntry{await tessera.call('data.patch',{operations:ops});await load();say(okMsg,'ok');return true;}\ncatch(e){say('That did not work and nothing was changed. Please try again.','err');return false;}}\nasync function add(){\nconst name=$('name').value.trim();\nif(!name){say('Type the chore first.','err');$('name').focus();return;}\nconst ok=await patch([{op:'add',collection:'chores',record:{name:name,assignee:$('who').value,day:$('day').value,done:false}}],'Added “'+name+'”.');\nif(ok){$('name').value='';$('name').focus();}}\nfunction toggle(id,v){patch([{op:'replace',collection:'chores',id:id,revisionCount:revs[id],fields:{done:v}}],v?'Marked done.':'Marked not done.');}\nfunction remove(id){const c=chores.find(x=>x.id===id);patch([{op:'remove',collection:'chores',id:id,revisionCount:revs[id]}],'Removed “'+(c?c.name:'chore')+'”.');}\nfunction reset(){const ops=chores.filter(c=>c.done).map(c=>({op:'replace',collection:'chores',id:c.id,revisionCount:revs[c.id],fields:{done:false}}));\nif(!ops.length){say('No ticks to clear.');return;}patch(ops,'All ticks cleared.');}\n$('add').addEventListener('click',add);\n$('name').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add();}});\n$('reset').addEventListener('click',reset);\nfill($('day'),DAYS);\nload().catch(()=>say('Could not load the chores.','err'));"
+          },
+          "data": {
+            "schema": {
+              "$schema": "http://json-schema.org/draft-07/schema#",
+              "type": "object",
+              "properties": {
+                "members": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  }
+                },
+                "chores": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "assignee": {
+                        "type": "string"
+                      },
+                      "day": {
+                        "type": "string"
+                      },
+                      "done": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "assignee",
+                      "day",
+                      "done"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "members",
+                "chores"
+              ]
+            },
+            "reusableDefaults": {
+              "members": [
+                {
+                  "id": "m-ana",
+                  "name": "Ana"
+                },
+                {
+                  "id": "m-leo",
+                  "name": "Leo"
+                },
+                {
+                  "id": "m-me",
+                  "name": "Me"
+                }
+              ],
+              "chores": []
+            },
+            "initialState": {
+              "chores": [
+                {
+                  "id": "c-laundry",
+                  "name": "Laundry",
+                  "assignee": "Ana",
+                  "day": "Every Saturday",
+                  "done": false
+                }
+              ]
+            }
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-standard@5953c402b1d6",
+        "accessibility@bd63b2577331",
+        "profile@a230baa738e0",
+        "create@95fdc23aa768",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "data",
+          "dataPart": "Leo takes out the trash every Tuesday.",
+          "interfacePart": null,
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "Trash chore for Leo",
+              "request": "Leo takes out the trash every Tuesday."
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Adds a new chore, \"Take out trash\", assigned to Leo every Tuesday and not yet done. No existing chores are changed.",
+          "patch": {
+            "operations": [
+              {
+                "op": "add",
+                "collection": "chores",
+                "record": {
+                  "name": "Take out trash",
+                  "assignee": "Leo",
+                  "day": "Every Tuesday",
+                  "done": false
+                }
+              }
+            ]
+          }
+        }
+      },
+      "parts": [
+        "data-plan@2ce101112867",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "conversation@55efc5121fcd",
+        "data-context@f23d03154e01"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "intent",
+        "value": {
+          "kind": "data",
+          "interfacePart": null,
+          "dataPart": "Ana did the laundry.",
+          "behaviorChange": false,
+          "lookOnly": false,
+          "targetsCurrentTool": true,
+          "language": "en",
+          "features": [
+            {
+              "name": "Mark laundry done",
+              "request": "Ana did the laundry."
+            }
+          ],
+          "profile": null,
+          "drawsCharts": false,
+          "usesFiles": false,
+          "connections": []
+        }
+      },
+      "parts": [
+        "intent@606fb79ccc38",
+        "intent-open@ad363d62acd6",
+        "intent-no-saved@62b6b33152f8",
+        "intent-conversation@2f0d3d87c7f1",
+        "intent-no-connections@47d12f6212ee",
+        "intent-request@5da774cb7f35"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "data",
+        "value": {
+          "outcome": "patch",
+          "summary": "Mark Ana's Saturday laundry chore as done. No other chores or members will change.",
+          "patch": {
+            "operations": [
+              {
+                "op": "replace",
+                "collection": "chores",
+                "id": "c-laundry",
+                "revisionCount": 2,
+                "fields": {
+                  "done": true
+                }
+              }
+            ]
+          }
+        }
+      },
+      "parts": [
+        "data-plan@2ce101112867",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "conversation@55efc5121fcd",
+        "data-context@f23d03154e01"
+      ]
+    }
+  ]
+}
