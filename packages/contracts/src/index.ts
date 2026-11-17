@@ -125,6 +125,7 @@ export {
   SAVE_LIMIT_BYTES,
   SAVE_TEXT_TYPES,
   checkSaveFile,
+  FILE_SAVE_HOOK,
   saveKind,
   saveName,
   saveRequestSchema,

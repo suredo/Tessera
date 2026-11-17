@@ -6,6 +6,7 @@ import {
   OWN_PART_CAPABILITIES,
   CHART_LIMITS,
   CHART_TYPES,
+  FILE_SAVE_HOOK,
   ITEM_LIST_PROFILE,
   CONNECTION_SAMPLES_LIMIT,
   PROFILE_IDS,
@@ -556,6 +557,8 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(told.system).toContain("await tessera.saveFile(file)");
     expect(told.system).toContain("at most 25 MB");
     expect(told.system).toContain("Never make a file input");
+    // Its save button is marked, so a scenario can press it as the person would (A87).
+    expect(told.system).toContain(`data-hook="${FILE_SAVE_HOOK}"`);
     for (const usesFiles of [false, undefined]) {
       const plain = assemblePrompt({
         stage: "create",

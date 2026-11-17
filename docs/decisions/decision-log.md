@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A86), with its choice and reasons."
+description: "Every decision made so far (A1–A87), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T00:20:11Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T00:39:46Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -101,6 +101,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A84 | How a new tool is useful at once without passing off examples as the person's, and creation's prompt room | **Examples, only when the request gives no entries and the tool needs some, go in the request's starting data, each record marked "example": true and shown as an example; never in the reusable defaults, which the host refuses, as using the tool again copies those. Dates a tool fills in start from today by the host's clock, never a fixed day. Creation's budget rises to 21,000** | Chosen by Claude Code on 2026-11-15 for #352, under the owner's go-ahead (`UX-01`, `GEN-05`, L-58, L-63). Starting data is never copied by Use again, so marking examples there keeps them the request's and easy to tell apart. With the two lines, the largest creation, filtering with charts, measured 20,198 of 20,000; 21,000 is within the 30,000 the owner allowed (A77). |
 | A85 | How a new tool's first sight is checked | **In staging, after the smoke check, a new tool is opened on a throwaway copy of its starting data, the request's entries in it, and its page read as the person sees it, its text and what its fields hold: when the request gave entries, at least one of their texts shows; when it gave none but the tool made examples, at least one element shows marked data-example, the label in the person's own words, which the AI review reads; and no date field, a week's too, starts before today by the host's clock. A failure is repaired as a behavior check's is** | Chosen by Claude Code on 2026-11-15 for #352, under the owner's go-ahead (`UX-01`, `GEN-05`, L-58, L-63). Profile checks keep running on the defaults they were written for; only this check sees the starting data, which is the person's own request and never leaves the panel. Whether the request held entries the model missed is the AI review's (`EVAL-03`). |
 | A86 | How an edit declares a capability the change needs | **An edit's answer may replace the tool's capabilities with every one the changed tool uses, or leave them unchanged, which is also what leaving them out means; the host keeps the "connection" capability in step with the connections whatever the list says, and a look-only edit that replaces them is refused. The static check still refuses any use of one not declared** | Chosen by Claude Code on 2026-11-17 while preparing T5's export for M4's live set: the edit contract couldn't declare capabilities at all, so a form gaining a save button, or a tracker gaining a chart, failed the static check on every repair, told to declare what it couldn't. `GEN-13` keeps declarations unless the request changes them; a request to add saving does. |
+| A87 | How a scenario presses a tool's save button when no files profile names one | **The files part asks a tool that saves files to mark its save button `data-hook="file-save"`, besides any other hook it holds; a scenario may press that hook only in a click answered as a save** | Chosen by Claude Code on 2026-11-17 for T5's export in M4's live set: the form profile names no save button, and a do step that guessed at the markup would test the guess (`VER-04`). Asking only a saving tool, through the part it already gets (A82), adds no hook to the profiles. |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2

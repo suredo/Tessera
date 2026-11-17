@@ -1,16 +1,17 @@
-# T5, RSVP form (docs/testing/app-catalogue.md), in its M3 form, without export (CAP-03, M4): a
-# form checked by the form profile (VER-03) before it opens. The person sends it empty, which
-# saves nothing, then fills each field, found by the label the request names, and sends it, which
-# saves an answer that is still there the next day. The request names the labels, so finding a
-# field by one asks nothing the generated tool wasn't told. Whether the form says what is missing in plain words, and
-# shows the answers well, is the AI review's.
+# T5, RSVP form (docs/testing/app-catalogue.md), in its M4 form, with export (CAP-03): a form
+# checked by the form profile (VER-03) before it opens. The person sends it empty, which saves
+# nothing, then fills each field, found by the label the request names, and sends it, which saves
+# an answer. They ask to save the answers as a file, a change to the tool, and press its save
+# button, which the files part asks a saving tool to mark (A87), saying Save when Tessera asks
+# (A81); the answer is still there the next day. Whether the form says what is missing in plain
+# words, shows the answers well, and saves them in a file a spreadsheet opens, is the AI review's.
 id: T5-rsvp-form
 tier: intermediate
 language: en
 person: "Someone planning a birthday party"
 goal: "A form guests fill in, with their answers kept and shown"
 clock: { start: "2026-11-03T20:00:00", zone: "America/Sao_Paulo" }
-budget: { calls: 8 }
+budget: { calls: 10 }
 profiles: [form]
 steps:
   - say: 'Make a form for my party guests with the fields "Name", "How many people" and "Food allergies". Show me the answers.'
@@ -22,6 +23,11 @@ steps:
   - do: { fill: form-field, label: Food allergies, value: "Peanuts" }
   - do: { click: form-submit }
     expect: { version: unchanged, data: changed }
+  # A change to the tool: the answer already sent stays as it was.
+  - say: "Let me save the answers as a spreadsheet file."
+    expect: { version: new, data: unchanged }
+  - do: { click: file-save, answer: save }
+    expect: { version: unchanged, data: unchanged, downloaded: true }
   - next-day: true
     expect: { workspace: same, version: unchanged, data: unchanged }
 review:

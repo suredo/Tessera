@@ -79,7 +79,8 @@ describe("scenario files (EVAL-01)", () => {
       "T3-spending-chart": 10,
       // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
       "T4-habit-tracker": 8,
-      "T5-rsvp-form": 8,
+      // Two requests, intent and create or edit, with a repair each in reserve, and the review's.
+      "T5-rsvp-form": 10,
       "T6-tip-calculator": 7,
       // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
       "T7-movie-finder": 8,
@@ -141,6 +142,21 @@ describe("scenario files (EVAL-01)", () => {
       "T98-no-profile",
       "steps:\n  - say: hi\n  - do: { click: item-add }\n",
       /the hook item-add isn't one/,
+    );
+    // The save button the files part asks a saving tool to mark, pressed only to answer Tessera's
+    // question about saving (A87).
+    expect(
+      loadScenario(
+        scenarioFile(
+          "T94-file-save",
+          "profiles: [form]\nsteps:\n  - say: hi\n  - do: { click: file-save, answer: save }\n",
+        ),
+      ).steps[1],
+    ).toEqual({ do: { click: "file-save", answer: "save" } });
+    refused(
+      "T96-file-save-unanswered",
+      "profiles: [form]\nsteps:\n  - say: hi\n  - do: { click: file-save }\n",
+      /the hook file-save isn't one/,
     );
     refused(
       "T99-unknown-in",

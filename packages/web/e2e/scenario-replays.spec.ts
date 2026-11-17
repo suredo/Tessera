@@ -30,7 +30,18 @@ const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "T1-shopping-list": [],
   "T2-reading-list": [],
   "T3-spending-chart": [],
-  "T5-rsvp-form": [],
+  // T5's export came in M4, after its M3 recording, which has no answer for it: until M4's live
+  // run records T5 again, its request fails and its save button isn't there.
+  "T5-rsvp-form": [
+    [
+      7,
+      [
+        "The tool didn't change.",
+        `The answers don't fit this run, so it needs a new live run: Script "T5-rsvp-form" has no reply left for the intent call.`,
+      ],
+    ],
+    [8, ["The tool shows 0 elements marked file-save; the step needs one."]],
+  ],
   "T6-tip-calculator": [],
   "T10-study-planner": [],
   "T13-drawing-board": [],
