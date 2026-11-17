@@ -81,17 +81,11 @@
                         "type": "boolean"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "done"
-                    ]
+                    "required": ["id", "name", "done"]
                   }
                 }
               },
-              "required": [
-                "items"
-              ]
+              "required": ["items"]
             },
             "reusableDefaults": {
               "items": []
@@ -202,20 +196,13 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "done",
-                      "aisle"
-                    ],
+                    "required": ["id", "name", "done", "aisle"],
                     "type": "object"
                   },
                   "type": "array"
                 }
               },
-              "required": [
-                "items"
-              ],
+              "required": ["items"],
               "type": "object"
             },
             "defaults": {

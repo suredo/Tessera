@@ -56,9 +56,7 @@
           "name": "Exam study planner",
           "summary": "Add your exam topics and they are spread over evening sessions in the next two weeks, skipping the weekdays you rule out (Fridays to start with). Flashcards from pasted notes are not part of this tool yet.",
           "uiMode": "standard",
-          "capabilities": [
-            "clock"
-          ],
+          "capabilities": ["clock"],
           "code": {
             "html": "<h1>Exam study planner</h1>\n<p class=\"sub\">Evening sessions over the next 14 days. Each topic gets up to 3 sessions.</p>\n<p id=\"status\" role=\"status\" class=\"status\"></p>\n<section aria-labelledby=\"h-topic\">\n<h2 id=\"h-topic\">Add a topic</h2>\n<div class=\"row\">\n<label for=\"tn\">Topic name</label>\n<input id=\"tn\" type=\"text\" data-hook=\"task-name\" placeholder=\"e.g. Cell biology\">\n<button id=\"ta\" type=\"button\" data-hook=\"task-add\">Add topic</button>\n</div>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days I don't study</h2>\n<ul id=\"rules\" class=\"plain\"></ul>\n<div class=\"row\">\n<label for=\"rd\">Weekday</label>\n<select id=\"rd\" data-hook=\"rule-day\">\n<option value=\"0\">Sunday</option><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option><option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\" selected>Friday</option><option value=\"6\">Saturday</option>\n</select>\n<button id=\"ra\" type=\"button\" data-hook=\"rule-add\">Add rule</button>\n</div>\n</section>\n<section aria-labelledby=\"h-plan\">\n<h2 id=\"h-plan\">Plan</h2>\n<p id=\"empty\" hidden>No topics yet. Add one above and its evening sessions will appear here.</p>\n<div id=\"plan\"></div>\n</section>\n<section aria-labelledby=\"h-topics\">\n<h2 id=\"h-topics\">Topics</h2>\n<ul id=\"topics\" class=\"plain\"></ul>\n</section>",
             "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\nh3{font-size:var(--ui-size-body);font-weight:600;margin:var(--ui-space-3) 0 var(--ui-space-1)}\n.sub{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center}\ninput,select,button{font:inherit;min-height:var(--ui-target);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text)}\ninput{flex:1 1 200px;min-width:0}\nbutton{cursor:pointer;background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul.plain{list-style:none;padding:0;margin:0 0 var(--ui-space-3)}\nul.plain li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;justify-content:space-between;padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\n.day{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-2) var(--ui-space-3);margin-bottom:var(--ui-space-2)}\n.s{padding:var(--ui-space-1) 0}\n.s time{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin-right:var(--ui-space-2)}\n.status{min-height:1.5em;font-size:var(--ui-size-secondary)}\n.status.err{color:var(--ui-error)}\n.status.ok{color:var(--ui-success)}",
@@ -80,10 +78,7 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name"
-                    ]
+                    "required": ["id", "name"]
                   }
                 },
                 "sessions": {
@@ -101,11 +96,7 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "taskId",
-                      "date"
-                    ]
+                    "required": ["id", "taskId", "date"]
                   }
                 },
                 "rules": {
@@ -122,18 +113,11 @@
                         "maximum": 6
                       }
                     },
-                    "required": [
-                      "id",
-                      "day"
-                    ]
+                    "required": ["id", "day"]
                   }
                 }
               },
-              "required": [
-                "tasks",
-                "sessions",
-                "rules"
-              ]
+              "required": ["tasks", "sessions", "rules"]
             },
             "reusableDefaults": {
               "tasks": [],
@@ -176,9 +160,7 @@
           "name": "Exam study planner",
           "summary": "Add your exam topics and they are spread over evening sessions in the next two weeks, skipping the weekdays you rule out (Fridays to start with). Flashcards from pasted notes are not part of this tool yet.",
           "uiMode": "standard",
-          "capabilities": [
-            "clock"
-          ],
+          "capabilities": ["clock"],
           "code": {
             "html": "<h1>Exam study planner</h1>\n<p class=\"sub\">Evening sessions over the next 14 days. Each topic gets up to 3 sessions.</p>\n<p id=\"status\" role=\"status\" class=\"status\"></p>\n<section aria-labelledby=\"h-topic\">\n<h2 id=\"h-topic\">Add a topic</h2>\n<div class=\"row\">\n<label for=\"tn\">Topic name</label>\n<input id=\"tn\" type=\"text\" data-hook=\"task-name\" placeholder=\"e.g. Cell biology\">\n<button id=\"ta\" type=\"button\" data-hook=\"task-add\">Add topic</button>\n</div>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days I don't study</h2>\n<ul id=\"rules\" class=\"plain\"></ul>\n<div class=\"row\">\n<label for=\"rd\">Weekday</label>\n<select id=\"rd\" data-hook=\"rule-day\">\n<option value=\"0\">Sunday</option><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option><option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\" selected>Friday</option><option value=\"6\">Saturday</option>\n</select>\n<button id=\"ra\" type=\"button\" data-hook=\"rule-add\">Add rule</button>\n</div>\n</section>\n<section aria-labelledby=\"h-plan\">\n<h2 id=\"h-plan\">Plan</h2>\n<p id=\"empty\" hidden>No topics yet. Add one above and its evening sessions will appear here.</p>\n<div id=\"plan\"></div>\n</section>\n<section aria-labelledby=\"h-topics\">\n<h2 id=\"h-topics\">Topics</h2>\n<ul id=\"topics\" class=\"plain\"></ul>\n</section>",
             "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-5) 0 var(--ui-space-2)}\nh3{font-size:var(--ui-size-body);font-weight:600;margin:var(--ui-space-3) 0 var(--ui-space-1)}\n.sub{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center}\ninput,select,button{font:inherit;min-height:var(--ui-target);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text)}\ninput{flex:1 1 200px;min-width:0}\nbutton{cursor:pointer;background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul.plain{list-style:none;padding:0;margin:0 0 var(--ui-space-3)}\nul.plain li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;justify-content:space-between;padding:var(--ui-space-2) 0;border-bottom:1px solid var(--ui-divider)}\n.day{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-2) var(--ui-space-3);margin-bottom:var(--ui-space-2)}\n.s{padding:var(--ui-space-1) 0}\n.s time{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin-right:var(--ui-space-2)}\n.status{min-height:1.5em;font-size:var(--ui-size-secondary)}\n.status.err{color:var(--ui-error)}\n.status.ok{color:var(--ui-success)}",
@@ -200,10 +182,7 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name"
-                    ]
+                    "required": ["id", "name"]
                   }
                 },
                 "sessions": {
@@ -221,11 +200,7 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "taskId",
-                      "date"
-                    ]
+                    "required": ["id", "taskId", "date"]
                   }
                 },
                 "rules": {
@@ -242,18 +217,11 @@
                         "maximum": 6
                       }
                     },
-                    "required": [
-                      "id",
-                      "day"
-                    ]
+                    "required": ["id", "day"]
                   }
                 }
               },
-              "required": [
-                "tasks",
-                "sessions",
-                "rules"
-              ]
+              "required": ["tasks", "sessions", "rules"]
             },
             "reusableDefaults": {
               "tasks": [],
@@ -413,18 +381,12 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "front",
-                      "back"
-                    ],
+                    "required": ["id", "front", "back"],
                     "additionalProperties": false
                   }
                 }
               },
-              "required": [
-                "cards"
-              ],
+              "required": ["cards"],
               "additionalProperties": false
             },
             "reusableDefaults": {

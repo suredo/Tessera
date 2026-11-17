@@ -64,9 +64,7 @@
           "name": "Tutoring booking sheet",
           "summary": "Book one-hour tutoring sessions Monday to Thursday, 2–7 pm, never two at the same time. João (Monday 3 pm) and Maria (Thursday 4 pm) are already in. You can also block a weekday, and sessions on it move to other free times.",
           "uiMode": "standard",
-          "capabilities": [
-            "clock"
-          ],
+          "capabilities": ["clock"],
           "code": {
             "html": "<h1>Tutoring bookings</h1>\n<p class=\"hint\">Monday to Thursday, 2–7 pm, one-hour sessions. Each time slot holds one student. Sessions repeat weekly; dates show the next one.</p>\n<div id=\"status\" role=\"status\" aria-live=\"polite\"></div>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Book a student</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"task-name\">Student name</label><input id=\"task-name\" data-hook=\"task-name\" type=\"text\" autocomplete=\"off\"></div>\n<button id=\"task-add\" data-hook=\"task-add\" type=\"button\">Book first free time</button>\n</div>\n</section>\n<section aria-labelledby=\"h-sessions\">\n<h2 id=\"h-sessions\">Sessions</h2>\n<p id=\"empty\" hidden>No sessions yet. Add a student above.</p>\n<ul id=\"sessions\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Days off</h2>\n<p class=\"hint\">Blocking a weekday moves its sessions to other free times.</p>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rule-day\">Weekday with no sessions</label>\n<select id=\"rule-day\" data-hook=\"rule-day\"><option value=\"1\">Monday</option><option value=\"2\">Tuesday</option><option value=\"3\">Wednesday</option><option value=\"4\">Thursday</option><option value=\"5\">Friday</option><option value=\"6\">Saturday</option><option value=\"0\">Sunday</option></select></div>\n<button id=\"rule-add\" data-hook=\"rule-add\" type=\"button\">Block this day</button>\n</div>\n<p id=\"no-rules\" hidden>No days blocked.</p>\n<ul id=\"rules\" class=\"list\"></ul>\n</section>",
             "css": "body{font-family:var(--ui-font);color:var(--ui-text);background:var(--ui-background);font-size:var(--ui-size-body);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2);font-weight:600}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2);font-weight:600}\n.hint{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-3)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 200px}\nlabel{font-size:var(--ui-size-secondary)}\ninput,select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;width:100%}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent)}\nbutton:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.when{color:var(--ui-text-secondary)}\n.who{font-weight:600}\n#status{min-height:1.5em;margin-bottom:var(--ui-space-2)}\n#status.error{color:var(--ui-error)}\n#status.ok{color:var(--ui-success)}",
@@ -100,12 +98,7 @@
                         "maximum": 18
                       }
                     },
-                    "required": [
-                      "id",
-                      "student",
-                      "weekday",
-                      "hour"
-                    ],
+                    "required": ["id", "student", "weekday", "hour"],
                     "additionalProperties": false
                   }
                 },
@@ -123,18 +116,12 @@
                         "maximum": 6
                       }
                     },
-                    "required": [
-                      "id",
-                      "weekday"
-                    ],
+                    "required": ["id", "weekday"],
                     "additionalProperties": false
                   }
                 }
               },
-              "required": [
-                "sessions",
-                "rules"
-              ],
+              "required": ["sessions", "rules"],
               "additionalProperties": false
             },
             "reusableDefaults": {

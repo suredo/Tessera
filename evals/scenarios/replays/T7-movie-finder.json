@@ -32,9 +32,7 @@
           "profile": "search-results",
           "drawsCharts": false,
           "usesFiles": false,
-          "connections": [
-            "movies"
-          ]
+          "connections": ["movies"]
         }
       },
       "parts": [
@@ -54,9 +52,7 @@
           "name": "Old Sci-Fi Watchlist",
           "summary": "Search for classic science-fiction films, choose how old they should be, and keep the ones you want to watch on a watchlist.",
           "uiMode": "standard",
-          "capabilities": [
-            "connection"
-          ],
+          "capabilities": ["connection"],
           "connections": {
             "movies": {
               "samples": {
@@ -90,19 +86,13 @@
                       "type": "string"
                     },
                     "year": {
-                      "type": [
-                        "integer",
-                        "null"
-                      ]
+                      "type": ["integer", "null"]
                     },
                     "overview": {
                       "type": "string"
                     }
                   },
-                  "required": [
-                    "id",
-                    "title"
-                  ]
+                  "required": ["id", "title"]
                 }
               }
             },
@@ -159,34 +149,24 @@
                         "type": "string"
                       },
                       "year": {
-                        "type": [
-                          "integer",
-                          "null"
-                        ]
+                        "type": ["integer", "null"]
                       },
                       "overview": {
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "title"
-                    ]
+                    "required": ["id", "title"]
                   }
                 }
               },
-              "required": [
-                "watchlist"
-              ]
+              "required": ["watchlist"]
             },
             "reusableDefaults": {
               "watchlist": []
             },
             "initialState": {}
           },
-          "capabilities": [
-            "connection"
-          ],
+          "capabilities": ["connection"],
           "uiMode": "standard"
         }
       },
@@ -228,9 +208,7 @@
           "profile": "search-results",
           "drawsCharts": false,
           "usesFiles": false,
-          "connections": [
-            "movies"
-          ]
+          "connections": ["movies"]
         }
       },
       "parts": [

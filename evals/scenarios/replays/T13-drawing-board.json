@@ -52,11 +52,7 @@
           "reason": "Sketching with the mouse cannot be done by typing or pressing controls, so no check can show a result."
         }
       },
-      "parts": [
-        "acceptance@854dcf83049b",
-        "request@47a51319da7d",
-        "language@2a8e10d77d23"
-      ]
+      "parts": ["acceptance@854dcf83049b", "request@47a51319da7d", "language@2a8e10d77d23"]
     },
     {
       "reply": {
@@ -81,15 +77,11 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id"
-                    ]
+                    "required": ["id"]
                   }
                 }
               },
-              "required": [
-                "strokes"
-              ]
+              "required": ["strokes"]
             },
             "reusableDefaults": {
               "strokes": []

@@ -52,9 +52,7 @@
           "name": "Monthly spending",
           "summary": "Shows this month's spending as a chart with a total. It starts with rent, food, transport and fun, and you can add or remove items.",
           "uiMode": "standard",
-          "capabilities": [
-            "chart"
-          ],
+          "capabilities": ["chart"],
           "data": {
             "schema": {
               "entries": {
@@ -73,11 +71,7 @@
                       "type": "number"
                     }
                   },
-                  "required": [
-                    "id",
-                    "name",
-                    "value"
-                  ]
+                  "required": ["id", "name", "value"]
                 }
               }
             },
@@ -159,11 +153,7 @@
                       "type": "number"
                     }
                   },
-                  "required": [
-                    "id",
-                    "name",
-                    "value"
-                  ]
+                  "required": ["id", "name", "value"]
                 }
               }
             },
@@ -195,9 +185,7 @@
               ]
             }
           },
-          "capabilities": [
-            "chart"
-          ],
+          "capabilities": ["chart"],
           "uiMode": "standard"
         }
       },

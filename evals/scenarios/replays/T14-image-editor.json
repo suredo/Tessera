@@ -60,9 +60,7 @@
           "name": "Photo Markup",
           "summary": "Open a photo, crop it, add arrows and text on top, and save the result as a PNG image.",
           "uiMode": "standard",
-          "capabilities": [
-            "files"
-          ],
+          "capabilities": ["files"],
           "data": {
             "schema": {
               "type": "object",
@@ -76,9 +74,7 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id"
-                    ]
+                    "required": ["id"]
                   }
                 }
               }
@@ -131,9 +127,7 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id"
-                    ]
+                    "required": ["id"]
                   }
                 }
               }
@@ -141,9 +135,7 @@
             "reusableDefaults": {},
             "initialState": {}
           },
-          "capabilities": [
-            "files"
-          ],
+          "capabilities": ["files"],
           "uiMode": "standard"
         }
       },
@@ -185,9 +177,7 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id"
-                    ],
+                    "required": ["id"],
                     "type": "object"
                   },
                   "type": "array"
@@ -198,9 +188,7 @@
             "reusableDefaults": {},
             "initialState": {}
           },
-          "capabilities": [
-            "files"
-          ],
+          "capabilities": ["files"],
           "uiMode": "standard"
         }
       },

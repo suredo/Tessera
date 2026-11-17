@@ -56,9 +56,7 @@
           "name": "Plano de estudos para a prova",
           "summary": "Distribui os assuntos da prova nas noites das próximas duas semanas, evitando os dias da semana que você bloquear (sextas já vêm bloqueadas). Os cartões de memorização com suas anotações ficam para uma próxima etapa.",
           "uiMode": "standard",
-          "capabilities": [
-            "clock"
-          ],
+          "capabilities": ["clock"],
           "code": {
             "html": "<main>\n<h1>Plano de estudos</h1>\n<p class=\"sec\" id=\"intro\">Estudo à noite, até a prova (daqui a 14 dias). Cada assunto recebe 3 noites de estudo.</p>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Novo assunto</h2>\n<div class=\"row\">\n<label for=\"tn\">Nome do assunto</label>\n<input id=\"tn\" data-hook=\"task-name\" type=\"text\" autocomplete=\"off\" placeholder=\"Ex.: Revolução Francesa\">\n<button id=\"ta\" data-hook=\"task-add\" type=\"button\">Adicionar assunto</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Dias sem estudo</h2>\n<ul id=\"rules\"></ul>\n<div class=\"row\">\n<label for=\"rd\">Dia da semana</label>\n<select id=\"rd\" data-hook=\"rule-day\"></select>\n<button id=\"ra\" data-hook=\"rule-add\" type=\"button\">Bloquear este dia</button>\n</div>\n<p id=\"rmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-plan\">\n<h2 id=\"h-plan\">Noites de estudo</h2>\n<p id=\"empty\" class=\"sec\">Ainda não há assuntos. Adicione o primeiro acima.</p>\n<ul id=\"sessions\"></ul>\n</section>\n</main>",
             "css": "main{max-width:640px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2);font-weight:600}\n.sec{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;margin:var(--ui-space-2) 0}\n.row label{flex:1 0 100%}\ninput,select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;flex:1 1 180px;min-width:0}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.ghost{background:var(--ui-surface);color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;margin:0;padding:0}\nli{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;justify-content:space-between;padding:var(--ui-space-2) var(--ui-space-3);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);background:var(--ui-surface);margin-bottom:var(--ui-space-2)}\nli time{color:var(--ui-text-secondary);min-width:9em}\nli .nm{flex:1 1 120px}\n.err{color:var(--ui-error)}\n.ok{color:var(--ui-success)}\np[role=status]{min-height:1.5em;margin:0}",
@@ -88,11 +86,7 @@
                         }
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "dates"
-                    ]
+                    "required": ["id", "name", "dates"]
                   }
                 },
                 "rules": {
@@ -109,17 +103,11 @@
                         "maximum": 6
                       }
                     },
-                    "required": [
-                      "id",
-                      "weekday"
-                    ]
+                    "required": ["id", "weekday"]
                   }
                 }
               },
-              "required": [
-                "tasks",
-                "rules"
-              ]
+              "required": ["tasks", "rules"]
             },
             "reusableDefaults": {
               "tasks": [],
@@ -162,9 +150,7 @@
           "name": "Plano de estudos para a prova",
           "summary": "Distribui os assuntos da prova nas noites das próximas duas semanas, evitando os dias da semana que você bloquear (sextas já vêm bloqueadas). Os cartões de memorização com suas anotações ficam para uma próxima etapa.",
           "uiMode": "standard",
-          "capabilities": [
-            "clock"
-          ],
+          "capabilities": ["clock"],
           "code": {
             "html": "<main>\n<h1>Plano de estudos</h1>\n<p class=\"sec\" id=\"intro\">Estudo à noite, até a prova (daqui a 14 dias). Cada assunto recebe 3 noites de estudo.</p>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Novo assunto</h2>\n<div class=\"row\">\n<label for=\"tn\">Nome do assunto</label>\n<input id=\"tn\" data-hook=\"task-name\" type=\"text\" autocomplete=\"off\" placeholder=\"Ex.: Revolução Francesa\">\n<button id=\"ta\" data-hook=\"task-add\" type=\"button\">Adicionar assunto</button>\n</div>\n<p id=\"msg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Dias sem estudo</h2>\n<ul id=\"rules\"></ul>\n<div class=\"row\">\n<label for=\"rd\">Dia da semana</label>\n<select id=\"rd\" data-hook=\"rule-day\"></select>\n<button id=\"ra\" data-hook=\"rule-add\" type=\"button\">Bloquear este dia</button>\n</div>\n<p id=\"rmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-plan\">\n<h2 id=\"h-plan\">Noites de estudo</h2>\n<p id=\"empty\" class=\"sec\">Ainda não há assuntos. Adicione o primeiro acima.</p>\n<ul id=\"sessions\"></ul>\n</section>\n</main>",
             "css": "main{max-width:640px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2);font-weight:600}\n.sec{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;margin:var(--ui-space-2) 0}\n.row label{flex:1 0 100%}\ninput,select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;flex:1 1 180px;min-width:0}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.ghost{background:var(--ui-surface);color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;margin:0;padding:0}\nli{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;justify-content:space-between;padding:var(--ui-space-2) var(--ui-space-3);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);background:var(--ui-surface);margin-bottom:var(--ui-space-2)}\nli time{color:var(--ui-text-secondary);min-width:9em}\nli .nm{flex:1 1 120px}\n.err{color:var(--ui-error)}\n.ok{color:var(--ui-success)}\np[role=status]{min-height:1.5em;margin:0}",
@@ -194,11 +180,7 @@
                         }
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "dates"
-                    ]
+                    "required": ["id", "name", "dates"]
                   }
                 },
                 "rules": {
@@ -215,17 +197,11 @@
                         "maximum": 6
                       }
                     },
-                    "required": [
-                      "id",
-                      "weekday"
-                    ]
+                    "required": ["id", "weekday"]
                   }
                 }
               },
-              "required": [
-                "tasks",
-                "rules"
-              ]
+              "required": ["tasks", "rules"]
             },
             "reusableDefaults": {
               "tasks": [],
@@ -374,20 +350,13 @@
             "schema": {
               "$schema": "http://json-schema.org/draft-07/schema#",
               "type": "object",
-              "required": [
-                "tasks",
-                "rules",
-                "cards"
-              ],
+              "required": ["tasks", "rules", "cards"],
               "properties": {
                 "rules": {
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "weekday"
-                    ],
+                    "required": ["id", "weekday"],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -404,11 +373,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "name",
-                      "dates"
-                    ],
+                    "required": ["id", "name", "dates"],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -430,11 +395,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "front",
-                      "back"
-                    ],
+                    "required": ["id", "front", "back"],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -506,19 +467,13 @@
             "schema": {
               "$schema": "http://json-schema.org/draft-07/schema#",
               "type": "object",
-              "required": [
-                "tasks",
-                "rules"
-              ],
+              "required": ["tasks", "rules"],
               "properties": {
                 "rules": {
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "weekday"
-                    ],
+                    "required": ["id", "weekday"],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -535,11 +490,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "name",
-                      "dates"
-                    ],
+                    "required": ["id", "name", "dates"],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -561,11 +512,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "front",
-                      "back"
-                    ],
+                    "required": ["id", "front", "back"],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -637,19 +584,13 @@
             "schema": {
               "$schema": "http://json-schema.org/draft-07/schema#",
               "type": "object",
-              "required": [
-                "tasks",
-                "rules"
-              ],
+              "required": ["tasks", "rules"],
               "properties": {
                 "rules": {
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "weekday"
-                    ],
+                    "required": ["id", "weekday"],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -666,11 +607,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "name",
-                      "dates"
-                    ],
+                    "required": ["id", "name", "dates"],
                     "properties": {
                       "id": {
                         "type": "string"
@@ -692,11 +629,7 @@
                   "type": "array",
                   "items": {
                     "type": "object",
-                    "required": [
-                      "id",
-                      "front",
-                      "back"
-                    ],
+                    "required": ["id", "front", "back"],
                     "properties": {
                       "id": {
                         "type": "string"

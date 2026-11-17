@@ -52,9 +52,7 @@
           "name": "Daily Habits",
           "summary": "Track walk, read and drink water each day. Mark a habit done today and see how many days in a row you've kept it up. You can add more habits.",
           "uiMode": "standard",
-          "capabilities": [
-            "clock"
-          ],
+          "capabilities": ["clock"],
           "code": {
             "html": "<main class=\"wrap\"><h1>Daily habits</h1><p class=\"sub\" id=\"today\"></p><p id=\"msg\" role=\"status\" aria-live=\"polite\"></p><ul id=\"list\" class=\"list\" aria-label=\"Habits\"></ul><p id=\"empty\" hidden>No habits yet. Add one below.</p><div class=\"add\"><label for=\"name\">New habit</label><div class=\"row\"><input id=\"name\" type=\"text\" data-hook=\"habit-name\" maxlength=\"80\" autocomplete=\"off\"><button id=\"add\" type=\"button\" data-hook=\"habit-add\">Add habit</button></div></div></main>",
             "css": ".wrap{max-width:560px;margin:0 auto;padding:var(--ui-padding)}h1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-1)}.sub{margin:0 0 var(--ui-space-3);color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.list{list-style:none;margin:0 0 var(--ui-space-5);padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}.list li{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-space-3);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3) var(--ui-space-4)}.hname{flex:1 1 140px;font-weight:600}.streak{flex:0 1 auto;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}.streak .n{color:var(--ui-text);font-size:var(--ui-size-section);font-weight:600}button{min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}button.done{background:var(--ui-accent-soft);color:var(--ui-text)}button:focus-visible,input:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}label{display:block;margin-bottom:var(--ui-space-1);font-size:var(--ui-size-secondary)}.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-2)}input{flex:1 1 180px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}#msg{min-height:1.5em;margin:0 0 var(--ui-space-2);color:var(--ui-error);font-size:var(--ui-size-secondary)}",
@@ -85,18 +83,12 @@
                         }
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "doneDates"
-                    ],
+                    "required": ["id", "name", "doneDates"],
                     "additionalProperties": false
                   }
                 }
               },
-              "required": [
-                "habits"
-              ]
+              "required": ["habits"]
             },
             "reusableDefaults": {
               "habits": []
@@ -187,10 +179,7 @@
           },
           "capabilities": {
             "mode": "replace",
-            "capabilities": [
-              "clock",
-              "chart"
-            ]
+            "capabilities": ["clock", "chart"]
           }
         }
       },

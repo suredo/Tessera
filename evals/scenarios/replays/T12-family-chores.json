@@ -80,10 +80,7 @@
                         "minLength": 1
                       }
                     },
-                    "required": [
-                      "id",
-                      "name"
-                    ]
+                    "required": ["id", "name"]
                   }
                 },
                 "chores": {
@@ -108,20 +105,11 @@
                         "type": "boolean"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "assignee",
-                      "day",
-                      "done"
-                    ]
+                    "required": ["id", "name", "assignee", "day", "done"]
                   }
                 }
               },
-              "required": [
-                "members",
-                "chores"
-              ]
+              "required": ["members", "chores"]
             },
             "reusableDefaults": {
               "members": [

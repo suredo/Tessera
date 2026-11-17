@@ -75,18 +75,11 @@
                         "type": "string"
                       }
                     },
-                    "required": [
-                      "id",
-                      "name",
-                      "people",
-                      "allergies"
-                    ]
+                    "required": ["id", "name", "people", "allergies"]
                   }
                 }
               },
-              "required": [
-                "answers"
-              ]
+              "required": ["answers"]
             },
             "reusableDefaults": {
               "answers": []
@@ -164,9 +157,7 @@
           },
           "capabilities": {
             "mode": "replace",
-            "capabilities": [
-              "files"
-            ]
+            "capabilities": ["files"]
           }
         }
       },

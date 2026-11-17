@@ -90,19 +90,12 @@
                         "type": "boolean"
                       }
                     },
-                    "required": [
-                      "id",
-                      "title",
-                      "genre",
-                      "rating"
-                    ],
+                    "required": ["id", "title", "genre", "rating"],
                     "additionalProperties": false
                   }
                 }
               },
-              "required": [
-                "books"
-              ],
+              "required": ["books"],
               "additionalProperties": false
             },
             "reusableDefaults": {
