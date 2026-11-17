@@ -10,6 +10,7 @@ person: "Uma leitora que anota os livros que quer ler"
 goal: "Uma lista de livros para ler, com nota e filtro por gênero"
 clock: { start: "2026-11-04T21:00:00", zone: "America/Sao_Paulo" }
 budget: { calls: 8 }
+acceptanceChecks: true
 profiles: [filtering]
 steps:
   - say: "Quero uma lista dos livros que quero ler, com nota de 1 a 5 e filtro por gênero."

@@ -12,6 +12,7 @@ person: "Someone planning a birthday party"
 goal: "A form guests fill in, with their answers kept and shown"
 clock: { start: "2026-11-03T20:00:00", zone: "America/Sao_Paulo" }
 budget: { calls: 10 }
+acceptanceChecks: true
 profiles: [form]
 steps:
   - say: 'Make a form for my party guests with the fields "Name", "How many people" and "Food allergies". Show me the answers.'

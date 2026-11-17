@@ -72,7 +72,8 @@ describe("scenario files (EVAL-01)", () => {
       "T11-tutor-bookings": 8,
       // Three requests, intent and create or data, with a repair in reserve, and the review's.
       "T12-family-chores": 10,
-      "T13-drawing-board": 7,
+      // Its M2 calls, and the acceptance stage on its creation, as no profile fits (VER-09).
+      "T13-drawing-board": 9,
       // Two requests, each intent and create or edit, with a repair each in reserve, and the review's.
       "T14-image-editor": 8,
       "T2-reading-list": 8,
@@ -87,14 +88,20 @@ describe("scenario files (EVAL-01)", () => {
       // Four creations, each intent, acceptance and create, with one repair in reserve (VER-09).
       "V9-acceptance-checks": 16,
     });
-    // The acceptance-check experiment's scenario turns it on, and so does each scenario first
-    // recorded in M4, to measure Tessera as it ships (A57).
+    // The acceptance-check experiment's scenario turns it on, and so does each scenario of M4's
+    // set, to measure Tessera as it ships (A57).
     expect(all.filter((s) => s.acceptanceChecks).map((s) => s.id)).toEqual([
+      "T1-shopping-list",
       "T10-study-planner-pt",
+      "T10-study-planner",
       "T11-tutor-bookings",
       "T12-family-chores",
+      "T13-drawing-board",
       "T14-image-editor",
+      "T2-reading-list",
+      "T3-spending-chart",
       "T4-habit-tracker",
+      "T5-rsvp-form",
       "T7-movie-finder",
       "V9-acceptance-checks",
     ]);
