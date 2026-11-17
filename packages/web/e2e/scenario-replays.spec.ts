@@ -44,11 +44,22 @@ const failedLive: Record<string, [step: number, problems: string[]][]> = {
   ],
   "T6-tip-calculator": [],
   "T10-study-planner": [],
-  "T13-drawing-board": [],
+  // T13 runs with the checks from the request on since M4's plan (A57), and its M2 recording has
+  // no answer for their stage: until M4's live run records T13 again, its first request fails.
+  "T13-drawing-board": [
+    [
+      1,
+      [
+        "No tool was created.",
+        "No new workspace is open.",
+        `The answers don't fit this run, so it needs a new live run: Script "T13-drawing-board" has a create reply next, but the call is for acceptance.`,
+      ],
+    ],
+  ],
   "V9-acceptance-checks": [],
 };
 // The recorded runs whose first step failed, so the runner stopped there (the stop rule).
-const stoppedLive = new Set<string>();
+const stoppedLive = new Set<string>(["T13-drawing-board"]);
 
 test("EVAL-07: every recorded live run has its expected steps listed here", () => {
   const recorded = fs.readdirSync(replays).map((f) => path.basename(f, ".json"));
