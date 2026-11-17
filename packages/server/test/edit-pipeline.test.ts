@@ -464,6 +464,60 @@ describe("edits through the pipeline (GEN-07, GEN-09)", () => {
     expect(context.repairUsage).toEqual({ smoke: 1 });
   });
 
+  it("A86, GEN-09: smoke repair is shown the capabilities the edit declared, and keeps them when it leaves them out", async () => {
+    const { store, workspace } = await setup();
+    let context: SmokeRepairContext | undefined;
+    if (quantityEdit.files.mode !== "replace") throw new Error("Expected file fixture");
+    const save = `document.body.addEventListener("click", () => tessera.saveFile({ name: "list", type: "text/plain", text: "list" }));`;
+    const saving = {
+      ...quantityEdit,
+      files: { mode: "replace", code: { ...quantityEdit.files.code, js: save } },
+      capabilities: { mode: "replace", capabilities: ["files"] },
+    };
+    const candidate = await generate(
+      store,
+      provider(reply(intent(), "intent"), reply(saving, "edit")),
+      DEFAULT_ROUTES,
+      { request: "Let me save the list", workspaceId: workspace.id },
+      undefined,
+      (c) => {
+        context = c;
+      },
+    );
+    if (candidate.kind !== "candidate" || !context) throw new Error("Expected continuation");
+    const prompts: string[] = [];
+    // The repair leaves its capabilities out.
+    const leftOut = Object.fromEntries(
+      Object.entries(saving).filter(([key]) => key !== "capabilities"),
+    );
+    const scripted = provider(reply(leftOut, "repair"));
+    const watched: Provider = {
+      ...scripted,
+      run: (spec) => {
+        prompts.push(spec.prompt);
+        return scripted.run(spec);
+      },
+    };
+    const repaired = await repairSmoke(
+      store,
+      watched,
+      DEFAULT_ROUTES,
+      { workspaceId: workspace.id, hash: candidate.hash, findings: ["Nothing showed."] },
+      context,
+    );
+    // The fixture's tool already uses a connection, which stays in step with its connections.
+    expect(prompts[0]).toContain(
+      '"capabilities":{"mode":"replace","capabilities":["connection","files"]}',
+    );
+    expect(repaired).toMatchObject({ kind: "candidate", operation: "edit" });
+    if (repaired.kind !== "candidate") throw new Error("Expected repaired candidate");
+    const version = loadVersion(store.db, repaired.hash);
+    expect(version?.kind === "ok" && version.artifact.capabilities).toEqual([
+      "connection",
+      "files",
+    ]);
+  });
+
   it("GEN-09: smoke repair cannot change the failed candidate's data declaration or overwrite a concurrent update", async () => {
     for (const scenario of ["declaration", "stale"] as const) {
       const { store, workspace } = await setup();

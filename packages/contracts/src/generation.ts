@@ -118,6 +118,20 @@ export const editSchema = z.discriminatedUnion("outcome", [
       .describe(
         "The connections the changed tool uses, only from those the request lists, each with its sample answers; unchanged, or left out, keeps them as they are (CAP-02, A66, A69).",
       ),
+    capabilities: z
+      .discriminatedUnion("mode", [
+        z.strictObject({ mode: z.literal("unchanged") }),
+        z.strictObject({
+          mode: z.literal("replace"),
+          capabilities: z
+            .array(z.enum(capabilities))
+            .describe("Every host capability the changed tool uses, only those (CAP-01)."),
+        }),
+      ])
+      .optional()
+      .describe(
+        "The capabilities the changed tool needs, when the change uses one it doesn't declare or stops using one; unchanged, or left out, keeps them as they are (CAP-01, A86). The connection capability follows the connections.",
+      ),
     data: z.discriminatedUnion("mode", [
       z.strictObject({ mode: z.literal("unchanged") }),
       z.strictObject({

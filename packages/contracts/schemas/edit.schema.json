@@ -193,6 +193,51 @@
             }
           ]
         },
+        "capabilities": {
+          "description": "The capabilities the changed tool needs, when the change uses one it doesn't declare or stops using one; unchanged, or left out, keeps them as they are (CAP-01, A86). The connection capability follows the connections.",
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "const": "unchanged"
+                }
+              },
+              "required": [
+                "mode"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "const": "replace"
+                },
+                "capabilities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "clock",
+                      "chart",
+                      "connection",
+                      "files"
+                    ]
+                  },
+                  "description": "Every host capability the changed tool uses, only those (CAP-01)."
+                }
+              },
+              "required": [
+                "mode",
+                "capabilities"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
         "data": {
           "oneOf": [
             {
