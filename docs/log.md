@@ -2,6 +2,8 @@
 
 ## 2026-11-17
 
+* **Changed**: M4's live run report adds P2, moving to another data folder ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)): every step passed in 5 calls, the move keeping the workspace, version and data and the saved tool coming along; Use again's "with its starting data" misleads when a fresh start is empty. Its answers are saved as a replay. 111 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T13:31:43Z.
+
 * **New**: P2 as a scenario, with a `move` step ([scenario format](testing/scenario-format.md), [scenarios](code/evals/scenarios.md), [runner](code/evals/runner.md)): the open workspace is exported with the host's button, Tessera starts again on a new, empty data folder, the file is imported there, and the facts compare the two folders (`DATA-05`); then the person carries on and uses the saved tool again. Its rehearsal passes every step. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T13:08:31Z.
 
 * **Changed**: M4's live run report adds the owner's reruns of T3, T10 in Portuguese, T12 and T14 after L-103 and L-104 ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)): T3 and T10 in Portuguese passed every step; T12 was made as a planner and T14 marked two buttons as its edit, again. With them, 28 of 29 requests at the first attempt and 49 of 54 lifecycle steps; the reruns' own stage, repair and speed figures are given apart; 105 calls used. Their answers replace the first runs' replays ([web](code/web/package.md)). Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T11:59:06Z.
