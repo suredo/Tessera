@@ -62,6 +62,9 @@ const shapeFailure = (findings: string[]): EditResult => ({
 /** Host validation, on copies; no workspace writes and no model-owned lifecycle fields (GEN-07). */
 export function editedCandidate(input: EditInput, answer: Answer): EditResult {
   const before = input.artifact;
+  // A look changes no behavior, so it needs no capability it didn't have (GEN-14, A86).
+  if (input.intent?.lookOnly && answer.capabilities?.mode === "replace")
+    return shapeFailure(["A style edit must keep the capabilities."]);
   let data = before.data;
   if (answer.data.mode === "migrate") {
     if (input.intent?.lookOnly)
@@ -101,9 +104,16 @@ export function editedCandidate(input: EditInput, answer: Answer): EditResult {
     ...before,
     connections,
     // Only when they change, so an edit that keeps them keeps its declarations exactly (GEN-07).
+    // Replaced, they are the ones the edit lists, the connection capability always following the
+    // connections (A74, A86).
     capabilities:
-      answer.connections?.mode === "replace"
-        ? withConnectionCapability(before.capabilities, connections)
+      answer.capabilities?.mode === "replace" || answer.connections?.mode === "replace"
+        ? withConnectionCapability(
+            answer.capabilities?.mode === "replace"
+              ? answer.capabilities.capabilities
+              : before.capabilities,
+            connections,
+          )
         : before.capabilities,
     data,
     code:
@@ -231,12 +241,18 @@ export async function editTool(
         result = plainRefusal(response.value.reason, input.request);
       else {
         // A repair that leaves its connections out keeps the failed attempt's replacement, samples
-        // and all, which its prompt names by path only (#368 review).
-        const failed = repair?.attempt?.connections;
-        attempt =
-          response.value.connections === undefined && failed?.mode === "replace"
-            ? { ...response.value, connections: failed }
-            : response.value;
+        // and all, which its prompt names by path only (#368 review); and so with its capabilities,
+        // so a repair doesn't lose one the change needs (A86).
+        const failed = repair?.attempt;
+        attempt = {
+          ...response.value,
+          ...(response.value.connections === undefined && failed?.connections?.mode === "replace"
+            ? { connections: failed.connections }
+            : {}),
+          ...(response.value.capabilities === undefined && failed?.capabilities?.mode === "replace"
+            ? { capabilities: failed.capabilities }
+            : {}),
+        };
         // The summary the person reads is in plain words too (GEN-12).
         const words = [
           ...plainWordProblems("The change's summary", attempt.summary, input.request),

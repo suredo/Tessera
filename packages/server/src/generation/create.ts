@@ -218,7 +218,7 @@ export function connectionProblems(
 
 /**
  * A version's capabilities with "connection" exactly when it uses a connection (A74): the host
- * keeps the two in step, as an edit can't declare capabilities itself.
+ * keeps the two in step, whatever capabilities a creation or an edit lists (A86).
  */
 export const withConnectionCapability = (
   capabilities: readonly Artifact["capabilities"][number][],
