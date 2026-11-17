@@ -337,7 +337,7 @@ export function withNewLists(schema: object, data: ToolData): ToolData {
       if (Object.hasOwn(data, name) || !isPlainObject(property)) return false;
       return property["type"] === "array";
     })
-    .map(([name]) => [name, []] as const);
+    .map(([name]): [string, ToolData[string]] => [name, []]);
   return added.length ? { ...data, ...Object.fromEntries(added) } : data;
 }
 
