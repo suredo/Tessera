@@ -2,9 +2,9 @@
   "about": "A live run of T10-study-planner-pt, recorded for replay.",
   "scenario": "T10-study-planner-pt",
   "recorded": {
-    "head": "accbc600335f26f2ee053b1b394ad75ad09fe284",
-    "at": "2026-11-17T11:50:25.594Z",
-    "cliVersion": "2.1.326"
+    "head": "ec003bb76568cce83031e7d539fdbe6724464a37",
+    "at": "2026-11-18T01:05:20.860Z",
+    "cliVersion": "2.1.327"
   },
   "answers": [
     {
@@ -13,20 +13,24 @@
         "stage": "intent",
         "value": {
           "kind": "create",
-          "interfacePart": "Me ajuda a organizar os assuntos; estudo à noite, nunca às sextas. Depois vou colar anotações para fazer cartões de memorização.",
+          "interfacePart": null,
           "dataPart": null,
           "behaviorChange": true,
           "lookOnly": false,
           "targetsCurrentTool": false,
-          "language": "pt",
+          "language": "pt-BR",
           "features": [
             {
-              "name": "study plan",
-              "request": "Minha prova é daqui a duas semanas. Me ajuda a organizar os assuntos; estudo à noite, nunca às sextas."
+              "name": "plano de estudo",
+              "request": "Me ajuda a organizar os assuntos"
             },
             {
-              "name": "memorization cards",
-              "request": "Depois vou colar anotações para fazer cartões de memorização."
+              "name": "dias de estudo",
+              "request": "estudo à noite, nunca às sextas"
+            },
+            {
+              "name": "cartões de memorização",
+              "request": "vou colar anotações para fazer cartões de memorização"
             }
           ],
           "profile": "scheduling",
@@ -49,10 +53,15 @@
         "stage": "create",
         "value": {
           "outcome": "tool",
-          "name": "Plano de estudos para a prova",
-          "summary": "Você cadastra os assuntos e eles são distribuídos em sessões de estudo à noite, até a prova (por padrão daqui a duas semanas). Sextas já vêm bloqueadas, e você pode bloquear outros dias. As anotações para cartões de memorização ficam para depois.",
+          "name": "Plano de estudo para a prova",
+          "summary": "Distribui seus assuntos em sessões de estudo nas próximas duas semanas, antes da prova. Você pode bloquear dias da semana (já começa sem sextas) e as sessões se ajustam sozinhas. Os cartões de memorização ficam para quando você colar suas anotações.",
           "uiMode": "standard",
           "capabilities": ["clock"],
+          "code": {
+            "html": "<h1>Plano de estudo</h1>\n<p class=\"muted\" id=\"intro\">Estudo à noite, até a véspera da prova.</p>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Novo assunto</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"tn\">Nome do assunto</label><input id=\"tn\" data-hook=\"task-name\" type=\"text\" placeholder=\"Ex.: Equações do 2º grau\"></div>\n<button id=\"ta\" data-hook=\"task-add\" type=\"button\">Adicionar e agendar</button>\n</div>\n<p id=\"tmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Dias sem estudo</h2>\n<ul id=\"rules\" class=\"plain\"></ul>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rd\">Nunca estudar às</label>\n<select id=\"rd\" data-hook=\"rule-day\"><option value=\"0\">domingos</option><option value=\"1\">segundas</option><option value=\"2\">terças</option><option value=\"3\">quartas</option><option value=\"4\">quintas</option><option value=\"5\" selected>sextas</option><option value=\"6\">sábados</option></select></div>\n<button id=\"ra\" data-hook=\"rule-add\" type=\"button\">Bloquear dia</button>\n</div>\n<p id=\"rmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-s\">\n<h2 id=\"h-s\">Sessões à noite</h2>\n<p id=\"empty\" class=\"muted\">Nenhum assunto ainda. Adicione o primeiro acima e ele será distribuído pelos dias disponíveis.</p>\n<ul id=\"sessions\" class=\"plain\"></ul>\n</section>\n<section aria-labelledby=\"h-t\">\n<h2 id=\"h-t\">Assuntos</h2>\n<ul id=\"tasks\" class=\"plain\"></ul>\n</section>",
+            "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 200px}\ninput,select,button{font:inherit;min-height:var(--ui-target);border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\nul.plain li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.err{color:var(--ui-error)}.ok{color:var(--ui-success)}",
+            "js": "let tasks=[],rules=[],revs={},today=null;\nconst WD=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\nconst WDP=['domingos','segundas','terças','quartas','quintas','sextas','sábados'];\nconst $=id=>document.getElementById(id);\nfunction parse(iso){const p=iso.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2]));}\nfunction iso(d){return d.toISOString().slice(0,10);}\nfunction addDays(s,n){const d=parse(s);d.setUTCDate(d.getUTCDate()+n);return iso(d);}\nfunction wd(s){return parse(s).getUTCDay();}\nfunction fmt(s){return parse(s).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});}\nfunction msg(id,t,bad){const e=$(id);e.textContent=t;e.className=bad?'err':'ok';}\nfunction allowedDays(blocked){const r=[];for(let i=0;i<14;i++){const d=addDays(today,i);if(!blocked.has(wd(d)))r.push(d);}return r;}\nfunction loadMap(list){const m={};for(const t of list)for(const d of t.dates)m[d]=(m[d]||0)+1;return m;}\nfunction pickBest(cands,load,taken,target){let best=null,bs=null;cands.forEach((d,i)=>{if(taken.has(d))return;const s=[load[d]||0,Math.abs(i-target)];if(!bs||s[0]<bs[0]||(s[0]===bs[0]&&s[1]<bs[1])){best=d;bs=s;}});return best;}\nfunction pickDates(cands,load,k){const n=cands.length,out=new Set();k=Math.min(k,n);for(let j=0;j<k;j++){const target=k===1?0:Math.round(j*(n-1)/(k-1));const win=cands.map((d,i)=>Math.abs(i-target)<=2?d:null);const taken=new Set(out);cands.forEach((d,i)=>{if(Math.abs(i-target)>2)taken.add(d);});let d=pickBest(cands,load,taken,target);if(!d)d=pickBest(cands,load,out,target);out.add(d);load[d]=(load[d]||0)+1;}return Array.from(out).sort();}\nasync function load(){const r=await tessera.call('data.read',{});tasks=r.data.tasks||[];rules=r.data.rules||[];revs=r.revisions||{};render();}\nfunction render(){\nconst rl=$('rules');rl.textContent='';\nif(!rules.length){const li=document.createElement('li');li.textContent='Nenhum dia bloqueado.';rl.appendChild(li);}\nfor(const r of rules){const li=document.createElement('li');li.setAttribute('data-hook','rule');const s=document.createElement('span');s.textContent='Nunca às '+WDP[r.weekday];const b=document.createElement('button');b.type='button';b.className='sec';b.setAttribute('data-hook','rule-remove');b.textContent='Remover regra';b.setAttribute('aria-label','Remover regra: nunca às '+WDP[r.weekday]);b.addEventListener('click',()=>removeRule(r));li.append(s,b);rl.appendChild(li);}\nconst all=[];for(const t of tasks)for(const d of t.dates||[])all.push({name:t.name,date:d});\nall.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);\n$('empty').hidden=tasks.length>0;\nconst sl=$('sessions');sl.textContent='';\nfor(const s of all){const li=document.createElement('li');li.setAttribute('data-hook','session');const tm=document.createElement('time');tm.setAttribute('datetime',s.date);tm.textContent=fmt(s.date)+' à noite';const n=document.createElement('span');n.setAttribute('data-hook','session-task');n.textContent=s.name;li.append(tm,n);sl.appendChild(li);}\nconst tl=$('tasks');tl.textContent='';\nfor(const t of tasks){const li=document.createElement('li');const s=document.createElement('span');s.textContent=t.name+' ('+(t.dates||[]).length+' sessões)';const b=document.createElement('button');b.type='button';b.className='sec';b.textContent='Remover assunto';b.setAttribute('aria-label','Remover assunto '+t.name);b.addEventListener('click',()=>removeTask(t));li.append(s,b);tl.appendChild(li);}\n}\nasync function addTask(){\nconst name=$('tn').value.trim();\nif(!name){msg('tmsg','Digite o nome do assunto.',true);return;}\nconst blocked=new Set(rules.map(r=>r.weekday));\nconst cands=allowedDays(blocked);\nif(!cands.length){msg('tmsg','Todos os dias estão bloqueados. Remova uma regra.',true);return;}\nconst dates=pickDates(cands,loadMap(tasks),3);\ntry{await tessera.call('data.patch',{operations:[{op:'add',collection:'tasks',record:{name:name,dates:dates}}]});$('tn').value='';await load();msg('tmsg','Assunto agendado em '+dates.length+' sessões.',false);}catch(e){msg('tmsg','Não foi possível salvar. Tente de novo.',true);}\n}\nasync function addRule(){\nconst day=Number($('rd').value);\nif(rules.some(r=>r.weekday===day)){msg('rmsg','Esse dia já está bloqueado.',true);return;}\nconst blocked=new Set(rules.map(r=>r.weekday));blocked.add(day);\nconst cands=allowedDays(blocked);\nif(!cands.length){msg('rmsg','Não dá para bloquear todos os dias da semana.',true);return;}\nconst load={};const base=tasks.map(t=>({dates:(t.dates||[]).filter(d=>!blocked.has(wd(d)))}));\nfor(const t of base)for(const d of t.dates)load[d]=(load[d]||0)+1;\nconst ops=[{op:'add',collection:'rules',record:{weekday:day}}];\nfor(const t of tasks){const keep=(t.dates||[]).filter(d=>!blocked.has(wd(d)));const moved=(t.dates||[]).length-keep.length;if(!moved)continue;const set=new Set(keep);for(let i=0;i<moved;i++){let d=pickBest(cands,load,set,0);if(!d)break;set.add(d);load[d]=(load[d]||0)+1;}\nops.push({op:'replace',collection:'tasks',id:t.id,revisionCount:(revs.tasks||{})[t.id]||1,fields:{dates:Array.from(set).sort()}});}\ntry{await tessera.call('data.patch',{operations:ops});await load();msg('rmsg','Regra salva. Sessões de '+WD[day]+' foram movidas para outros dias.',false);}catch(e){msg('rmsg','Não foi possível salvar a regra. Tente de novo.',true);}\n}\nasync function removeRule(r){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'rules',id:r.id,revisionCount:(revs.rules||{})[r.id]||1}]});await load();msg('rmsg','Regra removida.',false);}catch(e){msg('rmsg','Não foi possível remover a regra.',true);}\n}\nasync function removeTask(t){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'tasks',id:t.id,revisionCount:(revs.tasks||{})[t.id]||1}]});await load();msg('tmsg','Assunto removido.',false);}catch(e){msg('tmsg','Não foi possível remover o assunto.',true);}\n}\n$('ta').addEventListener('click',addTask);\n$('tn').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});\n$('ra').addEventListener('click',addRule);\n(async()=>{try{const c=await tessera.call('clock.now',{});today=c.date;$('intro').textContent='Estudo à noite, de hoje até a véspera da prova (daqui a duas semanas, '+fmt(addDays(today,14))+').';await load();}catch(e){msg('tmsg','Não foi possível carregar o plano.',true);}})();"
+          },
           "data": {
             "schema": {
               "type": "object",
@@ -67,30 +76,15 @@
                       },
                       "name": {
                         "type": "string"
+                      },
+                      "dates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
                       }
                     },
-                    "required": ["id", "name"]
-                  }
-                },
-                "sessions": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "taskId": {
-                        "type": "string"
-                      },
-                      "date": {
-                        "type": "string"
-                      },
-                      "done": {
-                        "type": "boolean"
-                      }
-                    },
-                    "required": ["id", "taskId", "date"]
+                    "required": ["id", "name", "dates"]
                   }
                 },
                 "rules": {
@@ -109,49 +103,27 @@
                     },
                     "required": ["id", "weekday"]
                   }
-                },
-                "exam": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "date": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["id", "date"]
-                  }
                 }
               },
-              "required": ["tasks", "sessions", "rules", "exam"]
+              "required": ["tasks", "rules"]
             },
             "reusableDefaults": {
               "tasks": [],
-              "sessions": [],
               "rules": [
                 {
-                  "id": "r-1",
+                  "id": "rule-sexta",
                   "weekday": 5
                 }
-              ],
-              "exam": []
+              ]
             },
             "initialState": {
               "rules": [
                 {
-                  "id": "r-1",
+                  "id": "rule-sexta",
                   "weekday": 5
                 }
               ]
             }
-          },
-          "code": {
-            "html": "<h1>Plano de estudos</h1>\n<p class=\"sub\">Sessões à noite, até o dia da prova.</p>\n<div id=\"status\" role=\"status\" class=\"status\"></div>\n<section aria-labelledby=\"h-exam\">\n<h2 id=\"h-exam\">Prova</h2>\n<label for=\"exam-date\">Data da prova</label>\n<input id=\"exam-date\" type=\"date\">\n</section>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Novo assunto</h2>\n<div class=\"row\">\n<div class=\"grow\"><label for=\"task-name\">Nome do assunto</label>\n<input id=\"task-name\" data-hook=\"task-name\" type=\"text\" placeholder=\"Ex.: Revolução Francesa\" autocomplete=\"off\"></div>\n<button id=\"task-add\" data-hook=\"task-add\" type=\"button\">Adicionar assunto</button>\n</div>\n<p id=\"task-error\" class=\"error\"></p>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Dias sem estudo</h2>\n<ul id=\"rules\" class=\"list\"></ul>\n<div class=\"row\">\n<div><label for=\"rule-day\">Dia da semana</label>\n<select id=\"rule-day\" data-hook=\"rule-day\">\n<option value=\"0\">Domingo</option><option value=\"1\">Segunda-feira</option><option value=\"2\">Terça-feira</option><option value=\"3\">Quarta-feira</option><option value=\"4\">Quinta-feira</option><option value=\"5\">Sexta-feira</option><option value=\"6\">Sábado</option>\n</select></div>\n<button id=\"rule-add\" data-hook=\"rule-add\" type=\"button\">Bloquear este dia</button>\n</div>\n<p id=\"rule-error\" class=\"error\"></p>\n</section>\n<section aria-labelledby=\"h-sess\">\n<h2 id=\"h-sess\">Sessões de estudo</h2>\n<p id=\"empty\">Nenhum assunto ainda. Adicione o primeiro acima.</p>\n<ul id=\"sessions\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-tasks\">\n<h2 id=\"h-tasks\">Assuntos</h2>\n<ul id=\"tasks\" class=\"list\"></ul>\n</section>",
-            "css": ":root{color-scheme:light}\nbody{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-1);font-weight:600}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2);font-weight:600}\n.sub{margin:0;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\nlabel{display:block;font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);margin-bottom:var(--ui-space-1)}\ninput,select{font:inherit;min-height:var(--ui-target);box-sizing:border-box;padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);max-width:100%}\ninput[type=text]{width:100%}\nbutton{font:inherit;min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.grow{flex:1 1 200px}\n.list{list-style:none;margin:0 0 var(--ui-space-3);padding:0}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3);margin-bottom:var(--ui-space-2)}\n.list li .info{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center}\n.done .tname{text-decoration:line-through;color:var(--ui-text-secondary)}\n.error{color:var(--ui-error);margin:var(--ui-space-2) 0 0;font-size:var(--ui-size-secondary)}\n.status{min-height:1.5em;color:var(--ui-success);font-size:var(--ui-size-secondary)}\n.status.bad{color:var(--ui-error)}\n.chk{display:flex;align-items:center;gap:var(--ui-space-2);margin:0;color:var(--ui-text)}\n.chk input{min-height:auto;width:20px;height:20px}",
-            "js": "const DAYS=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];\nlet S={tasks:[],sessions:[],rules:[],exam:[]};\nlet REV={};\nlet TODAY='';\nlet examDate='';\nconst $=id=>document.getElementById(id);\nfunction parse(s){const p=s.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2]);}\nfunction fmt(ms){return new Date(ms).toISOString().slice(0,10);}\nfunction addDays(s,n){return fmt(parse(s)+n*86400000);}\nfunction wd(s){return new Date(parse(s)).getUTCDay();}\nfunction pretty(s){return new Date(parse(s)).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});}\nfunction say(t,bad){const e=$('status');e.textContent=t;e.className='status'+(bad?' bad':'');}\nfunction rev(c,id){const m=REV[c];return m&&m[id]?m[id]:1;}\nfunction windowDays(){\n  let last=addDays(examDate,-1);\n  if(last<TODAY)last=TODAY;\n  const out=[];\n  for(let d=TODAY;d<=last&&out.length<400;d=addDays(d,1))out.push(d);\n  return out;\n}\nfunction blockedSet(extra){\n  const b=new Set(S.rules.map(r=>r.weekday));\n  if(extra!==undefined)b.add(extra);\n  return b;\n}\nfunction loadMap(){\n  const m=new Map();\n  for(const s of S.sessions){m.set(s.date,(m.get(s.date)||0)+1);}\n  return m;\n}\nasync function load(){\n  const r=await tessera.call('data.read',{});\n  const d=r.data||{};\n  S={tasks:d.tasks||[],sessions:d.sessions||[],rules:d.rules||[],exam:d.exam||[]};\n  REV=r.revisions||{};\n  examDate=S.exam.length?S.exam[0].date:addDays(TODAY,14);\n  render();\n}\nfunction render(){\n  $('exam-date').value=examDate;\n  const rl=$('rules');rl.textContent='';\n  const rs=S.rules.slice().sort((a,b)=>a.weekday-b.weekday);\n  if(!rs.length){const li=document.createElement('li');li.textContent='Nenhum dia bloqueado.';rl.appendChild(li);}\n  for(const r of rs){\n    const li=document.createElement('li');li.setAttribute('data-hook','rule');\n    const sp=document.createElement('span');sp.textContent='Nunca estudo: '+DAYS[r.weekday];\n    const b=document.createElement('button');b.type='button';b.className='secondary';b.setAttribute('data-hook','rule-remove');b.textContent='Remover';\n    b.setAttribute('aria-label','Remover bloqueio de '+DAYS[r.weekday]);\n    b.addEventListener('click',()=>removeRule(r.id));\n    li.appendChild(sp);li.appendChild(b);rl.appendChild(li);\n  }\n  const names=new Map();for(const t of S.tasks)names.set(t.id,t.name);\n  const ss=S.sessions.filter(s=>names.has(s.taskId)).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);\n  $('empty').style.display=ss.length?'none':'';\n  const sl=$('sessions');sl.textContent='';\n  for(const s of ss){\n    const li=document.createElement('li');li.setAttribute('data-hook','session');\n    if(s.done)li.className='done';\n    const info=document.createElement('span');info.className='info';\n    const tm=document.createElement('time');tm.setAttribute('datetime',s.date);tm.textContent=pretty(s.date)+' (à noite)';\n    const tn=document.createElement('strong');tn.className='tname';tn.setAttribute('data-hook','session-task');tn.textContent=names.get(s.taskId);\n    info.appendChild(tm);info.appendChild(tn);\n    const lab=document.createElement('label');lab.className='chk';\n    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!s.done;\n    cb.addEventListener('change',()=>toggleDone(s.id,cb.checked));\n    lab.appendChild(cb);lab.appendChild(document.createTextNode('Estudado'));\n    li.appendChild(info);li.appendChild(lab);sl.appendChild(li);\n  }\n  const tl=$('tasks');tl.textContent='';\n  for(const t of S.tasks){\n    const li=document.createElement('li');\n    const sp=document.createElement('span');sp.textContent=t.name;\n    const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Excluir';\n    b.setAttribute('aria-label','Excluir o assunto '+t.name+' e suas sessões');\n    b.addEventListener('click',()=>removeTask(t.id));\n    li.appendChild(sp);li.appendChild(b);tl.appendChild(li);\n  }\n}\nasync function patch(ops){return tessera.call('data.patch',{operations:ops});}\nasync function addTask(){\n  const inp=$('task-name');const name=inp.value.trim();\n  const err=$('task-error');err.textContent='';\n  if(!name){err.textContent='Digite o nome do assunto.';inp.focus();return;}\n  const blocked=blockedSet();\n  const days=windowDays().filter(d=>!blocked.has(wd(d)));\n  if(!days.length){err.textContent='Não há dias livres antes da prova. Mude a data da prova ou remova um bloqueio.';return;}\n  const lm=loadMap();\n  const chosen=[];\n  const want=Math.min(2,days.length);\n  for(let i=0;i<want;i++){\n    let best=null,bs=null;\n    for(const d of days){\n      if(chosen.indexOf(d)>=0)continue;\n      let near=0;\n      for(const c of chosen){if(Math.abs(parse(c)-parse(d))<3*86400000)near=1;}\n      const sc=[near,lm.get(d)||0,d];\n      if(bs===null||sc[0]<bs[0]||(sc[0]===bs[0]&&(sc[1]<bs[1]||(sc[1]===bs[1]&&sc[2]<bs[2])))){bs=sc;best=d;}\n    }\n    if(best===null)break;\n    chosen.push(best);lm.set(best,(lm.get(best)||0)+1);\n  }\n  try{\n    const res=await patch([{op:'add',collection:'tasks',record:{name:name}}]);\n    const id=res.addedIds[0];\n    const ops=chosen.map(d=>({op:'add',collection:'sessions',record:{taskId:id,date:d,done:false}}));\n    await patch(ops);\n    inp.value='';\n    say('Assunto adicionado com '+chosen.length+' sessão(ões).');\n    await load();\n  }catch(e){say('Não foi possível adicionar o assunto. Tente de novo.',true);}\n}\nasync function addRule(){\n  const w=Number($('rule-day').value);\n  const err=$('rule-error');err.textContent='';\n  if(S.rules.some(r=>r.weekday===w)){err.textContent=DAYS[w]+' já está bloqueado.';return;}\n  const blocked=blockedSet(w);\n  if(blocked.size>=7){err.textContent='Não dá para bloquear todos os dias da semana.';return;}\n  const days=windowDays().filter(d=>!blocked.has(wd(d)));\n  const moving=S.sessions.filter(s=>s.date>=TODAY&&wd(s.date)===w);\n  if(moving.length&&!days.length){err.textContent='Não restariam dias livres antes da prova. Mude a data da prova.';return;}\n  const lm=loadMap();\n  const ops=[{op:'add',collection:'rules',record:{weekday:w}}];\n  for(const s of moving){\n    lm.set(s.date,(lm.get(s.date)||1)-1);\n    let best=null,bs=null;\n    for(const d of days){\n      const same=S.sessions.some(o=>o.taskId===s.taskId&&o.id!==s.id&&o.date===d)?1:0;\n      const dist=Math.abs(parse(d)-parse(s.date));\n      const sc=[same,lm.get(d)||0,dist];\n      if(bs===null||sc[0]<bs[0]||(sc[0]===bs[0]&&(sc[1]<bs[1]||(sc[1]===bs[1]&&sc[2]<bs[2])))){bs=sc;best=d;}\n    }\n    lm.set(best,(lm.get(best)||0)+1);\n    ops.push({op:'replace',collection:'sessions',id:s.id,revisionCount:rev('sessions',s.id),fields:{date:best}});\n  }\n  try{\n    await patch(ops);\n    say(DAYS[w]+' bloqueado. '+moving.length+' sessão(ões) mudaram de dia.');\n    await load();\n  }catch(e){say('Não foi possível bloquear o dia. Tente de novo.',true);}\n}\nasync function removeRule(id){\n  try{\n    await patch([{op:'remove',collection:'rules',id:id,revisionCount:rev('rules',id)}]);\n    say('Bloqueio removido. As sessões atuais continuam onde estão.');\n    await load();\n  }catch(e){say('Não foi possível remover o bloqueio.',true);}\n}\nasync function removeTask(id){\n  const ops=S.sessions.filter(s=>s.taskId===id).map(s=>({op:'remove',collection:'sessions',id:s.id,revisionCount:rev('sessions',s.id)}));\n  ops.push({op:'remove',collection:'tasks',id:id,revisionCount:rev('tasks',id)});\n  try{await patch(ops);say('Assunto excluído com suas sessões.');await load();}\n  catch(e){say('Não foi possível excluir o assunto.',true);}\n}\nasync function toggleDone(id,v){\n  try{await patch([{op:'replace',collection:'sessions',id:id,revisionCount:rev('sessions',id),fields:{done:v}}]);await load();}\n  catch(e){say('Não foi possível marcar a sessão.',true);await load();}\n}\nasync function setExam(){\n  const v=$('exam-date').value;\n  if(!v){say('Escolha uma data válida para a prova.',true);return;}\n  try{\n    if(S.exam.length)await patch([{op:'replace',collection:'exam',id:S.exam[0].id,revisionCount:rev('exam',S.exam[0].id),fields:{date:v}}]);\n    else await patch([{op:'add',collection:'exam',record:{date:v}}]);\n    say('Data da prova salva. Os próximos assuntos usarão essa data.');\n    await load();\n  }catch(e){say('Não foi possível salvar a data.',true);}\n}\n$('task-add').addEventListener('click',addTask);\n$('task-name').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTask();}});\n$('rule-add').addEventListener('click',addRule);\n$('exam-date').addEventListener('change',setExam);\n(async function(){\n  try{\n    const c=await tessera.call('clock.now',{});\n    TODAY=c.date;\n    await load();\n  }catch(e){say('Não foi possível carregar o plano.',true);}\n})();"
           }
         }
       },
@@ -172,24 +144,39 @@
         "stage": "repair",
         "value": {
           "outcome": "tool",
-          "name": "Plano de estudos para a prova",
-          "summary": "Você cadastra os assuntos e eles são distribuídos em sessões de estudo à noite, até a prova (por padrão daqui a duas semanas). Sextas já vêm bloqueadas, e você pode bloquear outros dias. As anotações para cartões de memorização ficam para depois.",
+          "name": "Plano de estudo para a prova",
+          "summary": "Distribui seus assuntos em sessões de estudo nas próximas duas semanas, antes da prova. Você pode bloquear dias da semana (já começa sem sextas) e as sessões se ajustam sozinhas. Os cartões de memorização ficam para quando você colar suas anotações.",
           "uiMode": "standard",
           "capabilities": ["clock"],
-          "code": {
-            "html": "<h1>Plano de estudos</h1>\n<p class=\"sub\">Sessões à noite, até o dia da prova.</p>\n<div id=\"status\" role=\"status\" class=\"status\"></div>\n<section aria-labelledby=\"h-exam\">\n<h2 id=\"h-exam\">Prova</h2>\n<label for=\"exam-date\">Data da prova</label>\n<input id=\"exam-date\" type=\"date\">\n</section>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Novo assunto</h2>\n<div class=\"row\">\n<div class=\"grow\"><label for=\"task-name\">Nome do assunto</label>\n<input id=\"task-name\" data-hook=\"task-name\" type=\"text\" placeholder=\"Ex.: Revolução Francesa\" autocomplete=\"off\"></div>\n<button id=\"task-add\" data-hook=\"task-add\" type=\"button\">Adicionar assunto</button>\n</div>\n<p id=\"task-error\" class=\"error\"></p>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Dias sem estudo</h2>\n<ul id=\"rules\" class=\"list\"></ul>\n<div class=\"row\">\n<div><label for=\"rule-day\">Dia da semana</label>\n<select id=\"rule-day\" data-hook=\"rule-day\">\n<option value=\"0\">Domingo</option><option value=\"1\">Segunda-feira</option><option value=\"2\">Terça-feira</option><option value=\"3\">Quarta-feira</option><option value=\"4\">Quinta-feira</option><option value=\"5\">Sexta-feira</option><option value=\"6\">Sábado</option>\n</select></div>\n<button id=\"rule-add\" data-hook=\"rule-add\" type=\"button\">Bloquear este dia</button>\n</div>\n<p id=\"rule-error\" class=\"error\"></p>\n</section>\n<section aria-labelledby=\"h-sess\">\n<h2 id=\"h-sess\">Sessões de estudo</h2>\n<p id=\"empty\">Nenhum assunto ainda. Adicione o primeiro acima.</p>\n<ul id=\"sessions\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-tasks\">\n<h2 id=\"h-tasks\">Assuntos</h2>\n<ul id=\"tasks\" class=\"list\"></ul>\n</section>",
-            "css": ":root{color-scheme:light}\nbody{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-1);font-weight:600}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2);font-weight:600}\n.sub{margin:0;color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\nlabel{display:block;font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);margin-bottom:var(--ui-space-1)}\ninput,select{font:inherit;min-height:var(--ui-target);box-sizing:border-box;padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);max-width:100%}\ninput[type=text]{width:100%}\nbutton{font:inherit;min-height:var(--ui-target);padding:0 var(--ui-space-4);border-radius:var(--ui-radius-control);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.grow{flex:1 1 200px}\n.list{list-style:none;margin:0 0 var(--ui-space-3);padding:0}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3);margin-bottom:var(--ui-space-2)}\n.list li .info{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center}\n.done .tname{text-decoration:line-through;color:var(--ui-text-secondary)}\n.error{color:var(--ui-error);margin:var(--ui-space-2) 0 0;font-size:var(--ui-size-secondary)}\n.status{min-height:1.5em;color:var(--ui-success);font-size:var(--ui-size-secondary)}\n.status.bad{color:var(--ui-error)}\n.chk{display:flex;align-items:center;gap:var(--ui-space-2);margin:0;color:var(--ui-text)}\n.chk input{min-height:auto;width:20px;height:20px}",
-            "js": "const DAYS=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];\nlet S={tasks:[],sessions:[],rules:[],exam:[]};\nlet REV={};\nlet TODAY='';\nlet examDate='';\nconst $=id=>document.getElementById(id);\nfunction parse(s){const p=s.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2]);}\nfunction fmt(ms){return new Date(ms).toISOString().slice(0,10);}\nfunction addDays(s,n){return fmt(parse(s)+n*86400000);}\nfunction wd(s){return new Date(parse(s)).getUTCDay();}\nfunction pretty(s){return new Date(parse(s)).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});}\nfunction say(t,bad){const e=$('status');e.textContent=t;e.className='status'+(bad?' bad':'');}\nfunction rev(c,id){const m=REV[c];return m&&m[id]?m[id]:1;}\nfunction windowDays(){\n  let last=addDays(examDate,-1);\n  if(last<TODAY)last=TODAY;\n  const out=[];\n  for(let d=TODAY;d<=last&&out.length<400;d=addDays(d,1))out.push(d);\n  return out;\n}\nfunction blockedSet(extra){\n  const b=new Set(S.rules.map(r=>r.weekday));\n  if(extra!==undefined)b.add(extra);\n  return b;\n}\nfunction loadMap(){\n  const m=new Map();\n  for(const s of S.sessions){m.set(s.date,(m.get(s.date)||0)+1);}\n  return m;\n}\nasync function load(){\n  const r=await tessera.call('data.read',{});\n  const d=r.data||{};\n  S={tasks:d.tasks||[],sessions:d.sessions||[],rules:d.rules||[],exam:d.exam||[]};\n  REV=r.revisions||{};\n  examDate=S.exam.length?S.exam[0].date:addDays(TODAY,14);\n  render();\n}\nfunction render(){\n  $('exam-date').value=examDate;\n  const rl=$('rules');rl.textContent='';\n  const rs=S.rules.slice().sort((a,b)=>a.weekday-b.weekday);\n  if(!rs.length){const li=document.createElement('li');li.textContent='Nenhum dia bloqueado.';rl.appendChild(li);}\n  for(const r of rs){\n    const li=document.createElement('li');li.setAttribute('data-hook','rule');\n    const sp=document.createElement('span');sp.textContent='Nunca estudo: '+DAYS[r.weekday];\n    const b=document.createElement('button');b.type='button';b.className='secondary';b.setAttribute('data-hook','rule-remove');b.textContent='Remover';\n    b.setAttribute('aria-label','Remover bloqueio de '+DAYS[r.weekday]);\n    b.addEventListener('click',()=>removeRule(r.id));\n    li.appendChild(sp);li.appendChild(b);rl.appendChild(li);\n  }\n  const names=new Map();for(const t of S.tasks)names.set(t.id,t.name);\n  const ss=S.sessions.filter(s=>names.has(s.taskId)).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);\n  $('empty').style.display=ss.length?'none':'';\n  const sl=$('sessions');sl.textContent='';\n  for(const s of ss){\n    const li=document.createElement('li');li.setAttribute('data-hook','session');\n    if(s.done)li.className='done';\n    const info=document.createElement('span');info.className='info';\n    const tm=document.createElement('time');tm.setAttribute('datetime',s.date);tm.textContent=pretty(s.date)+' (à noite)';\n    const tn=document.createElement('strong');tn.className='tname';tn.setAttribute('data-hook','session-task');tn.textContent=names.get(s.taskId);\n    info.appendChild(tm);info.appendChild(tn);\n    const lab=document.createElement('label');lab.className='chk';\n    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!s.done;\n    cb.addEventListener('change',()=>toggleDone(s.id,cb.checked));\n    lab.appendChild(cb);lab.appendChild(document.createTextNode('Estudado'));\n    li.appendChild(info);li.appendChild(lab);sl.appendChild(li);\n  }\n  const tl=$('tasks');tl.textContent='';\n  for(const t of S.tasks){\n    const li=document.createElement('li');\n    const sp=document.createElement('span');sp.textContent=t.name;\n    const b=document.createElement('button');b.type='button';b.className='secondary';b.textContent='Excluir';\n    b.setAttribute('aria-label','Excluir o assunto '+t.name+' e suas sessões');\n    b.addEventListener('click',()=>removeTask(t.id));\n    li.appendChild(sp);li.appendChild(b);tl.appendChild(li);\n  }\n}\nasync function patch(ops){return tessera.call('data.patch',{operations:ops});}\nasync function addTask(){\n  const inp=$('task-name');const name=inp.value.trim();\n  const err=$('task-error');err.textContent='';\n  if(!name){err.textContent='Digite o nome do assunto.';inp.focus();return;}\n  const blocked=blockedSet();\n  const days=windowDays().filter(d=>!blocked.has(wd(d)));\n  if(!days.length){err.textContent='Não há dias livres antes da prova. Mude a data da prova ou remova um bloqueio.';return;}\n  const lm=loadMap();\n  const chosen=[];\n  const want=Math.min(2,days.length);\n  for(let i=0;i<want;i++){\n    let best=null,bs=null;\n    for(const d of days){\n      if(chosen.indexOf(d)>=0)continue;\n      let near=0;\n      for(const c of chosen){if(Math.abs(parse(c)-parse(d))<3*86400000)near=1;}\n      const sc=[near,lm.get(d)||0,d];\n      if(bs===null||sc[0]<bs[0]||(sc[0]===bs[0]&&(sc[1]<bs[1]||(sc[1]===bs[1]&&sc[2]<bs[2])))){bs=sc;best=d;}\n    }\n    if(best===null)break;\n    chosen.push(best);lm.set(best,(lm.get(best)||0)+1);\n  }\n  try{\n    const res=await patch([{op:'add',collection:'tasks',record:{name:name}}]);\n    const id=res.addedIds[0];\n    const ops=chosen.map(d=>({op:'add',collection:'sessions',record:{taskId:id,date:d,done:false}}));\n    await patch(ops);\n    inp.value='';\n    say('Assunto adicionado com '+chosen.length+' sessão(ões).');\n    await load();\n  }catch(e){say('Não foi possível adicionar o assunto. Tente de novo.',true);}\n}\nasync function addRule(){\n  const w=Number($('rule-day').value);\n  const err=$('rule-error');err.textContent='';\n  if(S.rules.some(r=>r.weekday===w)){err.textContent=DAYS[w]+' já está bloqueado.';return;}\n  const blocked=blockedSet(w);\n  if(blocked.size>=7){err.textContent='Não dá para bloquear todos os dias da semana.';return;}\n  const days=windowDays().filter(d=>!blocked.has(wd(d)));\n  const moving=S.sessions.filter(s=>s.date>=TODAY&&wd(s.date)===w);\n  if(moving.length&&!days.length){err.textContent='Não restariam dias livres antes da prova. Mude a data da prova.';return;}\n  const lm=loadMap();\n  const ops=[{op:'add',collection:'rules',record:{weekday:w}}];\n  for(const s of moving){\n    lm.set(s.date,(lm.get(s.date)||1)-1);\n    let best=null,bs=null;\n    for(const d of days){\n      const same=S.sessions.some(o=>o.taskId===s.taskId&&o.id!==s.id&&o.date===d)?1:0;\n      const dist=Math.abs(parse(d)-parse(s.date));\n      const sc=[same,lm.get(d)||0,dist];\n      if(bs===null||sc[0]<bs[0]||(sc[0]===bs[0]&&(sc[1]<bs[1]||(sc[1]===bs[1]&&sc[2]<bs[2])))){bs=sc;best=d;}\n    }\n    lm.set(best,(lm.get(best)||0)+1);\n    ops.push({op:'replace',collection:'sessions',id:s.id,revisionCount:rev('sessions',s.id),fields:{date:best}});\n  }\n  try{\n    await patch(ops);\n    say(DAYS[w]+' bloqueado. '+moving.length+' sessão(ões) mudaram de dia.');\n    await load();\n  }catch(e){say('Não foi possível bloquear o dia. Tente de novo.',true);}\n}\nasync function removeRule(id){\n  try{\n    await patch([{op:'remove',collection:'rules',id:id,revisionCount:rev('rules',id)}]);\n    say('Bloqueio removido. As sessões atuais continuam onde estão.');\n    await load();\n  }catch(e){say('Não foi possível remover o bloqueio.',true);}\n}\nasync function removeTask(id){\n  const ops=S.sessions.filter(s=>s.taskId===id).map(s=>({op:'remove',collection:'sessions',id:s.id,revisionCount:rev('sessions',s.id)}));\n  ops.push({op:'remove',collection:'tasks',id:id,revisionCount:rev('tasks',id)});\n  try{await patch(ops);say('Assunto excluído com suas sessões.');await load();}\n  catch(e){say('Não foi possível excluir o assunto.',true);}\n}\nasync function toggleDone(id,v){\n  try{await patch([{op:'replace',collection:'sessions',id:id,revisionCount:rev('sessions',id),fields:{done:v}}]);await load();}\n  catch(e){say('Não foi possível marcar a sessão.',true);await load();}\n}\nasync function setExam(){\n  const v=$('exam-date').value;\n  if(!v){say('Escolha uma data válida para a prova.',true);return;}\n  try{\n    if(S.exam.length)await patch([{op:'replace',collection:'exam',id:S.exam[0].id,revisionCount:rev('exam',S.exam[0].id),fields:{date:v}}]);\n    else await patch([{op:'add',collection:'exam',record:{date:v}}]);\n    say('Data da prova salva. Os próximos assuntos usarão essa data.');\n    await load();\n  }catch(e){say('Não foi possível salvar a data.',true);}\n}\n$('task-add').addEventListener('click',addTask);\n$('task-name').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTask();}});\n$('rule-add').addEventListener('click',addRule);\n$('exam-date').addEventListener('change',setExam);\n(async function(){\n  try{\n    const c=await tessera.call('clock.now',{});\n    TODAY=c.date;\n    await load();\n  }catch(e){say('Não foi possível carregar o plano.',true);}\n})();"
-          },
           "data": {
             "schema": {
-              "type": "object",
               "properties": {
-                "tasks": {
-                  "type": "array",
+                "rules": {
                   "items": {
-                    "type": "object",
                     "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "maximum": 6,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": ["id", "weekday"],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "tasks": {
+                  "items": {
+                    "properties": {
+                      "dates": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
                       "id": {
                         "type": "string"
                       },
@@ -197,79 +184,30 @@
                         "type": "string"
                       }
                     },
-                    "required": ["id", "name"]
-                  }
-                },
-                "sessions": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "taskId": {
-                        "type": "string"
-                      },
-                      "date": {
-                        "type": "string"
-                      },
-                      "done": {
-                        "type": "boolean"
-                      }
-                    },
-                    "required": ["id", "taskId", "date"]
-                  }
-                },
-                "rules": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "weekday": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 6
-                      }
-                    },
-                    "required": ["id", "weekday"]
-                  }
-                },
-                "exam": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "date": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["id", "date"]
-                  }
+                    "required": ["id", "name", "dates"],
+                    "type": "object"
+                  },
+                  "type": "array"
                 }
               },
-              "required": ["tasks", "sessions", "rules", "exam"]
+              "required": ["tasks", "rules"],
+              "type": "object"
             },
             "reusableDefaults": {
-              "tasks": [],
-              "sessions": [],
-              "rules": [],
-              "exam": []
-            },
-            "initialState": {
               "rules": [
                 {
-                  "id": "r-1",
+                  "id": "rule-sexta",
                   "weekday": 5
                 }
-              ]
-            }
+              ],
+              "tasks": []
+            },
+            "initialState": {}
+          },
+          "code": {
+            "html": "<h1>Plano de estudo</h1>\n<p class=\"muted\" id=\"intro\">Estudo à noite, até a véspera da prova.</p>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Novo assunto</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"tn\">Nome do assunto</label><input id=\"tn\" data-hook=\"task-name\" type=\"text\" placeholder=\"Ex.: Equações do 2º grau\"></div>\n<button id=\"ta\" data-hook=\"task-add\" type=\"button\">Adicionar e agendar</button>\n</div>\n<p id=\"tmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Dias sem estudo</h2>\n<ul id=\"rules\" class=\"plain\"></ul>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rd\">Nunca estudar às</label>\n<select id=\"rd\" data-hook=\"rule-day\"><option value=\"0\">domingos</option><option value=\"1\">segundas</option><option value=\"2\">terças</option><option value=\"3\">quartas</option><option value=\"4\">quintas</option><option value=\"5\" selected>sextas</option><option value=\"6\">sábados</option></select></div>\n<button id=\"ra\" data-hook=\"rule-add\" type=\"button\">Bloquear dia</button>\n</div>\n<p id=\"rmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-s\">\n<h2 id=\"h-s\">Sessões à noite</h2>\n<p id=\"empty\" class=\"muted\">Nenhum assunto ainda. Adicione o primeiro acima e ele será distribuído pelos dias disponíveis.</p>\n<ul id=\"sessions\" class=\"plain\"></ul>\n</section>\n<section aria-labelledby=\"h-t\">\n<h2 id=\"h-t\">Assuntos</h2>\n<ul id=\"tasks\" class=\"plain\"></ul>\n</section>",
+            "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 200px}\ninput,select,button{font:inherit;min-height:var(--ui-target);border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\nul.plain li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.err{color:var(--ui-error)}.ok{color:var(--ui-success)}",
+            "js": "let tasks=[],rules=[],revs={},today=null;\nconst WD=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\nconst WDP=['domingos','segundas','terças','quartas','quintas','sextas','sábados'];\nconst $=id=>document.getElementById(id);\nfunction parse(iso){const p=iso.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2]));}\nfunction iso(d){return d.toISOString().slice(0,10);}\nfunction addDays(s,n){const d=parse(s);d.setUTCDate(d.getUTCDate()+n);return iso(d);}\nfunction wd(s){return parse(s).getUTCDay();}\nfunction fmt(s){return parse(s).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});}\nfunction msg(id,t,bad){const e=$(id);e.textContent=t;e.className=bad?'err':'ok';}\nfunction allowedDays(blocked){const r=[];for(let i=0;i<14;i++){const d=addDays(today,i);if(!blocked.has(wd(d)))r.push(d);}return r;}\nfunction loadMap(list){const m={};for(const t of list)for(const d of t.dates||[])m[d]=(m[d]||0)+1;return m;}\nfunction pickBest(cands,ld,taken,target){let best=null,bs=null;cands.forEach((d,i)=>{if(taken.has(d))return;const s=[ld[d]||0,Math.abs(i-target)];if(!bs||s[0]<bs[0]||(s[0]===bs[0]&&s[1]<bs[1])){best=d;bs=s;}});return best;}\nfunction pickDates(cands,ld,k){const n=cands.length,out=new Set();k=Math.min(k,n);for(let j=0;j<k;j++){const target=k===1?0:Math.round(j*(n-1)/(k-1));const taken=new Set(out);cands.forEach((d,i)=>{if(Math.abs(i-target)>2)taken.add(d);});let d=pickBest(cands,ld,taken,target);if(!d)d=pickBest(cands,ld,out,target);out.add(d);ld[d]=(ld[d]||0)+1;}return Array.from(out).sort();}\nasync function load(){const r=await tessera.call('data.read',{});tasks=r.data.tasks||[];rules=r.data.rules||[];revs=r.revisions||{};render();}\nfunction render(){\nconst rl=$('rules');rl.textContent='';\nif(!rules.length){const li=document.createElement('li');li.textContent='Nenhum dia bloqueado.';rl.appendChild(li);}\nfor(const r of rules){const li=document.createElement('li');li.setAttribute('data-hook','rule');const s=document.createElement('span');s.textContent='Nunca às '+WDP[r.weekday];const b=document.createElement('button');b.type='button';b.className='sec';b.setAttribute('data-hook','rule-remove');b.textContent='Remover regra';b.setAttribute('aria-label','Remover regra: nunca às '+WDP[r.weekday]);b.addEventListener('click',()=>removeRule(r));li.append(s,b);rl.appendChild(li);}\nconst all=[];for(const t of tasks)for(const d of t.dates||[])all.push({name:t.name,date:d});\nall.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);\n$('empty').hidden=tasks.length>0;\nconst sl=$('sessions');sl.textContent='';\nfor(const s of all){const li=document.createElement('li');li.setAttribute('data-hook','session');const tm=document.createElement('time');tm.setAttribute('datetime',s.date);tm.textContent=fmt(s.date)+' à noite';const n=document.createElement('span');n.setAttribute('data-hook','session-task');n.textContent=s.name;li.append(tm,n);sl.appendChild(li);}\nconst tl=$('tasks');tl.textContent='';\nfor(const t of tasks){const li=document.createElement('li');const s=document.createElement('span');s.textContent=t.name+' ('+(t.dates||[]).length+' sessões)';const b=document.createElement('button');b.type='button';b.className='sec';b.textContent='Remover assunto';b.setAttribute('aria-label','Remover assunto '+t.name);b.addEventListener('click',()=>removeTask(t));li.append(s,b);tl.appendChild(li);}\n}\nasync function addTask(){\nconst name=$('tn').value.trim();\nif(!name){msg('tmsg','Digite o nome do assunto.',true);return;}\nconst blocked=new Set(rules.map(r=>r.weekday));\nconst cands=allowedDays(blocked);\nif(!cands.length){msg('tmsg','Todos os dias estão bloqueados. Remova uma regra.',true);return;}\nconst dates=pickDates(cands,loadMap(tasks),3);\ntry{await tessera.call('data.patch',{operations:[{op:'add',collection:'tasks',record:{name:name,dates:dates}}]});$('tn').value='';await load();msg('tmsg','Assunto agendado em '+dates.length+' sessões.',false);}catch(e){msg('tmsg','Não foi possível salvar. Tente de novo.',true);}\n}\nasync function addRule(){\nconst day=Number($('rd').value);\nif(rules.some(r=>r.weekday===day)){msg('rmsg','Esse dia já está bloqueado.',true);return;}\nconst blocked=new Set(rules.map(r=>r.weekday));blocked.add(day);\nconst cands=allowedDays(blocked);\nif(!cands.length){msg('rmsg','Não dá para bloquear todos os dias da semana.',true);return;}\nconst ld={};\nfor(const t of tasks)for(const d of (t.dates||[]).filter(x=>!blocked.has(wd(x))))ld[d]=(ld[d]||0)+1;\nconst ops=[{op:'add',collection:'rules',record:{weekday:day}}];\nfor(const t of tasks){const keep=(t.dates||[]).filter(d=>!blocked.has(wd(d)));const moved=(t.dates||[]).length-keep.length;if(!moved)continue;const set=new Set(keep);for(let i=0;i<moved;i++){let d=pickBest(cands,ld,set,0);if(!d)break;set.add(d);ld[d]=(ld[d]||0)+1;}\nops.push({op:'replace',collection:'tasks',id:t.id,revisionCount:(revs.tasks||{})[t.id]||1,fields:{dates:Array.from(set).sort()}});}\ntry{await tessera.call('data.patch',{operations:ops});await load();msg('rmsg','Regra salva. Sessões de '+WD[day]+' foram movidas para outros dias.',false);}catch(e){msg('rmsg','Não foi possível salvar a regra. Tente de novo.',true);}\n}\nasync function removeRule(r){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'rules',id:r.id,revisionCount:(revs.rules||{})[r.id]||1}]});await load();msg('rmsg','Regra removida.',false);}catch(e){msg('rmsg','Não foi possível remover a regra.',true);}\n}\nasync function removeTask(t){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'tasks',id:t.id,revisionCount:(revs.tasks||{})[t.id]||1}]});await load();msg('tmsg','Assunto removido.',false);}catch(e){msg('tmsg','Não foi possível remover o assunto.',true);}\n}\n$('ta').addEventListener('click',addTask);\n$('tn').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});\n$('ra').addEventListener('click',addRule);\n(async()=>{try{const c=await tessera.call('clock.now',{});today=c.date;$('intro').textContent='Estudo à noite, de hoje até a véspera da prova (daqui a duas semanas, '+fmt(addDays(today,14))+').';await load();}catch(e){msg('tmsg','Não foi possível carregar o plano.',true);}})();"
           },
           "leftOut": []
         }
@@ -281,7 +219,7 @@
         "accessibility@bd63b2577331",
         "profile@3877bf3c212e",
         "create@6849cfbe5453",
-        "repair-schema-shape@1fdc6c120869",
+        "repair-behavior@753b4c0deca3",
         "request@47a51319da7d",
         "language@2a8e10d77d23",
         "attempt@db8c6b71b427",
@@ -294,15 +232,15 @@
         "stage": "intent",
         "value": {
           "kind": "data",
-          "interfacePart": null,
           "dataPart": "Sexta pode agora.",
+          "interfacePart": null,
           "behaviorChange": false,
           "lookOnly": false,
           "targetsCurrentTool": true,
           "language": "pt-BR",
           "features": [
             {
-              "name": "Remove Friday block",
+              "name": "allow Fridays",
               "request": "Sexta pode agora."
             }
           ],
@@ -327,13 +265,13 @@
         "stage": "data",
         "value": {
           "outcome": "patch",
-          "summary": "Remover a regra que bloqueia as sextas-feiras, para que sessões de estudo possam ser marcadas nesse dia.",
+          "summary": "Remove a regra que bloqueia as sextas, para que as sessões de estudo também possam ser agendadas nesse dia.",
           "patch": {
             "operations": [
               {
                 "op": "remove",
                 "collection": "rules",
-                "id": "r-1",
+                "id": "rule-sexta",
                 "revisionCount": 2
               }
             ]
@@ -353,21 +291,21 @@
         "kind": "value",
         "stage": "intent",
         "value": {
-          "kind": "new_tool",
-          "interfacePart": null,
+          "kind": "edit",
+          "interfacePart": "Faz cartões de memorização destas anotações",
           "dataPart": null,
-          "behaviorChange": false,
+          "behaviorChange": true,
           "lookOnly": false,
-          "targetsCurrentTool": false,
-          "language": "pt",
+          "targetsCurrentTool": true,
+          "language": "pt-BR",
           "features": [
             {
-              "name": "memorization flashcards",
-              "request": "Faz cartões de memorização destas anotações"
+              "name": "memorization cards",
+              "request": "Faz cartões de memorização"
             },
             {
-              "name": "notes content",
-              "request": "Média: a soma dos valores dividida pela quantidade. Mediana: o valor do meio."
+              "name": "from pasted notes",
+              "request": "destas anotações: Média: a soma dos valores dividida pela quantidade. Mediana: o valor do meio."
             }
           ],
           "profile": "cards",
@@ -388,21 +326,62 @@
     {
       "reply": {
         "kind": "value",
-        "stage": "create",
+        "stage": "edit",
         "value": {
-          "outcome": "tool",
-          "name": "Cartões de memorização",
-          "summary": "Cole anotações com uma ideia por linha no formato «frente: verso» e o botão faz um cartão para cada linha. Os cartões ficam guardados; já vêm os de Média e Mediana.",
-          "uiMode": "standard",
-          "capabilities": [],
+          "outcome": "edit",
+          "summary": "Adiciona ao plano uma seção de cartões de memorização: suas anotações já aparecem num campo, e o botão cria um cartão para cada termo, com a resposta escondida até você mostrar.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Plano de estudo</h1>\n<p class=\"muted\" id=\"intro\">Estudo à noite, até a véspera da prova.</p>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Novo assunto</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"tn\">Nome do assunto</label><input id=\"tn\" data-hook=\"task-name\" type=\"text\" placeholder=\"Ex.: Equações do 2º grau\"></div>\n<button id=\"ta\" data-hook=\"task-add\" type=\"button\">Adicionar e agendar</button>\n</div>\n<p id=\"tmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Dias sem estudo</h2>\n<ul id=\"rules\" class=\"plain\"></ul>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rd\">Nunca estudar às</label>\n<select id=\"rd\" data-hook=\"rule-day\"><option value=\"0\">domingos</option><option value=\"1\">segundas</option><option value=\"2\">terças</option><option value=\"3\">quartas</option><option value=\"4\">quintas</option><option value=\"5\" selected>sextas</option><option value=\"6\">sábados</option></select></div>\n<button id=\"ra\" data-hook=\"rule-add\" type=\"button\">Bloquear dia</button>\n</div>\n<p id=\"rmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-s\">\n<h2 id=\"h-s\">Sessões à noite</h2>\n<p id=\"empty\" class=\"muted\">Nenhum assunto ainda. Adicione o primeiro acima e ele será distribuído pelos dias disponíveis.</p>\n<ul id=\"sessions\" class=\"plain\"></ul>\n</section>\n<section aria-labelledby=\"h-t\">\n<h2 id=\"h-t\">Assuntos</h2>\n<ul id=\"tasks\" class=\"plain\"></ul>\n</section>\n<section aria-labelledby=\"h-c\">\n<h2 id=\"h-c\">Cartões de memorização</h2>\n<div class=\"field\"><label for=\"cn\">Anotações (termo: explicação)</label>\n<textarea id=\"cn\" rows=\"4\">Média: a soma dos valores dividida pela quantidade. Mediana: o valor do meio.</textarea></div>\n<p><button id=\"cb\" type=\"button\">Criar cartões</button></p>\n<p id=\"cmsg\" role=\"status\"></p>\n<p id=\"cempty\" class=\"muted\">Nenhum cartão ainda. Use o botão acima para criar cartões a partir das anotações.</p>\n<ul id=\"cards\" class=\"plain\"></ul>\n</section>",
+              "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 200px}\ninput,select,button,textarea{font:inherit;min-height:var(--ui-target);border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\ntextarea{padding:var(--ui-space-2) var(--ui-space-3);width:100%}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\nul.plain li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.err{color:var(--ui-error)}.ok{color:var(--ui-success)}\n.card-text{flex:1 1 200px}\n.card-actions{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}",
+              "js": "let tasks=[],rules=[],cards=[],revs={},today=null;\nconst shown=new Set();\nconst WD=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\nconst WDP=['domingos','segundas','terças','quartas','quintas','sextas','sábados'];\nconst $=id=>document.getElementById(id);\nfunction parse(iso){const p=iso.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2]));}\nfunction iso(d){return d.toISOString().slice(0,10);}\nfunction addDays(s,n){const d=parse(s);d.setUTCDate(d.getUTCDate()+n);return iso(d);}\nfunction wd(s){return parse(s).getUTCDay();}\nfunction fmt(s){return parse(s).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});}\nfunction msg(id,t,bad){const e=$(id);e.textContent=t;e.className=bad?'err':'ok';}\nfunction allowedDays(blocked){const r=[];for(let i=0;i<14;i++){const d=addDays(today,i);if(!blocked.has(wd(d)))r.push(d);}return r;}\nfunction loadMap(list){const m={};for(const t of list)for(const d of t.dates||[])m[d]=(m[d]||0)+1;return m;}\nfunction pickBest(cands,ld,taken,target){let best=null,bs=null;cands.forEach((d,i)=>{if(taken.has(d))return;const s=[ld[d]||0,Math.abs(i-target)];if(!bs||s[0]<bs[0]||(s[0]===bs[0]&&s[1]<bs[1])){best=d;bs=s;}});return best;}\nfunction pickDates(cands,ld,k){const n=cands.length,out=new Set();k=Math.min(k,n);for(let j=0;j<k;j++){const target=k===1?0:Math.round(j*(n-1)/(k-1));const taken=new Set(out);cands.forEach((d,i)=>{if(Math.abs(i-target)>2)taken.add(d);});let d=pickBest(cands,ld,taken,target);if(!d)d=pickBest(cands,ld,out,target);out.add(d);ld[d]=(ld[d]||0)+1;}return Array.from(out).sort();}\nasync function load(){const r=await tessera.call('data.read',{});tasks=r.data.tasks||[];rules=r.data.rules||[];cards=r.data.cards||[];revs=r.revisions||{};render();}\nfunction render(){\nconst rl=$('rules');rl.textContent='';\nif(!rules.length){const li=document.createElement('li');li.textContent='Nenhum dia bloqueado.';rl.appendChild(li);}\nfor(const r of rules){const li=document.createElement('li');li.setAttribute('data-hook','rule');const s=document.createElement('span');s.textContent='Nunca às '+WDP[r.weekday];const b=document.createElement('button');b.type='button';b.className='sec';b.setAttribute('data-hook','rule-remove');b.textContent='Remover regra';b.setAttribute('aria-label','Remover regra: nunca às '+WDP[r.weekday]);b.addEventListener('click',()=>removeRule(r));li.append(s,b);rl.appendChild(li);}\nconst all=[];for(const t of tasks)for(const d of t.dates||[])all.push({name:t.name,date:d});\nall.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);\n$('empty').hidden=tasks.length>0;\nconst sl=$('sessions');sl.textContent='';\nfor(const s of all){const li=document.createElement('li');li.setAttribute('data-hook','session');const tm=document.createElement('time');tm.setAttribute('datetime',s.date);tm.textContent=fmt(s.date)+' à noite';const n=document.createElement('span');n.setAttribute('data-hook','session-task');n.textContent=s.name;li.append(tm,n);sl.appendChild(li);}\nconst tl=$('tasks');tl.textContent='';\nfor(const t of tasks){const li=document.createElement('li');const s=document.createElement('span');s.textContent=t.name+' ('+(t.dates||[]).length+' sessões)';const b=document.createElement('button');b.type='button';b.className='sec';b.textContent='Remover assunto';b.setAttribute('aria-label','Remover assunto '+t.name);b.addEventListener('click',()=>removeTask(t));li.append(s,b);tl.appendChild(li);}\nrenderCards();\n}\nfunction renderCards(){\n$('cempty').hidden=cards.length>0;\nconst cl=$('cards');cl.textContent='';\nfor(const c of cards){const li=document.createElement('li');const tx=document.createElement('div');tx.className='card-text';const f=document.createElement('strong');f.textContent=c.front;tx.appendChild(f);\nconst open=shown.has(c.id);\nif(open){const a=document.createElement('div');a.textContent=c.back;tx.appendChild(a);}\nconst act=document.createElement('div');act.className='card-actions';\nconst fl=document.createElement('button');fl.type='button';fl.className='sec';fl.textContent=open?'Esconder resposta':'Mostrar resposta';fl.setAttribute('aria-expanded',open?'true':'false');fl.setAttribute('aria-label',(open?'Esconder':'Mostrar')+' resposta do cartão '+c.front);\nfl.addEventListener('click',()=>{if(shown.has(c.id))shown.delete(c.id);else shown.add(c.id);renderCards();const nb=Array.from($('cards').querySelectorAll('button')).find(x=>x.getAttribute('aria-label')&&x.getAttribute('aria-label').endsWith('resposta do cartão '+c.front));if(nb)nb.focus();});\nconst rm=document.createElement('button');rm.type='button';rm.className='sec';rm.textContent='Remover cartão';rm.setAttribute('aria-label','Remover cartão '+c.front);rm.addEventListener('click',()=>removeCard(c));\nact.append(fl,rm);li.append(tx,act);cl.appendChild(li);}\n}\nfunction parseNotes(text){\nconst out=[];const parts=text.split(/\\n+|(?<=[.!?])\\s+(?=[^:.\\n]{1,60}:)/);\nfor(const p of parts){const i=p.indexOf(':');if(i<1)continue;const front=p.slice(0,i).trim(),back=p.slice(i+1).trim();if(front&&back)out.push({front:front,back:back});}\nreturn out;}\nasync function addCards(){\nconst list=parseNotes($('cn').value);\nif(!list.length){msg('cmsg','Não encontrei termos. Escreva no formato \"Termo: explicação\".',true);return;}\ntry{await tessera.call('data.patch',{operations:list.map(c=>({op:'add',collection:'cards',record:c}))});await load();msg('cmsg',list.length+' cartões criados.',false);}catch(e){msg('cmsg','Não foi possível salvar os cartões. Tente de novo.',true);}\n}\nasync function removeCard(c){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'cards',id:c.id,revisionCount:(revs.cards||{})[c.id]||1}]});await load();msg('cmsg','Cartão removido.',false);}catch(e){msg('cmsg','Não foi possível remover o cartão.',true);}\n}\nasync function addTask(){\nconst name=$('tn').value.trim();\nif(!name){msg('tmsg','Digite o nome do assunto.',true);return;}\nconst blocked=new Set(rules.map(r=>r.weekday));\nconst cands=allowedDays(blocked);\nif(!cands.length){msg('tmsg','Todos os dias estão bloqueados. Remova uma regra.',true);return;}\nconst dates=pickDates(cands,loadMap(tasks),3);\ntry{await tessera.call('data.patch',{operations:[{op:'add',collection:'tasks',record:{name:name,dates:dates}}]});$('tn').value='';await load();msg('tmsg','Assunto agendado em '+dates.length+' sessões.',false);}catch(e){msg('tmsg','Não foi possível salvar. Tente de novo.',true);}\n}\nasync function addRule(){\nconst day=Number($('rd').value);\nif(rules.some(r=>r.weekday===day)){msg('rmsg','Esse dia já está bloqueado.',true);return;}\nconst blocked=new Set(rules.map(r=>r.weekday));blocked.add(day);\nconst cands=allowedDays(blocked);\nif(!cands.length){msg('rmsg','Não dá para bloquear todos os dias da semana.',true);return;}\nconst ld={};\nfor(const t of tasks)for(const d of (t.dates||[]).filter(x=>!blocked.has(wd(x))))ld[d]=(ld[d]||0)+1;\nconst ops=[{op:'add',collection:'rules',record:{weekday:day}}];\nfor(const t of tasks){const keep=(t.dates||[]).filter(d=>!blocked.has(wd(d)));const moved=(t.dates||[]).length-keep.length;if(!moved)continue;const set=new Set(keep);for(let i=0;i<moved;i++){let d=pickBest(cands,ld,set,0);if(!d)break;set.add(d);ld[d]=(ld[d]||0)+1;}\nops.push({op:'replace',collection:'tasks',id:t.id,revisionCount:(revs.tasks||{})[t.id]||1,fields:{dates:Array.from(set).sort()}});}\ntry{await tessera.call('data.patch',{operations:ops});await load();msg('rmsg','Regra salva. Sessões de '+WD[day]+' foram movidas para outros dias.',false);}catch(e){msg('rmsg','Não foi possível salvar a regra. Tente de novo.',true);}\n}\nasync function removeRule(r){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'rules',id:r.id,revisionCount:(revs.rules||{})[r.id]||1}]});await load();msg('rmsg','Regra removida.',false);}catch(e){msg('rmsg','Não foi possível remover a regra.',true);}\n}\nasync function removeTask(t){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'tasks',id:t.id,revisionCount:(revs.tasks||{})[t.id]||1}]});await load();msg('tmsg','Assunto removido.',false);}catch(e){msg('tmsg','Não foi possível remover o assunto.',true);}\n}\n$('ta').addEventListener('click',addTask);\n$('tn').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});\n$('ra').addEventListener('click',addRule);\n$('cb').addEventListener('click',addCards);\n(async()=>{try{const c=await tessera.call('clock.now',{});today=c.date;$('intro').textContent='Estudo à noite, de hoje até a véspera da prova (daqui a duas semanas, '+fmt(addDays(today,14))+').';await load();}catch(e){msg('tmsg','Não foi possível carregar o plano.',true);}})();"
+            }
+          },
           "data": {
+            "mode": "migrate",
             "schema": {
-              "type": "object",
               "properties": {
-                "cards": {
-                  "type": "array",
+                "rules": {
                   "items": {
-                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "maximum": 6,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": ["id", "weekday"],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "tasks": {
+                  "items": {
+                    "properties": {
+                      "dates": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "name", "dates"],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "cards": {
+                  "items": {
                     "properties": {
                       "id": {
                         "type": "string"
@@ -414,47 +393,171 @@
                         "type": "string"
                       }
                     },
-                    "required": ["id", "front", "back"]
-                  }
+                    "required": ["id", "front", "back"],
+                    "type": "object"
+                  },
+                  "type": "array"
                 }
               },
-              "required": ["cards"]
+              "required": ["tasks", "rules"],
+              "type": "object"
             },
-            "reusableDefaults": {
+            "defaults": {
+              "rules": [
+                {
+                  "id": "rule-sexta",
+                  "weekday": 5
+                }
+              ],
+              "tasks": [],
               "cards": []
             },
-            "initialState": {
-              "cards": [
+            "migration": {
+              "fromVersion": 1,
+              "toVersion": 2,
+              "operations": [
                 {
-                  "id": "c-media",
-                  "front": "Média",
-                  "back": "a soma dos valores dividida pela quantidade."
-                },
-                {
-                  "id": "c-mediana",
-                  "front": "Mediana",
-                  "back": "o valor do meio."
+                  "op": "addField",
+                  "collection": "tasks",
+                  "fields": {}
                 }
               ]
             }
-          },
-          "code": {
-            "html": "<h1>Cartões de memorização</h1>\n<label for=\"notes\">Anotações (uma por linha, no formato frente: verso)</label>\n<textarea id=\"notes\" data-hook=\"notes\" rows=\"5\" placeholder=\"Moda: o valor que mais se repete\"></textarea>\n<div class=\"bar\"><button id=\"make\" type=\"button\" data-hook=\"cards-make\">Fazer cartões</button></div>\n<p id=\"status\" role=\"status\"></p>\n<h2>Meus cartões</h2>\n<p id=\"empty\" hidden>Ainda não há cartões. Cole suas anotações acima.</p>\n<ul id=\"list\"></ul>",
-            "css": "body{font-family:var(--ui-font);color:var(--ui-text);background:var(--ui-background)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3);font-weight:600}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 var(--ui-space-2)}\nlabel{display:block;margin-bottom:var(--ui-space-1)}\ntextarea{width:100%;box-sizing:border-box;padding:var(--ui-space-2);font:inherit;border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text)}\n.bar{margin-top:var(--ui-space-2)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);font:inherit;border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;border-radius:var(--ui-radius-control);cursor:pointer}\nbutton:focus-visible,textarea:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\nul{list-style:none;padding:0;margin:0;display:grid;gap:var(--ui-space-2)}\nli{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3)}\n.front{font-weight:600}\n.back{color:var(--ui-text-secondary);margin-top:var(--ui-space-1)}\n#status{min-height:1.5em}\n#status.err{color:var(--ui-error)}",
-            "js": "const list=document.getElementById('list');\nconst empty=document.getElementById('empty');\nconst statusEl=document.getElementById('status');\nconst notes=document.getElementById('notes');\nfunction say(t,err){statusEl.textContent=t;statusEl.className=err?'err':'';}\nasync function load(){\n  const r=await tessera.call('data.read',{});\n  const cards=(r.data&&r.data.cards)||[];\n  list.textContent='';\n  empty.hidden=cards.length>0;\n  for(const c of cards){\n    const li=document.createElement('li');\n    li.setAttribute('data-hook','card');\n    const f=document.createElement('div');\n    f.className='front';f.setAttribute('data-hook','card-front');f.textContent=c.front;\n    const b=document.createElement('div');\n    b.className='back';b.setAttribute('data-hook','card-back');b.textContent=c.back;\n    li.appendChild(f);li.appendChild(b);list.appendChild(li);\n  }\n}\ndocument.getElementById('make').addEventListener('click',async()=>{\n  const ops=[];\n  for(const line of notes.value.split(/\\r?\\n/)){\n    const i=line.indexOf(':');\n    if(i<0)continue;\n    const front=line.slice(0,i).trim();\n    const back=line.slice(i+1).trim();\n    if(front&&back)ops.push({op:'add',collection:'cards',record:{front:front,back:back}});\n  }\n  if(!ops.length){say('Nenhum cartão feito. Escreva cada linha como «frente: verso».',true);return;}\n  try{\n    await tessera.call('data.patch',{operations:ops});\n    notes.value='';\n    await load();\n    say(ops.length===1?'1 cartão feito e guardado.':ops.length+' cartões feitos e guardados.',false);\n  }catch(e){say('Não foi possível guardar os cartões. Suas anotações continuam aí; tente de novo.',true);}\n});\nload().catch(()=>say('Não foi possível abrir os cartões.',true));"
           }
         }
       },
       "parts": [
         "base@23124625851c",
         "bridge@2ae6fa4b9337",
-        "ui-standard@5953c402b1d6",
+        "ui-edit@722f0daf16a5",
         "accessibility@bd63b2577331",
-        "profile@2eb4d5f2b3f3",
-        "create@6849cfbe5453",
+        "profile@3877bf3c212e",
+        "edit@a204f4d753be",
         "request@47a51319da7d",
         "language@2a8e10d77d23",
-        "conversation@55efc5121fcd"
+        "conversation@55efc5121fcd",
+        "style-notes@6fbe89c62e1f",
+        "source@0eae49d84708",
+        "edit-declarations@7eb300505e9f"
+      ]
+    },
+    {
+      "reply": {
+        "kind": "value",
+        "stage": "repair",
+        "value": {
+          "outcome": "edit",
+          "summary": "Adiciona ao plano uma seção de cartões de memorização: suas anotações já aparecem num campo, e o botão cria um cartão para cada termo, com a resposta escondida até você mostrar.",
+          "files": {
+            "mode": "replace",
+            "code": {
+              "html": "<h1>Plano de estudo</h1>\n<p class=\"muted\" id=\"intro\">Estudo à noite, até a véspera da prova.</p>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Novo assunto</h2>\n<div class=\"row\">\n<div class=\"field\"><label for=\"tn\">Nome do assunto</label><input id=\"tn\" data-hook=\"task-name\" type=\"text\" placeholder=\"Ex.: Equações do 2º grau\"></div>\n<button id=\"ta\" data-hook=\"task-add\" type=\"button\">Adicionar e agendar</button>\n</div>\n<p id=\"tmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-rules\">\n<h2 id=\"h-rules\">Dias sem estudo</h2>\n<ul id=\"rules\" class=\"plain\"></ul>\n<div class=\"row\">\n<div class=\"field\"><label for=\"rd\">Nunca estudar às</label>\n<select id=\"rd\" data-hook=\"rule-day\"><option value=\"0\">domingos</option><option value=\"1\">segundas</option><option value=\"2\">terças</option><option value=\"3\">quartas</option><option value=\"4\">quintas</option><option value=\"5\" selected>sextas</option><option value=\"6\">sábados</option></select></div>\n<button id=\"ra\" data-hook=\"rule-add\" type=\"button\">Bloquear dia</button>\n</div>\n<p id=\"rmsg\" role=\"status\"></p>\n</section>\n<section aria-labelledby=\"h-s\">\n<h2 id=\"h-s\">Sessões à noite</h2>\n<p id=\"empty\" class=\"muted\">Nenhum assunto ainda. Adicione o primeiro acima e ele será distribuído pelos dias disponíveis.</p>\n<ul id=\"sessions\" class=\"plain\"></ul>\n</section>\n<section aria-labelledby=\"h-t\">\n<h2 id=\"h-t\">Assuntos</h2>\n<ul id=\"tasks\" class=\"plain\"></ul>\n</section>\n<section aria-labelledby=\"h-c\">\n<h2 id=\"h-c\">Cartões de memorização</h2>\n<div class=\"field\"><label for=\"cn\">Anotações (termo: explicação)</label>\n<textarea id=\"cn\" rows=\"4\">Média: a soma dos valores dividida pela quantidade. Mediana: o valor do meio.</textarea></div>\n<p><button id=\"cb\" type=\"button\">Criar cartões</button></p>\n<p id=\"cmsg\" role=\"status\"></p>\n<p id=\"cempty\" class=\"muted\">Nenhum cartão ainda. Use o botão acima para criar cartões a partir das anotações.</p>\n<ul id=\"cards\" class=\"plain\"></ul>\n</section>",
+              "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 200px}\ninput,select,button,textarea{font:inherit;min-height:var(--ui-target);border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\ntextarea{padding:var(--ui-space-2) var(--ui-space-3);width:100%}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text);border-color:var(--ui-control-border)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul.plain{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\nul.plain li{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.err{color:var(--ui-error)}.ok{color:var(--ui-success)}\n.card-text{flex:1 1 200px}\n.card-actions{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}",
+              "js": "let tasks=[],rules=[],cards=[],revs={},today=null;\nconst shown=new Set();\nconst WD=['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\nconst WDP=['domingos','segundas','terças','quartas','quintas','sextas','sábados'];\nconst $=id=>document.getElementById(id);\nfunction parse(iso){const p=iso.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2]));}\nfunction iso(d){return d.toISOString().slice(0,10);}\nfunction addDays(s,n){const d=parse(s);d.setUTCDate(d.getUTCDate()+n);return iso(d);}\nfunction wd(s){return parse(s).getUTCDay();}\nfunction fmt(s){return parse(s).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',timeZone:'UTC'});}\nfunction msg(id,t,bad){const e=$(id);e.textContent=t;e.className=bad?'err':'ok';}\nfunction allowedDays(blocked){const r=[];for(let i=0;i<14;i++){const d=addDays(today,i);if(!blocked.has(wd(d)))r.push(d);}return r;}\nfunction loadMap(list){const m={};for(const t of list)for(const d of t.dates||[])m[d]=(m[d]||0)+1;return m;}\nfunction pickBest(cands,ld,taken,target){let best=null,bs=null;cands.forEach((d,i)=>{if(taken.has(d))return;const s=[ld[d]||0,Math.abs(i-target)];if(!bs||s[0]<bs[0]||(s[0]===bs[0]&&s[1]<bs[1])){best=d;bs=s;}});return best;}\nfunction pickDates(cands,ld,k){const n=cands.length,out=new Set();k=Math.min(k,n);for(let j=0;j<k;j++){const target=k===1?0:Math.round(j*(n-1)/(k-1));const taken=new Set(out);cands.forEach((d,i)=>{if(Math.abs(i-target)>2)taken.add(d);});let d=pickBest(cands,ld,taken,target);if(!d)d=pickBest(cands,ld,out,target);out.add(d);ld[d]=(ld[d]||0)+1;}return Array.from(out).sort();}\nasync function load(){const r=await tessera.call('data.read',{});tasks=r.data.tasks||[];rules=r.data.rules||[];cards=r.data.cards||[];revs=r.revisions||{};render();}\nfunction render(){\nconst rl=$('rules');rl.textContent='';\nif(!rules.length){const li=document.createElement('li');li.textContent='Nenhum dia bloqueado.';rl.appendChild(li);}\nfor(const r of rules){const li=document.createElement('li');li.setAttribute('data-hook','rule');const s=document.createElement('span');s.textContent='Nunca às '+WDP[r.weekday];const b=document.createElement('button');b.type='button';b.className='sec';b.setAttribute('data-hook','rule-remove');b.textContent='Remover regra';b.setAttribute('aria-label','Remover regra: nunca às '+WDP[r.weekday]);b.addEventListener('click',()=>removeRule(r));li.append(s,b);rl.appendChild(li);}\nconst all=[];for(const t of tasks)for(const d of t.dates||[])all.push({name:t.name,date:d});\nall.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:0);\n$('empty').hidden=tasks.length>0;\nconst sl=$('sessions');sl.textContent='';\nfor(const s of all){const li=document.createElement('li');li.setAttribute('data-hook','session');const tm=document.createElement('time');tm.setAttribute('datetime',s.date);tm.textContent=fmt(s.date)+' à noite';const n=document.createElement('span');n.setAttribute('data-hook','session-task');n.textContent=s.name;li.append(tm,n);sl.appendChild(li);}\nconst tl=$('tasks');tl.textContent='';\nfor(const t of tasks){const li=document.createElement('li');const s=document.createElement('span');s.textContent=t.name+' ('+(t.dates||[]).length+' sessões)';const b=document.createElement('button');b.type='button';b.className='sec';b.textContent='Remover assunto';b.setAttribute('aria-label','Remover assunto '+t.name);b.addEventListener('click',()=>removeTask(t));li.append(s,b);tl.appendChild(li);}\nrenderCards();\n}\nfunction renderCards(){\n$('cempty').hidden=cards.length>0;\nconst cl=$('cards');cl.textContent='';\nfor(const c of cards){const li=document.createElement('li');const tx=document.createElement('div');tx.className='card-text';const f=document.createElement('strong');f.textContent=c.front;tx.appendChild(f);\nconst expanded=shown.has(c.id);\nif(expanded){const a=document.createElement('div');a.textContent=c.back;tx.appendChild(a);}\nconst act=document.createElement('div');act.className='card-actions';\nconst fl=document.createElement('button');fl.type='button';fl.className='sec';fl.textContent=expanded?'Esconder resposta':'Mostrar resposta';fl.setAttribute('aria-expanded',expanded?'true':'false');fl.setAttribute('aria-label',(expanded?'Esconder':'Mostrar')+' resposta do cartão '+c.front);\nfl.addEventListener('click',()=>{if(shown.has(c.id))shown.delete(c.id);else shown.add(c.id);renderCards();const nb=Array.from($('cards').querySelectorAll('button')).find(x=>x.getAttribute('aria-label')&&x.getAttribute('aria-label').endsWith('resposta do cartão '+c.front));if(nb)nb.focus();});\nconst rm=document.createElement('button');rm.type='button';rm.className='sec';rm.textContent='Remover cartão';rm.setAttribute('aria-label','Remover cartão '+c.front);rm.addEventListener('click',()=>removeCard(c));\nact.append(fl,rm);li.append(tx,act);cl.appendChild(li);}\n}\nfunction parseNotes(text){\nconst out=[];const parts=text.split(/\\n+|(?<=[.!?])\\s+(?=[^:.\\n]{1,60}:)/);\nfor(const p of parts){const i=p.indexOf(':');if(i<1)continue;const front=p.slice(0,i).trim(),back=p.slice(i+1).trim();if(front&&back)out.push({front:front,back:back});}\nreturn out;}\nasync function addCards(){\nconst list=parseNotes($('cn').value);\nif(!list.length){msg('cmsg','Não encontrei termos. Escreva no formato \"Termo: explicação\".',true);return;}\ntry{await tessera.call('data.patch',{operations:list.map(c=>({op:'add',collection:'cards',record:c}))});await load();msg('cmsg',list.length+' cartões criados.',false);}catch(e){msg('cmsg','Não foi possível salvar os cartões. Tente de novo.',true);}\n}\nasync function removeCard(c){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'cards',id:c.id,revisionCount:(revs.cards||{})[c.id]||1}]});await load();msg('cmsg','Cartão removido.',false);}catch(e){msg('cmsg','Não foi possível remover o cartão.',true);}\n}\nasync function addTask(){\nconst name=$('tn').value.trim();\nif(!name){msg('tmsg','Digite o nome do assunto.',true);return;}\nconst blocked=new Set(rules.map(r=>r.weekday));\nconst cands=allowedDays(blocked);\nif(!cands.length){msg('tmsg','Todos os dias estão bloqueados. Remova uma regra.',true);return;}\nconst dates=pickDates(cands,loadMap(tasks),3);\ntry{await tessera.call('data.patch',{operations:[{op:'add',collection:'tasks',record:{name:name,dates:dates}}]});$('tn').value='';await load();msg('tmsg','Assunto agendado em '+dates.length+' sessões.',false);}catch(e){msg('tmsg','Não foi possível salvar. Tente de novo.',true);}\n}\nasync function addRule(){\nconst day=Number($('rd').value);\nif(rules.some(r=>r.weekday===day)){msg('rmsg','Esse dia já está bloqueado.',true);return;}\nconst blocked=new Set(rules.map(r=>r.weekday));blocked.add(day);\nconst cands=allowedDays(blocked);\nif(!cands.length){msg('rmsg','Não dá para bloquear todos os dias da semana.',true);return;}\nconst ld={};\nfor(const t of tasks)for(const d of (t.dates||[]).filter(x=>!blocked.has(wd(x))))ld[d]=(ld[d]||0)+1;\nconst ops=[{op:'add',collection:'rules',record:{weekday:day}}];\nfor(const t of tasks){const keep=(t.dates||[]).filter(d=>!blocked.has(wd(d)));const moved=(t.dates||[]).length-keep.length;if(!moved)continue;const set=new Set(keep);for(let i=0;i<moved;i++){let d=pickBest(cands,ld,set,0);if(!d)break;set.add(d);ld[d]=(ld[d]||0)+1;}\nops.push({op:'replace',collection:'tasks',id:t.id,revisionCount:(revs.tasks||{})[t.id]||1,fields:{dates:Array.from(set).sort()}});}\ntry{await tessera.call('data.patch',{operations:ops});await load();msg('rmsg','Regra salva. Sessões de '+WD[day]+' foram movidas para outros dias.',false);}catch(e){msg('rmsg','Não foi possível salvar a regra. Tente de novo.',true);}\n}\nasync function removeRule(r){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'rules',id:r.id,revisionCount:(revs.rules||{})[r.id]||1}]});await load();msg('rmsg','Regra removida.',false);}catch(e){msg('rmsg','Não foi possível remover a regra.',true);}\n}\nasync function removeTask(t){\ntry{await tessera.call('data.patch',{operations:[{op:'remove',collection:'tasks',id:t.id,revisionCount:(revs.tasks||{})[t.id]||1}]});await load();msg('tmsg','Assunto removido.',false);}catch(e){msg('tmsg','Não foi possível remover o assunto.',true);}\n}\n$('ta').addEventListener('click',addTask);\n$('tn').addEventListener('keydown',e=>{if(e.key==='Enter')addTask();});\n$('ra').addEventListener('click',addRule);\n$('cb').addEventListener('click',addCards);\n(async()=>{try{const c=await tessera.call('clock.now',{});today=c.date;$('intro').textContent='Estudo à noite, de hoje até a véspera da prova (daqui a duas semanas, '+fmt(addDays(today,14))+').';await load();}catch(e){msg('tmsg','Não foi possível carregar o plano.',true);}})();"
+            }
+          },
+          "data": {
+            "mode": "migrate",
+            "schema": {
+              "properties": {
+                "rules": {
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "weekday": {
+                        "maximum": 6,
+                        "minimum": 0,
+                        "type": "integer"
+                      }
+                    },
+                    "required": ["id", "weekday"],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "tasks": {
+                  "items": {
+                    "properties": {
+                      "dates": {
+                        "items": {
+                          "type": "string"
+                        },
+                        "type": "array"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "name", "dates"],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "cards": {
+                  "items": {
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "front": {
+                        "type": "string"
+                      },
+                      "back": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["id", "front", "back"],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": ["tasks", "rules"],
+              "type": "object"
+            },
+            "defaults": {
+              "rules": [
+                {
+                  "id": "rule-sexta",
+                  "weekday": 5
+                }
+              ],
+              "tasks": [],
+              "cards": []
+            },
+            "migration": {
+              "fromVersion": 1,
+              "toVersion": 2,
+              "operations": [
+                {
+                  "op": "addField",
+                  "collection": "tasks",
+                  "fields": {}
+                }
+              ]
+            }
+          }
+        }
+      },
+      "parts": [
+        "base@23124625851c",
+        "bridge@2ae6fa4b9337",
+        "ui-edit@722f0daf16a5",
+        "accessibility@bd63b2577331",
+        "profile@3877bf3c212e",
+        "edit@a204f4d753be",
+        "repair-static@a49fe96d58a7",
+        "request@47a51319da7d",
+        "language@2a8e10d77d23",
+        "source@0eae49d84708",
+        "edit-declarations@7eb300505e9f",
+        "edit-attempt@7572eebc3639",
+        "diagnostics@0b26a00a48fd"
       ]
     }
   ]

@@ -23,8 +23,9 @@ const replays = path.join(scenarios, "replays");
 // rest are M4's (evals/reports/2026-11-17-m4-live-run.md), each failing as it did live; T3, T10
 // in Portuguese, T12 and T14 are their reruns after L-103 and L-104: T12's board was made as a
 // planner, with none of its steps' hooks and no way to mark a chore done, and T14 marked two
-// buttons as the edit. A run whose first step failed is listed in stoppedLive, with every later
-// step blocked.
+// buttons as the edit. T10 and T10 in Portuguese were recorded again after L-105: both added the
+// flashcards to the planner instead of making a tool, with no hooks on them. A run whose first
+// step failed is listed in stoppedLive, with every later step blocked.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "J6-limits": [],
   "P2-move-data-folder": [],
@@ -35,28 +36,12 @@ const failedLive: Record<string, [step: number, problems: string[]][]> = {
   "T5-rsvp-form": [],
   "T6-tip-calculator": [],
   "T7-movie-finder": [],
-  // T10 and T10 in Portuguese answered a repair for a rule given twice, which L-105 no longer
-  // asks for: until they are recorded again, their replays stop fitting at that repair.
   "T10-study-planner": [
-    [
-      4,
-      [
-        "The data didn't change.",
-        `The answers don't fit this run, so it needs a new live run: Script "T10-study-planner" has a repair reply next, but the call is for intent.`,
-      ],
-    ],
     [6, ["No tool was created.", "No new workspace is open."]],
     [7, ["The tool shows 0 elements marked notes; the step needs one."]],
     [8, ["The tool shows 0 elements marked cards-make; the step needs one."]],
   ],
   "T10-study-planner-pt": [
-    [
-      4,
-      [
-        "The data didn't change.",
-        `The answers don't fit this run, so it needs a new live run: Script "T10-study-planner-pt" has a repair reply next, but the call is for intent.`,
-      ],
-    ],
     [6, ["No tool was created.", "No new workspace is open."]],
     [7, ["The tool shows 0 elements marked notes; the step needs one."]],
     [8, ["The tool shows 0 elements marked cards-make; the step needs one."]],

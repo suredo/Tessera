@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-18
+
+* **Changed**: M4's live run report adds T10 and T10 in Portuguese, recorded again after L-105 ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)): no rule given twice; both added the flashcards to the planner instead of making a tool, without hooks, so steps 6 to 8 failed; each edit paid a repair for a variable named `open`. Their answers replace the earlier replays ([web](code/web/package.md)). 128 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T01:08:19Z.
+
 ## 2026-11-17
 
 * **Changed**: M4's live run report adds P2, moving to another data folder ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)): every step passed in 5 calls, the move keeping the workspace, version and data and the saved tool coming along; Use again's "with its starting data" misleads when a fresh start is empty. Its answers are saved as a replay. 111 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-17T13:31:43Z.
