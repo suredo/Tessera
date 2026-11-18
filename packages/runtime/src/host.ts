@@ -74,6 +74,71 @@ export type MountedTool = {
   unmount(): void;
 };
 
+/** The most a tool's panel grows to fit its page, in CSS pixels (A89). */
+export const FIT_MAX_PX = 4000;
+/** How many times the panel follows the page's height on one allowance (A89). */
+export const FIT_CHANGES = 4;
+/** How long after the last held-back height, in ms, it is applied once, the page being quiet. */
+export const FIT_QUIET_MS = 500;
+
+/**
+ * How the panel fits its tool's page (A89): the height applied, how many more changes this
+ * allowance has, the latest height held back, and whether a held height was applied once already.
+ */
+export type Fit = {
+  height?: number;
+  left: number;
+  pending?: number;
+  settled: boolean;
+};
+
+/** A tool's first allowance, as it starts. */
+export const NEW_FIT: Fit = { left: FIT_CHANGES, settled: false };
+
+/**
+ * The fit after the page says how tall it is (A89). The page's word is the tool's, so it is
+ * bounded: anything but a positive number is dropped, and the height is `FIT_MAX_PX` at most. A
+ * page whose height depends on its frame's, as one made to fill its window, answers each resize
+ * with a new height, growing for ever or flipping between two, however fast or slow; no timing
+ * tells that from a tool's own changes. So the panel follows the page `FIT_CHANGES` times on each
+ * allowance, which the tool's start and the person's use of it give (`allowFit`), and holds back
+ * the heights after that, the tool scrolling in its frame as before; `settleFit` applies the last
+ * once, when the page is quiet.
+ */
+export function nextFit(fit: Fit, reported: unknown): Fit {
+  const value = (reported as { height?: unknown } | null)?.height;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return fit;
+  const height = Math.min(Math.ceil(value), FIT_MAX_PX);
+  if (height === fit.height) return { ...fit, pending: undefined };
+  if (fit.left > 0) return { height, left: fit.left - 1, settled: fit.settled };
+  return { ...fit, pending: height };
+}
+
+/**
+ * The fit once the page has been quiet for `FIT_QUIET_MS` after a held-back height: that height is
+ * applied, once an allowance, so rows that came in quick steps end at their full height. A page
+ * that follows its frame answers it again, and that answer waits for the next allowance.
+ */
+export function settleFit(fit: Fit): Fit {
+  if (fit.pending === undefined || fit.settled) return fit;
+  return { height: fit.pending, left: 0, settled: true };
+}
+
+/**
+ * The fit after the person used the tool (A89): a new allowance of one change, and a settling
+ * after it, out of the tool's reach, since only the wrapper sees real input, and it says so at most
+ * once a second. A height held back is applied now, as that change. So rows the person adds keep
+ * fitting, and a page whose height follows its frame changes it at most twice a second, and only
+ * while the person uses it.
+ */
+export function allowFit(fit: Fit): Fit {
+  if (fit.pending === undefined) return { ...fit, left: 1, settled: false };
+  return { height: fit.pending, left: 0, settled: false };
+}
+
+/** The CSS variable on the tool's frame that holds its fitted height; the host app's CSS uses it. */
+export const FIT_HEIGHT_PROPERTY = "--tool-fit-height";
+
 /**
  * Mounts the tool the server knows as `mountId` inside `container`. Resolves once the wrapper has
  * loaded and holds the channel; the tool's own document follows on its own. Aborting `signal`
@@ -111,6 +176,16 @@ export function mountTool(
         if (reports.delete(id)) refuse(new Error("The tool didn't answer the check."));
       }, timeoutMs);
     });
+  // The frame's fit to its page (A89), and the wait before a held-back height is applied.
+  let fit: Fit = NEW_FIT;
+  let settling: ReturnType<typeof setTimeout> | undefined;
+  const fitTo = (next: Fit) => {
+    const changed = next.height !== fit.height;
+    fit = next;
+    if (changed && fit.height !== undefined) {
+      frame.style.setProperty(FIT_HEIGHT_PROPERTY, `${fit.height}px`);
+    }
+  };
   // Every listener there when the event happens hears it, even one that unmounts the tool first.
   const emit = (event: MountEvent) => [...eventListeners].forEach((listen) => listen(event));
 
@@ -138,6 +213,7 @@ export function mountTool(
   };
   const stop = () => {
     clearInterval(watching);
+    clearTimeout(settling);
     listeners.clear();
     callListeners.clear();
     interactionListeners.clear();
@@ -166,6 +242,8 @@ export function mountTool(
       if (toolEvent === "restarted") {
         answered = false;
         unansweredSince = undefined;
+        // A new page of the tool starts with a new allowance to fit it (A89).
+        fitTo(allowFit(fit));
       }
       if (toolEvent) emit(toolEvent);
     } else if ("call" in data) {
@@ -179,6 +257,17 @@ export function mountTool(
       }
     } else if ("interacted" in data) {
       interactionListeners.forEach((listen) => listen());
+    } else if ("used" in data) {
+      // The person used the tool, as the wrapper saw it: a new allowance to fit it (A89).
+      clearTimeout(settling);
+      fitTo(allowFit(fit));
+    } else if ("size" in data) {
+      fitTo(nextFit(fit, data["size"]));
+      // A height held back is applied once the page has been quiet (settleFit).
+      clearTimeout(settling);
+      if (fit.pending !== undefined && !fit.settled) {
+        settling = setTimeout(() => fitTo(settleFit(fit)), FIT_QUIET_MS);
+      }
     } else {
       listeners.forEach((listen) => listen(data.message));
     }

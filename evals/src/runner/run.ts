@@ -312,7 +312,19 @@ export async function runScenario(
       result.seconds = (Date.now() - began) / 1000;
       result.calls = { from: callsFrom, to: harness.callsAsked() };
       result.screenshot = await toolShown(page);
-      await page.screenshot({ path: path.join(folder, `step-${result.index}.png`) });
+      // The whole page, so a tool its panel fits shows whole, not cut at the window (A89). Taking
+      // it scrolls the host page, which a tool may notice; one that saved because of it would
+      // change the next step's start, so that fails this step instead of passing unseen. A save it
+      // put off is watched for too, for PICTURE_WATCH_MS after a picture that scrolled.
+      const pictured = await openWorkspace(page);
+      const revision = pictured ? getWorkspace(store, pictured)?.dataRevision : undefined;
+      const scrolled = await wholePage(page, path.join(folder, `step-${result.index}.png`));
+      const watched = scrolled ? PICTURE_WATCH_MS : 0;
+      const read = () => (pictured ? getWorkspace(store, pictured)?.dataRevision : undefined);
+      if (pictured && (await changedWithin(read, revision, watched))) {
+        result.problems.push("The tool changed its data while the screenshot was taken.");
+        result.outcome = "failed";
+      }
       // Everything after depends on the first step, so a failed first step ends the run.
       if (index === 0 && result.outcome === "failed") {
         stopped = "The first step failed, so the steps after it can't be judged.";
@@ -375,6 +387,84 @@ async function toolShown(page: Page): Promise<Screenshot> {
       () => "empty" as const,
     );
 }
+
+/**
+ * A screenshot of the whole page, so a tool its panel fits shows whole, not cut at the window
+ * (A89). The page is never resized (ENG-14): Playwright's full-page picture resizes it and lays the
+ * tool's nested frames, each in a process of its own, out at the wrong size. Instead the host page
+ * is scrolled a window at a time, each window pictured as it is, and scrolled back; scrolling the
+ * host page changes nothing in the tool's frames, which keep their size. The pictures are joined on
+ * a canvas in a page of their own, in a separate context, so the run's page is not touched. Says
+ * whether it scrolled.
+ */
+export async function wholePage(page: Page, file: string): Promise<boolean> {
+  const viewport = page.viewportSize();
+  // Evaluated in the page, as text: the runner's own code has no page types.
+  const total = Number(await page.evaluate("document.documentElement.scrollHeight"));
+  const browser = page.context().browser();
+  if (!viewport || !browser || !(total > viewport.height)) {
+    await page.screenshot({ path: file });
+    return false;
+  }
+  const scrolled = Number(await page.evaluate("scrollY"));
+  const slices: { top: number; png: string }[] = [];
+  for (let top = 0; ; top += viewport.height) {
+    const y = Math.min(top, total - viewport.height);
+    await page.evaluate(`scrollTo(0, ${y})`);
+    await page.waitForTimeout(150);
+    slices.push({ top: y, png: (await page.screenshot()).toString("base64") });
+    if (y + viewport.height >= total) break;
+  }
+  await page.evaluate(`scrollTo(0, ${scrolled})`);
+  const joining = await browser.newContext();
+  try {
+    const joiner = await joining.newPage();
+    const joined = await joiner.evaluate(joinSlices(slices, viewport.width, total));
+    fs.writeFileSync(file, Buffer.from(String(joined), "base64"));
+  } finally {
+    await joining.close();
+  }
+  return true;
+}
+
+/** How long after a whole-page picture that scrolled the runner watches the tool's data, in ms. */
+export const PICTURE_WATCH_MS = 2_000;
+
+/**
+ * Whether `read` gives something other than `before` now or within `ms`, read every `everyMs`: a
+ * save a tool made, or put off, after the picture scrolled the host page (A89).
+ */
+export async function changedWithin<T>(
+  read: () => T,
+  before: T,
+  ms: number,
+  everyMs = 100,
+): Promise<boolean> {
+  const end = Date.now() + ms;
+  for (;;) {
+    if (read() !== before) return true;
+    if (Date.now() >= end) return false;
+    await new Promise((resolve) => setTimeout(resolve, everyMs));
+  }
+}
+
+/** The script that joins `slices`, each a window's picture at its top, into one PNG, as base64. */
+const joinSlices = (slices: { top: number; png: string }[], width: number, total: number) =>
+  `(async (slices, width, total) => {
+  const images = await Promise.all(slices.map((slice) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = "data:image/png;base64," + slice.png;
+  })));
+  const scale = images[0].naturalWidth / width;
+  const canvas = document.createElement("canvas");
+  canvas.width = images[0].naturalWidth;
+  canvas.height = Math.round(total * scale);
+  const context = canvas.getContext("2d");
+  images.forEach((image, i) => context.drawImage(image, 0, Math.round(slices[i].top * scale)));
+  return canvas.toDataURL("image/png").split(",")[1];
+})(${JSON.stringify(slices)}, ${width}, ${total})`;
 
 /** The open tool's own page, inside the host's frame and the wrapper's (RUN-01). */
 const toolFrame = (page: Page) =>

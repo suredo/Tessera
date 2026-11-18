@@ -271,12 +271,17 @@ button.primary {
   overflow: hidden;
   min-height: 20rem;
 }
+/* The tool's frame fits its page, as tall as the runtime says it lays out, at least 20rem (A89);
+   full screen, it fills the screen and the page scrolls inside. */
 .tool-frame iframe {
   display: block;
   width: 100%;
-  height: 100%;
+  height: var(--tool-fit-height, 100%);
   min-height: 20rem;
   border: 0;
+}
+.tool-panel.full-screen .tool-frame iframe {
+  height: 100%;
 }
 
 /* The details view, under the history and closed until asked for (APP-09, UX-06). */

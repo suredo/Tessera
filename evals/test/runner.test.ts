@@ -19,7 +19,13 @@ import { featuresMissed, outcomeOf, say } from "../src/runner/messages.ts";
 import { clickAndPick } from "../src/runner/run.ts";
 import { reportMarkdown } from "../src/runner/report.ts";
 import { startServices } from "../src/runner/services.ts";
-import { dataSettled, runScenario, zonedInstant, type RunReport } from "../src/runner/run.ts";
+import {
+  changedWithin,
+  dataSettled,
+  runScenario,
+  zonedInstant,
+  type RunReport,
+} from "../src/runner/run.ts";
 import { answersProvider, loadAnswers, type Answers } from "../src/runner/script.ts";
 import { CANCELLED_WAIT_MS, recordAnswers } from "../src/runner/record.ts";
 import { startHarness } from "../src/harness/index.ts";
@@ -597,5 +603,22 @@ describe("picking a file a click opens the picker for (A80, CAP-03)", () => {
     });
     expect((failure as Error).message).toBe("The button is covered.");
     expect(seen).toEqual([]);
+  });
+});
+
+describe("a whole-page picture's watch on the tool's data (A89)", () => {
+  it("EVAL-02, A89: a save the tool puts off after the picture scrolled is still seen", async () => {
+    let revision = 0;
+    setTimeout(() => (revision = 1), 1_500);
+    expect(await changedWithin(() => revision, 0, 2_000, 20)).toBe(true);
+  });
+
+  it("A89: data left as it was, or a picture that didn't scroll, isn't waited on long", async () => {
+    const began = Date.now();
+    expect(await changedWithin(() => 3, 3, 200, 20)).toBe(false);
+    expect(Date.now() - began).toBeGreaterThanOrEqual(200);
+    const at = Date.now();
+    expect(await changedWithin(() => 3, 3, 0)).toBe(false);
+    expect(Date.now() - at).toBeLessThan(50);
   });
 });
