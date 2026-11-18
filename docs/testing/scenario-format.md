@@ -4,7 +4,7 @@ title: "Scenario file format"
 description: "The scenario file format, step types and fields, with a full example."
 tags: [testing, scenario-format]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T13:08:31Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-18T10:07:54Z }
 ---
 # Scenario file format
 
@@ -44,7 +44,7 @@ review: [fulfilment, useful-at-first-sight, standard-style, controls-work, acces
 
 **Step types:**
 - `say`: a chat request
-- `do`: use one of the tool's controls, through a hook of one of the scenario's profiles (from M3): `{ click: <hook> }` or `{ fill: <hook>, value: <text> }` (a select takes the choice with that text or value), acting on the one shown element with that hook, or with `in: { hook: <hook>, text: <text> }` on the one inside the one shown element with that hook showing that text, such as one item; with `label: <text>`, of several elements with that hook, the one whose label shows that text, such as one field of a form. A hook none of the scenario's profiles has is refused when the file loads, except `file-save` in a click answered as a save (below): the files part asks every tool that saves files to mark its save button so (A87). A click may also say what the person does next (`CAP-03`): with `pick: <file>`, it opens the browser's file picker, where the person picks that file from `evals/scenarios/files`, by its name and never a path (A80); with `answer: save` or `answer: dont-save`, Tessera asks about saving a file the tool offers, and the person answers (A81).
+- `do`: use one of the tool's controls, through a hook of one of the scenario's profiles (from M3): `{ click: <hook> }` or `{ fill: <hook>, value: <text> }` (a select takes the choice with that text or value), acting on the one shown element with that hook, or with `in: { hook: <hook>, text: <text> }` on the one inside the one shown element with that hook showing that text, such as one item; with `label: <text>`, of several elements with that hook, the one whose label shows that text, such as one field of a form; with `first: true`, a click on the first of several that each do what the hook says, such as one of an image editor's edits (A90). A hook none of the scenario's profiles has is refused when the file loads, except `file-save` in a click answered as a save (below): the files part asks every tool that saves files to mark its save button so (A87). A click may also say what the person does next (`CAP-03`): with `pick: <file>`, it opens the browser's file picker, where the person picks that file from `evals/scenarios/files`, by its name and never a path (A80); with `answer: save` or `answer: dont-save`, Tessera asks about saving a file the tool offers, and the person answers (A81).
 - `next-day`: move the host clock and reload
 - `reload`
 - `save`, `continue`, `use-again`: save the tool, or open a saved one in its two ways
