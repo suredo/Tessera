@@ -7,7 +7,7 @@ implements: [CLI-01, CLI-02, CLI-03, CLI-04, CLI-05, CLI-08, CLI-09, TEST-02, EN
 tests: [../../../packages/server/test/claude.test.ts, ../../../packages/server/test/codex.test.ts, ../../../packages/server/test/strict-schema.test.ts, ../../../packages/server/test/routing.test.ts, ../../../packages/server/test/providers.test.ts, ../../../packages/server/test/call-cap.test.ts, ../../../packages/contracts/test/provider.test.ts]
 tags: [code, server, providers]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-16T11:23:39Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-18T11:21:46Z }
 ---
 # Purpose
 
@@ -33,7 +33,7 @@ Puts every model connection behind one interface (`CLI-01`): a stage's system pr
 - `src/providers/scripted.ts`: `createScriptedProvider` answers from a script; `loadScript` reads one from a JSON fixture file; `ScriptError` means the script doesn't fit the calls made.
 - The shapes that cross the boundary (stages, efforts, error kinds, usage and the script itself) are in `packages/contracts/src/provider.ts`.
 - `test/support/fake-codex.ts`: the same for the codex program: it records the arguments, folder, environment, standard input and the `--output-schema` file, checks that schema as draft-07 with an object root, and prints canned JSON events by call order, failures included.
-- `test/support/fake-claude.ts`: a stand-in for the claude program. It records the arguments, working folder and environment it got, checks `--json-schema` as the real one does, and prints canned result envelopes by call order; it can also wait, print raw text or exit with an error, for the contract tests (`TEST-02`). The M0 spikes' dry runs use it too.
+- `test/support/fake-claude.ts`: a stand-in for the claude program. It records the arguments, working folder and environment it got, each call's file written beside the calls folder and moved in whole, so a test reading the folder never finds one half-written, checks `--json-schema` as the real one does, and prints canned result envelopes by call order; it can also wait, print raw text or exit with an error, for the contract tests (`TEST-02`). The M0 spikes' dry runs use it too.
 
 # Invariants
 

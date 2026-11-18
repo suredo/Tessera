@@ -26,8 +26,17 @@ const stdin = readOr(() => fs.readFileSync(0, "utf8"), "");
 const systemFileAt = args.indexOf("--system-prompt-file") + 1;
 const system =
   systemFileAt > 0 ? readOr(() => fs.readFileSync(args[systemFileAt] ?? "", "utf8"), "") : "";
-fs.writeFileSync(
-  path.join(callsFolder, `call-${callIndex}.json`),
+// Each call's file appears whole: written beside the calls folder, then moved in, since a test
+// reads every file there while this fake may still be writing (a CI run read one empty).
+const writeCall = (name: string, text: string) => {
+  const staging = `${callsFolder}.writing`;
+  fs.mkdirSync(staging, { recursive: true });
+  const file = path.join(staging, `${process.pid}-${name}`);
+  fs.writeFileSync(file, text);
+  fs.renameSync(file, path.join(callsFolder, name));
+};
+writeCall(
+  `call-${callIndex}.json`,
   JSON.stringify({
     args,
     cwd: process.cwd(),
