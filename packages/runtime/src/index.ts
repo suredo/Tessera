@@ -55,11 +55,15 @@ export {
   type StagingResult,
 } from "./staging.ts";
 export {
+  FIT_ANSWER_MS,
+  FIT_ANSWERS,
   FIT_HEIGHT_PROPERTY,
   FIT_MAX_PX,
-  FIT_RUNAWAY_MS,
+  FIT_QUIET_MS,
   mountTool,
+  NEW_FIT,
   nextFit,
+  settleFit,
   WATCHDOG_DEFAULTS,
   type Fit,
   type MountedTool,

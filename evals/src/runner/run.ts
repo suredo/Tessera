@@ -379,23 +379,58 @@ async function toolShown(page: Page): Promise<Screenshot> {
 
 /**
  * A screenshot of the whole page, so a tool its panel fits shows whole, not cut at the window
- * (A89). Playwright's full-page picture lays the tool's nested frames, each in a process of its own,
- * out at the wrong size, so the window itself is made as tall as the page for the picture, the
- * frames given a moment to lay out again, and put back after.
+ * (A89). The page is never resized (ENG-14): Playwright's full-page picture resizes it and lays the
+ * tool's nested frames, each in a process of its own, out at the wrong size. Instead the host page
+ * is scrolled a window at a time, each window pictured as it is, and scrolled back; scrolling the
+ * host page changes nothing in the tool's frames, which keep their size. The pictures are joined on
+ * a canvas in a page of their own, in a separate context, so the run's page is not touched.
  */
-async function wholePage(page: Page, file: string): Promise<void> {
+export async function wholePage(page: Page, file: string): Promise<void> {
   const viewport = page.viewportSize();
   // Evaluated in the page, as text: the runner's own code has no page types.
-  const height = Number(await page.evaluate("document.documentElement.scrollHeight"));
-  if (!viewport || !(height > viewport.height)) {
+  const total = Number(await page.evaluate("document.documentElement.scrollHeight"));
+  const browser = page.context().browser();
+  if (!viewport || !browser || !(total > viewport.height)) {
     await page.screenshot({ path: file });
     return;
   }
-  await page.setViewportSize({ width: viewport.width, height });
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: file });
-  await page.setViewportSize(viewport);
+  const scrolled = Number(await page.evaluate("scrollY"));
+  const slices: { top: number; png: string }[] = [];
+  for (let top = 0; ; top += viewport.height) {
+    const y = Math.min(top, total - viewport.height);
+    await page.evaluate(`scrollTo(0, ${y})`);
+    await page.waitForTimeout(150);
+    slices.push({ top: y, png: (await page.screenshot()).toString("base64") });
+    if (y + viewport.height >= total) break;
+  }
+  await page.evaluate(`scrollTo(0, ${scrolled})`);
+  const joining = await browser.newContext();
+  try {
+    const joiner = await joining.newPage();
+    const joined = await joiner.evaluate(joinSlices(slices, viewport.width, total));
+    fs.writeFileSync(file, Buffer.from(String(joined), "base64"));
+  } finally {
+    await joining.close();
+  }
 }
+
+/** The script that joins `slices`, each a window's picture at its top, into one PNG, as base64. */
+const joinSlices = (slices: { top: number; png: string }[], width: number, total: number) =>
+  `(async (slices, width, total) => {
+  const images = await Promise.all(slices.map((slice) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = "data:image/png;base64," + slice.png;
+  })));
+  const scale = images[0].naturalWidth / width;
+  const canvas = document.createElement("canvas");
+  canvas.width = images[0].naturalWidth;
+  canvas.height = Math.round(total * scale);
+  const context = canvas.getContext("2d");
+  images.forEach((image, i) => context.drawImage(image, 0, Math.round(slices[i].top * scale)));
+  return canvas.toDataURL("image/png").split(",")[1];
+})(${JSON.stringify(slices)}, ${width}, ${total})`;
 
 /** The open tool's own page, inside the host's frame and the wrapper's (RUN-01). */
 const toolFrame = (page: Page) =>

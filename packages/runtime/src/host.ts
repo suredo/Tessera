@@ -76,36 +76,59 @@ export type MountedTool = {
 
 /** The most a tool's panel grows to fit its page, in CSS pixels (A89). */
 export const FIT_MAX_PX = 4000;
-/** Two growths of the same size this close together, in ms, mean the page grows with its frame. */
-export const FIT_RUNAWAY_MS = 500;
-
-/** How the panel fits its tool's page: its height, its last growth, and whether it stopped growing. */
-export type Fit = {
-  height?: number;
-  lastGrowth?: { by: number; at: number };
-  frozen: boolean;
-};
+/** A new height this soon after the host resized the frame, in ms, may answer that resize. */
+export const FIT_ANSWER_MS = 400;
+/** After this many such answers in a row, the page's height follows its frame: it is held back. */
+export const FIT_ANSWERS = 3;
+/** How long after the last held-back height, in ms, it is applied once, the page being quiet. */
+export const FIT_QUIET_MS = 500;
 
 /**
- * The fit after the page says, at `now`, how tall it is (A89). The page's word is the tool's, so
- * it is bounded: anything but a positive number is dropped, and it grows to `FIT_MAX_PX` at most. A
- * page made to fill its frame, plus a margin, would grow its frame for ever, by the same step each
- * time: two equal growths within `FIT_RUNAWAY_MS` stop the growing for this tool, which then
- * scrolls in its frame as before. Shrinking always applies.
+ * How the panel fits its tool's page (A89): the height applied and when, how many new heights in a
+ * row came just after a resize, whether they are held back, the latest one held, and whether a held
+ * height was applied once already.
+ */
+export type Fit = {
+  height?: number;
+  appliedAt?: number;
+  answers: number;
+  held: boolean;
+  pending?: number;
+  settled: boolean;
+};
+
+export const NEW_FIT: Fit = { answers: 0, held: false, settled: false };
+
+/**
+ * The fit after the page says, at `now`, how tall it is (A89). The page's word is the tool's, so it
+ * is bounded: anything but a positive number is dropped, and the height is `FIT_MAX_PX` at most.
+ * A page whose height depends on its frame's, as one made to fill its window, answers each resize
+ * with a new height, growing for ever or flipping between two: a new height within `FIT_ANSWER_MS`
+ * of a resize may be such an answer, and after `FIT_ANSWERS` of them in a row the heights are held
+ * back, the tool scrolling in its frame as before; `settleFit` applies the last once, when the
+ * page is quiet. A new height at any other time is the tool's own change, as rows the person adds:
+ * it is applied, and ends the holding back.
  */
 export function nextFit(fit: Fit, reported: unknown, now: number): Fit {
   const value = (reported as { height?: unknown } | null)?.height;
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return fit;
   const height = Math.min(Math.ceil(value), FIT_MAX_PX);
-  if (fit.height === undefined || height <= fit.height) {
-    return { height, frozen: fit.frozen };
-  }
-  if (fit.frozen) return fit;
-  const by = height - fit.height;
-  if (fit.lastGrowth?.by === by && now - fit.lastGrowth.at <= FIT_RUNAWAY_MS) {
-    return { height: fit.height, frozen: true };
-  }
-  return { height, lastGrowth: { by, at: now }, frozen: false };
+  if (height === fit.height) return { ...fit, pending: undefined };
+  const answering = fit.appliedAt !== undefined && now - fit.appliedAt <= FIT_ANSWER_MS;
+  if (!answering) return { height, appliedAt: now, answers: 0, held: false, settled: false };
+  const answers = fit.answers + 1;
+  if (fit.held || answers >= FIT_ANSWERS) return { ...fit, answers, held: true, pending: height };
+  return { ...fit, height, appliedAt: now, answers };
+}
+
+/**
+ * The fit once the page has been quiet for `FIT_QUIET_MS` after a held-back height: that height is
+ * applied, once, so a tool whose rows came in quick steps ends at its full height. A page that
+ * follows its frame answers it again, and that answer stays held back.
+ */
+export function settleFit(fit: Fit, now: number): Fit {
+  if (!fit.held || fit.pending === undefined || fit.settled) return fit;
+  return { ...fit, height: fit.pending, appliedAt: now, pending: undefined, settled: true };
 }
 
 /** The CSS variable on the tool's frame that holds its fitted height; the host app's CSS uses it. */
@@ -148,7 +171,16 @@ export function mountTool(
         if (reports.delete(id)) refuse(new Error("The tool didn't answer the check."));
       }, timeoutMs);
     });
-  let fit: Fit = { frozen: false };
+  // The frame's fit to its page (A89), and the wait before a held-back height is applied.
+  let fit: Fit = NEW_FIT;
+  let settling: ReturnType<typeof setTimeout> | undefined;
+  const fitTo = (next: Fit) => {
+    const changed = next.height !== fit.height;
+    fit = next;
+    if (changed && fit.height !== undefined) {
+      frame.style.setProperty(FIT_HEIGHT_PROPERTY, `${fit.height}px`);
+    }
+  };
   // Every listener there when the event happens hears it, even one that unmounts the tool first.
   const emit = (event: MountEvent) => [...eventListeners].forEach((listen) => listen(event));
 
@@ -176,6 +208,7 @@ export function mountTool(
   };
   const stop = () => {
     clearInterval(watching);
+    clearTimeout(settling);
     listeners.clear();
     callListeners.clear();
     interactionListeners.clear();
@@ -218,9 +251,11 @@ export function mountTool(
     } else if ("interacted" in data) {
       interactionListeners.forEach((listen) => listen());
     } else if ("size" in data) {
-      fit = nextFit(fit, data["size"], performance.now());
-      if (fit.height !== undefined) {
-        frame.style.setProperty(FIT_HEIGHT_PROPERTY, `${fit.height}px`);
+      fitTo(nextFit(fit, data["size"], performance.now()));
+      // A height held back is applied once the page has been quiet (settleFit).
+      clearTimeout(settling);
+      if (fit.held && fit.pending !== undefined && !fit.settled) {
+        settling = setTimeout(() => fitTo(settleFit(fit, performance.now())), FIT_QUIET_MS);
       }
     } else {
       listeners.forEach((listen) => listen(data.message));

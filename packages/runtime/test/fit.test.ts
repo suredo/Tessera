@@ -1,48 +1,75 @@
 import { describe, expect, it } from "vitest";
-import { FIT_MAX_PX, FIT_RUNAWAY_MS, nextFit, type Fit } from "../src/index.ts";
+import {
+  FIT_ANSWER_MS,
+  FIT_ANSWERS,
+  FIT_MAX_PX,
+  NEW_FIT,
+  nextFit,
+  settleFit,
+  type Fit,
+} from "../src/index.ts";
 
 // How the tool panel fits its page (APP-01, A89): the page's height is only the tool's word, so
-// the host bounds it, and stops a page that grows with its frame.
+// the host bounds it, and holds back the heights of a page that answers each resize with a new one.
 
-const start: Fit = { frozen: false };
-/** The fit after each report in turn, `ms` apart. */
-const after = (reports: unknown[], ms = 16, from = start) =>
-  reports.reduce<Fit>((fit, report, i) => nextFit(fit, report, i * ms), from);
+/** The fit after each [height, at ms] report in turn, from `from`. */
+const after = (reports: [unknown, number][], from: Fit = NEW_FIT) =>
+  reports.reduce<Fit>((fit, [height, at]) => nextFit(fit, { height }, at), from);
+/** Reports `ms` apart, from 0. */
+const every = (ms: number, heights: unknown[]) =>
+  heights.map((height, i): [unknown, number] => [height, i * ms]);
+const apart = FIT_ANSWER_MS + 100;
 
 describe("fitting the tool panel to its page (A89)", () => {
   it("APP-01, A89: takes the page's height, rounded up, growing and shrinking with it", () => {
-    expect(after([{ height: 812.4 }]).height).toBe(813);
-    expect(after([{ height: 500 }, { height: 900 }]).height).toBe(900);
-    expect(after([{ height: 900 }, { height: 400 }]).height).toBe(400);
+    expect(after([[812.4, 0]]).height).toBe(813);
+    expect(after(every(apart, [500, 900])).height).toBe(900);
+    expect(after(every(apart, [900, 400])).height).toBe(400);
   });
 
-  it("A89: drops anything but a positive number, and grows to the cap at most", () => {
-    const fit = after([{ height: 600 }]);
+  it("A89: drops anything but a positive number, and is the cap at most", () => {
+    const fit = after([[600, 0]]);
     for (const bad of [null, "tall", {}, { height: "900" }, { height: -5 }, { height: 0 }]) {
-      expect(nextFit(fit, bad, 1000)).toBe(fit);
+      expect(nextFit(fit, bad, 5000)).toBe(fit);
     }
-    expect(nextFit(fit, { height: Number.POSITIVE_INFINITY }, 1000)).toBe(fit);
-    expect(nextFit(fit, { height: 1e9 }, 1000).height).toBe(FIT_MAX_PX);
+    expect(nextFit(fit, { height: Number.POSITIVE_INFINITY }, 5000)).toBe(fit);
+    expect(nextFit(fit, { height: 1e9 }, 5000).height).toBe(FIT_MAX_PX);
   });
 
-  it("A89: two equal growths in a moment stop the growing; shrinking still applies", () => {
-    // A page as tall as its frame plus 32 px of padding, each growth asking for the next.
-    const frozen = after([{ height: 352 }, { height: 384 }, { height: 416 }]);
-    expect(frozen).toMatchObject({ height: 384, frozen: true });
-    expect(nextFit(frozen, { height: 2000 }, 100).height).toBe(384);
-    expect(nextFit(frozen, { height: 300 }, 100).height).toBe(300);
+  it("A89: a page that grows with its frame is held back after a few resizes, then settles once", () => {
+    // Each resize answered at once with 32 px more: the frame would grow for ever.
+    const heights = Array.from({ length: 10 }, (_, i) => 352 + 32 * i);
+    const held = after(every(16, heights));
+    expect(held.held).toBe(true);
+    expect(held.height).toBe(352 + 32 * (FIT_ANSWERS - 1));
+    // Quiet, the last held height is applied once; the page's answer to it stays held.
+    const settled = settleFit(held, 1000);
+    expect(settled.height).toBe(heights.at(-1));
+    const answered = nextFit(settled, { height: heights.at(-1)! + 32 }, 1016);
+    expect(answered).toMatchObject({ height: heights.at(-1), held: true });
+    expect(settleFit(answered, 2000)).toBe(answered);
   });
 
-  it("A89: equal growths far apart, as rows the person adds, keep growing", () => {
-    const fit = after(
-      [{ height: 400 }, { height: 440 }, { height: 480 }, { height: 520 }],
-      FIT_RUNAWAY_MS + 1,
-    );
-    expect(fit).toMatchObject({ height: 520, frozen: false });
-    // Unequal growths close together, as a page still laying out, keep growing too.
-    expect(after([{ height: 400 }, { height: 700 }, { height: 1100 }])).toMatchObject({
-      height: 1100,
-      frozen: false,
+  it("A89: a page flipping between two heights with its frame is held back too", () => {
+    const flipping = after(every(16, [332, 532, 332, 532, 332, 532, 332, 532]));
+    expect(flipping.held).toBe(true);
+    expect(flipping.answers).toBeGreaterThanOrEqual(FIT_ANSWERS);
+  });
+
+  it("A89: rows in quick steps end at the full height, and later changes still fit", () => {
+    // 400, 440, 480 at 100 ms: held back after the third, then settled to the last.
+    const quick = after(every(100, [400, 440, 480, 520]));
+    expect(settleFit(quick, 1000).height).toBe(520);
+    // A change well after the last resize is the tool's own: it applies and ends the holding back.
+    const later = nextFit(settleFit(quick, 1000), { height: 200 }, 3000);
+    expect(later).toMatchObject({ height: 200, held: false });
+    expect(nextFit(later, { height: 800 }, 6000).height).toBe(800);
+  });
+
+  it("A89: rows the person adds, far apart, keep growing it", () => {
+    expect(after(every(apart, [400, 440, 480, 520, 560]))).toMatchObject({
+      height: 560,
+      held: false,
     });
   });
 });

@@ -1,5 +1,7 @@
+import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "@tessera/contracts";
+import { wholePage } from "../../../evals/src/runner/run.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, TOOL_START, workspaceWith, type AppHost } from "./support/app-host.ts";
 
@@ -68,7 +70,7 @@ test("APP-01, A89: a tool made to fill its window doesn't grow its panel for eve
   page,
 }) => {
   // A full-window block plus the standard's page padding is always taller than its window: each
-  // growth would ask for the next. The host stops after two equal growths.
+  // growth would ask for the next. The host holds them back after a few.
   await open(
     page,
     "Full window",
@@ -76,6 +78,46 @@ test("APP-01, A89: a tool made to fill its window doesn't grow its panel for eve
   );
   await page.waitForTimeout(2000);
   expect(await frameHeight(page)).toBeLessThan(600);
+});
+
+test("APP-01, A89: a tool whose height flips with its window's settles", async ({ page }) => {
+  // Short windows get a tall block and tall ones a short block: each resize asks for the other.
+  const css = `@media (max-height: 450px) { #text { height: 500px; } }
+@media (min-height: 451px) { #text { height: 300px; } }`;
+  await open(page, "Flipping", toolWith(`<div id="text">Flips</div>`, css));
+  await page.waitForTimeout(2000);
+  const settled = await frameHeight(page);
+  await page.waitForTimeout(1000);
+  expect(await frameHeight(page)).toBe(settled);
+});
+
+test("EVAL-07, ENG-14, A89: the runner's whole-page picture shows the page, and leaves it as it was", async ({
+  page,
+}) => {
+  const rows = Array.from({ length: 60 }, (_, i) => `<p class="row">Row ${i + 1}</p>`).join("");
+  // The tool counts the resizes of its own window, as a tool that saved on resize would see them.
+  const js = `let resizes = 0;
+addEventListener("resize", () => { resizes += 1; document.getElementById("resizes").textContent = String(resizes); });`;
+  await open(
+    page,
+    "Pictured",
+    toolWith(`<p id="text">Top</p><p id="resizes">0</p>${rows}`, "", js),
+  );
+  await expect.poll(() => frameHeight(page), TOOL_START).toBeGreaterThan(1500);
+  await page.waitForTimeout(1000);
+  const resizes = await inTool(page).locator("#resizes").textContent();
+  const viewport = page.viewportSize();
+  const total = Number(await page.evaluate("document.documentElement.scrollHeight"));
+
+  const file = test.info().outputPath("whole-page.png");
+  await wholePage(page, file);
+
+  // A PNG's height is the big-endian number at bytes 20 to 23.
+  expect(fs.readFileSync(file).readUInt32BE(20)).toBe(total);
+  expect(page.viewportSize()).toEqual(viewport);
+  expect(Number(await page.evaluate("scrollY"))).toBe(0);
+  await page.waitForTimeout(500);
+  await expect(inTool(page).locator("#resizes")).toHaveText(resizes!);
 });
 
 test("APP-01, A89: full screen still fills the screen with a short tool", async ({ page }) => {
