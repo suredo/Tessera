@@ -2,9 +2,9 @@
   "about": "A live run of T12-family-chores, recorded for replay.",
   "scenario": "T12-family-chores",
   "recorded": {
-    "head": "accbc600335f26f2ee053b1b394ad75ad09fe284",
-    "at": "2026-11-17T11:52:36.452Z",
-    "cliVersion": "2.1.326"
+    "head": "a3b456d3ac89f93f0f2d10cac8e0c889212547a7",
+    "at": "2026-11-18T20:50:29.298Z",
+    "cliVersion": "2.1.327"
   },
   "answers": [
     {
@@ -13,34 +13,34 @@
         "stage": "intent",
         "value": {
           "kind": "create",
-          "interfacePart": "A chores board for my family",
-          "dataPart": "Family members Ana, Leo and me; Ana does laundry every Saturday",
+          "interfacePart": "A chores board for my family: Ana, Leo and me, where I can see just one person's chores.",
+          "dataPart": "Ana does laundry every Saturday.",
           "behaviorChange": true,
           "lookOnly": false,
           "targetsCurrentTool": false,
           "language": "en",
           "features": [
             {
-              "name": "Chores board",
-              "request": "A chores board for my family"
+              "name": "Family chores board",
+              "request": "A chores board for my family: Ana, Leo and me"
             },
             {
-              "name": "Family members",
-              "request": "Ana, Leo and me"
+              "name": "View one person's chores",
+              "request": "where I can see just one person's chores"
             },
             {
-              "name": "Recurring laundry chore",
-              "request": "Ana does laundry every Saturday"
+              "name": "Ana's weekly laundry",
+              "request": "Ana does laundry every Saturday."
             }
           ],
-          "profile": "scheduling",
+          "profile": "filtering",
           "drawsCharts": false,
           "usesFiles": false,
           "connections": []
         }
       },
       "parts": [
-        "intent@606fb79ccc38",
+        "intent@c3a3360d459b",
         "intent-none@a47602c1d680",
         "intent-no-saved@62b6b33152f8",
         "intent-no-connections@47d12f6212ee",
@@ -54,34 +54,19 @@
         "value": {
           "outcome": "tool",
           "name": "Family chores board",
-          "summary": "Shows upcoming chores for Ana, Leo and you, starting with Ana's laundry every Saturday. Add chores and pick who does them and on which weekday, and block weekdays when no chore should happen.",
+          "summary": "A shared chores list for Ana, Leo and you. Pick a person to see just their chores. Ana's weekly Saturday laundry is already on it.",
           "uiMode": "standard",
-          "capabilities": ["clock"],
+          "capabilities": [],
           "code": {
-            "html": "<main>\n<h1>Family chores</h1>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a chore</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"tname\">Chore</label><input id=\"tname\" data-hook=\"task-name\" type=\"text\" placeholder=\"e.g. Dishes\"></div>\n<div class=\"f\"><label for=\"twho\">Who does it</label><select id=\"twho\"></select></div>\n<div class=\"f\"><label for=\"tday\">Repeats every</label><select id=\"tday\"></select></div>\n<button id=\"tadd\" data-hook=\"task-add\" type=\"button\">Add chore</button>\n</div>\n<p id=\"terr\" class=\"err\" role=\"alert\"></p>\n</section>\n<section aria-labelledby=\"h-s\">\n<h2 id=\"h-s\">Coming up (next 4 weeks)</h2>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"sessions\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-c\">\n<h2 id=\"h-c\">Chores</h2>\n<ul id=\"tasks\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-r\">\n<h2 id=\"h-r\">Days with no chores</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"rday\">Weekday</label><select id=\"rday\" data-hook=\"rule-day\"></select></div>\n<button id=\"radd\" data-hook=\"rule-add\" type=\"button\">Block this day</button>\n</div>\n<p id=\"rerr\" class=\"err\" role=\"alert\"></p>\n<ul id=\"rules\" class=\"list\"></ul>\n<p id=\"rempty\">No days blocked. Chores happen on their usual weekday.</p>\n</section>\n</main>",
-            "css": "main{max-width:720px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 150px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select,button{min-height:var(--ui-target);font:inherit;border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text)}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.meta{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.err{color:var(--ui-error);margin:var(--ui-space-2) 0 0;min-height:0}\n.ok{color:var(--ui-success)}",
-            "js": "const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nlet data={tasks:[],rules:[],members:[]};\nlet rev={};\nlet today=null;\nconst $=id=>document.getElementById(id);\nfunction parse(s){const p=s.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2]);}\nfunction fmt(ms){const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}\nfunction wd(ms){return new Date(ms).getUTCDay();}\nfunction names(){const m=(data.members||[]).map(x=>x.name);return m.length?m:['Ana','Leo','Me'];}\nfunction blocked(){return (data.rules||[]).map(r=>r.weekday);}\nfunction buildSessions(){\n const out=[];if(!today)return out;\n const b=blocked();const t0=parse(today);\n for(const t of data.tasks||[]){\n  let first=t0;while(wd(first)!==t.weekday)first+=86400000;\n  for(let k=0;k<4;k++){\n   let d=first+k*7*86400000;let n=0;\n   while(b.includes(wd(d))&&n<7){d+=86400000;n++;}\n   out.push({task:t,date:fmt(d)});\n  }\n }\n out.sort((a,c)=>a.date<c.date?-1:a.date>c.date?1:0);\n return out;\n}\nfunction el(tag,text,cls){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}\nfunction render(){\n const sl=$('sessions');sl.textContent='';\n const ss=buildSessions();\n $('status').textContent=ss.length?'':'Nothing planned yet. Add a chore above.';\n for(const s of ss){\n  const li=el('li');li.setAttribute('data-hook','session');\n  const left=el('span');\n  const tm=el('time',fmt0(s.date));tm.setAttribute('datetime',s.date);\n  left.appendChild(tm);left.appendChild(document.createTextNode(' · '));\n  const nm=el('strong','');nm.textContent=s.task.name;nm.style.fontWeight='400';nm.setAttribute('data-hook','session-task');\n  left.appendChild(nm);\n  li.appendChild(left);li.appendChild(el('span','Who: '+s.task.assignee,'meta'));\n  sl.appendChild(li);\n }\n const tl=$('tasks');tl.textContent='';\n for(const t of data.tasks||[]){\n  const li=el('li');\n  li.appendChild(el('span',t.name+' — '+t.assignee+', every '+DAYS[t.weekday]));\n  const b=el('button','Remove','sec');b.type='button';b.setAttribute('aria-label','Remove chore '+t.name);\n  b.addEventListener('click',()=>removeTask(t.id));\n  li.appendChild(b);tl.appendChild(li);\n }\n if(!(data.tasks||[]).length)tl.appendChild(el('li','No chores yet.'));\n const rl=$('rules');rl.textContent='';\n for(const r of data.rules||[]){\n  const li=el('li');li.setAttribute('data-hook','rule');\n  li.appendChild(el('span','No chores on '+DAYS[r.weekday]+'s'));\n  const b=el('button','Remove','sec');b.type='button';b.setAttribute('data-hook','rule-remove');b.setAttribute('aria-label','Remove the rule for '+DAYS[r.weekday]);\n  b.addEventListener('click',()=>removeRule(r.id));\n  li.appendChild(b);rl.appendChild(li);\n }\n $('rempty').hidden=(data.rules||[]).length>0;\n}\nfunction fmt0(s){const ms=parse(s);const d=new Date(ms);return DAYS[d.getUTCDay()]+' '+s;}\nasync function load(){\n const r=await tessera.call('data.read',{});\n data=r.data;rev=r.revisions;\n if(!data.tasks)data.tasks=[];if(!data.rules)data.rules=[];\n render();\n}\nasync function patch(ops){\n try{await tessera.call('data.patch',{operations:ops});await load();return true;}\n catch(e){return false;}\n}\nasync function addTask(){\n const name=$('tname').value.trim();\n $('terr').textContent='';\n if(!name){$('terr').textContent='Type the chore’s name first.';$('tname').focus();return;}\n const ok=await patch([{op:'add',collection:'tasks',record:{name:name,assignee:$('twho').value,weekday:Number($('tday').value)}}]);\n if(ok){$('tname').value='';$('tname').focus();}else $('terr').textContent='Could not save the chore. Your text is still here; try again.';\n}\nasync function addRule(){\n const d=Number($('rday').value);$('rerr').textContent='';\n if(blocked().includes(d)){$('rerr').textContent=DAYS[d]+' is already blocked.';return;}\n if(blocked().length>=6){$('rerr').textContent='At least one weekday must stay open for chores.';return;}\n const ok=await patch([{op:'add',collection:'rules',record:{weekday:d}}]);\n if(!ok)$('rerr').textContent='Could not save the rule. Try again.';\n}\nasync function removeRule(id){\n const ok=await patch([{op:'remove',collection:'rules',id:id,revisionCount:(rev.rules||{})[id]||1}]);\n if(!ok)$('rerr').textContent='Could not remove the rule. Try again.';\n}\nasync function removeTask(id){\n const ok=await patch([{op:'remove',collection:'tasks',id:id,revisionCount:(rev.tasks||{})[id]||1}]);\n if(!ok)$('terr').textContent='Could not remove the chore. Try again.';\n}\nfunction fillSelects(){\n for(const n of names()){const o=el('option',n);o.value=n;$('twho').appendChild(o);}\n for(let i=0;i<7;i++){\n  const o=el('option',DAYS[i]);o.value=String(i);$('tday').appendChild(o);\n  const p=el('option',DAYS[i]);p.value=String(i);$('rday').appendChild(p);\n }\n}\n$('tadd').addEventListener('click',addTask);\n$('tname').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTask();}});\n$('radd').addEventListener('click',addRule);\n(async()=>{\n const c=await tessera.call('clock.now',{});today=c.date;\n await load();\n fillSelects();\n $('tday').value=String(wd(parse(today)));\n})();"
+            "html": "<h1>Family chores</h1>\n<p class=\"hint\">Add a chore and who does it. Choose a person below to see only their chores.</p>\n<div class=\"add\">\n<div class=\"field\"><label for=\"name\">Chore</label><input id=\"name\" data-hook=\"item-name\" type=\"text\" placeholder=\"e.g. Take out the trash\"></div>\n<div class=\"field\"><label for=\"cat\">Person</label><input id=\"cat\" data-hook=\"item-category\" type=\"text\" list=\"people\" placeholder=\"e.g. Leo\"></div>\n<div class=\"field\"><label for=\"when\">When (optional)</label><input id=\"when\" type=\"text\" placeholder=\"e.g. Every Saturday\"></div>\n<button id=\"add\" data-hook=\"item-add\" type=\"button\">Add chore</button>\n</div>\n<datalist id=\"people\"><option value=\"Ana\"><option value=\"Leo\"><option value=\"Me\"></datalist>\n<p id=\"msg\" role=\"status\"></p>\n<div class=\"field filter\"><label for=\"filter\">Show chores for</label><select id=\"filter\" data-hook=\"filter\"></select></div>\n<h2>Chores</h2>\n<p id=\"empty\" hidden>No chores to show. Add one above.</p>\n<ul id=\"list\"></ul>",
+            "css": "body{font-family:var(--ui-font);color:var(--ui-text);background:var(--ui-background);line-height:var(--ui-line-height);padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-2)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:var(--ui-space-4) 0 var(--ui-space-2)}\n.hint{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:0 0 var(--ui-space-3)}\n.add{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.field{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 160px;min-width:0}\n.filter{max-width:260px;margin-top:var(--ui-space-3)}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;box-sizing:border-box;width:100%}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);border-radius:var(--ui-radius-control);background:var(--ui-accent);color:#fff;font:inherit;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\nul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\nli{display:flex;flex-wrap:wrap;align-items:center;gap:var(--ui-space-3);padding:var(--ui-space-3);background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel)}\n.main{flex:1 1 180px;min-width:0}\n.cname{font-weight:400;overflow-wrap:anywhere}\n.done .cname{text-decoration:line-through;color:var(--ui-text-secondary)}\n.meta{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\n.tag{background:var(--ui-accent-soft);color:var(--ui-text);border-radius:var(--ui-radius-control);padding:var(--ui-space-1) var(--ui-space-2);font-size:var(--ui-size-secondary)}\n.check{display:flex;align-items:center;gap:var(--ui-space-2);min-height:var(--ui-target)}\n.check input{width:20px;min-height:20px;height:20px}\n#msg{min-height:1.5em;font-size:var(--ui-size-secondary);margin:var(--ui-space-2) 0 0}\n#msg.err{color:var(--ui-error)}",
+            "js": "const nameEl=document.getElementById('name');\nconst catEl=document.getElementById('cat');\nconst whenEl=document.getElementById('when');\nconst msg=document.getElementById('msg');\nconst listEl=document.getElementById('list');\nconst emptyEl=document.getElementById('empty');\nconst filterEl=document.getElementById('filter');\nlet chores=[];\nlet revs={};\nfunction norm(s){return String(s||'').trim().replace(/\\s+/g,' ');}\nfunction say(t,isErr){msg.textContent=t;msg.className=isErr?'err':'';}\nfunction render(){\n  const keep=filterEl.value;\n  const seen=[];\n  for(const c of chores){const k=norm(c.category);if(k&&!seen.includes(k))seen.push(k);}\n  filterEl.textContent='';\n  const all=document.createElement('option');all.value='';all.textContent='Everyone';filterEl.appendChild(all);\n  for(const k of seen){const o=document.createElement('option');o.value=k;o.textContent=k;filterEl.appendChild(o);}\n  filterEl.value=seen.includes(keep)?keep:'';\n  const f=filterEl.value;\n  listEl.textContent='';\n  let shown=0;\n  for(const c of chores){\n    if(f&&norm(c.category)!==f)continue;\n    shown++;\n    const li=document.createElement('li');\n    li.setAttribute('data-hook','item');\n    if(c.done)li.className='done';\n    const chk=document.createElement('label');chk.className='check';\n    const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!c.done;\n    const main=document.createElement('span');main.className='main';\n    const nm=document.createElement('span');nm.className='cname';nm.textContent=c.name;\n    main.appendChild(nm);\n    if(c.when){const w=document.createElement('span');w.className='meta';w.textContent=' · '+c.when;main.appendChild(w);}\n    chk.appendChild(cb);chk.appendChild(main);\n    cb.addEventListener('change',()=>toggle(c.id,cb.checked));\n    const tag=document.createElement('span');tag.className='tag';tag.setAttribute('data-hook','category');tag.textContent=c.category;\n    const rm=document.createElement('button');rm.type='button';rm.className='secondary';rm.setAttribute('data-hook','item-remove');rm.textContent='Remove';\n    rm.setAttribute('aria-label','Remove '+c.name);\n    rm.addEventListener('click',()=>remove(c.id,c.name));\n    li.appendChild(chk);li.appendChild(tag);li.appendChild(rm);\n    listEl.appendChild(li);\n  }\n  emptyEl.hidden=shown>0;\n}\nasync function load(){\n  const r=await tessera.call('data.read',{});\n  chores=Array.isArray(r.data.chores)?r.data.chores:[];\n  revs=(r.revisions&&r.revisions.chores)||{};\n  render();\n}\nasync function add(){\n  const name=norm(nameEl.value),cat=norm(catEl.value);\n  if(!name||!cat){say('Please type the chore and who does it.',true);return;}\n  const rec={name:name,category:cat,when:norm(whenEl.value),done:false};\n  try{\n    await tessera.call('data.patch',{operations:[{op:'add',collection:'chores',record:rec}]});\n    nameEl.value='';whenEl.value='';\n    await load();\n    say('Added \"'+name+'\" for '+cat+'.');\n    nameEl.focus();\n  }catch(e){say('Could not add the chore. Nothing was changed. Please try again.',true);}\n}\nasync function toggle(id,val){\n  try{\n    await tessera.call('data.patch',{operations:[{op:'replace',collection:'chores',id:id,revisionCount:revs[id],fields:{done:val}}]});\n    await load();\n  }catch(e){say('Could not update the chore. Please try again.',true);await load();}\n}\nasync function remove(id,name){\n  try{\n    await tessera.call('data.patch',{operations:[{op:'remove',collection:'chores',id:id,revisionCount:revs[id]}]});\n    await load();\n    say('Removed \"'+name+'\".');\n  }catch(e){say('Could not remove the chore. Please try again.',true);}\n}\ndocument.getElementById('add').addEventListener('click',add);\nfor(const el of [nameEl,catEl,whenEl]){el.addEventListener('keydown',(e)=>{if(e.key==='Enter'){e.preventDefault();add();}});}\nfilterEl.addEventListener('change',render);\nload().catch(()=>say('Could not load the chores.',true));"
           },
           "data": {
             "schema": {
               "type": "object",
               "properties": {
-                "members": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["id", "name"]
-                  }
-                },
-                "tasks": {
+                "chores": {
                   "type": "array",
                   "items": {
                     "type": "object",
@@ -92,63 +77,33 @@
                       "name": {
                         "type": "string"
                       },
-                      "assignee": {
+                      "category": {
                         "type": "string"
                       },
-                      "weekday": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 6
-                      }
-                    },
-                    "required": ["id", "name", "assignee", "weekday"]
-                  }
-                },
-                "rules": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
+                      "when": {
                         "type": "string"
                       },
-                      "weekday": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 6
+                      "done": {
+                        "type": "boolean"
                       }
                     },
-                    "required": ["id", "weekday"]
+                    "required": ["id", "name", "category"]
                   }
                 }
               },
-              "required": ["members", "tasks", "rules"]
+              "required": ["chores"]
             },
             "reusableDefaults": {
-              "members": [
-                {
-                  "id": "m-ana",
-                  "name": "Ana"
-                },
-                {
-                  "id": "m-leo",
-                  "name": "Leo"
-                },
-                {
-                  "id": "m-me",
-                  "name": "Me"
-                }
-              ],
-              "tasks": [],
-              "rules": []
+              "chores": []
             },
             "initialState": {
-              "tasks": [
+              "chores": [
                 {
-                  "id": "t-laundry",
+                  "id": "laundry",
                   "name": "Laundry",
-                  "assignee": "Ana",
-                  "weekday": 6
+                  "category": "Ana",
+                  "when": "Every Saturday",
+                  "done": false
                 }
               ]
             }
@@ -156,11 +111,11 @@
         }
       },
       "parts": [
-        "base@23124625851c",
+        "base@79eccadc792b",
         "bridge@2ae6fa4b9337",
         "ui-standard@5953c402b1d6",
         "accessibility@bd63b2577331",
-        "profile@3877bf3c212e",
+        "profile@cc3d58b48db9",
         "create@6849cfbe5453",
         "request@47a51319da7d",
         "language@2a8e10d77d23"
@@ -169,140 +124,18 @@
     {
       "reply": {
         "kind": "value",
-        "stage": "repair",
-        "value": {
-          "outcome": "tool",
-          "name": "Family chores board",
-          "summary": "Shows upcoming chores for Ana, Leo and you, starting with Ana's laundry every Saturday. Add chores and pick who does them and on which weekday, and block weekdays when no chore should happen.",
-          "uiMode": "standard",
-          "capabilities": ["clock"],
-          "code": {
-            "html": "<main>\n<h1>Family chores</h1>\n<section aria-labelledby=\"h-add\">\n<h2 id=\"h-add\">Add a chore</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"tname\">Chore</label><input id=\"tname\" data-hook=\"task-name\" type=\"text\" placeholder=\"e.g. Dishes\"></div>\n<div class=\"f\"><label for=\"twho\">Who does it</label><select id=\"twho\"></select></div>\n<div class=\"f\"><label for=\"tday\">Repeats every</label><select id=\"tday\"></select></div>\n<button id=\"tadd\" data-hook=\"task-add\" type=\"button\">Add chore</button>\n</div>\n<p id=\"terr\" class=\"err\" role=\"alert\"></p>\n</section>\n<section aria-labelledby=\"h-s\">\n<h2 id=\"h-s\">Coming up (next 4 weeks)</h2>\n<p id=\"status\" role=\"status\"></p>\n<ul id=\"sessions\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-c\">\n<h2 id=\"h-c\">Chores</h2>\n<ul id=\"tasks\" class=\"list\"></ul>\n</section>\n<section aria-labelledby=\"h-r\">\n<h2 id=\"h-r\">Days with no chores</h2>\n<div class=\"row\">\n<div class=\"f\"><label for=\"rday\">Weekday</label><select id=\"rday\" data-hook=\"rule-day\"></select></div>\n<button id=\"radd\" data-hook=\"rule-add\" type=\"button\">Block this day</button>\n</div>\n<p id=\"rerr\" class=\"err\" role=\"alert\"></p>\n<ul id=\"rules\" class=\"list\"></ul>\n<p id=\"rempty\">No days blocked. Chores happen on their usual weekday.</p>\n</section>\n</main>",
-            "css": "main{max-width:720px;margin:0 auto;padding:var(--ui-padding);font-family:var(--ui-font);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height)}\nh1{font-size:var(--ui-size-title);margin:0 0 var(--ui-space-3)}\nh2{font-size:var(--ui-size-section);margin:var(--ui-space-5) 0 var(--ui-space-2)}\n.row{display:flex;flex-wrap:wrap;gap:var(--ui-space-3);align-items:flex-end}\n.f{display:flex;flex-direction:column;gap:var(--ui-space-1);flex:1 1 150px}\nlabel{font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\ninput,select,button{min-height:var(--ui-target);font:inherit;border-radius:var(--ui-radius-control);border:1px solid var(--ui-control-border);padding:0 var(--ui-space-3);background:var(--ui-surface);color:var(--ui-text)}\nbutton{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent);cursor:pointer}\nbutton.sec{background:var(--ui-surface);color:var(--ui-text)}\n:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\n.list li{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:center;justify-content:space-between;background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3)}\n.meta{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n.err{color:var(--ui-error);margin:var(--ui-space-2) 0 0;min-height:0}\n.ok{color:var(--ui-success)}",
-            "js": "const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];\nlet data={tasks:[],rules:[],members:[]};\nlet rev={};\nlet today=null;\nconst $=id=>document.getElementById(id);\nfunction parse(s){const p=s.split('-').map(Number);return Date.UTC(p[0],p[1]-1,p[2]);}\nfunction fmt(ms){const d=new Date(ms);return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}\nfunction wd(ms){return new Date(ms).getUTCDay();}\nfunction names(){const m=(data.members||[]).map(x=>x.name);return m.length?m:['Ana','Leo','Me'];}\nfunction blocked(){return (data.rules||[]).map(r=>r.weekday);}\nfunction buildSessions(){\n const out=[];if(!today)return out;\n const b=blocked();const t0=parse(today);\n for(const t of data.tasks||[]){\n  let first=t0;while(wd(first)!==t.weekday)first+=86400000;\n  for(let k=0;k<4;k++){\n   let d=first+k*7*86400000;let n=0;\n   while(b.includes(wd(d))&&n<7){d+=86400000;n++;}\n   out.push({task:t,date:fmt(d)});\n  }\n }\n out.sort((a,c)=>a.date<c.date?-1:a.date>c.date?1:0);\n return out;\n}\nfunction make(tag){\n if(tag==='li')return document.createElement('li');\n if(tag==='span')return document.createElement('span');\n if(tag==='strong')return document.createElement('strong');\n if(tag==='time')return document.createElement('time');\n if(tag==='button')return document.createElement('button');\n return document.createElement('option');\n}\nfunction el(tag,text,cls){const e=make(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;}\nfunction render(){\n const sl=$('sessions');sl.textContent='';\n const ss=buildSessions();\n $('status').textContent=ss.length?'':'Nothing planned yet. Add a chore above.';\n for(const s of ss){\n  const li=el('li');li.setAttribute('data-hook','session');\n  const left=el('span');\n  const tm=el('time',fmt0(s.date));tm.setAttribute('datetime',s.date);\n  left.appendChild(tm);left.appendChild(document.createTextNode(' · '));\n  const nm=el('strong','');nm.textContent=s.task.name;nm.style.fontWeight='400';nm.setAttribute('data-hook','session-task');\n  left.appendChild(nm);\n  li.appendChild(left);li.appendChild(el('span','Who: '+s.task.assignee,'meta'));\n  sl.appendChild(li);\n }\n const tl=$('tasks');tl.textContent='';\n for(const t of data.tasks||[]){\n  const li=el('li');\n  li.appendChild(el('span',t.name+' — '+t.assignee+', every '+DAYS[t.weekday]));\n  const b=el('button','Remove','sec');b.type='button';b.setAttribute('aria-label','Remove chore '+t.name);\n  b.addEventListener('click',()=>removeTask(t.id));\n  li.appendChild(b);tl.appendChild(li);\n }\n if(!(data.tasks||[]).length)tl.appendChild(el('li','No chores yet.'));\n const rl=$('rules');rl.textContent='';\n for(const r of data.rules||[]){\n  const li=el('li');li.setAttribute('data-hook','rule');\n  li.appendChild(el('span','No chores on '+DAYS[r.weekday]+'s'));\n  const b=el('button','Remove','sec');b.type='button';b.setAttribute('data-hook','rule-remove');b.setAttribute('aria-label','Remove the rule for '+DAYS[r.weekday]);\n  b.addEventListener('click',()=>removeRule(r.id));\n  li.appendChild(b);rl.appendChild(li);\n }\n $('rempty').hidden=(data.rules||[]).length>0;\n}\nfunction fmt0(s){const ms=parse(s);const d=new Date(ms);return DAYS[d.getUTCDay()]+' '+s;}\nasync function load(){\n const r=await tessera.call('data.read',{});\n data=r.data;rev=r.revisions;\n if(!data.tasks)data.tasks=[];if(!data.rules)data.rules=[];\n render();\n}\nasync function patch(ops){\n try{await tessera.call('data.patch',{operations:ops});await load();return true;}\n catch(e){return false;}\n}\nasync function addTask(){\n const name=$('tname').value.trim();\n $('terr').textContent='';\n if(!name){$('terr').textContent='Type the chore’s name first.';$('tname').focus();return;}\n const ok=await patch([{op:'add',collection:'tasks',record:{name:name,assignee:$('twho').value,weekday:Number($('tday').value)}}]);\n if(ok){$('tname').value='';$('tname').focus();}else $('terr').textContent='Could not save the chore. Your text is still here; try again.';\n}\nasync function addRule(){\n const d=Number($('rday').value);$('rerr').textContent='';\n if(blocked().includes(d)){$('rerr').textContent=DAYS[d]+' is already blocked.';return;}\n if(blocked().length>=6){$('rerr').textContent='At least one weekday must stay open for chores.';return;}\n const ok=await patch([{op:'add',collection:'rules',record:{weekday:d}}]);\n if(!ok)$('rerr').textContent='Could not save the rule. Try again.';\n}\nasync function removeRule(id){\n const ok=await patch([{op:'remove',collection:'rules',id:id,revisionCount:(rev.rules||{})[id]||1}]);\n if(!ok)$('rerr').textContent='Could not remove the rule. Try again.';\n}\nasync function removeTask(id){\n const ok=await patch([{op:'remove',collection:'tasks',id:id,revisionCount:(rev.tasks||{})[id]||1}]);\n if(!ok)$('terr').textContent='Could not remove the chore. Try again.';\n}\nfunction fillSelects(){\n for(const n of names()){const o=el('option',n);o.value=n;$('twho').appendChild(o);}\n for(let i=0;i<7;i++){\n  const o=el('option',DAYS[i]);o.value=String(i);$('tday').appendChild(o);\n  const p=el('option',DAYS[i]);p.value=String(i);$('rday').appendChild(p);\n }\n}\n$('tadd').addEventListener('click',addTask);\n$('tname').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addTask();}});\n$('radd').addEventListener('click',addRule);\n(async()=>{\n const c=await tessera.call('clock.now',{});today=c.date;\n await load();\n fillSelects();\n $('tday').value=String(wd(parse(today)));\n})();"
-          },
-          "data": {
-            "schema": {
-              "type": "object",
-              "properties": {
-                "members": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["id", "name"]
-                  }
-                },
-                "tasks": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "assignee": {
-                        "type": "string"
-                      },
-                      "weekday": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 6
-                      }
-                    },
-                    "required": ["id", "name", "assignee", "weekday"]
-                  }
-                },
-                "rules": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "weekday": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 6
-                      }
-                    },
-                    "required": ["id", "weekday"]
-                  }
-                }
-              },
-              "required": ["members", "tasks", "rules"]
-            },
-            "reusableDefaults": {
-              "members": [
-                {
-                  "id": "m-ana",
-                  "name": "Ana"
-                },
-                {
-                  "id": "m-leo",
-                  "name": "Leo"
-                },
-                {
-                  "id": "m-me",
-                  "name": "Me"
-                }
-              ],
-              "tasks": [],
-              "rules": []
-            },
-            "initialState": {
-              "tasks": [
-                {
-                  "id": "t-laundry",
-                  "name": "Laundry",
-                  "assignee": "Ana",
-                  "weekday": 6
-                }
-              ]
-            }
-          }
-        }
-      },
-      "parts": [
-        "base@23124625851c",
-        "bridge@2ae6fa4b9337",
-        "ui-standard@5953c402b1d6",
-        "accessibility@bd63b2577331",
-        "profile@3877bf3c212e",
-        "create@6849cfbe5453",
-        "repair-static@a49fe96d58a7",
-        "request@47a51319da7d",
-        "language@2a8e10d77d23",
-        "attempt@db8c6b71b427",
-        "diagnostics@0b26a00a48fd"
-      ]
-    },
-    {
-      "reply": {
-        "kind": "value",
         "stage": "intent",
         "value": {
           "kind": "data",
-          "dataPart": "Leo takes out the trash every Tuesday.",
           "interfacePart": null,
+          "dataPart": "Leo takes out the trash every Tuesday.",
           "behaviorChange": false,
           "lookOnly": false,
           "targetsCurrentTool": true,
           "language": "en",
           "features": [
             {
-              "name": "Add Leo's trash chore",
+              "name": "Leo's trash chore",
               "request": "Leo takes out the trash every Tuesday."
             }
           ],
@@ -313,7 +146,7 @@
         }
       },
       "parts": [
-        "intent@606fb79ccc38",
+        "intent@c3a3360d459b",
         "intent-open@ad363d62acd6",
         "intent-no-saved@62b6b33152f8",
         "intent-conversation@2f0d3d87c7f1",
@@ -327,16 +160,17 @@
         "stage": "data",
         "value": {
           "outcome": "patch",
-          "summary": "Adds a recurring chore, Take out trash, assigned to Leo on Tuesdays. Existing entries stay as they are.",
+          "summary": "Adds a new chore for Leo: taking out the trash every Tuesday, not yet done.",
           "patch": {
             "operations": [
               {
                 "op": "add",
-                "collection": "tasks",
+                "collection": "chores",
                 "record": {
-                  "name": "Take out trash",
-                  "assignee": "Leo",
-                  "weekday": 2
+                  "name": "Take out the trash",
+                  "category": "Leo",
+                  "when": "Every Tuesday",
+                  "done": false
                 }
               }
             ]
@@ -365,7 +199,7 @@
           "language": "en",
           "features": [
             {
-              "name": "log laundry done",
+              "name": "mark laundry done",
               "request": "Ana did the laundry."
             }
           ],
@@ -376,7 +210,7 @@
         }
       },
       "parts": [
-        "intent@606fb79ccc38",
+        "intent@c3a3360d459b",
         "intent-open@ad363d62acd6",
         "intent-no-saved@62b6b33152f8",
         "intent-conversation@2f0d3d87c7f1",
@@ -389,8 +223,21 @@
         "kind": "value",
         "stage": "data",
         "value": {
-          "outcome": "cannot",
-          "reason": "This chores board has no field for marking a chore as done, so I can't record that Ana did the laundry. Her laundry chore stays as it is: every Saturday, assigned to Ana."
+          "outcome": "patch",
+          "summary": "Marks Ana's Saturday laundry chore as done.",
+          "patch": {
+            "operations": [
+              {
+                "op": "replace",
+                "collection": "chores",
+                "id": "laundry",
+                "revisionCount": 2,
+                "fields": {
+                  "done": true
+                }
+              }
+            ]
+          }
         }
       },
       "parts": [

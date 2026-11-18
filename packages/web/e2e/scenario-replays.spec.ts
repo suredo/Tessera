@@ -21,9 +21,9 @@ const replays = path.join(scenarios, "replays");
 // is the M2 live run's recording (evals/reports/2026-11-05-m2-live-run.md); T6 and V9 are M3's
 // (evals/reports/2026-11-09-m3-live-run.md, evals/reports/2026-11-10-acceptance-run.md). The
 // rest are M4's (evals/reports/2026-11-17-m4-live-run.md), each failing as it did live; T3, T10
-// in Portuguese, T12 and T14 are their reruns after L-103 and L-104: T12's board was made as a
-// planner, with none of its steps' hooks and no way to mark a chore done, and T14 marked two
-// buttons as the edit, which its step now takes the first of (A90), so it passes. T10 and T10 in Portuguese were recorded again after L-105: both added the
+// in Portuguese and T14 are their reruns after L-103 and L-104: T14 marked two buttons as the
+// edit, which its step now takes the first of (A90), so it passes. T12 was recorded again with
+// its request saying the person wants to see one person's chores (A91), and passes every step. T10 and T10 in Portuguese were recorded again after L-105: both added the
 // flashcards to the planner instead of making a tool, with no hooks on them. A run whose first
 // step failed is listed in stoppedLive, with every later step blocked.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
@@ -47,13 +47,7 @@ const failedLive: Record<string, [step: number, problems: string[]][]> = {
     [8, ["The tool shows 0 elements marked cards-make; the step needs one."]],
   ],
   "T11-tutor-bookings": [],
-  "T12-family-chores": [
-    [2, ["The tool shows 0 elements marked item-name; the step needs one."]],
-    [3, ["The tool shows 0 elements marked item-category; the step needs one."]],
-    [4, ["The tool shows 0 elements marked item-add; the step needs one."]],
-    [5, ["The tool shows 0 elements marked filter; the step needs one."]],
-    [7, ["The data didn't change."]],
-  ],
+  "T12-family-chores": [],
   "T13-drawing-board": [],
   "T14-image-editor": [],
   "V9-acceptance-checks": [],

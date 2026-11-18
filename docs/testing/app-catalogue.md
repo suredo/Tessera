@@ -4,7 +4,7 @@ title: "Test application catalogue"
 description: "The test apps (simple, medium, advanced), platform scenarios and later modularity scenarios."
 tags: [testing, app-catalogue]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T04:00:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-18T20:53:08Z }
 ---
 # Test application catalogue
 
@@ -42,7 +42,7 @@ These have no app of their own. They test Tessera around the tools.
 | T9 | Research board | "Research whether standing desks help with back pain and show me the sources and what they say." | Cited findings, comparing sources, honest limits | Cited findings | `CAP-02` plus the research stage (M5) |
 | T10 | Study planner (PT variant too) | "My exam is in two weeks. Help me organize topics; I study evenings, never Fridays. Later I'll paste notes to make flashcards." | Rules enforced, notes to cards, mixed requests, next day | Scheduling with rules, notes to cards | `RUN-07` clock |
 | T11 | Tutor bookings | "A booking sheet for my tutoring: Monday to Thursday 2–7 pm, one-hour sessions, never double-booked." | Conflicts, "move João to Thursday 4 pm" when that slot is taken | Scheduling with rules | `RUN-07` clock |
-| T12 | Family chores board | "A chores board for my family: Ana, Leo and me. Ana does laundry every Saturday." | Board, recurring items, filter "only mine", checking off in the tool | Item list (board) | `RUN-07` clock |
+| T12 | Family chores board | "A chores board for my family: Ana, Leo and me, where I can see just one person's chores. Ana does laundry every Saturday." | Board, recurring items, filter "only mine", checking off in the tool | Item list (board) | `RUN-07` clock |
 
 ## Advanced
 
