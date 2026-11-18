@@ -2,6 +2,8 @@
 
 ## 2026-11-18
 
+* **Fixed**: The fake claude and codex programs write each call's file whole, moving it into the calls folder once written ([providers](code/server/providers.md)): a CI run of #405 read one empty, failing a job control test with "Unexpected end of JSON input". No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T11:21:46Z.
+
 * **Changed**: M4's live run report gives the owner's verdict on each run, by Claude Code's recommendation, which the owner took on 2026-11-18 ([report](../evals/reports/2026-11-17-m4-live-run.md)): each AI review's advice, except both T12 runs, rejected since the board couldn't show one person's chores. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T10:47:51Z.
 
 * **Changed**: The intent makes another kind of tool beside the open one a new tool, unless the person asks to put it in, as flashcards beside a study planner (L-107, [Tessera issues](lessons/tessera-issues.md)): three of T10's five M4 runs added them to the planner, where only the planner's check ran. The owner's choice, on Claude Code's recommendation. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T10:25:00Z.
