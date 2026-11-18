@@ -23,7 +23,7 @@ const replays = path.join(scenarios, "replays");
 // rest are M4's (evals/reports/2026-11-17-m4-live-run.md), each failing as it did live; T3, T10
 // in Portuguese, T12 and T14 are their reruns after L-103 and L-104: T12's board was made as a
 // planner, with none of its steps' hooks and no way to mark a chore done, and T14 marked two
-// buttons as the edit. T10 and T10 in Portuguese were recorded again after L-105: both added the
+// buttons as the edit, which its step now takes the first of (A90), so it passes. T10 and T10 in Portuguese were recorded again after L-105: both added the
 // flashcards to the planner instead of making a tool, with no hooks on them. A run whose first
 // step failed is listed in stoppedLive, with every later step blocked.
 const failedLive: Record<string, [step: number, problems: string[]][]> = {
@@ -55,7 +55,7 @@ const failedLive: Record<string, [step: number, problems: string[]][]> = {
     [7, ["The data didn't change."]],
   ],
   "T13-drawing-board": [],
-  "T14-image-editor": [[3, ["The tool shows 2 elements marked image-edit; the step needs one."]]],
+  "T14-image-editor": [],
   "V9-acceptance-checks": [],
 };
 // The recorded runs whose first step failed, so the runner stopped there (the stop rule).

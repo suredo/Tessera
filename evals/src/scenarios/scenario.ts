@@ -86,13 +86,20 @@ export const scenarioFileSchema = z
  * Using one of the tool's own controls, as the person would (EVAL-01, from M3): clicking the
  * element marked with a hook, or typing a value into it (a select takes the choice it names), the
  * one shown, or the one inside an element `in` names, or of several, the one whose label shows
- * `label`, as a person finds one field of a form.
+ * `label`, as a person finds one field of a form, or, with `first`, the first of several clicks
+ * that each do what the hook says, as one of an editor's edits.
  */
 const doSchema = z.union([
   z.strictObject({
     click: hookName,
     in: within.optional(),
     label: label.optional(),
+    first: z
+      .literal(true)
+      .optional()
+      .describe(
+        "Of several shown elements marked with the hook, each doing what it says, the first: one of an editor's edits.",
+      ),
     pick: scenarioFileSchema
       .optional()
       .describe(

@@ -132,7 +132,8 @@ describe("scenario files (EVAL-01)", () => {
           "  - do: { fill: item-name, value: Eggs }\n" +
           "  - do: { click: item-add }\n    expect: { data: changed }\n" +
           "  - do: { click: item-remove, in: { hook: item, text: Milk } }\n" +
-          "  - do: { fill: item-name, label: Item, value: Bread }\n",
+          "  - do: { fill: item-name, label: Item, value: Bread }\n" +
+          "  - do: { click: item-add, first: true }\n",
       ),
     );
     expect(scenario.steps.slice(1).map((s) => [stepKind(s), "do" in s && s.do])).toEqual([
@@ -140,9 +141,16 @@ describe("scenario files (EVAL-01)", () => {
       ["do", { click: "item-add" }],
       ["do", { click: "item-remove", in: { hook: "item", text: "Milk" } }],
       ["do", { fill: "item-name", label: "Item", value: "Bread" }],
+      ["do", { click: "item-add", first: true }],
     ]);
     const refused = (id: string, rest: string, problem: RegExp) =>
       expect(() => loadScenario(scenarioFile(id, rest))).toThrow(problem);
+    // First is for clicks only, one of several that each do what the hook says (A90).
+    refused(
+      "T99-first-fill",
+      "profiles: [item-list]\nsteps:\n  - say: hi\n  - do: { fill: item-name, value: Eggs, first: true }\n",
+      /isn't a scenario|first/,
+    );
     // A hook none of its profiles has, or any hook with no profile, would guess at the markup.
     refused(
       "T97-unknown-hook",

@@ -529,9 +529,12 @@ async function useControl(page: Page, action: DoAction): Promise<void> {
   }
   // Of several, the one whose label shows the step's text, as a person finds a form's field.
   const candidates = scope.locator(marked(hook));
-  const control = action.label ? candidates.and(tool.getByLabel(action.label)) : candidates;
-  const count = await control.count();
-  if (count !== 1) {
+  const labelled = action.label ? candidates.and(tool.getByLabel(action.label)) : candidates;
+  // Of several that each do what the hook says, as one of an editor's edits, the first.
+  const first = "click" in action && action.first === true;
+  const control = first ? labelled.first() : labelled;
+  const count = await labelled.count();
+  if (count === 0 || (count !== 1 && !first)) {
     throw new Error(
       `The tool shows ${count} elements marked ${hook}${action.label ? ` labelled "${action.label}"` : ""}${action.in ? ` there` : ""}; the step needs one.`,
     );
