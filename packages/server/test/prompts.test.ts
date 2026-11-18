@@ -35,6 +35,7 @@ import {
   quoteTag,
   type PromptInput,
 } from "../src/prompts/index.ts";
+import { checkJs, RESERVED_NAMES } from "../src/checks/index.ts";
 
 /** The tag a prompt's markers carry, as its quoting sentence names it (SEC-02). */
 const tagOf = (prompt: string): string => {
@@ -113,7 +114,7 @@ describe("assembling a stage's prompt (GEN-03)", () => {
     expect(prompt.system).toContain(
       "Use only these schema keywords: $schema, additionalProperties,",
     );
-    expect(prompt.system).toContain(partText("base"));
+    expect(prompt.system).toContain(partText("base").split("{{reserved}}")[0]);
     expect(prompt.system).toContain(manifestForPrompt());
     expect(prompt.system).toContain(`Tessera's UI standard (version ${UI_STANDARD_VERSION})`);
     for (const [name, value] of Object.entries(UI_TOKENS)) {
@@ -742,6 +743,20 @@ describe("the base rules steer what Tessera can verify (L-84, A60)", () => {
     expect(base).toContain("Never write data while the tool starts");
     // The advice that only served the startup analysis is gone with it (A60).
     expect(base).not.toContain("Destructure indexed values a call uses");
+  });
+
+  it("L-106, P3: names the names a tool can't give its own variables, from the check's one list", () => {
+    const { system } = assemblePrompt({ stage: "create", request: "A list", uiMode: "standard" });
+    expect(system).toContain(`any of these: ${RESERVED_NAMES.join(", ")}.`);
+    for (const name of ["open", "location", "eval", "parent", "document"]) {
+      expect(RESERVED_NAMES).toContain(name);
+    }
+    // The prompt's example is what the check does: its own `open` refused, `isOpen` not.
+    const script = (name: string) => `const ${name} = true;\nif (${name}) console.log("shown");`;
+    expect(checkJs(script("open")).map((finding) => finding.message)).toContain(
+      "The JavaScript uses open, which a tool can't use.",
+    );
+    expect(checkJs(script("isOpen"))).toEqual([]);
   });
 });
 

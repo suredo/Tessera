@@ -546,6 +546,12 @@ class Bindings {
 const PAGE_NAMES = new Set([...PAGE_GLOBALS, ...FORBIDDEN_GLOBALS]);
 
 /**
+ * The names a tool can't give anything of its own, since the check reads each as the page's object
+ * or a forbidden global however it is declared: the base prompt lists them from here (P3).
+ */
+export const RESERVED_NAMES: readonly string[] = [...PAGE_NAMES].sort();
+
+/**
  * Which variables and functions may hold the page or its elements, each by the variable a name
  * refers to (or, when names can't be resolved, by name across the whole script). Repeated until
  * nothing new is found.

@@ -7,4 +7,5 @@ export {
   type StaticCheckResult,
   type StaticFinding,
 } from "./static-check.ts";
+export { RESERVED_NAMES } from "./js-check.ts";
 export { STYLE_NOTES_LIMIT, styleNotes } from "./style-notes.ts";
