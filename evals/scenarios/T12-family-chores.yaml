@@ -16,7 +16,7 @@ budget: { calls: 10 }
 acceptanceChecks: true
 profiles: [filtering]
 steps:
-  - say: "A chores board for my family: Ana, Leo and me. Ana does laundry every Saturday."
+  - say: "A chores board for my family: Ana, Leo and me, where I can see just one person's chores. Ana does laundry every Saturday."
     expect: { created: true, workspace: new }
   - do: { fill: item-name, value: Dishes }
   - do: { fill: item-category, value: Me }

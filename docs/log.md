@@ -2,6 +2,8 @@
 
 ## 2026-11-18
 
+* **Changed**: T12's request says the person wants to see one person's chores (A91; [app catalogue](testing/app-catalogue.md), [decision log](decisions/decision-log.md)); recorded again live, it passed every step in 6 calls and its review advises accept with notes ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)); its answers replace the rerun's replay ([web](code/web/package.md)). 135 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T20:53:08Z.
+
 * **Fixed**: The fake claude and codex programs write each call's file whole, moving it into the calls folder once written ([providers](code/server/providers.md)): a CI run of #405 read one empty, failing a job control test with "Unexpected end of JSON input". No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T11:21:46Z.
 
 * **Changed**: M4's live run report gives the owner's verdict on each run, by Claude Code's recommendation, which the owner took on 2026-11-18 ([report](../evals/reports/2026-11-17-m4-live-run.md)): each AI review's advice, except both T12 runs, rejected since the board couldn't show one person's chores. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T10:47:51Z.
