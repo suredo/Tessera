@@ -312,8 +312,16 @@ export async function runScenario(
       result.seconds = (Date.now() - began) / 1000;
       result.calls = { from: callsFrom, to: harness.callsAsked() };
       result.screenshot = await toolShown(page);
-      // The whole page, so a tool its panel fits shows whole, not cut at the window (A89).
+      // The whole page, so a tool its panel fits shows whole, not cut at the window (A89). Taking
+      // it scrolls the host page, which a tool may notice; one that saved because of it would
+      // change the next step's start, so that fails this step instead of passing unseen.
+      const pictured = await openWorkspace(page);
+      const revision = pictured ? getWorkspace(store, pictured)?.dataRevision : undefined;
       await wholePage(page, path.join(folder, `step-${result.index}.png`));
+      if (pictured && getWorkspace(store, pictured)?.dataRevision !== revision) {
+        result.problems.push("The tool changed its data while the screenshot was taken.");
+        result.outcome = "failed";
+      }
       // Everything after depends on the first step, so a failed first step ends the run.
       if (index === 0 && result.outcome === "failed") {
         stopped = "The first step failed, so the steps after it can't be judged.";

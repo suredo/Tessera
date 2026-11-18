@@ -70,14 +70,19 @@ test("APP-01, A89: a tool made to fill its window doesn't grow its panel for eve
   page,
 }) => {
   // A full-window block plus the standard's page padding is always taller than its window: each
-  // growth would ask for the next. The host holds them back after a few.
+  // growth would ask for the next. The host follows it only a few times.
   await open(
     page,
     "Full window",
     toolWith(`<div id="text">Fills</div>`, "#text { height: 100vh; }"),
   );
-  await page.waitForTimeout(2000);
-  expect(await frameHeight(page)).toBeLessThan(600);
+  // Each use of the tool lets the panel follow it once more, at most once a second; the click
+  // that opened it counts as use for a few seconds, so this waits past that.
+  await page.waitForTimeout(7000);
+  const settled = await frameHeight(page);
+  expect(settled).toBeLessThan(1000);
+  await page.waitForTimeout(1000);
+  expect(await frameHeight(page)).toBe(settled);
 });
 
 test("APP-01, A89: a tool whose height flips with its window's settles", async ({ page }) => {
@@ -85,7 +90,7 @@ test("APP-01, A89: a tool whose height flips with its window's settles", async (
   const css = `@media (max-height: 450px) { #text { height: 500px; } }
 @media (min-height: 451px) { #text { height: 300px; } }`;
   await open(page, "Flipping", toolWith(`<div id="text">Flips</div>`, css));
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(7000);
   const settled = await frameHeight(page);
   await page.waitForTimeout(1000);
   expect(await frameHeight(page)).toBe(settled);

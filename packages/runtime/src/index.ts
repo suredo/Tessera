@@ -55,8 +55,8 @@ export {
   type StagingResult,
 } from "./staging.ts";
 export {
-  FIT_ANSWER_MS,
-  FIT_ANSWERS,
+  allowFit,
+  FIT_CHANGES,
   FIT_HEIGHT_PROPERTY,
   FIT_MAX_PX,
   FIT_QUIET_MS,

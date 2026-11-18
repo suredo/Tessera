@@ -26,6 +26,10 @@
   // Watches for the person's first real input in the tool's page (GEN-06).
   let watchingInput: ReturnType<typeof setInterval> | undefined;
   let checkInput: (() => void) | undefined;
+  // Watches for the person's use of the tool, each time, so the host may fit it again (A89).
+  let checkUse: (() => void) | undefined;
+  // At most one use a second is told while the person keeps using the tool.
+  const USE_EVERY_MS = 1000;
   // Lays out this wrapper and the page frame while a check waits for its answer (VER-02, VER-03).
   // On a cold browser, Chrome may not lay out a frame until something asks: the tool's frame then
   // had no width, and a check measured a page as wide as its widest control with nothing shown
@@ -57,6 +61,7 @@
     clearInterval(watchingInput);
     clearInterval(layingOut);
     checkInput = undefined;
+    checkUse = undefined;
   };
   const unmount = () => {
     unmountTool();
@@ -150,6 +155,21 @@
         interacted = true;
         hostPort?.postMessage({ instanceId, interacted: true });
       };
+      // Each use (A89): the page frame's transient activation, which only the person's click, tap
+      // or key gives it, as above. It is told as it begins, and again at most once a second while
+      // it lasts, so a tool whose height follows its frame changes it only that often, and only
+      // while the person uses it.
+      let usedAt: number | undefined;
+      checkUse = () => {
+        if (!page.contentWindow?.navigator.userActivation.isActive) {
+          usedAt = undefined;
+          return;
+        }
+        const now = performance.now();
+        if (usedAt !== undefined && now - usedAt < USE_EVERY_MS) return;
+        usedAt = now;
+        hostPort?.postMessage({ instanceId, used: true });
+      };
       const leave = () => {
         if (left || toolFrame !== frame) return;
         left = true;
@@ -223,7 +243,10 @@
             if (!frame.contentWindow || event.source !== frame.contentWindow) return;
             if ((event.data as { type?: unknown })?.type === HELLO_MESSAGE) onHello?.();
           });
-          watchingInput = setInterval(() => checkInput?.(), 100);
+          watchingInput = setInterval(() => {
+            checkInput?.();
+            checkUse?.();
+          }, 100);
           body.append(frame);
         },
         { once: true },

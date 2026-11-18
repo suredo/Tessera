@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  FIT_ANSWER_MS,
-  FIT_ANSWERS,
+  allowFit,
+  FIT_CHANGES,
   FIT_MAX_PX,
   NEW_FIT,
   nextFit,
@@ -10,66 +10,68 @@ import {
 } from "../src/index.ts";
 
 // How the tool panel fits its page (APP-01, A89): the page's height is only the tool's word, so
-// the host bounds it, and holds back the heights of a page that answers each resize with a new one.
+// the host bounds it, and follows it a few times on each allowance, which the tool's start and the
+// person's use of it give: a page whose height follows its frame's can't keep the panel changing.
 
-/** The fit after each [height, at ms] report in turn, from `from`. */
-const after = (reports: [unknown, number][], from: Fit = NEW_FIT) =>
-  reports.reduce<Fit>((fit, [height, at]) => nextFit(fit, { height }, at), from);
-/** Reports `ms` apart, from 0. */
-const every = (ms: number, heights: unknown[]) =>
-  heights.map((height, i): [unknown, number] => [height, i * ms]);
-const apart = FIT_ANSWER_MS + 100;
+/** The fit after each reported height in turn, from `from`. */
+const after = (heights: unknown[], from: Fit = NEW_FIT) =>
+  heights.reduce<Fit>((fit, height) => nextFit(fit, { height }), from);
 
 describe("fitting the tool panel to its page (A89)", () => {
   it("APP-01, A89: takes the page's height, rounded up, growing and shrinking with it", () => {
-    expect(after([[812.4, 0]]).height).toBe(813);
-    expect(after(every(apart, [500, 900])).height).toBe(900);
-    expect(after(every(apart, [900, 400])).height).toBe(400);
+    expect(after([812.4]).height).toBe(813);
+    expect(after([500, 900]).height).toBe(900);
+    expect(after([900, 400]).height).toBe(400);
+    // The same height again costs nothing.
+    expect(after([500, 500, 500, 500, 500, 600]).height).toBe(600);
   });
 
   it("A89: drops anything but a positive number, and is the cap at most", () => {
-    const fit = after([[600, 0]]);
+    const fit = after([600]);
     for (const bad of [null, "tall", {}, { height: "900" }, { height: -5 }, { height: 0 }]) {
-      expect(nextFit(fit, bad, 5000)).toBe(fit);
+      expect(nextFit(fit, bad)).toBe(fit);
     }
-    expect(nextFit(fit, { height: Number.POSITIVE_INFINITY }, 5000)).toBe(fit);
-    expect(nextFit(fit, { height: 1e9 }, 5000).height).toBe(FIT_MAX_PX);
+    expect(nextFit(fit, { height: Number.POSITIVE_INFINITY })).toBe(fit);
+    expect(nextFit(fit, { height: 1e9 }).height).toBe(FIT_MAX_PX);
   });
 
-  it("A89: a page that grows with its frame is held back after a few resizes, then settles once", () => {
-    // Each resize answered at once with 32 px more: the frame would grow for ever.
-    const heights = Array.from({ length: 10 }, (_, i) => 352 + 32 * i);
-    const held = after(every(16, heights));
-    expect(held.held).toBe(true);
-    expect(held.height).toBe(352 + 32 * (FIT_ANSWERS - 1));
-    // Quiet, the last held height is applied once; the page's answer to it stays held.
-    const settled = settleFit(held, 1000);
+  it("A89: a page that grows with its frame, however slowly, is followed a few times, then settles once", () => {
+    const heights = Array.from({ length: 20 }, (_, i) => 352 + 32 * i);
+    const held = after(heights);
+    expect(held.height).toBe(heights[FIT_CHANGES - 1]);
+    expect(held.pending).toBe(heights.at(-1));
+    // Quiet, the last held height is applied once; the page's answer to it waits.
+    const settled = settleFit(held);
     expect(settled.height).toBe(heights.at(-1));
-    const answered = nextFit(settled, { height: heights.at(-1)! + 32 }, 1016);
-    expect(answered).toMatchObject({ height: heights.at(-1), held: true });
-    expect(settleFit(answered, 2000)).toBe(answered);
+    const answered = nextFit(settled, { height: heights.at(-1)! + 32 });
+    expect(answered).toMatchObject({ height: heights.at(-1), pending: heights.at(-1)! + 32 });
+    expect(settleFit(answered)).toBe(answered);
   });
 
-  it("A89: a page flipping between two heights with its frame is held back too", () => {
-    const flipping = after(every(16, [332, 532, 332, 532, 332, 532, 332, 532]));
-    expect(flipping.held).toBe(true);
-    expect(flipping.answers).toBeGreaterThanOrEqual(FIT_ANSWERS);
+  it("A89: a page flipping between two heights with its frame stops too", () => {
+    const flipping = after([332, 532, 332, 532, 332, 532, 332]);
+    expect(flipping).toMatchObject({ left: 0, height: 532, pending: 332 });
+    // Settled once to the held height, its answer waits: the panel stops changing.
+    const settled = settleFit(flipping);
+    const answered = after([532, 332, 532], settled);
+    expect(answered.height).toBe(settled.height);
+    expect(settleFit(answered)).toBe(answered);
   });
 
-  it("A89: rows in quick steps end at the full height, and later changes still fit", () => {
-    // 400, 440, 480 at 100 ms: held back after the third, then settled to the last.
-    const quick = after(every(100, [400, 440, 480, 520]));
-    expect(settleFit(quick, 1000).height).toBe(520);
-    // A change well after the last resize is the tool's own: it applies and ends the holding back.
-    const later = nextFit(settleFit(quick, 1000), { height: 200 }, 3000);
-    expect(later).toMatchObject({ height: 200, held: false });
-    expect(nextFit(later, { height: 800 }, 6000).height).toBe(800);
+  it("A89: the person's use gives a new allowance, applying a held height at once", () => {
+    const held = settleFit(after([400, 440, 480, 520, 560, 600]));
+    const waiting = nextFit(held, { height: 640 });
+    expect(waiting.height).toBe(600);
+    const used = allowFit(waiting);
+    expect(used.height).toBe(640);
+    // Rows the person adds, each after a use, keep fitting; a shrink too.
+    let fit = used;
+    for (const height of [680, 720, 200]) fit = nextFit(allowFit(fit), { height });
+    expect(fit.height).toBe(200);
   });
 
-  it("A89: rows the person adds, far apart, keep growing it", () => {
-    expect(after(every(apart, [400, 440, 480, 520, 560]))).toMatchObject({
-      height: 560,
-      held: false,
-    });
+  it("A89: a tool's start, with its first few changes, fits whole", () => {
+    expect(after([320, 900, 1400]).height).toBe(1400);
+    expect(after([320, 900, 1400]).pending).toBeUndefined();
   });
 });
