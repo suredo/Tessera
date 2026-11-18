@@ -537,6 +537,25 @@ import type { BridgeMethodName } from "@tessera/contracts";
     once: true,
   });
 
+  // The page's own height, so the host can fit the tool's panel to it (A89): the height of what
+  // the page lays out, not of its window, so a page made to fill its window reports the window and
+  // doesn't grow it. Sent when it changes, at most once a frame. It is only the tool's word, which
+  // its code can send too: the host bounds what it does with it.
+  let measuring = false;
+  let lastHeight = -1;
+  const measure = () => {
+    measuring = false;
+    const height = Math.ceil(document.documentElement.getBoundingClientRect().height);
+    if (height === lastHeight) return;
+    lastHeight = height;
+    post({ size: { height } });
+  };
+  new ResizeObserver(() => {
+    if (measuring) return;
+    measuring = true;
+    requestAnimationFrame(measure);
+  }).observe(document.documentElement);
+
   // The chart helper (CAP-04, ADR 0014). A tool that declares chart gets Chart.js in a script just
   // before this one; it is taken here and removed from the page, so a tool draws only through
   // tessera.chart. The server writes in the spec's shape and the standard's chart styles, each

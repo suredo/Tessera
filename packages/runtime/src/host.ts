@@ -74,6 +74,43 @@ export type MountedTool = {
   unmount(): void;
 };
 
+/** The most a tool's panel grows to fit its page, in CSS pixels (A89). */
+export const FIT_MAX_PX = 4000;
+/** Two growths of the same size this close together, in ms, mean the page grows with its frame. */
+export const FIT_RUNAWAY_MS = 500;
+
+/** How the panel fits its tool's page: its height, its last growth, and whether it stopped growing. */
+export type Fit = {
+  height?: number;
+  lastGrowth?: { by: number; at: number };
+  frozen: boolean;
+};
+
+/**
+ * The fit after the page says, at `now`, how tall it is (A89). The page's word is the tool's, so
+ * it is bounded: anything but a positive number is dropped, and it grows to `FIT_MAX_PX` at most. A
+ * page made to fill its frame, plus a margin, would grow its frame for ever, by the same step each
+ * time: two equal growths within `FIT_RUNAWAY_MS` stop the growing for this tool, which then
+ * scrolls in its frame as before. Shrinking always applies.
+ */
+export function nextFit(fit: Fit, reported: unknown, now: number): Fit {
+  const value = (reported as { height?: unknown } | null)?.height;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return fit;
+  const height = Math.min(Math.ceil(value), FIT_MAX_PX);
+  if (fit.height === undefined || height <= fit.height) {
+    return { height, frozen: fit.frozen };
+  }
+  if (fit.frozen) return fit;
+  const by = height - fit.height;
+  if (fit.lastGrowth?.by === by && now - fit.lastGrowth.at <= FIT_RUNAWAY_MS) {
+    return { height: fit.height, frozen: true };
+  }
+  return { height, lastGrowth: { by, at: now }, frozen: false };
+}
+
+/** The CSS variable on the tool's frame that holds its fitted height; the host app's CSS uses it. */
+export const FIT_HEIGHT_PROPERTY = "--tool-fit-height";
+
 /**
  * Mounts the tool the server knows as `mountId` inside `container`. Resolves once the wrapper has
  * loaded and holds the channel; the tool's own document follows on its own. Aborting `signal`
@@ -111,6 +148,7 @@ export function mountTool(
         if (reports.delete(id)) refuse(new Error("The tool didn't answer the check."));
       }, timeoutMs);
     });
+  let fit: Fit = { frozen: false };
   // Every listener there when the event happens hears it, even one that unmounts the tool first.
   const emit = (event: MountEvent) => [...eventListeners].forEach((listen) => listen(event));
 
@@ -179,6 +217,11 @@ export function mountTool(
       }
     } else if ("interacted" in data) {
       interactionListeners.forEach((listen) => listen());
+    } else if ("size" in data) {
+      fit = nextFit(fit, data["size"], performance.now());
+      if (fit.height !== undefined) {
+        frame.style.setProperty(FIT_HEIGHT_PROPERTY, `${fit.height}px`);
+      }
     } else {
       listeners.forEach((listen) => listen(data.message));
     }

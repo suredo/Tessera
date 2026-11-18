@@ -55,8 +55,13 @@ export {
   type StagingResult,
 } from "./staging.ts";
 export {
+  FIT_HEIGHT_PROPERTY,
+  FIT_MAX_PX,
+  FIT_RUNAWAY_MS,
   mountTool,
+  nextFit,
   WATCHDOG_DEFAULTS,
+  type Fit,
   type MountedTool,
   type MountEvent,
   type WatchdogOptions,

@@ -312,7 +312,8 @@ export async function runScenario(
       result.seconds = (Date.now() - began) / 1000;
       result.calls = { from: callsFrom, to: harness.callsAsked() };
       result.screenshot = await toolShown(page);
-      await page.screenshot({ path: path.join(folder, `step-${result.index}.png`) });
+      // The whole page, so a tool its panel fits shows whole, not cut at the window (A89).
+      await wholePage(page, path.join(folder, `step-${result.index}.png`));
       // Everything after depends on the first step, so a failed first step ends the run.
       if (index === 0 && result.outcome === "failed") {
         stopped = "The first step failed, so the steps after it can't be judged.";
@@ -374,6 +375,26 @@ async function toolShown(page: Page): Promise<Screenshot> {
       () => "tool" as const,
       () => "empty" as const,
     );
+}
+
+/**
+ * A screenshot of the whole page, so a tool its panel fits shows whole, not cut at the window
+ * (A89). Playwright's full-page picture lays the tool's nested frames, each in a process of its own,
+ * out at the wrong size, so the window itself is made as tall as the page for the picture, the
+ * frames given a moment to lay out again, and put back after.
+ */
+async function wholePage(page: Page, file: string): Promise<void> {
+  const viewport = page.viewportSize();
+  // Evaluated in the page, as text: the runner's own code has no page types.
+  const height = Number(await page.evaluate("document.documentElement.scrollHeight"));
+  if (!viewport || !(height > viewport.height)) {
+    await page.screenshot({ path: file });
+    return;
+  }
+  await page.setViewportSize({ width: viewport.width, height });
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: file });
+  await page.setViewportSize(viewport);
 }
 
 /** The open tool's own page, inside the host's frame and the wrapper's (RUN-01). */

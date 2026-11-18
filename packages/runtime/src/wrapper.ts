@@ -177,8 +177,11 @@
             pong?: unknown;
             call?: unknown;
             report?: unknown;
+            size?: unknown;
           };
           if (data && "pong" in data) hostPort?.postMessage({ instanceId, pong: data.pong });
+          // The page's height, only the tool's word: the host bounds it (A89).
+          else if (data && "size" in data) hostPort?.postMessage({ instanceId, size: data.size });
           else if (data && "report" in data)
             hostPort?.postMessage({ instanceId, report: data.report });
           else if (data && "call" in data) {

@@ -2,6 +2,8 @@
 
 ## 2026-11-18
 
+* **Changed**: The tool panel fits its tool (A89; [decision log](decisions/decision-log.md), [runtime](code/runtime/package.md), [web](code/web/package.md), [runner](code/evals/runner.md)): the tool's page sends the height it lays out, the host bounds it and sizes the frame to it, at least 20rem, and full screen still fills the screen; the runner's screenshots show the whole page, so a review sees the whole tool. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T02:19:01Z.
+
 * **Changed**: The base rules list the names a tool can't give its own variables, generated from the static check's one list (L-106, A88; [Tessera issues](lessons/tessera-issues.md), [decision log](decisions/decision-log.md), [prompts](code/server/prompts.md), [checks](code/server/checks.md)): every flashcard edit in M4 paid a repair for its own `open`. Edit's prompt budget rises to 22,500 and repair's to 24,000, within the owner's 30,000. The check is unchanged. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T01:49:11Z.
 
 * **Changed**: M4's live run report adds T10 and T10 in Portuguese, recorded again after L-105 ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)): no rule given twice; both added the flashcards to the planner instead of making a tool, without hooks, so steps 6 to 8 failed; each edit paid a repair for a variable named `open`. Their answers replace the earlier replays ([web](code/web/package.md)). 128 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T01:08:19Z.
