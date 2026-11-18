@@ -717,6 +717,19 @@ describe("a new kind of value is a change to the data (L-97)", () => {
   });
 });
 
+describe("another kind of tool beside the open one is a new tool (L-107)", () => {
+  it("L-107, GEN-01, VER-03: the intent makes another kind of tool a new one, unless the person asks to put it in", () => {
+    const intentPart = partText("intent");
+    expect(intentPart).toContain(
+      "or another kind of tool beside it, unless the person asks to put it in the open tool.",
+    );
+    expect(intentPart).toContain(
+      'With a study planner open, "Make flashcards from these notes: …" is new_tool',
+    );
+    expect(intentPart).toContain('"Add flashcards to this planner." is edit.');
+  });
+});
+
 describe("motion that answers the person is not a look (L-96)", () => {
   it("L-96, GEN-01: the intent says motion following the mouse needs the tool's code, with the case as an example", () => {
     const intentPart = partText("intent");

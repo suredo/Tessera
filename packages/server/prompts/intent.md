@@ -7,7 +7,7 @@ Choose one kind:
 - edit: change the open tool: how it looks or how it works. A statement about how things work in the person's world ("guests arrive in groups", "the shop is closed on Mondays") is a change for the tool to follow, not a question or a remark.
 - data: add, change or remove records in the open tool, without changing the tool itself.
 - mixed: a change to the tool and a change to its records in one request. Put the change to the tool in interfacePart and the change to the records in dataPart, so neither is lost.
-- new_tool: a tool is open, but the request asks for a different tool that has nothing to do with it. The open tool must stay as it is.
+- new_tool: a tool is open, but the request asks for a different tool: one that has nothing to do with it, or another kind of tool beside it, unless the person asks to put it in the open tool. The open tool must stay as it is.
 - open_saved: the request asks to open or use one of the saved tools listed, by its name or by what it does. Give that tool's ID, exactly as listed, in savedToolId. When no saved tool is listed, or none is the one asked for, never choose it. A request for a new tool ("a new budget", "another shopping list") is create or new_tool, even when a saved one is like it.
 - discuss: a question or idea about a tool, not yet asking for it to be built ("would a modal be better here?"), or a question of fact ("what was Brazil's GDP?"). A change asked politely or as a question ("can you make it blue?") is that change.
 - clarify: you can't tell what the request wants built or changed.
@@ -40,6 +40,7 @@ With a recipe collection open, which keeps recipes (title, servings, ingredients
 - "Add my grandmother's soup, it serves six." is data.
 - "Add my grandmother's soup and show the cooking time on each card." is mixed: "show the cooking time on each card" is the interfacePart, "Add my grandmother's soup" the dataPart.
 - "I need something to track my running." is new_tool, targetsCurrentTool false.
+- With a study planner open, "Make flashcards from these notes: …" is new_tool, another kind of tool beside it; "Add flashcards to this planner." is edit.
 - "Can you do the thing from before?" is clarify.
 
 With a seating planner open, which keeps tables (name, seats) and guests (name, table):

@@ -4,6 +4,8 @@
 
 * **Changed**: M4's live run report gives the owner's verdict on each run, by Claude Code's recommendation, which the owner took on 2026-11-18 ([report](../evals/reports/2026-11-17-m4-live-run.md)): each AI review's advice, except both T12 runs, rejected since the board couldn't show one person's chores. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T10:47:51Z.
 
+* **Changed**: The intent makes another kind of tool beside the open one a new tool, unless the person asks to put it in, as flashcards beside a study planner (L-107, [Tessera issues](lessons/tessera-issues.md)): three of T10's five M4 runs added them to the planner, where only the planner's check ran. The owner's choice, on Claude Code's recommendation. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T10:25:00Z.
+
 * **Changed**: A scenario's click may take the first of several controls with its hook (A90; [scenario format](testing/scenario-format.md), [decision log](decisions/decision-log.md)), and T14's edit step does, since an image editor has several edits; its M4 replay now passes every step. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T10:07:54Z.
 
 * **Changed**: The tool panel fits its tool (A89; [decision log](decisions/decision-log.md), [runtime](code/runtime/package.md), [web](code/web/package.md), [runner](code/evals/runner.md)): the tool's page sends the height it lays out, the host bounds it and sizes the frame to it, at least 20rem, and full screen still fills the screen; the runner's screenshots show the whole page, so a review sees the whole tool. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T02:19:01Z.
