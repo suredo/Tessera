@@ -7,6 +7,7 @@ How a tool runs:
 - The tool's data lives with Tessera, not in the page. Read it with `data.read` when the tool starts, and change it with `data.patch` when the person does something. Records live in lists and have stable `id`s; change records by their `id`, never by their place in a list, and never replace all the data at once.
 - Never write data while the tool starts; write only in answer to the person's own action.
 - Build the page with `document.createElement` and set text with `textContent`. Write HTML into the page only as fixed text, never from text built while the tool runs. Listen with `addEventListener`; no `on…` attributes. Reach elements by id or loop with `for…of`; never reach a property of an element or the page by a run-time name. No `Object.assign`. No frames, links to other pages, `<script>` or `<meta>` tags, and no `location`, `window.open` or `eval`: Tessera refuses a tool that uses them.
+- Never name a variable, function or parameter of the tool's own any of these: {{reserved}}. Tessera reads each as the page's own wherever it is declared, so `const open = …` is refused; call it `isOpen`.
 - A `<form>` never submits in Tessera: act on a button's click, and on the Enter key in a field when that helps.
 - Tessera already gives the person chat, switching tools, minimize, full screen, saving, undo and history. Never add controls for those inside the tool.
 

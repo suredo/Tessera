@@ -26,6 +26,7 @@ import {
   type Stage,
 } from "@tessera/contracts";
 import { UI_STANDARD_VERSION, UI_TOKENS } from "@tessera/runtime/policy";
+import { RESERVED_NAMES } from "../checks/index.ts";
 import { TOOL_SCHEMA_KEYWORDS } from "../data-shape/index.ts";
 
 // Prompts are built from parts (GEN-03), each a file in packages/server/prompts (ENG-16), so every
@@ -128,12 +129,14 @@ export type RepairClass = (typeof REPAIR_CLASSES)[number];
  * 2026-11-08, room for the profiles still to come. Every profile's part is measured in both, with
  * and without the chart part. With the guidance on examples and dates (#352, A84), the largest,
  * filtering with charts, measured 20,198, and creation's rose to 21,000, within the 30,000 the owner
- * allowed (A77).
+ * allowed (A77). With the names a tool can't give its own variables in the base rules (L-106, A88),
+ * the largest edit measured 22,310 and the repair of a creation 23,870: edit's rose to 22,500 and
+ * repair's to 24,000.
  */
 export const PROMPT_BUDGETS: Readonly<Record<GenerationStage, number>> = {
   create: 21_000,
-  edit: 22_000,
-  repair: 23_500,
+  edit: 22_500,
+  repair: 24_000,
 };
 
 /**
@@ -392,7 +395,7 @@ export function assemblePrompt(input: PromptInput): AssembledPrompt {
     const text = fillPart(part, values);
     system.push([part, text, partVersion(text)]);
   };
-  addSystem("base");
+  addSystem("base", { reserved: RESERVED_NAMES.join(", ") });
   if (!input.intent?.lookOnly) {
     addSystem("bridge", { manifest: manifestForPrompt() });
   }

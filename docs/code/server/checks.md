@@ -7,7 +7,7 @@ implements: [FIL-05, SBX-06, SBX-07, RUN-07, VER-01, VER-06, UX-04]
 tests: [../../../packages/server/test/static-check.test.ts, ../../../packages/server/test/archives.test.ts, ../../../packages/server/test/style-notes.test.ts]
 tags: [code, server, checks, security, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T23:37:05Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-18T01:49:11Z }
 ---
 
 # Purpose
@@ -17,7 +17,7 @@ Reads a tool's code before it runs, with real parsers (`VER-01`): acorn for the 
 # Entry points
 
 - `src/checks/static-check.ts`: `staticCheck` checks a tool's code with its actual artifact capabilities and gives a `StaticCheckResult`. On failure it lists each `StaticFinding`: the part, the line, and a message saying what to do instead, for repair (`GEN-09`). `checkHtml` and `checkJs` check one part, and the HTML rules live here.
-- `src/checks/js-check.ts`: the JavaScript rules, with the tracking of which values may be the page or its elements.
+- `src/checks/js-check.ts`: the JavaScript rules, with the tracking of which values may be the page or its elements. `RESERVED_NAMES` lists the names it reads as the page's or a forbidden global however a tool declares them; the base prompt lists them from it (L-106).
 
 # Invariants
 
@@ -94,7 +94,7 @@ acorn, eslint-scope and parse5, pinned exactly. The [export and import](archives
 
 Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 
-- `index.ts`: `checkHtml`, `checkJs`, `staticCheck`, `StaticCheckResult` (type), `StaticFinding` (type), `STYLE_NOTES_LIMIT`, `styleNotes`
-- `js-check.ts`: `JsFinding` (type), `FILES_THROUGH_HOST`, `checkJs`
+- `index.ts`: `checkHtml`, `checkJs`, `staticCheck`, `StaticCheckResult` (type), `StaticFinding` (type), `RESERVED_NAMES`, `STYLE_NOTES_LIMIT`, `styleNotes`
+- `js-check.ts`: `JsFinding` (type), `FILES_THROUGH_HOST`, `RESERVED_NAMES`, `checkJs`
 - `static-check.ts`: `StaticFinding` (type), `StaticCheckResult` (type), `staticCheck`, `checkHtml`, `checkJs`
 - `style-notes.ts`: `STYLE_NOTES_LIMIT`, `styleNotes`
