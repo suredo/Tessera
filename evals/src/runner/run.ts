@@ -314,11 +314,14 @@ export async function runScenario(
       result.screenshot = await toolShown(page);
       // The whole page, so a tool its panel fits shows whole, not cut at the window (A89). Taking
       // it scrolls the host page, which a tool may notice; one that saved because of it would
-      // change the next step's start, so that fails this step instead of passing unseen.
+      // change the next step's start, so that fails this step instead of passing unseen. A save it
+      // put off is watched for too, for PICTURE_WATCH_MS after a picture that scrolled.
       const pictured = await openWorkspace(page);
       const revision = pictured ? getWorkspace(store, pictured)?.dataRevision : undefined;
-      await wholePage(page, path.join(folder, `step-${result.index}.png`));
-      if (pictured && getWorkspace(store, pictured)?.dataRevision !== revision) {
+      const scrolled = await wholePage(page, path.join(folder, `step-${result.index}.png`));
+      const watched = scrolled ? PICTURE_WATCH_MS : 0;
+      const read = () => (pictured ? getWorkspace(store, pictured)?.dataRevision : undefined);
+      if (pictured && (await changedWithin(read, revision, watched))) {
         result.problems.push("The tool changed its data while the screenshot was taken.");
         result.outcome = "failed";
       }
@@ -391,16 +394,17 @@ async function toolShown(page: Page): Promise<Screenshot> {
  * tool's nested frames, each in a process of its own, out at the wrong size. Instead the host page
  * is scrolled a window at a time, each window pictured as it is, and scrolled back; scrolling the
  * host page changes nothing in the tool's frames, which keep their size. The pictures are joined on
- * a canvas in a page of their own, in a separate context, so the run's page is not touched.
+ * a canvas in a page of their own, in a separate context, so the run's page is not touched. Says
+ * whether it scrolled.
  */
-export async function wholePage(page: Page, file: string): Promise<void> {
+export async function wholePage(page: Page, file: string): Promise<boolean> {
   const viewport = page.viewportSize();
   // Evaluated in the page, as text: the runner's own code has no page types.
   const total = Number(await page.evaluate("document.documentElement.scrollHeight"));
   const browser = page.context().browser();
   if (!viewport || !browser || !(total > viewport.height)) {
     await page.screenshot({ path: file });
-    return;
+    return false;
   }
   const scrolled = Number(await page.evaluate("scrollY"));
   const slices: { top: number; png: string }[] = [];
@@ -419,6 +423,28 @@ export async function wholePage(page: Page, file: string): Promise<void> {
     fs.writeFileSync(file, Buffer.from(String(joined), "base64"));
   } finally {
     await joining.close();
+  }
+  return true;
+}
+
+/** How long after a whole-page picture that scrolled the runner watches the tool's data, in ms. */
+export const PICTURE_WATCH_MS = 2_000;
+
+/**
+ * Whether `read` gives something other than `before` now or within `ms`, read every `everyMs`: a
+ * save a tool made, or put off, after the picture scrolled the host page (A89).
+ */
+export async function changedWithin<T>(
+  read: () => T,
+  before: T,
+  ms: number,
+  everyMs = 100,
+): Promise<boolean> {
+  const end = Date.now() + ms;
+  for (;;) {
+    if (read() !== before) return true;
+    if (Date.now() >= end) return false;
+    await new Promise((resolve) => setTimeout(resolve, everyMs));
   }
 }
 

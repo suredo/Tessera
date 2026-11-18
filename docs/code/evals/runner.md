@@ -7,7 +7,7 @@ implements: [OBS-03, EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../evals/test/metrics.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-18T03:25:22Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-18T03:52:18Z }
 ---
 
 # Purpose
@@ -54,7 +54,7 @@ Depends on the [harness](harness.md), the [scenario files and host facts](scenar
 - **Not in CI.** A rehearsal starts Chrome and Tessera and takes about a minute; run it locally, alone (`ENG-31`). Its parts that need no browser are unit-tested.
 - **A recorded run is reviewed before it is kept.** `answers.json` holds what the model answered; it is copied into `evals/scenarios/replays/` only after a person checks it holds nothing private (`ENG-19`).
 - **Continue and Use again wait for the workspace they open** (L-80): Continue's own, or one that didn't exist before Use again, for up to 30 s, never just any tool panel, since the one already showing would pass on a slow machine. If it never opens, the host facts report it.
-- **Each screenshot waits for the tool to show something** (L-81): after a workspace opens, its nested frames load again, so a screenshot taken at once showed an empty panel. The wait is at most 5 s and only for the picture; the facts are read before it, and each step's result records what its screenshot shows (`tool`, `empty` or `no tool`), and the replay spec fails on an `empty` one. The screenshot is of the whole page, so a tool its panel fits shows whole (A89): the page is never resized (`ENG-14`), since Playwright's full-page picture does and lays the tool's nested frames out at the wrong size: the host page is scrolled a window at a time, each window pictured, and scrolled back, and the pictures are joined on a canvas in a separate browser context. Scrolling the host page is something a tool may notice, so the open workspace's data revision is read before and after: a tool that changed its data meanwhile fails the step, instead of changing the next step's start unseen.
+- **Each screenshot waits for the tool to show something** (L-81): after a workspace opens, its nested frames load again, so a screenshot taken at once showed an empty panel. The wait is at most 5 s and only for the picture; the facts are read before it, and each step's result records what its screenshot shows (`tool`, `empty` or `no tool`), and the replay spec fails on an `empty` one. The screenshot is of the whole page, so a tool its panel fits shows whole (A89): the page is never resized (`ENG-14`), since Playwright's full-page picture does and lays the tool's nested frames out at the wrong size: the host page is scrolled a window at a time, each window pictured, and scrolled back, and the pictures are joined on a canvas in a separate browser context. Scrolling the host page is something a tool may notice, so the open workspace's data revision is read before, and watched after a picture that scrolled for `PICTURE_WATCH_MS` (2 s, `changedWithin`), so a save put off is seen too: a tool that changed its data meanwhile fails the step, instead of changing the next step's start unseen.
 - **A request's outcome is read from the chat** (`APP-01`): after a `say` or `cancel` step, the report's message is Tessera's newest reply in the chat; after the other steps, the notice.
 - **A big tool's request passes only with every feature in place** (`GEN-17`). `featuresMissed` reads, in the app's own words, a reply that says a feature wasn't added or may have been; the step fails with it, though the core stands and `outcomeOf` still reads the creation.
 - **A scenario's clock must start in the past** (L-83): the browser runs on the scenario's time and the server on its own, so a clock ahead of now makes every deadline look past to the browser. `runScenario` refuses it before anything starts, with the cap check.
@@ -71,7 +71,7 @@ Written by `node scripts/okf-check.mjs --fix`; don't edit it by hand.
 - `record.ts`: `CANCELLED_WAIT_MS`, `recordAnswers`
 - `replay.ts`: `replayScenario`
 - `report.ts`: `reportMarkdown`
-- `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `Screenshot` (type), `RunReport` (type), `zonedInstant`, `runScenario`, `wholePage`, `DO_WAIT`, `dataSettled`, `clickAndPick`
+- `run.ts`: `STEP_LIMIT_MS`, `NEW_WORKSPACE`, `RunMode` (type), `StepResult` (type), `Screenshot` (type), `RunReport` (type), `zonedInstant`, `runScenario`, `wholePage`, `PICTURE_WATCH_MS`, `changedWithin`, `DO_WAIT`, `dataSettled`, `clickAndPick`
 - `script.ts`: `answersSchema`, `Answers` (type), `loadAnswers`, `mapStrings`, `AnswersProvider` (type), `answersProvider`
 - `services.ts`: `Services` (type), `startServices`
 - `speed.ts`: `SPEED_TARGETS`, `RequestKind` (type), `Figures` (type), `Speed` (type), `figures`, `Run` (type), `callsBySay`, `speedOf`, `speedMarkdown`, `readRun`
