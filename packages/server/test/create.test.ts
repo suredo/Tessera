@@ -88,6 +88,19 @@ describe("starting data (GEN-05)", () => {
         { items: [{ id: "i-1" }], title: "Ours" },
       ),
     ).toEqual({ items: [{ id: "d-1" }, { id: "i-1" }], title: "Ours", sections: [] });
+    // The same record given as a default and as the request's own is kept once (L-105); one that
+    // shares an id but differs stays twice, for the id check to refuse.
+    const friday = { id: "r-1", weekday: 5 };
+    expect(startingDataOf({ rules: [friday] }, { rules: [{ weekday: 5, id: "r-1" }] })).toEqual({
+      rules: [friday],
+    });
+    expect(startingDataOf({ rules: [friday] }, { rules: [{ id: "r-1", weekday: 4 }] })).toEqual({
+      rules: [friday, { id: "r-1", weekday: 4 }],
+    });
+    // A list of plain values keeps every one it is given, repeated or not (#397 review).
+    expect(startingDataOf({ tags: ["a"] }, { tags: ["a", "a"] })).toEqual({
+      tags: ["a", "a", "a"],
+    });
     const result = candidateFrom(tool());
     expect(result.kind).toBe("candidate");
     if (result.kind !== "candidate") return;

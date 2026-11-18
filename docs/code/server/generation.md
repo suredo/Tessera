@@ -7,7 +7,7 @@ implements: [GEN-05, CON-02, GEN-07, GEN-04, GEN-11, GEN-16, CLI-07, GEN-12, GEN
 tests: [../../../packages/server/test/discuss.test.ts, ../../../packages/server/test/create.test.ts, ../../../packages/server/test/edit.test.ts, ../../../packages/server/test/edit-pipeline.test.ts, ../../../packages/server/test/pipeline.test.ts, ../../../packages/server/test/deadline.test.ts, ../../../packages/server/test/chat-data.test.ts, ../../../packages/server/test/chat-data-flow.test.ts, ../../../packages/server/test/mixed.test.ts, ../../../packages/server/test/request-lifecycle.test.ts, ../../../packages/server/test/request-cancel.test.ts]
 tags: [code, server, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T10:52:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T12:55:56Z }
 ---
 
 # Purpose
@@ -24,7 +24,7 @@ The core of generation (#146): interface requests create or edit a candidate too
 - `src/generation/create.ts`:
   - `createTool` asks the create stage on its route (`CLI-09`), within `GENERATION_TIME_LIMIT_MS` (`GEN-11`), repairs a failure of the host's checks on the repair route, within `REPAIR_TIME_LIMIT_MS` and `REPAIR_BUDGETS`, and gives a `CreateResult`: a `Candidate`, a "cannot" with its reason, or a failure with its class and findings, each with how many repairs it took.
   - `candidateFrom` is the host's checks on a created tool.
-  - `startingDataOf` builds a new workspace's data from the defaults and the request's entries.
+  - `startingDataOf` builds a new workspace's data from the defaults and the request's entries; a request record (an object with an id) exactly equal to a default's is kept once, plain values never merged, and one sharing a default's id with other content is left for the id check to refuse (L-105).
 - `src/generation/pipeline.ts`: `generate` carries out a request as far as the server goes. It tells the intent stage the person's connections by name (`connectionNames`), and gives creation the ones the intent chose that the person has.
 - `src/generation/tool-connections.ts`: `toolConnections` is what a request gives a tool (`CAP-02`, A66, A74), the host's choice and never the model's: the connections it already uses, whatever their number, and those the intent chose that the person has, while it uses fewer than three (`ToolConnections`: the names it may use, and those the person still has, with their addresses, for the prompt). The edit pipeline and smoke repair work it out the same way, an edit's from the tool it changes; a smoke repair's attempt carries the failed candidate's connections, and a repair, of a creation or an edit, that leaves them out keeps them, samples and all, so its prompt names them by path only and stays within its budget.
 - `src/generation/discuss.ts`: `answerDiscussion` answers a question or an idea (`GEN-19`, A59) with one call on the discuss route (Haiku 5.5 low, `CLI-09`), within the intent stage's time limit. The pipeline replies with a discussion, the answer in words, and builds, changes and stores nothing; a provider failure is a provider failure, as at any stage. The answer is kept in the chat like any reply, so the request after it is told it as its last exchange (A62).

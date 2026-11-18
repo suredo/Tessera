@@ -2,6 +2,7 @@ import {
   type AcceptanceChecks,
   artifactSchema,
   ARTIFACT_CONTRACT_VERSION,
+  canonicalJson,
   collectionName,
   creationSchema,
   fieldName,
@@ -78,12 +79,26 @@ export type CreateResult = (
 /**
  * The data a new workspace starts with: the reusable defaults, with each list the request gave
  * entries for extended by them, and any other value the request gave in place of the default's.
+ * An entry the request gives that is exactly a default's, its id and all, is the same record and
+ * is kept once (L-105: a "never on Fridays" rule given both as a setting and as the request's own
+ * forced a repair); one with a default's id but other content is still both, and refused.
  */
 export function startingDataOf(defaults: ToolData, initialState: ToolData): ToolData {
   const data: ToolData = { ...defaults };
   for (const [key, value] of Object.entries(initialState)) {
     const before = data[key];
-    data[key] = Array.isArray(before) && Array.isArray(value) ? [...before, ...value] : value;
+    if (!Array.isArray(before) || !Array.isArray(value)) {
+      data[key] = value;
+      continue;
+    }
+    // Only records, objects with an id: a list of plain values may hold the same one twice.
+    const isRecord = (item: unknown) =>
+      item !== null && typeof item === "object" && !Array.isArray(item) && "id" in item;
+    const kept = new Set(before.filter(isRecord).map((record) => canonicalJson(record)));
+    data[key] = [
+      ...before,
+      ...value.filter((item) => !isRecord(item) || !kept.has(canonicalJson(item))),
+    ];
   }
   return data;
 }
