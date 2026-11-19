@@ -200,7 +200,9 @@ test("SBX-09: not even right after the person clicks inside the tool", async ({ 
   }
 });
 
-test("SBX-10: no window opens, no dialog shows and no file downloads", async ({ page }) => {
+test("SBX-10, A92: no window opens and no file downloads; a dialog reaches the person", async ({
+  page,
+}) => {
   const seen: string[] = [];
   page.on("popup", () => seen.push("popup"));
   page.on("download", () => seen.push("download"));
@@ -211,10 +213,12 @@ test("SBX-10: no window opens, no dialog shows and no file downloads", async ({ 
   page.context().on("page", () => seen.push("page"));
   const found = await probe(page, host, "popups");
   expect(found["window.open"]).toBe("refused");
-  // Without permission for modals, the browser skips each dialog and returns at once.
+  // Dialogs are the tool's own window's, for the person (A92): each reaches the page, here
+  // dismissed, so confirm and prompt answer no; print returns. Popups and downloads still don't.
   expect(found["confirm"]).toBe("returned");
   expect(found["prompt"]).toBe("returned");
-  expect(seen).toEqual([]);
+  expect(found["print"]).toBe("returned");
+  expect(seen).toEqual(["dialog alert", "dialog confirm", "dialog prompt"]);
   await hostUnmoved(page);
   nothingArrived(host);
 });

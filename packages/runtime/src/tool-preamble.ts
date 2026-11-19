@@ -40,6 +40,15 @@ import type { BridgeMethodName } from "@tessera/contracts";
     const given = event.ports[0];
     if (data?.type !== PORT_MESSAGE || !given) return;
     port = given;
+    // Mounted for a check (A92): no dialog may reach the person, so the page answers them as the
+    // person the check acts for would: a confirm yes, a prompt its default, an alert and print
+    // nothing.
+    if ((data as { checked?: unknown }).checked === true) {
+      window.confirm = () => true;
+      window.alert = () => {};
+      window.prompt = (_message?: string, value?: string) => value ?? "";
+      window.print = () => {};
+    }
     // On the port, the host's messages come as { message }, replies to calls as { reply }, and the
     // watchdog's pings as { ping }, which is answered at once: an answer shows the tool's page
     // isn't stuck (RUN-02). The tool's code shares this window and can reach the port too, so
@@ -687,12 +696,10 @@ import type { BridgeMethodName } from "@tessera/contracts";
       },
       options: {
         animation: false,
-        events: [],
         responsive: true,
         plugins: {
           title: { display: true, text: checked.title },
           legend: { display: round || checked.series.length > 1 },
-          tooltip: { enabled: false },
         },
       },
     });

@@ -69,7 +69,7 @@ describe("the runtime's routes (RUN-01)", () => {
     const answer = await get("/runtime/tool?mount=mount-1", asFrame());
     expect(answer.status).toBe(200);
     const all = policies(answer);
-    expect(all).toContain("sandbox allow-scripts");
+    expect(all).toContain("sandbox allow-scripts allow-modals");
     expect(all.some((p) => p.startsWith("default-src 'none'"))).toBe(true);
     expect(all.some((p) => p.startsWith("frame-ancestors"))).toBe(true);
     expect(answer.headers["cache-control"]).toBe("no-store");

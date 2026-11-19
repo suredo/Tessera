@@ -7,6 +7,7 @@ import {
   MAX_RESTARTS,
   MOUNT_MESSAGE,
   PORT_MESSAGE,
+  TOOL_FRAME_PERMISSIONS,
   runtimeOriginFor,
   TOOL_CSP,
   TOOL_EVENTS,
@@ -47,7 +48,7 @@ describe("the runtime's documents (RUN-01)", () => {
       expect(tool[blocked], blocked).toEqual(["'none'"]);
     }
     // Sandboxed with scripts only: never the same origin, so the tool's origin is null.
-    expect(TOOL_SANDBOX).toBe("sandbox allow-scripts");
+    expect(TOOL_SANDBOX).toBe("sandbox allow-scripts allow-modals");
   });
 
   it("lets the wrapper run only its own script and frame only the tool's document", () => {
@@ -67,6 +68,9 @@ describe("the runtime's documents (RUN-01)", () => {
     expect(source("wrapper.ts")).toContain(`const MOUNT_MESSAGE = "${MOUNT_MESSAGE}"`);
     expect(source("wrapper.ts")).toContain(`const PORT_MESSAGE = "${PORT_MESSAGE}"`);
     expect(source("tool-preamble.ts")).toContain(`const PORT_MESSAGE = "${PORT_MESSAGE}"`);
+    expect(source("wrapper.ts")).toContain(
+      `const TOOL_FRAME_PERMISSIONS = "${TOOL_FRAME_PERMISSIONS}"`,
+    );
     for (const file of ["wrapper.ts", "tool-preamble.ts"]) {
       expect(source(file)).toContain(`const HELLO_MESSAGE = "${HELLO_MESSAGE}"`);
     }

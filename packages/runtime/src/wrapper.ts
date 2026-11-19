@@ -5,6 +5,7 @@
   const MOUNT_MESSAGE = "tessera:mount";
   const HELLO_MESSAGE = "tessera:hello";
   const PORT_MESSAGE = "tessera:port";
+  const TOOL_FRAME_PERMISSIONS = "clipboard-write";
   const MAX_RESTARTS = 3;
   // How long after the tool's frame loads its page may take to say hello.
   const HELLO_GRACE_MS = 1000;
@@ -76,14 +77,19 @@
     if (toolFrame?.contentWindow && event.source === toolFrame.contentWindow) return;
     // Only the host app's page that framed this wrapper may mount a tool, with a port of its own.
     if (event.origin !== appOrigin || event.source !== parent) return;
-    const data = event.data as { type?: unknown; mountId?: unknown; instanceId?: unknown };
+    const data = event.data as {
+      type?: unknown;
+      mountId?: unknown;
+      instanceId?: unknown;
+      checked?: unknown;
+    };
     const port = event.ports[0];
     if (data?.type !== MOUNT_MESSAGE || typeof data.mountId !== "string" || !port) return;
     if (typeof data.instanceId !== "string") return;
-    mount(data.mountId, data.instanceId, port);
+    mount(data.mountId, data.instanceId, port, data.checked === true);
   });
 
-  function mount(mountId: string, instanceId: string, port: MessagePort) {
+  function mount(mountId: string, instanceId: string, port: MessagePort, checked: boolean) {
     unmount();
     hostPort = port;
     port.onmessage = (e: MessageEvent) => {
@@ -125,9 +131,14 @@
       // styles, so it is sized through style properties once it has loaded.
       const page = document.createElement("iframe");
       page.title = "Tool";
+      // What the tool may do in its own window, granted through this frame too (A92).
+      if (!checked) page.allow = TOOL_FRAME_PERMISSIONS;
       page.srcdoc = "<!doctype html><html><body></body></html>";
       const frame = document.createElement("iframe");
-      frame.setAttribute("sandbox", "allow-scripts");
+      // Dialogs (confirm, alert, prompt, print) and the clipboard are the tool's own window's, for
+      // the person; a tool mounted for a check gets neither, so nothing reaches the person (A92).
+      frame.setAttribute("sandbox", checked ? "allow-scripts" : "allow-scripts allow-modals");
+      if (!checked) frame.allow = TOOL_FRAME_PERMISSIONS;
       frame.title = "Tool";
       // From a host of its own for this start, so it runs in a process of its own (RUN-02).
       const label = Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) =>
@@ -211,7 +222,9 @@
           } else hostPort?.postMessage({ instanceId, message: data?.message });
         };
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
-        frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
+        frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId, checked }, "*", [
+          channel.port2,
+        ]);
         for (const message of waiting.splice(0)) toolPort.postMessage({ message });
         for (const question of questions.splice(0)) toolPort.postMessage(question);
       };

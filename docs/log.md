@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-19
+
+* **Changed**: The sandbox limits what a tool reaches, not what it does in its own window when the person acts (A92; [decision log](decisions/decision-log.md), [runtime](spec/runtime.md), [threat model](spec/threat-model.md), [ADR 0014](decisions/adr/0014-chart-library.md), [runtime code](code/runtime/package.md)): a tool may show confirm, alert and prompt and print, copy to the clipboard, and its charts show values on hover; reading the clipboard stays refused (SBX-13), and a tool mounted for a check shows the person nothing. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-19T13:30:47Z.
+
 ## 2026-11-18
 
 * **Changed**: T12's request says the person wants to see one person's chores (A91; [app catalogue](testing/app-catalogue.md), [decision log](decisions/decision-log.md)); recorded again live, it passed every step in 6 calls and its review advises accept with notes ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)); its answers replace the rerun's replay ([web](code/web/package.md)). 135 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T20:53:08Z.
