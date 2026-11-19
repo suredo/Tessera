@@ -141,9 +141,9 @@ test("mounts a tool behind the wrapper and talks to it only through the bridge (
   // The wrapper is on the opposite loopback name; the tool is sandboxed inside it.
   const wrapper = page.frames().find((f) => f.url().includes("/runtime/wrapper"));
   expect(new URL(wrapper?.url() ?? "about:blank").hostname).toBe("localhost");
-  // Scripts and dialogs, and copying to the clipboard, the tool's own window's (A92); nothing else.
+  // Scripts only, and copying to the clipboard, the tool's own window's (A92).
   const sandbox = await toolFrameElement(page).getAttribute("sandbox");
-  expect(sandbox).toBe("allow-scripts allow-modals");
+  expect(sandbox).toBe("allow-scripts");
   expect(await toolFrameElement(page).getAttribute("allow")).toBe("clipboard-write");
 });
 

@@ -135,9 +135,9 @@
       if (!checked) page.allow = TOOL_FRAME_PERMISSIONS;
       page.srcdoc = "<!doctype html><html><body></body></html>";
       const frame = document.createElement("iframe");
-      // Dialogs (confirm, alert, prompt, print) and the clipboard are the tool's own window's, for
-      // the person; a tool mounted for a check gets neither, so nothing reaches the person (A92).
-      frame.setAttribute("sandbox", checked ? "allow-scripts" : "allow-scripts allow-modals");
+      // Copying to the clipboard is the tool's own window's, for the person; a tool mounted for a
+      // check doesn't get it (A92).
+      frame.setAttribute("sandbox", "allow-scripts");
       if (!checked) frame.allow = TOOL_FRAME_PERMISSIONS;
       frame.title = "Tool";
       // From a host of its own for this start, so it runs in a process of its own (RUN-02).
@@ -222,9 +222,7 @@
           } else hostPort?.postMessage({ instanceId, message: data?.message });
         };
         // The tool's origin is opaque, so "*" is the only target; the port goes to this frame only.
-        frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId, checked }, "*", [
-          channel.port2,
-        ]);
+        frame.contentWindow.postMessage({ type: PORT_MESSAGE, instanceId }, "*", [channel.port2]);
         for (const message of waiting.splice(0)) toolPort.postMessage({ message });
         for (const question of questions.splice(0)) toolPort.postMessage(question);
       };

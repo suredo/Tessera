@@ -21,8 +21,7 @@ export type ToolEvent = (typeof TOOL_EVENTS)[number];
  * around it: copy to the clipboard, which the browser allows only right after the person's click
  * or key. Reading it stays refused (SBX-13): Chrome keeps that permission for Tessera's whole
  * address, so one yes would let every later tool read what the person copies; pasting into a field
- * needs none. A tool mounted for a check gets nothing, nor dialogs, so nothing reaches the person
- * mid-check. The wrapper repeats it (a test keeps them equal).
+ * needs none. A tool mounted for a check gets nothing. The wrapper repeats it (a test keeps them equal).
  */
 export const TOOL_FRAME_PERMISSIONS = "clipboard-write";
 

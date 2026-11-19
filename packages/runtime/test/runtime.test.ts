@@ -48,7 +48,7 @@ describe("the runtime's documents (RUN-01)", () => {
       expect(tool[blocked], blocked).toEqual(["'none'"]);
     }
     // Sandboxed with scripts only: never the same origin, so the tool's origin is null.
-    expect(TOOL_SANDBOX).toBe("sandbox allow-scripts allow-modals");
+    expect(TOOL_SANDBOX).toBe("sandbox allow-scripts");
   });
 
   it("lets the wrapper run only its own script and frame only the tool's document", () => {

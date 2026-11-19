@@ -2,7 +2,7 @@
 
 ## 2026-11-19
 
-* **Changed**: The sandbox limits what a tool reaches, not what it does in its own window when the person acts (A92; [decision log](decisions/decision-log.md), [runtime](spec/runtime.md), [threat model](spec/threat-model.md), [ADR 0014](decisions/adr/0014-chart-library.md), [runtime code](code/runtime/package.md)): a tool may show confirm, alert and prompt and print, copy to the clipboard, and its charts show values on hover; reading the clipboard stays refused (SBX-13), and a tool mounted for a check shows the person nothing. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-19T13:30:47Z.
+* **Changed**: The sandbox limits what a tool reaches, not what it does in its own window when the person acts (A92; [decision log](decisions/decision-log.md), [runtime](spec/runtime.md), [threat model](spec/threat-model.md), [ADR 0014](decisions/adr/0014-chart-library.md), [runtime code](code/runtime/package.md)): a tool may copy to the clipboard after the person's click, and its charts show values on hover. Reading the clipboard stays refused (SBX-13), and so do the browser's own dialogs, which show over the whole host page and could pass for Tessera's; dialogs Tessera draws in the tool's panel are to come. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-19T13:59:52Z.
 
 ## 2026-11-18
 

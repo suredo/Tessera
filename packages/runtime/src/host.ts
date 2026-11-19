@@ -145,8 +145,7 @@ export const FIT_HEIGHT_PROPERTY = "--tool-fit-height";
  * loaded and holds the channel; the tool's own document follows on its own. Aborting `signal`
  * before then removes the frame and rejects, so a mount that is no longer wanted never runs.
  * The watchdog runs from the start, so a tool stuck while it starts is stopped too. A tool mounted
- * for a check (`checked`) may not show dialogs or use the clipboard, and its page answers a
- * confirm yes, as the person the check acts for would (A92).
+ * for a check (`checked`) may not use the clipboard (A92).
  */
 export function mountTool(
   container: HTMLElement,

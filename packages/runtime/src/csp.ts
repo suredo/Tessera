@@ -26,11 +26,11 @@ export const TOOL_CSP = [
 
 /**
  * Sent with the tool's document as well: the browser sandboxes it even if something framed it
- * without the sandbox attribute. Scripts are allowed, and dialogs, the tool's own window's for the
- * person (A92); no same origin, so its origin is null. The browser keeps only the flags both this
- * and the frame allow, so a tool mounted for a check, whose frame leaves dialogs out, has none.
+ * without the sandbox attribute. Only scripts are allowed: no same origin, so its origin is null.
+ * The browser's own dialogs stay off: they show over the whole host page, before any click, and a
+ * tool could pass one off as Tessera's (A92).
  */
-export const TOOL_SANDBOX = "sandbox allow-scripts allow-modals";
+export const TOOL_SANDBOX = "sandbox allow-scripts";
 
 /**
  * The wrapper's document: its own script, and one frame, the tool's document, from a host of its
