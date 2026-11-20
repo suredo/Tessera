@@ -2,6 +2,12 @@
 
 ## 2026-11-20
 
+* **Fixed**: The [redesign mockup renderer](roadmap/ui-redesign.md) reads the HTML element through Playwright's locator, so its browser callback passes the Node script lint rules. The width migration's archive regression checks that older contract 4 tools import at comfortable width and export with their original bytes. Recorded by `codex/gpt-6` at 2026-11-20T21:24:31Z.
+
+* **Changed**: The [width contract](code/contracts/package.md) is version 5: `ui.width` is comfortable or wide, with contract 4 tools upgraded in memory without rewriting stored hashes. [Creation](code/server/generation.md) defaults omitted `uiWidth` to comfortable; its [prompt](code/server/prompts.md) asks for the declaration. Current typed fixtures and development tools declare contract 5; recorded outputs are retained. The [host layout](code/web/package.md) remains pending. No live model was called. Recorded by `codex/gpt-6` at 2026-11-20T20:54:02Z.
+
+* **Changed**: The owner approved the separate [UI redesign milestone](roadmap/ui-redesign.md), the new [main-screen requirement](spec/app.md) (`APP-01`), the comfortable/wide contract declaration and Focus as the default. The milestone now has exit criteria; implementation and contract migration remain to be delivered. No model was called. Recorded by `codex/gpt-6` at 2026-11-20T20:52:00Z.
+
 * **New**: A proposed redesign of the host app ([UI redesign](roadmap/ui-redesign.md)): the tool first at its declared width, chat and workspaces hidden by default, the chat floating or docked on the right, one ask bar, a 64 px header and a phone layout, with its mockups in design/ui-redesign/; four decisions await the owner. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-20T20:18:05Z.
 
 ## 2026-11-18

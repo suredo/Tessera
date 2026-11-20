@@ -30,13 +30,13 @@ const newFolder = async () => {
 };
 
 const tool: Artifact = {
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: "<p>Errands</p>", css: "", js: "" },
   data: { schemaVersion: 1, schema: {}, defaults: { tasks: [] }, migrations: [] },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 };
 
 /** Asks the host API, expecting it to succeed; returns the result. */

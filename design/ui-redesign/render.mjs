@@ -17,9 +17,9 @@ for (const [file, width, height] of jobs) {
   await page.route(/^(?!file:)/, (route) => route.abort());
   await page.goto(pathToFileURL(path.join(dir, file)).href);
   await page.waitForTimeout(300);
-  const size = await page.evaluate(() => ({
-    w: document.documentElement.scrollWidth,
-    h: document.documentElement.scrollHeight,
+  const size = await page.locator("html").evaluate((element) => ({
+    w: element.scrollWidth,
+    h: element.scrollHeight,
   }));
   const png = path.join(outDir, file.replace(".html", ".png"));
   await page.screenshot({ path: png, fullPage: true });

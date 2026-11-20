@@ -113,7 +113,7 @@ load();`,
 }
 
 const tool = (code: Artifact["code"], data: Partial<Artifact["data"]> = {}): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code,
   data: {
@@ -125,7 +125,7 @@ const tool = (code: Artifact["code"], data: Partial<Artifact["data"]> = {}): Art
   },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 
 const withDone: Migration = {

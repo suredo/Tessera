@@ -1,14 +1,14 @@
 ---
 type: Milestone
-title: "UI redesign: the tool comes first (proposal)"
-description: "Proposed redesign of the host app, agreed with the owner over three Codex design rounds on 2026-11-20: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout; not yet scheduled."
+title: "UI redesign: the tool comes first"
+description: "The separate UI redesign milestone: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout."
 tags: [roadmap, ux, app, redesign]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-20T20:17:43Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T21:34:00Z }
 ---
-# UI redesign: the tool comes first (proposal)
+# UI redesign: the tool comes first
 
-A proposal, not yet scope: the owner directed it on 2026-11-20 and wants it finished with Codex. It changes how the host app frames tools (`APP-01` to `APP-11`), not how tools are generated, except for one new declaration (below). The mockups are in `design/ui-redesign/` (`overview.html` first); `design/ui-redesign/render.mjs` renders them with Playwright: `node design/ui-redesign/render.mjs design/ui-redesign <out folder> '[["a-focus.html",1440,900]]'`.
+The owner approved this scope on 2026-11-20 as a separate **UI redesign** milestone. It changes how the host app frames tools (`APP-01` to `APP-11`), not how tools are generated, except for one new declaration (below). The mockups are in `design/ui-redesign/` (`overview.html` first); `design/ui-redesign/render.mjs` renders them with Playwright: `node design/ui-redesign/render.mjs design/ui-redesign <out folder> '[["a-focus.html",1440,900]]'`.
 
 ## Why
 
@@ -32,14 +32,24 @@ A review of the current app (ten screenshots, three design rounds) found: the to
 - **Kept across panel changes:** the tool's scroll position and the field the person was typing in.
 - **Look:** the same sage palette and system fonts, fewer borders and boxes, text actions in place of outlined buttons, 44 px targets.
 
-## Pending the owner's approval
+## Approved decisions
 
-1. **Reword `APP-01`** in `docs/spec/app.md`: the chat is hidden, floating or docked on wide screens, and a bottom sheet on narrow ones, instead of always side by side.
-2. **The width declaration** (`comfortable` or `wide`) in the artifact contract, the creation prompt and its check: a contract change (`P3`).
+1. **Reword `APP-01`** in `docs/spec/app.md`: the chat is hidden, floating or docked on wide screens, and a bottom sheet on narrow ones.
+2. **The width declaration** (`comfortable` or `wide`) belongs in the artifact contract, the creation prompt and its check: a contract change (`P3`). Existing tools must remain readable.
 3. **The default:** every tool opens in Focus; the chat's position is remembered for when it opens.
-4. **Scheduling:** which milestone this belongs to.
+4. **Scheduling:** a separate UI redesign milestone; it does not change the scope of M0-M6.
+
+## Exit criteria
+
+- All seven mockup states work at the relevant desktop or phone width, with the host retaining its existing workspace, library, version, import, trash and setup actions (`APP-01` to `APP-10`).
+- Switching chat or drawer state preserves the running tool, its scroll position and in-progress input (`RUN-02`, `APP-01`).
+- The width declaration is validated from one contract definition, generated schemas agree, and earlier stored tools remain readable (`CON-01`, `CON-04`).
+- Browser checks cover the desktop states at 1280 px and phone states at 320 px, keyboard operation, modal focus containment and return, and automated accessibility (`APP-11`).
+- CI passes and the owner signs off the milestone report. No live calls are authorized by this milestone; any live prompt evaluation requires a separate approved budget (`ENG-07`).
 
 ## Suggested pull requests
+
+Progress: the first slice is implemented on `feat/ui-width`, with contract 4 compatibility and generated schemas. The host layout is still pending. The creation prompt's live check needs a separately approved budget (`ENG-07`, `ENG-16`).
 
 1. `APP-01` reworded and the width declaration in the contract, prompt and check, with tests.
 2. The header and the single More menu; Undo and History in it; history as a panel.

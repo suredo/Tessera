@@ -62,13 +62,13 @@ function newWorkspace(schema: Artifact["data"]["schema"] = {}): string {
   const folder = host.folder!;
   const { id } = createWorkspace(folder, "Errands");
   const version = saveVersion(folder.db, {
-    contractVersion: 4,
+    contractVersion: 5,
     connections: {},
     code: errands,
     data: { schemaVersion: 1, schema, defaults: {}, migrations: [] },
     capabilities: [],
     pins: [],
-    ui: { standardVersion: 1, mode: "standard" },
+    ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
   });
   addWorkspaceVersion(folder, id, version);
   saveWorkspaceData(folder, id, tasks, 0);

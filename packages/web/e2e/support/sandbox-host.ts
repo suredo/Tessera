@@ -88,7 +88,11 @@ export type TestTool =
 const asTool = (tool: TestTool): Pick<Artifact, "code" | "ui" | "capabilities"> =>
   "code" in tool
     ? { capabilities: [], ...tool }
-    : { code: tool, ui: { standardVersion: 1, mode: "custom" }, capabilities: [] };
+    : {
+        code: tool,
+        ui: { standardVersion: 1, mode: "custom", width: "comfortable" },
+        capabilities: [],
+      };
 
 export async function startSandboxHost(
   tools: Record<string, TestTool>,

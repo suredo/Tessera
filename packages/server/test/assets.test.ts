@@ -251,13 +251,13 @@ describe("removing assets nothing refers to (DATA-09, DATA-11)", () => {
     const workspace = workspaceHolding(folder, [inData.id]);
     // A version whose reusable defaults name an asset keeps it, as Use again starts from them.
     const version: Artifact = {
-      contractVersion: 4,
+      contractVersion: 5,
       connections: {},
       code: { html: "", css: "", js: "" },
       data: { schemaVersion: 1, schema: {}, defaults: { cover: inVersion.id }, migrations: [] },
       capabilities: [],
       pins: [],
-      ui: { standardVersion: 1, mode: "standard" },
+      ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
     };
     saveVersion(folder.db, version);
     expect(referencedAssets(folder)).toEqual(new Set([inData.id, inVersion.id]));
@@ -296,13 +296,13 @@ describe("removing assets nothing refers to (DATA-09, DATA-11)", () => {
     const asset = await stored(folder, png);
     const { id } = createWorkspace(folder, "Photos");
     const hash = saveVersion(folder.db, {
-      contractVersion: 4,
+      contractVersion: 5,
       connections: {},
       code: { html: "", css: "", js: "" },
       data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
       capabilities: [],
       pins: [],
-      ui: { standardVersion: 1, mode: "standard" },
+      ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
     });
     expect(activateVersion(folder, id, hash, 0).ok).toBe(true);
     folder.db.run(

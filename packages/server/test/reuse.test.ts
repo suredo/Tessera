@@ -50,13 +50,13 @@ const schema = {
 } as Artifact["data"]["schema"];
 
 const version = (html: string, defaults: Artifact["data"]["defaults"]): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html, css: "", js: "" },
   data: { schemaVersion: 1, schema, defaults, migrations: [] },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 const defaults = { categories: ["Fruit", "Dairy"], items: [] };
 const first = version("<p>Shopping</p>", defaults);

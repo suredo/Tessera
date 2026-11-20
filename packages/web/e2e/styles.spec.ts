@@ -23,7 +23,8 @@ const hostileHtml = `<button id="plain">Plain</button>
 <button id="inline" style="outline: none !important">Inline</button>
 <button id="slow">Slow</button>`;
 
-const ui = (mode: "standard" | "custom") => ({ standardVersion: 1, mode }) as const;
+const ui = (mode: "standard" | "custom") =>
+  ({ standardVersion: 1, mode, width: "comfortable" }) as const;
 const tools: Record<string, Pick<Artifact, "code" | "ui">> = {
   "hostile-standard": {
     code: { html: hostileHtml, css: hostileCss + slowFocusCss, js: "" },

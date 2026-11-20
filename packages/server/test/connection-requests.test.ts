@@ -274,13 +274,13 @@ async function setup(
     key: ODD_KEY,
   });
   const tool: Artifact = {
-    contractVersion: 4,
+    contractVersion: 5,
     connections: Object.fromEntries(uses.map((name) => [name, { samples: {} }])),
     code: { html: "<p>Movies</p>", css: "", js: "" },
     data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
     capabilities,
     pins: [],
-    ui: { standardVersion: 1, mode: "standard" },
+    ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
   };
   const { id } = createWorkspace(folder, "Movie finder");
   addWorkspaceVersion(folder, id, saveVersion(folder.db, tool));

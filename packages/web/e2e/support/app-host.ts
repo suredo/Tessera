@@ -84,13 +84,13 @@ export const TOOL_START = { timeout: WATCHDOG_DEFAULTS.startupMs };
 
 /** A hand-written test tool, in standard mode, that shows `text` and saves nothing. */
 export const testTool = (text: string): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: `<p id="text">${text}</p>`, css: "", js: "" },
   data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 
 /** A workspace named `title` running `tool`; returns its ID. */

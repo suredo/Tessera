@@ -56,7 +56,7 @@ test.afterAll(async () => {
 
 /** A tool that, on a click, adds a movie to a list through the connection, and says what happened. */
 const listTool: Artifact = {
-  contractVersion: 4,
+  contractVersion: 5,
   connections: { lists: { samples: {} } },
   code: {
     html: '<p id="text">Ready</p><button id="add" type="button">Add Alien</button>',
@@ -77,7 +77,7 @@ const listTool: Artifact = {
   data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
   capabilities: ["connection"],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 };
 
 const tool = (page: Page) =>

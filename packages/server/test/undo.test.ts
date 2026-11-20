@@ -150,7 +150,7 @@ describe("data undo (DATA-04)", () => {
     const folder = await newFolder();
     const { id } = createWorkspace(folder, "Errands");
     const version = (required: string[]): Artifact => ({
-      contractVersion: 4,
+      contractVersion: 5,
       connections: {},
       code: { html: "", css: "", js: "" },
       data: {
@@ -169,7 +169,7 @@ describe("data undo (DATA-04)", () => {
       },
       capabilities: [],
       pins: [],
-      ui: { standardVersion: 1, mode: "standard" },
+      ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
     });
     expect(activateVersion(folder, id, saveVersion(folder.db, version([])), 0).ok).toBe(true);
     const { addedIds } = patch(folder, id, [

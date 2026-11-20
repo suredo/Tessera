@@ -17,7 +17,7 @@ test.afterAll(() => app.close());
 
 /** A tool that offers a list as CSV, under a name that says HTML, and a drawing as PNG. */
 const saver: Artifact = {
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: {
     html: `<p id="text">Ready</p>
@@ -43,7 +43,7 @@ document.getElementById("drawing").addEventListener("click", () => {
   data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
   capabilities: ["files"],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 };
 
 const tool = (page: Page) =>

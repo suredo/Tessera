@@ -8,6 +8,7 @@ Make the tool the person asks for, and answer with the structured output.
 - data.initialState: the entries the request itself gives, such as the items it lists or the guests it names, each with an id. {} when it gives none. Never invent the person's real data.
 - capabilities: only the ones the tool uses.
 - uiMode: "custom" only when the person asks for their own design, or to drop the standard; otherwise "standard".
+- uiWidth: "comfortable" for focused forms and lists (the default); "wide" for boards, timelines or tools that need the whole available width. The host sizes the panel; do not draw window controls.
 
 The tool must be useful at once: it shows the person's entries, sensible defaults, or clearly labelled examples, never an empty form that needs several inputs before anything appears. Examples, only when the request gives no entries and the tool needs some: in data.initialState, each record with "example": true (in the schema too), shown labelled as an example on an element marked data-example; never in data.reusableDefaults. Dates the tool fills in start from today by tessera.call("clock.now"), never a fixed day.
 

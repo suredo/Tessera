@@ -38,7 +38,7 @@ const PNG = Buffer.from(
   "base64",
 );
 const tool: Artifact = {
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: '<form data-hook="form">Party RSVP</form>', css: "", js: "// the form" },
   // A list of rules, as T10's planner keeps, for a data change to act on.
@@ -63,7 +63,7 @@ const tool: Artifact = {
   },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 };
 
 /** The ID the host gave the rule a run with `ruleRemoved` added and then removed. */

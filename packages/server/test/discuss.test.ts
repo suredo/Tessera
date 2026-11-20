@@ -86,7 +86,7 @@ const QUESTION =
   "Would a modal be better than the side panel for editing a card? I keep losing my place when the panel opens, and I'm not sure what would work best here.";
 
 const board: Artifact = {
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: "<p>Board</p>", css: "", js: "" },
   data: {
@@ -108,7 +108,7 @@ const board: Artifact = {
   },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 };
 
 describe("discussing without building (GEN-19)", () => {

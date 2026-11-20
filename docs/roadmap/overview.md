@@ -4,9 +4,11 @@ title: "Overview"
 description: "Build order, the milestone diagram, sizes and sign-off."
 tags: [roadmap, overview]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-10-11T20:21:39Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T20:54:02Z }
 ---
 # Roadmap
+
+The owner approved a separate [UI redesign](ui-redesign.md) milestone on 2026-11-20. Its six implementation slices and exit criteria live there; it leaves M0-M6's scope unchanged.
 
 Milestones and provisional call envelopes, derived per scenario run. Before each evaluation, derive calls per stage including intent, generation, data actions, repair reserves and review, then approve the actual hard cap ([ENG-07](../practices/live-evaluation.md)).
 

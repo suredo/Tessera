@@ -59,7 +59,7 @@ const toV2: Migration = {
   operations: [{ op: "renameField", collection: "tasks", from: "name", to: "title" }],
 };
 const version = (html: string, data: Partial<Artifact["data"]>): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html, css: "", js: "" },
   data: {
@@ -71,7 +71,7 @@ const version = (html: string, data: Partial<Artifact["data"]>): Artifact => ({
   },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 
 /** A workspace running version 1 with one task, version 2 saved, and the route served. */

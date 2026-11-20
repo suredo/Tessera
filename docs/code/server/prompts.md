@@ -7,10 +7,12 @@ implements: [GEN-03, ENG-16, GEN-02, CON-03, GEN-14, SEC-02, VER-03, VER-04]
 tests: [../../../packages/server/test/prompts.test.ts]
 tags: [code, server, prompts, generation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-18T01:49:11Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T20:54:02Z }
 ---
 
 # Purpose
+
+The creation part asks for `uiWidth`: comfortable for focused forms and lists, wide for boards and timelines (`APP-01`). The optional declaration is checked by the artifact's shared field schema and defaults to comfortable in the host. Existing recorded answers need no changes; deterministic replay checks compatibility, while live selection quality awaits an approved budget.
 
 Keeps prompts small and every change to them tracked (`GEN-03`, `ENG-16`). The POC's single prompt reached about 18,000 characters and carried every contract into every request, and nothing recorded which prompt produced which result. Here a stage's prompt is built from the parts it needs, each a file reviewed like code, and every call records the parts' versions.
 

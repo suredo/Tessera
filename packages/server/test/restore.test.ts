@@ -49,13 +49,13 @@ const version = (
   html: string,
   data: Partial<Artifact["data"]> & Pick<Artifact["data"], "schemaVersion" | "schema">,
 ): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html, css: "", js: "" },
   data: { defaults: { tasks: [] }, migrations: [], ...data },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 const toV2: Migration = {
   fromVersion: 1,
