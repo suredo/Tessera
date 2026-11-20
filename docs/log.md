@@ -2,6 +2,8 @@
 
 ## 2026-11-20
 
+* **Checked**: The [width prompt's live check](../evals/reports/2026-11-20-ui-width.md) produced a list defaulted to comfortable (the optional field was omitted) and a board explicitly declaring wide at `a9b7108`, two of four separately approved calls, no repair. Both passed server candidate checks; browser layout and usability were not evaluated. Input 19,226 tokens (8,922 cached), output 5,772, model time 32.484 s. Recorded answers replay offline. Recorded by `codex/gpt-6` at 2026-11-20T23:14:30Z.
+
 * **Added**: The [UI redesign milestone](roadmap/ui-redesign.md) now links its six implementation issues (411-416). Its [width check](code/evals/ui-width.md) has a separately approved hard cap of four calls, with no more than a creation and one repair per case; a free fake-CLI rehearsal passed both width cases. Recorded scenario replays also passed, 17 checks. Live results are still pending. Recorded by `codex/gpt-6` at 2026-11-20T22:57:18Z.
 
 * **Fixed**: The [redesign mockup renderer](roadmap/ui-redesign.md) reads the HTML element through Playwright's locator, so its browser callback passes the Node script lint rules. The width migration's archive regression checks that older contract 4 tools import at comfortable width and export with their original bytes. Recorded by `codex/gpt-6` at 2026-11-20T21:24:31Z.

@@ -41,6 +41,8 @@ A review of the current app (ten screenshots, three design rounds) found: the to
 
 ## Exit criteria
 
+Width evidence: the [2026-11-20 live check](../../evals/reports/2026-11-20-ui-width.md) passed both declarations and server candidate checks in two of the separately approved four calls, with no repair. This does not verify the pending host layout or close the milestone.
+
 - All seven mockup states work at the relevant desktop or phone width, with the host retaining its existing workspace, library, version, import, trash and setup actions (`APP-01` to `APP-10`).
 - Switching chat or drawer state preserves the running tool, its scroll position and in-progress input (`RUN-02`, `APP-01`).
 - The width declaration is validated from one contract definition, generated schemas agree, and earlier stored tools remain readable (`CON-01`, `CON-04`).

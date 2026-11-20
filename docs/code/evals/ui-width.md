@@ -7,10 +7,12 @@ implements: [APP-01, ENG-07, ENG-16, OBS-02]
 tests: [../../../evals/test/ui-width.test.ts]
 tags: [code, evals, app, generation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-20T22:30:00Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T23:14:30Z }
 ---
 
 # Purpose
+
+The [live check](../../../evals/reports/2026-11-20-ui-width.md) passed both cases in two calls, with no repairs. The recorded declarations replay through the host checks in the test. The remaining two reserves do not authorize a repeat.
 
 Checks the creation prompt's width declaration for the [UI redesign](../../roadmap/ui-redesign.md). The owner approved at most four live calls on 2026-11-20: a focused shopping list and a three-column board, one creation and one repair reserve each. No intent or reviewer calls are made. Expected usage is roughly 16,000 input and 8,000 output tokens without repairs, up to roughly 36,000 input and 16,000 output tokens with both reserves; the ledger records actual usage, including unknowns.
 
