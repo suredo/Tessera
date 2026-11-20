@@ -4,7 +4,7 @@ title: "UI redesign: the tool comes first"
 description: "The separate UI redesign milestone: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout."
 tags: [roadmap, ux, app, redesign]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-20T21:34:00Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T22:57:18Z }
 ---
 # UI redesign: the tool comes first
 
@@ -49,11 +49,11 @@ A review of the current app (ten screenshots, three design rounds) found: the to
 
 ## Suggested pull requests
 
-Progress: the first slice is implemented on `feat/ui-width`, with contract 4 compatibility and generated schemas. The host layout is still pending. The creation prompt's live check needs a separately approved budget (`ENG-07`, `ENG-16`).
+Tracked in the [UI redesign milestone](https://github.com/suredo/Tessera/milestone/8). The first slice is implemented in [PR 410](https://github.com/suredo/Tessera/pull/410), with contract 4 compatibility and generated schemas. Header work has started; the rest of the host layout is pending. The owner separately approved at most four live width-check calls on 2026-11-20: a focused list and a wide board, with one repair reserve each. The [stage check](../code/evals/ui-width.md) has a free fake-CLI rehearsal (`ENG-07`, `ENG-16`). This approval does not authorize other live runs.
 
-1. `APP-01` reworded and the width declaration in the contract, prompt and check, with tests.
-2. The header and the single More menu; Undo and History in it; history as a panel.
-3. The workspaces drawer replacing the left column.
-4. The ask bar and the conversation panel, floating and docked, with the position menu and its memory.
-5. The phone layout with the bottom sheet.
-6. Visual polish, and browser tests at 1280 and 320 px for each state, with an accessibility pass (`APP-11`).
+1. [Issue 411](https://github.com/suredo/Tessera/issues/411): `APP-01` reworded and the width declaration in the contract, prompt and check, with tests.
+2. [Issue 412](https://github.com/suredo/Tessera/issues/412): the header and the single More menu; Undo and History in it; history as a panel.
+3. [Issue 413](https://github.com/suredo/Tessera/issues/413): the workspaces drawer replacing the left column.
+4. [Issue 414](https://github.com/suredo/Tessera/issues/414): the ask bar and the conversation panel, floating and docked, with the position menu and its memory.
+5. [Issue 415](https://github.com/suredo/Tessera/issues/415): the phone layout with the bottom sheet.
+6. [Issue 416](https://github.com/suredo/Tessera/issues/416): visual polish, and browser tests at 1280 and 320 px for each state, with an accessibility pass (`APP-11`).

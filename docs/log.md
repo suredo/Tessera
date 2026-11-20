@@ -2,6 +2,8 @@
 
 ## 2026-11-20
 
+* **Added**: The [UI redesign milestone](roadmap/ui-redesign.md) now links its six implementation issues (411-416). Its [width check](code/evals/ui-width.md) has a separately approved hard cap of four calls, with no more than a creation and one repair per case; a free fake-CLI rehearsal passed both width cases. Recorded scenario replays also passed, 17 checks. Live results are still pending. Recorded by `codex/gpt-6` at 2026-11-20T22:57:18Z.
+
 * **Fixed**: The [redesign mockup renderer](roadmap/ui-redesign.md) reads the HTML element through Playwright's locator, so its browser callback passes the Node script lint rules. The width migration's archive regression checks that older contract 4 tools import at comfortable width and export with their original bytes. Recorded by `codex/gpt-6` at 2026-11-20T21:24:31Z.
 
 * **Changed**: The [width contract](code/contracts/package.md) is version 5: `ui.width` is comfortable or wide, with contract 4 tools upgraded in memory without rewriting stored hashes. [Creation](code/server/generation.md) defaults omitted `uiWidth` to comfortable; its [prompt](code/server/prompts.md) asks for the declaration. Current typed fixtures and development tools declare contract 5; recorded outputs are retained. The [host layout](code/web/package.md) remains pending. No live model was called. Recorded by `codex/gpt-6` at 2026-11-20T20:54:02Z.

@@ -1,6 +1,7 @@
 # Evals
 
 * [Evaluation harness](harness.md) - Wraps any provider for an evaluation run: a hard call cap, a ledger and request log for every call, the run's own data folder, and a dry run that can't reach a model.
+* [Tool width check](ui-width.md) - Two creation cases check comfortable and wide declarations, through a capped provider with a free fake-CLI rehearsal.
 * [Codex probe](codex-probe.md) - The M3 live probe of the Codex adapter against the real CLI: whether strict structured output takes the projected contract, whether the answer comes back intact, and whether a call is offered any tool; with the fake codex for its free dry run.
 * [CLI contract spike](cli-contract-spike.md) - The M0 live spike that checks Claude Code accepts a zod-generated schema, keeps working with the locked flags, and returns structured output intact; with a fake claude for its free dry run.
 * [Intent spike](intent-spike.md) - The M0 live spike that measures how often a draft intent stage misroutes the POC's failure cases, in several languages, with its request set, draft prompt and report.
