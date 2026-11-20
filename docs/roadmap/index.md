@@ -12,3 +12,4 @@
 * [M4: First release, v0.1](m4-first-release.md) - Useful-immediately generation, more profiles, files and data providers, and the v0.1 acceptance run.
 * [M5: Engines and simulation](m5-engines-and-simulation.md) - Engines, research and simulations after the first release.
 * [M6: Hardening and API connections](m6-hardening-and-api-connections.md) - Hardening, API-key connections, other platforms and outside trials.
+* [UI redesign: the tool comes first (proposal)](ui-redesign.md) - Proposed redesign of the host app, agreed with the owner over three Codex design rounds on 2026-11-20: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout; not yet scheduled.

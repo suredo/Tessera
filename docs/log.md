@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-20
+
+* **New**: A proposed redesign of the host app ([UI redesign](roadmap/ui-redesign.md)): the tool first at its declared width, chat and workspaces hidden by default, the chat floating or docked on the right, one ask bar, a 64 px header and a phone layout, with its mockups in design/ui-redesign/; four decisions await the owner. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-20T20:18:05Z.
+
 ## 2026-11-18
 
 * **Changed**: T12's request says the person wants to see one person's chores (A91; [app catalogue](testing/app-catalogue.md), [decision log](decisions/decision-log.md)); recorded again live, it passed every step in 6 calls and its review advises accept with notes ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)); its answers replace the rerun's replay ([web](code/web/package.md)). 135 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T20:53:08Z.
