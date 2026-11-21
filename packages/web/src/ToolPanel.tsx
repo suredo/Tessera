@@ -67,6 +67,7 @@ export function ToolPanel({
   const name = workspace.title;
   const id = workspace.id;
   const hasTool = workspace.currentVersion !== null;
+  const run = `${id}:${workspace.currentVersion}:${reload}`;
   // How the person left this tool, read once for this workspace.
   const [left] = useState(() => rememberedState(id));
   const [mode, setMode] = useState<Mode>(
@@ -74,7 +75,7 @@ export function ToolPanel({
   );
   const [fullScreen, setFullScreen] = useState(false);
   // The question before a tool's first change through a connection, while it waits (A70).
-  const [question, setQuestion] = useState<Question | null>(null);
+  const [question, setQuestion] = useState<{ run: string; value: Question } | null>(null);
   const answering = useRef<((allowed: boolean) => void) | null>(null);
   const answer = (allowed: boolean) => {
     const resolve = answering.current;
@@ -87,10 +88,10 @@ export function ToolPanel({
       // A question still open is answered no: only the latest one is shown.
       answering.current?.(false);
       answering.current = resolve;
-      setQuestion(asked);
+      setQuestion({ run, value: asked });
     });
   // The question before a file the tool offers is saved, while it waits (A81).
-  const [offer, setOffer] = useState<Offer | null>(null);
+  const [offer, setOffer] = useState<{ run: string; value: Offer } | null>(null);
   const deciding = useRef<((save: boolean) => void) | null>(null);
   const decide = (save: boolean) => {
     const resolve = deciding.current;
@@ -102,15 +103,17 @@ export function ToolPanel({
     new Promise<boolean>((resolve) => {
       deciding.current?.(false);
       deciding.current = resolve;
-      setOffer(asked);
+      setOffer({ run, value: asked });
     });
   // A panel that goes, or a new tool, leaves no question open: it is answered no.
   useEffect(
     () => () => {
       answering.current?.(false);
       deciding.current?.(false);
+      answering.current = null;
+      deciding.current = null;
     },
-    [id],
+    [run],
   );
 
   // Starts the tool through `open`, until the panel goes or another start replaces this one.
@@ -118,6 +121,14 @@ export function ToolPanel({
     starting.current?.abort();
     const controller = new AbortController();
     starting.current = controller;
+    controller.signal.addEventListener(
+      "abort",
+      () => {
+        answer(false);
+        decide(false);
+      },
+      { once: true },
+    );
     startTool(current, id, open, controller.signal, {
       onWrite: () => dataChanged.current?.(),
       askToWrite,
@@ -173,8 +184,8 @@ export function ToolPanel({
       data-workspace-id={id}
       data-mode={mode}
     >
-      {question && <WriteQuestion question={question} onAnswer={answer} />}
-      {offer && <SaveQuestion question={offer} onAnswer={decide} />}
+      {question?.run === run && <WriteQuestion question={question.value} onAnswer={answer} />}
+      {offer?.run === run && <SaveQuestion question={offer.value} onAnswer={decide} />}
       <header className="tool-header">
         <div className="tool-heading">
           <h2 title={name}>{name}</h2>
