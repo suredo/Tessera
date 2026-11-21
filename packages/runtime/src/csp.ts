@@ -27,6 +27,8 @@ export const TOOL_CSP = [
 /**
  * Sent with the tool's document as well: the browser sandboxes it even if something framed it
  * without the sandbox attribute. Only scripts are allowed: no same origin, so its origin is null.
+ * The browser's own dialogs stay off: they show over the whole host page, before any click, and a
+ * tool could pass one off as Tessera's (A92).
  */
 export const TOOL_SANDBOX = "sandbox allow-scripts";
 

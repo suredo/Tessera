@@ -211,7 +211,8 @@ test("SBX-10: no window opens, no dialog shows and no file downloads", async ({ 
   page.context().on("page", () => seen.push("page"));
   const found = await probe(page, host, "popups");
   expect(found["window.open"]).toBe("refused");
-  // Without permission for modals, the browser skips each dialog and returns at once.
+  // Without permission for modals, the browser skips each dialog and returns at once: they would
+  // show over the whole host page, so a tool could pass one off as Tessera's (A92).
   expect(found["confirm"]).toBe("returned");
   expect(found["prompt"]).toBe("returned");
   expect(seen).toEqual([]);

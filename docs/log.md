@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-19
+
+* **Changed**: The sandbox limits what a tool reaches, not what it does in its own window when the person acts (A92; [decision log](decisions/decision-log.md), [runtime](spec/runtime.md), [threat model](spec/threat-model.md), [ADR 0014](decisions/adr/0014-chart-library.md), [runtime code](code/runtime/package.md)): a tool may copy to the clipboard after the person's click, and its charts show values on hover. Reading the clipboard stays refused (SBX-13), and so do the browser's own dialogs, which show over the whole host page and could pass for Tessera's; dialogs Tessera draws in the tool's panel are to come. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-19T13:59:52Z.
+
 ## 2026-11-18
 
 * **Changed**: T12's request says the person wants to see one person's chores (A91; [app catalogue](testing/app-catalogue.md), [decision log](decisions/decision-log.md)); recorded again live, it passed every step in 6 calls and its review advises accept with notes ([report](../evals/reports/2026-11-17-m4-live-run.md), [budgets](roadmap/budgets.md)); its answers replace the rerun's replay ([web](code/web/package.md)). 135 calls used. Recorded by `claude-code/claude-opus-5-5` at 2026-11-18T20:53:08Z.
