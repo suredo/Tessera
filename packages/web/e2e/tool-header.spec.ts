@@ -63,6 +63,18 @@ test("APP-01, APP-05, RUN-02: header panels keep the running tool, unfinished in
   ).toBe(150);
 });
 
+test("APP-01, APP-11: entering full screen dismisses More and leaves its controls unobstructed", async ({
+  page,
+}) => {
+  await open(page);
+  await clickToolAction(page, en["tool.fullScreen"]);
+  await expect(page.locator(".tool-menu")).toBeHidden();
+  await expect(page.locator(".tool-panel.full-screen")).toBeVisible();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+  await clickToolAction(page, en["tool.leaveFullScreen"]);
+  await expect(page.locator(".tool-panel.full-screen")).toHaveCount(0);
+});
+
 test("APP-03, APP-04: the header renames the workspace and saves a separate variant", async ({
   page,
 }) => {

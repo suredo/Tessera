@@ -254,7 +254,10 @@ export function ToolPanel({
           <button
             type="button"
             className="menu-full-screen"
-            onClick={() => setFullScreen(!fullScreen)}
+            onClick={(event) => {
+              event.currentTarget.closest<HTMLElement>("[popover]")?.hidePopover();
+              setFullScreen(!fullScreen);
+            }}
           >
             {fullScreen ? t("tool.leaveFullScreen") : t("tool.fullScreen")}
           </button>
