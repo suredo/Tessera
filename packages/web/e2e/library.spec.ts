@@ -1,3 +1,9 @@
+import {
+  openAppSection,
+  clickWorkspaceAction,
+  openWorkspaces,
+  closeWorkspaces,
+} from "./support/workspace-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { saveVersion } from "../../server/src/versions/index.ts";
 import {
@@ -43,8 +49,7 @@ const entry = (page: Page, name: string) =>
     .filter({ has: page.getByRole("heading", { name, exact: true }) });
 const openWorkspace = (page: Page, name: string) =>
   page.getByRole("button", { name: `${name}, open`, exact: true });
-const toLibrary = (page: Page) =>
-  page.getByRole("button", { name: en["nav.library"], exact: true }).click();
+const toLibrary = (page: Page) => openAppSection(page, en["nav.library"]);
 
 /** A saved tool whose workspace holds the person's own entry, beyond the tool's defaults. */
 function savedTool() {
@@ -58,7 +63,6 @@ function savedTool() {
   const { id: savedToolId } = saveTool(app.folder, workspaceId, name);
   return { id, workspace, name, workspaceId, savedToolId };
 }
-
 test("DATA-08: a workspace is saved to my tools by name, and found there by searching", async ({
   page,
 }) => {
@@ -66,11 +70,10 @@ test("DATA-08: a workspace is saved to my tools by name, and found there by sear
   const workspace = `Garden ${id}`;
   workspaceWith(app.folder, workspace, testTool(`Garden tool ${id}`));
   await page.goto(app.url);
-  await page.getByRole("button", { name: `Save ${workspace} to my tools` }).click();
+  await clickWorkspaceAction(page, `Save ${workspace} to my tools`);
   await page.getByLabel(en["workspaces.saveLabel"]).fill(`Garden plan ${id}`);
   await page.getByRole("button", { name: en["workspaces.saveConfirm"], exact: true }).click();
   await expect(page.getByText(`Garden plan ${id} is in my tools.`)).toBeVisible();
-
   await toLibrary(page);
   await expect(entry(page, `Garden plan ${id}`)).toContainText(`Continue opens ${workspace}`);
   await library(page).getByLabel(en["library.search"]).fill(`garden plan ${id}`);
@@ -105,7 +108,6 @@ test("APP-04: a saved tool shows when its tool was last updated, after it was sa
   await expect(entry(page, name)).toContainText(String(new Date().getFullYear()));
   await expect(entry(page, name)).not.toContainText("2020");
 });
-
 test("APP-04, DATA-07: Continue opens the linked workspace, and says which before", async ({
   page,
 }) => {
@@ -116,10 +118,11 @@ test("APP-04, DATA-07: Continue opens the linked workspace, and says which befor
   await entry(page, name)
     .getByRole("button", { name: `Continue ${name}, in ${workspace}` })
     .click();
+  await openWorkspaces(page);
   await expect(openWorkspace(page, workspace)).toBeVisible();
+  await closeWorkspaces(page);
   await expectToolText(page, workspace, `Errands tool ${id}`);
 });
-
 test("DATA-07: Use again opens a new workspace with fresh data, and Continue still opens the first", async ({
   page,
 }) => {
@@ -133,7 +136,9 @@ test("DATA-07: Use again opens a new workspace with fresh data, and Continue sti
     page.getByText(`${name} opened in a new workspace, with its starting data.`),
   ).toBeVisible();
   // The new workspace is named after the entry, runs the same tool, and is open.
+  await openWorkspaces(page);
   await expect(openWorkspace(page, name)).toBeVisible();
+  await closeWorkspaces(page);
   await expectToolText(page, name, `Errands tool ${id}`);
   // The library entry still continues its own workspace.
   await toLibrary(page);
@@ -143,7 +148,9 @@ test("DATA-07: Use again opens a new workspace with fresh data, and Continue sti
   await entry(page, name)
     .getByRole("button", { name: `Continue ${name}, in ${workspace}` })
     .click();
+  await openWorkspaces(page);
   await expect(openWorkspace(page, workspace)).toBeVisible();
+  await closeWorkspaces(page);
   await expect(page.getByText(`${name} is open again.`)).toBeVisible();
   await expect(page.getByText(`${name} opened in a new workspace`)).toHaveCount(0);
 });
@@ -188,19 +195,18 @@ test("APP-04: a saved tool shows its description, search finds it, and the perso
   await expect(entry(page, name)).toContainText(`Weekend chores ${id}.`);
   await expect(entry(page, name)).not.toContainText("Jobs around the house");
 });
-
 test("APP-04: a saved tool can be renamed and moved to the trash", async ({ page }) => {
   const { id, name } = savedTool();
   await page.goto(app.url);
   await toLibrary(page);
-  await entry(page, name)
-    .getByRole("button", { name: `Rename ${name}` })
+  await library(page)
+    .getByRole("button", { name: `Rename ${name}`, exact: true })
     .click();
   await library(page).getByLabel(`New name for ${name}`).fill(`Chores ${id}`);
   await library(page).getByRole("button", { name: en["library.confirm"], exact: true }).click();
   await expect(entry(page, `Chores ${id}`)).toBeVisible();
-  await entry(page, `Chores ${id}`)
-    .getByRole("button", { name: `Move Chores ${id} to the trash` })
+  await library(page)
+    .getByRole("button", { name: `Move Chores ${id} to the trash`, exact: true })
     .click();
   await expect(
     page.getByText(`Chores ${id} is in the trash. You can restore it for 30 days.`),

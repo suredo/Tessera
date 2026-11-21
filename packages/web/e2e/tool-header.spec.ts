@@ -1,3 +1,8 @@
+import {
+  clickWorkspaceAction,
+  openWorkspaces,
+  closeWorkspaces,
+} from "./support/workspace-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { AxeBuilder } from "@axe-core/playwright";
 import { saveTool } from "../../server/src/workspaces/index.ts";
@@ -20,7 +25,7 @@ async function open(page: Page) {
   const id = workspaceWith(app.folder, name, artifact);
   saveTool(app.folder, id, name);
   await page.goto(app.url);
-  await page.getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) }).click();
+  await clickWorkspaceAction(page, new RegExp(`^(Open ${name}|${name}, open)$`));
   await expect(tool(page).getByLabel("Note")).toBeVisible(TOOL_START);
   return name;
 }
@@ -74,7 +79,6 @@ test("APP-01, APP-11: entering full screen dismisses More and leaves its control
   await clickToolAction(page, en["tool.leaveFullScreen"]);
   await expect(page.locator(".tool-panel.full-screen")).toHaveCount(0);
 });
-
 test("APP-03, APP-04: the header renames the workspace and saves a separate variant", async ({
   page,
 }) => {
@@ -83,14 +87,16 @@ test("APP-03, APP-04: the header renames the workspace and saves a separate vari
   const rename = page.getByRole("dialog", { name: en["workspaces.renameShort"] });
   await rename.getByRole("textbox").fill(`${name} renamed`);
   await rename.getByRole("button", { name: en["library.confirm"], exact: true }).click();
-  await expect(page.locator(".tool-heading > h2")).toHaveText(`${name} renamed`);
+  await expect(page.locator(".tool-heading > h1")).toHaveText(`${name} renamed`);
   await page.keyboard.press("Escape");
   await clickToolAction(page, en["library.saveAsNew"]);
   const variant = page.getByRole("dialog", { name: en["library.saveAsNew"] });
   await variant.getByRole("textbox").fill(`${name} variant`);
   await variant.getByRole("button", { name: en["library.confirm"], exact: true }).click();
+  await openWorkspaces(page);
   await expect(page.getByRole("button", { name: `Open ${name} variant` })).toBeVisible();
-  await expect(page.locator(".tool-heading > h2")).toHaveText(`${name} renamed`);
+  await closeWorkspaces(page);
+  await expect(page.locator(".tool-heading > h1")).toHaveText(`${name} renamed`);
 });
 
 test("APP-01, APP-09, APP-11: More opens Details and the header fits with accessible controls", async ({

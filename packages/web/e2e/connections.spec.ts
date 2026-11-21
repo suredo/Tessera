@@ -1,3 +1,4 @@
+import { openAppSection, openWorkspaces, closeWorkspaces } from "./support/workspace-actions.ts";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
@@ -110,23 +111,22 @@ test("CAP-02 A71: the person adds a connection with a key, which reaches the ser
   await expect(page.getByText("There is already a connection called movies.")).toBeVisible();
   await expect(form(page)).toBeVisible();
 });
-
 test("CAP-02: removing a connection is confirmed first, and its key goes with it", async ({
   page,
 }) => {
   await page.goto(app.url);
-  await page.getByRole("button", { name: en["nav.connections"], exact: true }).click();
+  await openAppSection(page, en["nav.connections"]);
+  await openWorkspaces(page);
   await expect(
     page.getByRole("button", { name: en["nav.connections"], exact: true }),
   ).toHaveAttribute("aria-current", "page");
+  await closeWorkspaces(page);
   await entry(page, "movies").getByRole("button", { name: "Remove movies" }).click();
   const confirm = entry(page, "movies").getByRole("group");
   await expect(confirm).toContainText("Its key goes with it");
-
   // Cancel keeps it.
   await confirm.getByRole("button", { name: en["connections.cancel"] }).click();
   expect(listConnections(app.folder)).toHaveLength(1);
-
   await entry(page, "movies").getByRole("button", { name: "Remove movies" }).click();
   await entry(page, "movies")
     .getByRole("group")

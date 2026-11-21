@@ -1,3 +1,8 @@
+import {
+  selectWorkspace,
+  openAppSection,
+  clickWorkspaceAction,
+} from "./support/workspace-actions.ts";
 import { clickToolAction, openToolHistory } from "./support/tool-actions.ts";
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
@@ -72,8 +77,7 @@ const toolHeading = (page: Page) =>
     .frameLocator("iframe")
     .frameLocator("iframe")
     .getByRole("heading", { level: 1 });
-const section = (page: Page, name: string) =>
-  page.getByRole("button", { name, exact: true }).click();
+const section = (page: Page, name: string) => openAppSection(page, name);
 const workspaceButton = (page: Page, name: string) =>
   page.getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) });
 const cancel = (page: Page) =>
@@ -110,13 +114,12 @@ test("APP-11, APP-02: the first-run screen has no accessibility violations, and 
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
   await check(page);
 });
-
 /** The app with the samples in it, asking for reduced motion, on `name`'s workspace. */
 async function opened(page: Page, name: string) {
   seeded();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(app.url);
-  await workspaceButton(page, name).click();
+  await selectWorkspace(page, name);
   await expect(toolHeading(page)).toHaveText(name, TOOL_START);
 }
 
@@ -136,7 +139,6 @@ test("APP-11: the main screen, full screen and a restore that loses data have no
   );
   await check(page);
 });
-
 test("APP-11: a restore that keeps the data has no violations, and nothing moves", async ({
   page,
 }) => {
@@ -151,7 +153,7 @@ test("APP-11: a restore that keeps the data has no violations, and nothing moves
   }
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(app.url);
-  await workspaceButton(page, "Two versions").click();
+  await selectWorkspace(page, "Two versions");
   await openToolHistory(page);
   await page.getByRole("button", { name: "Restore version 1" }).click();
   await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
@@ -159,15 +161,14 @@ test("APP-11: a restore that keeps the data has no violations, and nothing moves
   );
   await check(page);
 });
-
 test("APP-11: a workspace's rename and save forms have no violations, and nothing moves", async ({
   page,
 }) => {
   await opened(page, "Shopping list");
-  await page.getByRole("button", { name: "Rename Shopping list" }).click();
+  await clickWorkspaceAction(page, "Rename Shopping list");
   await check(page);
   await cancel(page);
-  await page.getByRole("button", { name: "Save Shopping list to my tools" }).click();
+  await clickWorkspaceAction(page, "Save Shopping list to my tools");
   await expect(page.getByLabel(en["workspaces.saveLabel"])).toBeVisible();
   await check(page);
 });
@@ -226,17 +227,16 @@ test("APP-11 CAP-02: the connections, adding one and removing one have no violat
   await expect(page.getByText("Its key goes with it")).toBeVisible();
   await check(page);
 });
-
 test("APP-11: the app works by keyboard alone, with the focus always visible", async ({ page }) => {
   seeded();
   await page.goto(app.url);
+  await tabTo(page, page.getByRole("button", { name: en["workspaces.heading"], exact: true }));
+  await page.keyboard.press("Enter");
   await expect(workspaceButton(page, "Garden notes")).toBeVisible();
-
   // Open a workspace: Tab to it, Enter.
   await tabTo(page, workspaceButton(page, "Garden notes"));
   await page.keyboard.press("Enter");
   await expect(toolHeading(page)).toHaveText("Garden notes", TOOL_START);
-
   // Reach the tool menu and minimize by keyboard, then show the tool again.
   await tabTo(page, page.getByRole("button", { name: en["tool.more"] }));
   await page.keyboard.press("Enter");
@@ -246,8 +246,11 @@ test("APP-11: the app works by keyboard alone, with the focus always visible", a
   await tabTo(page, page.getByRole("button", { name: en["tool.restore"] }), "Shift+Tab");
   await page.keyboard.press("Space");
   await expect(toolHeading(page)).toHaveText("Garden notes", TOOL_START);
-
   // A form: Tab to Rename, Enter; its field has the focus; type and Enter saves.
+  await tabTo(page, page.getByRole("button", { name: en["workspaces.heading"], exact: true }));
+  await page.keyboard.press("Enter");
+  await tabTo(page, page.getByRole("button", { name: "Actions for Garden notes" }));
+  await page.keyboard.press("Enter");
   await tabTo(page, page.getByRole("button", { name: "Rename Garden notes" }), "Shift+Tab");
   await page.keyboard.press("Enter");
   await expect(page.getByLabel("New name for Garden notes")).toBeFocused();
@@ -255,9 +258,8 @@ test("APP-11: the app works by keyboard alone, with the focus always visible", a
   await page.keyboard.type("Garden plans");
   await page.keyboard.press("Enter");
   await expect(workspaceButton(page, "Garden plans")).toBeVisible();
-
   // A confirmation: Tab to Restore, Enter; Tab on to its Cancel, Enter closes it.
-  await workspaceButton(page, "Shopping list").click();
+  await selectWorkspace(page, "Shopping list");
   await expect(toolHeading(page)).toHaveText("Shopping list", TOOL_START);
   await tabTo(page, page.getByRole("button", { name: en["history.heading"], exact: true }));
   await page.keyboard.press("Enter");

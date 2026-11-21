@@ -1,5 +1,6 @@
 import type { SavedTool, Workspace } from "@tessera/contracts";
-import { useState } from "react";
+import { useId, useState } from "react";
+import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 import { NameForm } from "./NameForm.tsx";
 
@@ -28,13 +29,30 @@ type Props = {
 export function Workspaces(props: Props) {
   const { workspaces, savedTools, lastUsed, openId } = props;
   const [editing, setEditing] = useState<Editing>(null);
+  const searchId = useId();
+  const [query, setQuery] = useState("");
+  const wanted = query.trim().toLocaleLowerCase();
+  const shown = workspaces.filter((workspace) =>
+    workspace.title.toLocaleLowerCase().includes(wanted),
+  );
   const saved = new Set(savedTools.map((tool) => tool.workspaceId));
 
   return (
-    <section aria-labelledby="workspaces-heading" className="workspaces">
-      <h2 id="workspaces-heading">{t("workspaces.heading")}</h2>
+    <section aria-label={t("workspaces.heading")} className="workspaces">
+      <h2>{t("workspaces.recent")}</h2>
+      <label className="visually-hidden" htmlFor={searchId}>
+        {t("workspaces.find")}
+      </label>
+      <input
+        id={searchId}
+        type="search"
+        placeholder={t("workspaces.find")}
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+      />
+      {shown.length === 0 && wanted && <p>{t("workspaces.noMatch", { query: query.trim() })}</p>}
       <ul>
-        {workspaces.map((workspace) => {
+        {shown.map((workspace) => {
           const name = workspace.title;
           const isOpen = workspace.id === openId;
           const done = () => setEditing(null);
@@ -80,7 +98,19 @@ export function Workspaces(props: Props) {
                       <span className="badge">{t("workspaces.saved")}</span>
                     )}
                   </button>
-                  <div className="actions">
+                  <button
+                    type="button"
+                    className="icon-button workspace-more"
+                    aria-label={t("workspaces.actions", { name })}
+                    popoverTarget={`workspace-actions-${workspace.id}`}
+                  >
+                    <HostIcon name="more" />
+                  </button>
+                  <div
+                    id={`workspace-actions-${workspace.id}`}
+                    popover="auto"
+                    className="workspace-menu"
+                  >
                     {workspace.currentVersion !== null && (
                       <button
                         type="button"

@@ -1,3 +1,8 @@
+import {
+  clickWorkspaceAction,
+  openAppSection,
+  openWorkspaces,
+} from "./support/workspace-actions.ts";
 import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import { listWorkspaces, readWorkspaceData, saveTool } from "../../server/src/workspaces/index.ts";
@@ -30,11 +35,13 @@ async function downloaded(page: Page, click: () => Promise<void>) {
   const file = await download.path();
   return { name: download.suggestedFilename(), bytes: fs.readFileSync(file) };
 }
-const importFrom = (page: Page, name: string, bytes: Buffer) =>
-  page
+const importFrom = async (page: Page, name: string, bytes: Buffer) => {
+  if (await page.getByRole("button", { name: en["workspaces.heading"], exact: true }).count())
+    await openWorkspaces(page);
+  await page
     .getByLabel(en["archive.importLabel"])
     .setInputFiles({ name, mimeType: "application/octet-stream", buffer: bytes });
-
+};
 test("APP-06, DATA-05: a workspace exports to a file, and that file moves it to another Tessera", async ({
   page,
 }) => {
@@ -43,12 +50,9 @@ test("APP-06, DATA-05: a workspace exports to a file, and that file moves it to 
   const workspaceId = workspaceWith(app.folder, name, testTool(`Garden tool ${id}`));
   saveTool(app.folder, workspaceId, `Weekly ${id}`);
   await page.goto(app.url);
-  const file = await downloaded(page, () =>
-    page.getByRole("button", { name: `Export ${name} to a file` }).click(),
-  );
+  const file = await downloaded(page, () => clickWorkspaceAction(page, `Export ${name} to a file`));
   expect(file.name).toBe(`${name} ${day}.tessera`);
   await expect(page.getByText(`${name} is exported as ${file.name}.`)).toBeVisible();
-
   // Another Tessera, with nothing in it yet: its first screen imports the file.
   const other = await startApp();
   try {
@@ -67,7 +71,6 @@ test("APP-06, DATA-05: a workspace exports to a file, and that file moves it to 
     await other.close();
   }
 });
-
 test("APP-06: importing a file that is already here brings it in as a copy, and changes nothing", async ({
   page,
 }) => {
@@ -75,9 +78,7 @@ test("APP-06: importing a file that is already here brings it in as a copy, and 
   const name = `Errands ${id}`;
   workspaceWith(app.folder, name, testTool(`Errands tool ${id}`));
   await page.goto(app.url);
-  const file = await downloaded(page, () =>
-    page.getByRole("button", { name: `Export ${name} to a file` }).click(),
-  );
+  const file = await downloaded(page, () => clickWorkspaceAction(page, `Export ${name} to a file`));
   await importFrom(page, file.name, file.bytes);
   await expect(
     page.getByText(
@@ -86,15 +87,14 @@ test("APP-06: importing a file that is already here brings it in as a copy, and 
   ).toBeVisible();
   expect(listWorkspaces(app.folder).filter((w) => w.title === name)).toHaveLength(2);
 });
-
 test("APP-06: a saved tool exports to a file named after it", async ({ page }) => {
   const id = unique();
   const tool = `Weekly plan ${id}`;
   saveTool(app.folder, workspaceWith(app.folder, `Plan ${id}`, testTool(`Plan ${id}`)), tool);
   await page.goto(app.url);
-  await page.getByRole("button", { name: en["nav.library"], exact: true }).click();
+  await openAppSection(page, en["nav.library"]);
   const file = await downloaded(page, () =>
-    page.getByRole("button", { name: `Export ${tool} to a file` }).click(),
+    page.getByRole("button", { name: `Export ${tool} to a file`, exact: true }).click(),
   );
   expect(file.name).toBe(`${tool} ${day}.tessera`);
 });

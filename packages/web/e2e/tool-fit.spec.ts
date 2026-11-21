@@ -1,4 +1,5 @@
 import { clickToolAction } from "./support/tool-actions.ts";
+import { selectWorkspace } from "./support/workspace-actions.ts";
 import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "@tessera/contracts";
@@ -34,10 +35,7 @@ async function open(page: Page, title: string, tool: Artifact) {
   workspaceWith(app.folder, name, tool);
   await page.goto(app.url);
   // The newest workspace may open on its own; its button then says it is open.
-  const button = page
-    .getByRole("region", { name: en["workspaces.heading"] })
-    .getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) });
-  await button.click();
+  await selectWorkspace(page, name);
   await expect(inTool(page).locator("#text")).toBeVisible(TOOL_START);
 }
 

@@ -32,6 +32,7 @@ type Props = {
   /** Expands the tool, or puts it back beside the chat; none where there is no chat beside it. */
   onExpand?: (expanded: boolean) => void;
   headerActions?: ReactNode;
+  navigation?: ReactNode;
   menuActions?: ReactNode;
   details?: ReactNode;
   saved?: boolean;
@@ -46,6 +47,7 @@ export function ToolPanel({
   expanded = false,
   onExpand,
   headerActions,
+  navigation,
   menuActions,
   details,
   saved = false,
@@ -187,8 +189,9 @@ export function ToolPanel({
       {question?.run === run && <WriteQuestion question={question.value} onAnswer={answer} />}
       {offer?.run === run && <SaveQuestion question={offer.value} onAnswer={decide} />}
       <header className="tool-header">
+        {navigation}
         <div className="tool-heading">
-          <h2 title={name}>{name}</h2>
+          <h1 title={name}>{name}</h1>
           <p>
             {t("tool.kept")}
             {saved && <span className="saved-label">{t("tool.inLibrary")}</span>}

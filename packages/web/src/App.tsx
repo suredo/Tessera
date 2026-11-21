@@ -33,9 +33,11 @@ import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
 import { Workspaces } from "./Workspaces.tsx";
 import { WorkspaceActions } from "./WorkspaceActions.tsx";
+import { WorkspaceDrawer } from "./WorkspaceDrawer.tsx";
+import { HostIcon } from "./HostIcon.tsx";
 
-// The host's main screen (APP-01, APP-02, APP-03): the workspaces beside the open workspace's
-// chat and tool. With no workspaces it invites the person to describe what they need, with no
+// The host's main screen (APP-01, APP-02, APP-03): workspaces in a modal drawer over the open
+// workspace's chat and tool. With no workspaces it invites the person to describe what they need, with no
 // example tools (A12). A request's reply is said in the chat, kept with its workspace (ADR 0011);
 // the notice says what the person's other actions did.
 
@@ -159,6 +161,16 @@ const inPlace = (shown: readonly Workspace[] | null, list: readonly Workspace[])
 };
 
 export function App() {
+  const drawer = useRef<HTMLDialogElement>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const closeDrawer = () => {
+    drawer.current?.close();
+    setDrawerOpen(false);
+  };
+  const openDrawer = () => {
+    if (!drawer.current?.open) drawer.current?.showModal();
+    setDrawerOpen(true);
+  };
   const [workspaces, setWorkspaces] = useState<Workspace[] | null>(null);
   const [savedTools, setSavedTools] = useState<SavedTool[]>([]);
   const [lastUsed, setLastUsed] = useState<Record<string, string>>({});
@@ -651,79 +663,93 @@ export function App() {
       onTrash={() => deleteWorkspace(workspace.id)}
     />
   );
+  const drawerOpener = (
+    <button
+      type="button"
+      className="drawer-opener"
+      onClick={openDrawer}
+      aria-label={t("workspaces.heading")}
+      aria-haspopup="dialog"
+      aria-expanded={drawerOpen}
+    >
+      <HostIcon name="workspaces" />
+      <span>{t("workspaces.heading")}</span>
+    </button>
+  );
 
   return (
     <div className={view === "workspaces" ? "app" : "app one-section"}>
-      <header>
-        <h1>{t("app.title")}</h1>
-        <nav aria-label={t("nav.label")} className="sections">
-          <button
-            type="button"
-            aria-current={view === "workspaces" ? "page" : undefined}
-            onClick={() => setView("workspaces")}
-          >
-            {t("nav.workspaces")}
-          </button>
-          <button
-            type="button"
-            aria-current={view === "library" ? "page" : undefined}
-            onClick={() => setView("library")}
-          >
-            {t("nav.library")}
-          </button>
-          <button
-            type="button"
-            aria-current={view === "trash" ? "page" : undefined}
-            onClick={() => setView("trash")}
-          >
-            {t("nav.trash")}
-          </button>
-          <button
-            type="button"
-            aria-current={view === "status" ? "page" : undefined}
-            onClick={() => setView("status")}
-          >
-            {t("nav.status")}
-          </button>
-          <button
-            type="button"
-            aria-current={view === "connections" ? "page" : undefined}
-            onClick={() => setView("connections")}
-          >
-            {t("nav.connections")}
-          </button>
-        </nav>
-        {view !== "status" && (
+      {!(view === "workspaces" && current) && (
+        <header>
+          <h1>{t("app.title")}</h1>
+          {drawerOpener}
+        </header>
+      )}
+      {view !== "status" && (
+        <div className="setup-banner">
           <SetupNotice report={setup} problem={setupProblem} onOpen={() => setView("status")} />
-        )}
-      </header>
+        </div>
+      )}
+      <WorkspaceDrawer
+        dialog={drawer}
+        view={view}
+        onClose={closeDrawer}
+        onNew={() => {
+          closeDrawer();
+          open(null);
+          setView("workspaces");
+        }}
+        onNavigate={(next) => {
+          closeDrawer();
+          setView(next);
+        }}
+        notice={drawerOpen ? shownNotice : ""}
+        footer={
+          <ImportFile
+            onImport={async (file) => {
+              closeDrawer();
+              await importFile(file);
+            }}
+          />
+        }
+      >
+        <Workspaces
+          workspaces={workspaces}
+          savedTools={savedTools}
+          lastUsed={lastUsed}
+          openId={openId}
+          onOpen={(id) => {
+            closeDrawer();
+            showWorkspace(id);
+          }}
+          onRename={(id, title) => act(() => ask("workspaces.rename", { id, title }))}
+          onSave={(id, name) =>
+            act(
+              () => ask("library.save", { workspaceId: id, name }),
+              t("workspaces.savedAs", { name }),
+            )
+          }
+          onDelete={async (id) => {
+            closeDrawer();
+            await deleteWorkspace(id);
+          }}
+          onExport={(id) =>
+            exportFile(
+              { exported: "workspace", id },
+              workspaces.find((w) => w.id === id)?.title ?? "",
+            )
+          }
+        />
+      </WorkspaceDrawer>
       {view === "workspaces" ? (
         <>
-          <aside>
-            <Workspaces
-              workspaces={workspaces}
-              savedTools={savedTools}
-              lastUsed={lastUsed}
-              openId={openId}
-              onOpen={open}
-              onRename={(id, title) => act(() => ask("workspaces.rename", { id, title }))}
-              onSave={(id, name) =>
-                act(
-                  () => ask("library.save", { workspaceId: id, name }),
-                  t("workspaces.savedAs", { name }),
-                )
-              }
-              onDelete={deleteWorkspace}
-              onExport={(id) =>
-                exportFile(
-                  { exported: "workspace", id },
-                  workspaces.find((w) => w.id === id)?.title ?? "",
-                )
-              }
-            />
-            <ImportFile onImport={importFile} />
-          </aside>
           <main>
+            {!current && (
+              <>
+                <h2>{t("home.heading")}</h2>
+                <p>{t("home.intro")}</p>
+              </>
+            )}
             {(() => {
               // The chat beside the tool, with the divider between them, where both are shown. The
               // kept conversation shows whatever the setup; asking needs it (PLAT-03).
@@ -739,6 +765,7 @@ export function App() {
                   key={current.id}
                   reload={reloads}
                   workspace={current}
+                  navigation={drawerOpener}
                   onDataChanged={() => setToolChanges((n) => n + 1)}
                   onConnectionUsed={() => setConnectionUses((n) => n + 1)}
                   expanded={toolExpanded}
@@ -909,7 +936,7 @@ export function App() {
       )}
       <div className="notice">
         {/* The outcome notice stays the first status; Cancel's own status follows it. */}
-        <p role="status">{shownNotice}</p>
+        <p role="status">{drawerOpen ? "" : shownNotice}</p>
         {cancelControl}
         {dataOffer && (
           <DataChangeOffer offer={dataOffer} working={requesting} onChoose={takeDataOffer} />

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { selectWorkspace } from "./support/workspace-actions.ts";
 import type { Creation, Intent } from "../../contracts/src/index.ts";
 import { addToChat } from "../../server/src/chat/index.ts";
 import { findClaude, UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.ts";
@@ -108,11 +109,7 @@ const said = (page: Page) => log(page).locator(".chat-text");
 
 /** Opens the workspace named `name` from the list, unless it is open already. */
 async function openWorkspace(page: Page, name: string) {
-  const open = page.getByRole("button", { name: `Open ${name}`, exact: true });
-  const opened = page.getByRole("button", { name: `${name}, open`, exact: true });
-  // The list loads after the page: wait for this workspace's row, whichever way it reads.
-  await expect(open.or(opened)).toBeVisible();
-  if (await open.count()) await open.click();
+  await selectWorkspace(page, name);
   await expect(page.getByRole("region", { name: `Tool: ${name}` })).toBeVisible();
 }
 
