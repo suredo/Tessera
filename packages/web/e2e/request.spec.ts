@@ -1,3 +1,4 @@
+import { openAppSection } from "./support/workspace-actions.ts";
 import { openToolHistory } from "./support/tool-actions.ts";
 import { openToolDetails } from "./support/tool-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
@@ -25,7 +26,6 @@ const intent = (kind: Intent["kind"]): Intent =>
     language: "en",
     features: [],
   }) as Intent;
-
 const shoppingList: Creation = {
   outcome: "tool",
   name: "Shopping list",
@@ -188,13 +188,18 @@ test("GEN-09, GEN-08, GEN-10: a tool that fails its checks, even after its repai
   await expect(details).toContainText(en["details.unattachedHeading"]);
   const unattached = details.locator(".details-requests").last().locator(":scope > li");
   const before = await unattached.count();
-  await ask(page, "A page that shows a website");
+  // Keep the non-modal Details panel open to check its live refresh. Its popover can cover the
+  // pointer target for Make it, so submit from the request field with its public Enter action.
+  const request = page.getByRole("textbox", { name: en["request.label"] });
+  await request.fill("A page that shows a website");
+  await request.press("Enter");
   await expect(newestReply(page)).toContainText(
     "That didn't work. The tool Tessera made didn't pass its checks, so nothing was changed.",
     { timeout: 30_000 },
   );
   expect(listWorkspaces(app.folder)).toHaveLength(1);
   // The failed creation made no workspace, and its reasons are still there to see (GEN-10).
+  await expect(details).toBeVisible();
   await openToolDetails(page);
   await expect(unattached).toHaveCount(before + 1);
   const failed = unattached.first();
@@ -207,21 +212,20 @@ test("GEN-09, GEN-08, GEN-10: a tool that fails its checks, even after its repai
   ]);
   await expect(failed).toContainText("Asked to fix:");
 });
-
 test("GEN-01, GEN-16, UX-02, APP-10: a request keeps running when the person goes elsewhere, shows its stage and time, and no second one starts meanwhile", async ({
   page,
 }) => {
   await page.goto(app.url);
   await ask(page, "Something slow");
-  await page.getByRole("button", { name: en["nav.library"], exact: true }).click();
-  await page.getByRole("button", { name: en["nav.workspaces"], exact: true }).click();
+  await openAppSection(page, en["nav.library"]);
+  await openAppSection(page, en["nav.workspaces"]);
   // Back on the workspace: still running, so the box takes no other request.
   await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeDisabled();
   // The stage it is in, announced as the status, and the seconds since it was sent (GEN-16).
   const box = page.locator(".request");
   await expect(box.getByRole("status")).toHaveText(en["request.stage.intent"]);
   await expect(box.locator(".request-elapsed")).toHaveText(/^[1-9]\d* s$/);
-  await expect(newestReply(page)).toContainText(en["request.clarify"], { timeout: 30_000 });
+  await expect(newestReply(page)).toContainText(en["request.clarify"], { timeout: 30000 });
   await expect(box.getByRole("status")).toHaveText("");
   await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeEnabled();
 });

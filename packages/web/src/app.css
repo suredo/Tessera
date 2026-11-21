@@ -37,7 +37,7 @@ body {
   flex: 1;
   min-width: 0;
 }
-.tool-heading h2 {
+.tool-heading h1 {
   font-size: 1rem;
   margin: 0;
   white-space: nowrap;
@@ -179,12 +179,12 @@ button.primary {
   padding: var(--ui-space-6) var(--ui-padding);
 }
 
-/* Workspaces beside the tool on a wide screen, above it on a narrow one (APP-01). */
+/* Workspaces overlay the tool rather than taking its width (APP-01). */
 .app {
   display: grid;
-  grid-template-columns: minmax(14rem, 20rem) 1fr;
-  grid-template-rows: auto 1fr auto;
-  grid-template-areas: "header header" "aside main" "notice notice";
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr auto;
+  grid-template-areas: "header" "setup" "main" "notice";
   min-height: 100vh;
 }
 .app > header {
@@ -206,16 +206,9 @@ button.primary {
   border-color: var(--ui-accent);
 }
 /* The library takes the whole width. */
-.app.one-section {
-  grid-template-columns: 1fr;
-  grid-template-areas: "header" "main" "notice";
-}
-.app > aside {
-  grid-area: aside;
-  padding: var(--ui-padding);
-  border-right: 1px solid var(--ui-divider);
-  /* Never wider than its column: a file input is wide by itself (RUN-06). */
-  min-width: 0;
+.setup-banner {
+  grid-area: setup;
+  padding-inline: var(--ui-padding);
 }
 .app > main {
   grid-area: main;
@@ -234,14 +227,119 @@ button.primary {
   white-space: pre-line;
 }
 @media (max-width: 40rem) {
-  .app {
-    grid-template-columns: 1fr;
-    grid-template-areas: "header" "aside" "main" "notice";
+  .drawer-opener span {
+    display: none;
   }
-  .app > aside {
-    border-right: 0;
-    border-bottom: 1px solid var(--ui-divider);
-  }
+}
+
+.drawer-opener {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border-color: transparent;
+  flex-shrink: 0;
+}
+.workspace-drawer {
+  position: fixed;
+  inset: 0 auto 0 0;
+  margin: 0;
+  padding: 0;
+  width: min(24rem, 100vw);
+  height: 100dvh;
+  max-width: 100vw;
+  max-height: 100dvh;
+  box-sizing: border-box;
+  border: 0;
+  border-right: 1px solid var(--ui-divider);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+}
+.workspace-drawer[open] {
+  display: flex;
+  flex-direction: column;
+}
+.workspace-drawer::backdrop {
+  background: #29362e66;
+}
+.drawer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  gap: 0.5rem;
+  border-bottom: 1px solid var(--ui-divider);
+}
+.drawer-heading h2 {
+  margin: 0;
+}
+.drawer-content {
+  padding: 1rem;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+}
+.drawer-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--ui-divider);
+}
+.drawer-footer nav {
+  display: grid;
+}
+.workspace-drawer button,
+.workspace-drawer input {
+  min-height: 44px;
+}
+.drawer-new,
+.drawer-nav {
+  width: 100%;
+  margin-bottom: 0.75rem;
+  text-align: start;
+}
+.drawer-nav,
+.drawer-footer nav button {
+  border: 0;
+  background: transparent;
+  text-align: start;
+}
+.workspace-drawer [aria-current="page"] {
+  background: var(--ui-accent-soft);
+}
+.drawer-footer .detail {
+  color: var(--ui-text-secondary);
+  font-size: 0.75rem;
+}
+.workspaces > input {
+  box-sizing: border-box;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.workspaces h2 {
+  font-size: 0.875rem;
+  color: var(--ui-text-secondary);
+}
+.workspace-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  box-shadow: 0 8px 32px #29362e26;
+  top: anchor(bottom);
+  left: anchor(left);
+  max-width: calc(100vw - 2rem);
+  position-try-fallbacks: flip-block, flip-inline;
+}
+.workspace-menu button {
+  display: block;
+  width: 100%;
+  border: 0;
+  text-align: start;
 }
 
 .workspaces ul {
@@ -252,20 +350,27 @@ button.primary {
   gap: var(--ui-space-2);
 }
 .workspace {
-  border: 1px solid var(--ui-divider);
+  display: flex;
+  align-items: center;
+  min-width: 0;
   border-radius: var(--ui-radius-panel);
   padding: var(--ui-space-2);
   background: var(--ui-surface);
 }
 .workspace.open {
-  border-color: var(--ui-accent);
+  background: var(--ui-accent-soft);
 }
 .workspace-name {
   display: grid;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
+  background: transparent;
   text-align: left;
   border: 0;
   padding: var(--ui-space-2);
+}
+.workspace-name > span {
+  overflow-wrap: anywhere;
 }
 .workspace-name .detail {
   font-size: var(--ui-size-secondary);
@@ -341,6 +446,7 @@ button.primary {
 
 .tool-panel {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto 1fr;
   gap: var(--ui-space-2);
   min-height: 24rem;

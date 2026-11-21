@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
+import { clickWorkspaceAction } from "./support/workspace-actions.ts";
 
 // The host app's first screen in a real browser (TEST-06): Chrome, the supported
 // browsers (RUN-06), at each fixed viewport, served by a real Tessera with no workspaces yet.
@@ -32,7 +33,7 @@ test("APP-03: deleting the last workspace comes back here, and says it is in the
 }) => {
   workspaceWith(app.folder, "Only one", testTool("The only tool"));
   await page.goto(app.url);
-  await page.getByRole("button", { name: "Move Only one to the trash" }).click();
+  await clickWorkspaceAction(page, "Move Only one to the trash");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
   await expect(
     page.getByText("Only one is in the trash. You can restore it for 30 days."),

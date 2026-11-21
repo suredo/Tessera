@@ -1,3 +1,4 @@
+import { clickWorkspaceAction } from "./support/workspace-actions.ts";
 import { openToolDetails } from "./support/tool-actions.ts";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
@@ -54,7 +55,6 @@ test.afterAll(async () => {
   service.closeAllConnections();
   await new Promise((resolve) => service.close(resolve));
 });
-
 /** A tool that, on a click, adds a movie to a list through the connection, and says what happened. */
 const listTool: Artifact = {
   contractVersion: 5,
@@ -84,14 +84,13 @@ const listTool: Artifact = {
 const tool = (page: Page) =>
   page.frameLocator(".tool-frame iframe").frameLocator("iframe").frameLocator("iframe");
 const question = (page: Page) => page.getByRole("alertdialog", { name: en["write.label"] });
-
 /** Opens a new workspace running the list tool, and clicks its button. */
 async function clickAdd(page: Page) {
   const title = `Movie list ${Math.random().toString(36).slice(2, 7)}`;
   const id = workspaceWith(app.folder, title, listTool);
   await page.goto(app.url);
   // The app may already have it open, as the newest workspace.
-  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await clickWorkspaceAction(page, new RegExp(`^(Open ${title}|${title}, open)$`));
   await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
   await tool(page).getByRole("button", { name: "Add Alien" }).click();
   return { id, title };
@@ -181,7 +180,6 @@ test("CNX-07: on Don't allow, nothing is sent or kept, and the tool hears it was
   expect(seen).toEqual([]);
   expect(writesAllowed(app.folder, id, "lists")).toBe(false);
 });
-
 test("A75: a tool shows an image through its connection, fetched by the host, as a blob: URL", async ({
   page,
 }) => {
@@ -204,12 +202,11 @@ test("A75: a tool shows an image through its connection, fetched by the host, as
   const title = `Poster ${Math.random().toString(36).slice(2, 7)}`;
   workspaceWith(app.folder, title, poster);
   await page.goto(app.url);
-  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await clickWorkspaceAction(page, new RegExp(`^(Open ${title}|${title}, open)$`));
   await expect(tool(page).locator("#text")).toHaveText("Shown 1 blob:", TOOL_START);
   expect(seen).toEqual([{ method: "GET", url: "/poster.png", body: "" }]);
   await expect(question(page)).toBeHidden();
 });
-
 test("CNX-09 A76: a click in a tool opens a page under its connection in a new tab, with no way back to Tessera", async ({
   page,
 }) => {
@@ -230,7 +227,7 @@ test("CNX-09 A76: a click in a tool opens a page under its connection in a new t
   const title = `Trailer ${Math.random().toString(36).slice(2, 7)}`;
   workspaceWith(app.folder, title, opener);
   await page.goto(app.url);
-  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await clickWorkspaceAction(page, new RegExp(`^(Open ${title}|${title}, open)$`));
   await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
   const popup = page.context().waitForEvent("page");
   await tool(page).getByRole("button", { name: "Watch the trailer" }).click();
@@ -241,7 +238,6 @@ test("CNX-09 A76: a click in a tool opens a page under its connection in a new t
   await expect(tool(page).locator("#text")).toHaveText(`Opened ${origin}/watch?v=abc`);
   await opened.close();
 });
-
 test("CNX-09 A76: a page asked for when the click has lapsed opens nothing, and the tool hears why (#371 review)", async ({
   page,
 }) => {
@@ -266,14 +262,14 @@ test("CNX-09 A76: a page asked for when the click has lapsed opens nothing, and 
   const title = `Late ${Math.random().toString(36).slice(2, 7)}`;
   workspaceWith(app.folder, title, late);
   await page.goto(app.url);
-  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await clickWorkspaceAction(page, new RegExp(`^(Open ${title}|${title}, open)$`));
   await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
   const opened: string[] = [];
   page.context().on("page", (p) => opened.push(p.url()));
   await tool(page).getByRole("button", { name: "Open it later" }).click();
   // Nothing touches the page while the click lapses: Playwright's own reads of a page count as
   // the person acting, and would keep it active. The tool asks at 6 s; the click lasts about 5.
-  await page.waitForTimeout(8_000);
+  await page.waitForTimeout(8000);
   await expect(tool(page).locator("#text")).toHaveText("Refused not-allowed");
   expect(opened).toEqual([]);
 });

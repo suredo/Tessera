@@ -2,6 +2,10 @@
 
 ## 2026-11-21
 
+* **Fixed**: The [drawer browser consumers](code/web/package.md) delete the last workspace through its public menu and wait for asynchronous naming forms and More to close before opening Workspaces. The request failure-details check uses the request field's Enter action while Details remains open, retaining its live-refresh assertions. The inherited tool-window checks also select workspaces through the drawer. These address the two independent review findings and the pointer-overlay and unmigrated-navigation CI failures; no product behavior, timeout or guard changed. Recorded by `codex/gpt-6` at 2026-11-21T15:39:01Z.
+
+* **Changed**: The [workspace drawer slice](code/web/package.md) now includes merged PR 417 and its foundation/runtime fixes, including the keyboard Restore regression. The [roadmap](roadmap/ui-redesign.md) records the merged header and pending drawer review. Existing drawer review findings remain open; no guard or timeout changed. Recorded by `codex/gpt-6` at 2026-11-21T15:29:46Z.
+
 * **Changed**: The [header slice](code/web/package.md) now includes merged PR 410 and the approved foundation. Its keyboard Restore regression opens History's new popover and verifies real underlying frame growth with focus and data-loss assertions retained. The [roadmap](roadmap/ui-redesign.md) records the completed width slice; header integration remains draft. Recorded by `codex/gpt-6` at 2026-11-21T15:05:19Z.
 
 * **Changed**: The width slice now includes the merged [UI redesign foundation](roadmap/ui-redesign.md) and its accessibility CI correction. Its [web code doc](code/web/package.md) preserves both the contract 5 fixture notes and the distinction between current host behavior and the approved target. PR 410 remains a draft; its integration checks are separate from the completed foundation review. Recorded by `codex/gpt-6` at 2026-11-21T14:28:21Z.
@@ -19,6 +23,8 @@
 * **Fixed**: Entering full screen through the [tool header](code/web/package.md)'s More menu dismisses that menu first. The narrow accessibility check found it obstructing a header control; a browser regression now checks dismissal and accessibility in full screen. Recorded by `codex/gpt-6` at 2026-11-21T00:41:14Z.
 
 * **Changed**: The [host tool header](code/web/package.md) puts the tool's name, truthful local-save/library status, Undo, History, Save and one More menu beside the tool. History and Details open in native popovers; runtime reloads after data restores keep the header mounted. Header/panel controls use 44 px targets. Browser interactions now open those public controls, and a new layout spec checks keyboard dismissal/focus return and preserved tool input/scroll. Drawer, conversation and phone redesign slices remain pending. Recorded by `codex/gpt-6` at 2026-11-21T00:16:26Z.
+
+* **Changed**: The [workspace drawer](code/web/package.md) replaces the workspace column with modal navigation, search, row actions and entry points for the existing sections. Its [scenario runner](code/evals/runner.md) and browser checks use the public drawer controls. Verification remains in progress. Recorded by `codex/gpt-6` at 2026-11-21T05:09:41Z.
 
 * **Fixed**: The [width check](code/evals/ui-width.md)'s replay test narrows the creation answer before passing it to the host's tool-only candidate check. CI caught the missing TypeScript narrowing after the replay test was added; its runtime assertions already passed. No further live calls. Recorded by `codex/gpt-6` at 2026-11-21T00:20:00Z.
 

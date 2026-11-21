@@ -4,7 +4,7 @@ title: "UI redesign: the tool comes first"
 description: "The separate UI redesign milestone: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout."
 tags: [roadmap, ux, app, redesign]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-21T15:05:19Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T15:29:46Z }
 ---
 # UI redesign: the tool comes first
 
@@ -51,7 +51,7 @@ Width evidence: the [2026-11-20 live check](../../evals/reports/2026-11-20-ui-wi
 
 ## Suggested pull requests
 
-Tracked in the [UI redesign milestone](https://github.com/suredo/Tessera/milestone/8). The approved foundation is merged in [PR 409](https://github.com/suredo/Tessera/pull/409), and the width contract, compatibility and generated schemas are merged in [PR 410](https://github.com/suredo/Tessera/pull/410). The header slice is prepared in draft [PR 417](https://github.com/suredo/Tessera/pull/417); the remaining host layout is pending. The owner separately approved at most four live width-check calls on 2026-11-20: a focused list and a wide board, with one repair reserve each. The completed check used two calls, with no repair. The [stage check](../code/evals/ui-width.md) has a free fake-CLI rehearsal (`ENG-07`, `ENG-16`). This approval does not authorize further live runs.
+Tracked in the [UI redesign milestone](https://github.com/suredo/Tessera/milestone/8). The approved foundation is merged in [PR 409](https://github.com/suredo/Tessera/pull/409), the width contract in [PR 410](https://github.com/suredo/Tessera/pull/410), and the header in [PR 417](https://github.com/suredo/Tessera/pull/417). The workspace drawer is prepared in draft [PR 419](https://github.com/suredo/Tessera/pull/419), with review findings and verification still pending. Focus default, width consumption, conversation and phone layout remain pending. The owner separately approved at most four live width-check calls on 2026-11-20: a focused list and a wide board, with one repair reserve each. The completed check used two calls, with no repair. The [stage check](../code/evals/ui-width.md) has a free fake-CLI rehearsal (`ENG-07`, `ENG-16`). This approval does not authorize further live runs.
 
 1. [Issue 411](https://github.com/suredo/Tessera/issues/411): the width declaration in the contract, prompt and check, with compatibility tests. The approved `APP-01` target is recorded in this foundation.
 2. [Issue 412](https://github.com/suredo/Tessera/issues/412): the header and the single More menu; Undo and History in it; history as a panel.

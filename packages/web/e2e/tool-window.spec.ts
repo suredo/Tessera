@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "@tessera/contracts";
-import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, TOOL_START, workspaceWith, type AppHost } from "./support/app-host.ts";
+import { selectWorkspace } from "./support/workspace-actions.ts";
 
 // What a tool may do in its own window when the person acts (A92): copy to the clipboard after
 // their click, and show a chart's values on hover. The sandbox limits what a tool reaches, not
@@ -29,10 +29,7 @@ async function open(page: Page, title: string, tool: Artifact) {
   const name = `${title} ${Math.random().toString(36).slice(2, 7)}`;
   workspaceWith(app.folder, name, tool);
   await page.goto(app.url);
-  await page
-    .getByRole("region", { name: en["workspaces.heading"] })
-    .getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) })
-    .click();
+  await selectWorkspace(page, name);
   await expect(inTool(page).locator("#text")).toBeVisible(TOOL_START);
 }
 

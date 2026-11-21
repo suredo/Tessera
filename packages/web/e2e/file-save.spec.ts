@@ -1,3 +1,4 @@
+import { clickWorkspaceAction } from "./support/workspace-actions.ts";
 import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
@@ -15,7 +16,6 @@ test.beforeAll(async () => {
   app = await startApp();
 });
 test.afterAll(() => app.close());
-
 /** A tool that offers a list as CSV, under a name that says HTML, and a drawing as PNG. */
 const saver: Artifact = {
   contractVersion: 5,
@@ -50,13 +50,12 @@ document.getElementById("drawing").addEventListener("click", () => {
 const tool = (page: Page) =>
   page.frameLocator(".tool-frame iframe").frameLocator("iframe").frameLocator("iframe");
 const question = (page: Page) => page.getByRole("alertdialog", { name: en["save.label"] });
-
 /** Opens a new workspace running the saver, and clicks one of its buttons. */
 async function offer(page: Page, button: string) {
   const title = `Saver ${Math.random().toString(36).slice(2, 7)}`;
   workspaceWith(app.folder, title, saver);
   await page.goto(app.url);
-  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await clickWorkspaceAction(page, new RegExp(`^(Open ${title}|${title}, open)$`));
   await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
   await tool(page).getByRole("button", { name: button }).click();
   return title;
@@ -102,7 +101,6 @@ test("CAP-03: an image the tool drew is saved as the PNG it is", async ({ page }
   expect([...bytes.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   await expect(tool(page).locator("#text")).toHaveText("Saved");
 });
-
 test("RUN-02 A81: undo dismisses an old Save question and the restarted tool can ask again", async ({
   page,
 }) => {
@@ -134,7 +132,7 @@ test("RUN-02 A81: undo dismisses an old Save question and the restarted tool can
   });
   expect(changed.ok).toBe(true);
   await page.goto(app.url);
-  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await clickWorkspaceAction(page, new RegExp(`^(Open ${title}|${title}, open)$`));
   await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
   await tool(page).getByRole("button", { name: "Save the list" }).click();
   await expect(question(page)).toBeVisible();
