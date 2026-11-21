@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Corrected**: The [web code doc](code/web/package.md)'s request-box invariant now says footer placement, removing the stale above-the-tool description found by independent review of PR 421. No product code changed. Recorded by `codex/gpt-6` at 2026-11-21T16:45:33Z.
+
 * **Fixed**: The [conversation slice](code/web/package.md) keeps floating chat below the tool header, hides it behind full screen, and gives an empty conversation visible guidance. The connection browser consumer now closes Details and its parent More menu before outside pointer actions, reopening Details for its existing permission/request assertions; the prior CI failure showed Details intercepting Allow. Consent, request counts, timeouts and sandbox guards remain unchanged. Recorded by `codex/gpt-6` at 2026-11-21T16:39:00Z.
 
 * **Fixed**: The new [host-width regression](code/server/host-api.md) activates its second version against the current data revision. The full unit run caught the stale fixture revision, then its failed assertion left the test database open during cleanup; the focused host API suite passes after the fixture correction. The revision guard is unchanged. Recorded by `codex/gpt-6` at 2026-11-21T16:28:17Z.
