@@ -7,7 +7,7 @@ implements: [CON-01, APP-09, UX-06]
 tests: [../../../packages/server/test/host-api.test.ts]
 tags: [code, server, api, host]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-21T16:15:20Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T16:28:17Z }
 ---
 
 # Purpose
