@@ -703,7 +703,10 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     return { claim: "none" };
   }
   if ("undo" in s) {
+    // History is a panel, opened through the same control a person uses (APP-05).
     const history = page.getByRole("region", { name: say("history.heading") });
+    if (!(await history.isVisible())) await button(page, say("history.heading")).click();
+    await history.waitFor();
     if (s.undo === "data") {
       await history.getByRole("button", { name: say("history.undo") }).click();
       await page.getByText(say("history.undone")).waitFor();
@@ -721,6 +724,7 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
       await confirm.getByRole("button", { name: say("history.confirm"), exact: true }).click();
       await page.getByText(/is back, as the newest version\./).waitFor();
     }
+    await history.getByRole("button", { name: say("tool.closePanel"), exact: true }).click();
     return { claim: "none" };
   }
   if ("switch" in s) {

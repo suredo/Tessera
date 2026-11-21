@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Fixed**: The [scenario runner](code/evals/runner.md) opens History before data undo or version restore. CI for the header redesign found that its earlier assumption of an always-visible history blocked T1 and falsely reported no earlier version in T6. The expected replay outcomes and time limits are unchanged. Recorded by `codex/gpt-6` at 2026-11-21T01:43:09Z.
+
 * **Fixed**: Entering full screen through the [tool header](code/web/package.md)'s More menu dismisses that menu first. The narrow accessibility check found it obstructing a header control; a browser regression now checks dismissal and accessibility in full screen. Recorded by `codex/gpt-6` at 2026-11-21T00:41:14Z.
 
 * **Changed**: The [host tool header](code/web/package.md) puts the tool's name, truthful local-save/library status, Undo, History, Save and one More menu beside the tool. History and Details open in native popovers; runtime reloads after data restores keep the header mounted. Header/panel controls use 44 px targets. Browser interactions now open those public controls, and a new layout spec checks keyboard dismissal/focus return and preserved tool input/scroll. Drawer, conversation and phone redesign slices remain pending. Recorded by `codex/gpt-6` at 2026-11-21T00:16:26Z.
