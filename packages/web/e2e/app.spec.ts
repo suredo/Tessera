@@ -1,3 +1,4 @@
+import { clickToolAction } from "./support/tool-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { saveTool } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
@@ -93,15 +94,15 @@ test("APP-01: the tool can be minimized, shown again and put full screen", async
   await workspaceButton(page, shopping).click();
   await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
 
-  await page.getByRole("button", { name: en["tool.minimize"] }).click();
+  await clickToolAction(page, en["tool.minimize"]);
   await expect(page.getByText(`${shopping} is minimized.`)).toBeVisible();
   await expect(toolFrames(page)).toHaveCount(0);
   await page.getByRole("button", { name: en["tool.restore"] }).click();
   await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
 
-  await page.getByRole("button", { name: en["tool.fullScreen"] }).click();
+  await clickToolAction(page, en["tool.fullScreen"]);
   await expect(page.locator(".tool-panel.full-screen")).toBeVisible();
-  await page.getByRole("button", { name: en["tool.leaveFullScreen"] }).click();
+  await clickToolAction(page, en["tool.leaveFullScreen"]);
   await expect(page.locator(".tool-panel.full-screen")).toHaveCount(0);
 });
 
@@ -112,7 +113,7 @@ test("UX-07: a minimized tool stays minimized after a reload, and after switchin
   await page.goto(app.url);
   await workspaceButton(page, shopping).click();
   await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
-  await page.getByRole("button", { name: en["tool.minimize"] }).click();
+  await clickToolAction(page, en["tool.minimize"]);
   await expect(page.getByText(`${shopping} is minimized.`)).toBeVisible();
 
   await page.reload();
@@ -155,7 +156,7 @@ test("APP-03: opening a workspace shows it as used at once, even minimized, and 
   expect(await names()).toEqual(before);
 
   // A minimized tool doesn't start when it is opened again, but opening it is still using it.
-  await page.getByRole("button", { name: en["tool.minimize"] }).click();
+  await clickToolAction(page, en["tool.minimize"]);
   await workspaceButton(page, shopping).click();
   await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
   backdate(ids[1]!);
@@ -182,7 +183,7 @@ test("RUN-02: showing a tool again is one start at a time", async ({ page }) => 
   await page.goto(app.url);
   await workspaceButton(page, shopping).click();
   await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
-  await page.getByRole("button", { name: en["tool.minimize"] }).click();
+  await clickToolAction(page, en["tool.minimize"]);
 
   // Hold the runtime's wrapper document, so the start is still going when the person clicks again.
   let release!: () => void;
@@ -199,7 +200,7 @@ test("RUN-02: showing a tool again is one start at a time", async ({ page }) => 
   await expect(showAgain).toHaveCount(0);
   release();
   await expect(toolText(page)).toHaveText(`The shopping tool ${suffix}`, TOOL_START);
-  await expect(page.getByRole("button", { name: en["tool.minimize"] })).toBeVisible();
+  await expect(page.locator(".tool-panel[data-mode=running]")).toBeVisible();
   await expect(toolFrames(page)).toHaveCount(1);
   await page.context().unrouteAll();
 });

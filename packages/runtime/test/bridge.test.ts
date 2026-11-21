@@ -639,6 +639,22 @@ describe("files out, on the host page (CAP-03, A81)", () => {
     expect(saved).toEqual([]);
   });
 
+  it("RUN-02 A81: stopping the bridge while Save waits prevents a late download", async () => {
+    let answer!: (save: boolean) => void;
+    const { call, bridge, asked, saved } = offering(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+    );
+    await call("file.save", csv);
+    expect(asked).toHaveLength(1);
+    bridge.stop();
+    answer(true);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(saved).toEqual([]);
+  });
+
   it("FIL-04 A81: a file that isn't what it says is refused before the person is asked", async () => {
     const { call, asked } = offering(() => Promise.resolve(true));
     const reply = await call("file.save", {

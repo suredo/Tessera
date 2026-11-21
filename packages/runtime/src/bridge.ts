@@ -481,7 +481,7 @@ export function serveBridge(tool: BridgeTool, options: BridgeOptions): ServedBri
       } finally {
         offering = false;
       }
-      if (!allowed) return { saved: false };
+      if (!allowed || !serving) return { saved: false };
       (options.saveFile ?? saveInPage)(checked.file);
       return { saved: true };
     },

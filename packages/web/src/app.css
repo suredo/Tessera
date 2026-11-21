@@ -12,6 +12,126 @@ html {
 body {
   margin: 0;
 }
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.tool-panel {
+  container: tool / inline-size;
+}
+.tool-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 64px;
+  background: var(--ui-surface);
+  border-bottom: 1px solid var(--ui-divider);
+  padding-inline: 0.75rem;
+}
+.tool-heading {
+  flex: 1;
+  min-width: 0;
+}
+.tool-heading h2 {
+  font-size: 1rem;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tool-heading p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ui-text-secondary);
+}
+.saved-label {
+  margin-inline-start: 0.75rem;
+}
+.tool-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.tool-header button,
+.tool-menu button,
+.host-panel button {
+  min-height: 44px;
+  min-width: 44px;
+}
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.icon-button:hover,
+.tool-menu button:hover {
+  background: var(--ui-accent-soft);
+}
+.host-panel,
+.tool-menu {
+  position: fixed;
+  inset: 5rem 1rem auto auto;
+  margin: 0;
+  box-sizing: border-box;
+  max-height: calc(100dvh - 6rem);
+  max-width: calc(100vw - 2rem);
+  overflow: auto;
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: 0 8px 32px #29362e26;
+  padding: 1rem;
+  top: anchor(bottom);
+  right: calc(100% - anchor(right));
+  margin-top: 0.5rem;
+  position-try-fallbacks: flip-block, flip-inline;
+}
+.host-panel {
+  width: 30rem;
+}
+.tool-menu {
+  width: 15rem;
+  padding: 0.5rem;
+}
+.tool-menu > button,
+.tool-menu .menu-save-tool > button {
+  display: block;
+  width: 100%;
+  text-align: start;
+  border: 0;
+}
+.tool-menu .menu-save-tool,
+.tool-menu .menu-full-screen {
+  display: none;
+}
+.host-panel .details {
+  margin-top: 1rem;
+}
+.history.host-panel {
+  margin-top: 0;
+}
+@container tool (max-width: 42rem) {
+  .tool-heading p,
+  .save-tool,
+  .full-screen-opener {
+    display: none;
+  }
+  .tool-menu .menu-save-tool,
+  .tool-menu .menu-full-screen {
+    display: block;
+  }
+}
 h1 {
   font-size: var(--ui-size-title);
   font-weight: 600;

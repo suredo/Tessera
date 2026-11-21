@@ -1,6 +1,7 @@
 import type { Workspace } from "@tessera/contracts";
 import { createRuntime, type ToolRuntime } from "@tessera/runtime";
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from "react";
+import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 import { SaveQuestion } from "./SaveQuestion.tsx";
 import {
@@ -30,6 +31,12 @@ type Props = {
   expanded?: boolean;
   /** Expands the tool, or puts it back beside the chat; none where there is no chat beside it. */
   onExpand?: (expanded: boolean) => void;
+  headerActions?: ReactNode;
+  menuActions?: ReactNode;
+  details?: ReactNode;
+  saved?: boolean;
+  /** Restarts only the runtime after a data restore; keeps the header's open panels. */
+  reload?: number;
 };
 
 export function ToolPanel({
@@ -38,7 +45,15 @@ export function ToolPanel({
   onConnectionUsed,
   expanded = false,
   onExpand,
+  headerActions,
+  menuActions,
+  details,
+  saved = false,
+  reload = 0,
 }: Props) {
+  const menuId = useId();
+  const detailsId = useId();
+  const [detailsShown, setDetailsShown] = useState(false);
   const container = useRef<HTMLDivElement>(null);
   const runtime = useRef<ToolRuntime | null>(null);
   const starting = useRef<AbortController | null>(null);
@@ -52,6 +67,7 @@ export function ToolPanel({
   const name = workspace.title;
   const id = workspace.id;
   const hasTool = workspace.currentVersion !== null;
+  const run = `${id}:${workspace.currentVersion}:${reload}`;
   // How the person left this tool, read once for this workspace.
   const [left] = useState(() => rememberedState(id));
   const [mode, setMode] = useState<Mode>(
@@ -59,7 +75,7 @@ export function ToolPanel({
   );
   const [fullScreen, setFullScreen] = useState(false);
   // The question before a tool's first change through a connection, while it waits (A70).
-  const [question, setQuestion] = useState<Question | null>(null);
+  const [question, setQuestion] = useState<{ run: string; value: Question } | null>(null);
   const answering = useRef<((allowed: boolean) => void) | null>(null);
   const answer = (allowed: boolean) => {
     const resolve = answering.current;
@@ -72,10 +88,10 @@ export function ToolPanel({
       // A question still open is answered no: only the latest one is shown.
       answering.current?.(false);
       answering.current = resolve;
-      setQuestion(asked);
+      setQuestion({ run, value: asked });
     });
   // The question before a file the tool offers is saved, while it waits (A81).
-  const [offer, setOffer] = useState<Offer | null>(null);
+  const [offer, setOffer] = useState<{ run: string; value: Offer } | null>(null);
   const deciding = useRef<((save: boolean) => void) | null>(null);
   const decide = (save: boolean) => {
     const resolve = deciding.current;
@@ -87,15 +103,17 @@ export function ToolPanel({
     new Promise<boolean>((resolve) => {
       deciding.current?.(false);
       deciding.current = resolve;
-      setOffer(asked);
+      setOffer({ run, value: asked });
     });
   // A panel that goes, or a new tool, leaves no question open: it is answered no.
   useEffect(
     () => () => {
       answering.current?.(false);
       deciding.current?.(false);
+      answering.current = null;
+      deciding.current = null;
     },
-    [id],
+    [run],
   );
 
   // Starts the tool through `open`, until the panel goes or another start replaces this one.
@@ -103,6 +121,14 @@ export function ToolPanel({
     starting.current?.abort();
     const controller = new AbortController();
     starting.current = controller;
+    controller.signal.addEventListener(
+      "abort",
+      () => {
+        answer(false);
+        decide(false);
+      },
+      { once: true },
+    );
     startTool(current, id, open, controller.signal, {
       onWrite: () => dataChanged.current?.(),
       askToWrite,
@@ -124,7 +150,8 @@ export function ToolPanel({
     const element = container.current;
     if (!element || !hasTool) return;
     // A minimized or stopped tool starts as it was left, and isn't opened (UX-07).
-    const kept = left?.mode === "minimized" || left?.mode === "stopped" ? left : undefined;
+    const latest = rememberedState(id);
+    const kept = latest?.mode === "minimized" || latest?.mode === "stopped" ? latest : undefined;
     const created = createRuntime(element, kept);
     runtime.current = created;
     const stop = created.onState((state) => {
@@ -139,7 +166,7 @@ export function ToolPanel({
       runtime.current = null;
     };
     // A new workspace, or a new tool version, starts a new runtime.
-  }, [id, hasTool, left, workspace.currentVersion]);
+  }, [id, hasTool, workspace.currentVersion, reload]);
 
   // One start at a time: the button goes while this one runs, and a second click does nothing,
   // so two restores never race for the same runtime.
@@ -155,14 +182,66 @@ export function ToolPanel({
       className={fullScreen ? "tool-panel full-screen" : "tool-panel"}
       // A stable hook for the scenario runner and tests (VER-03): titles repeat, IDs don't.
       data-workspace-id={id}
+      data-mode={mode}
     >
-      {question && <WriteQuestion question={question} onAnswer={answer} />}
-      {offer && <SaveQuestion question={offer} onAnswer={decide} />}
-      <div className="tool-controls">
+      {question?.run === run && <WriteQuestion question={question.value} onAnswer={answer} />}
+      {offer?.run === run && <SaveQuestion question={offer.value} onAnswer={decide} />}
+      <header className="tool-header">
+        <div className="tool-heading">
+          <h2 title={name}>{name}</h2>
+          <p>
+            {t("tool.kept")}
+            {saved && <span className="saved-label">{t("tool.inLibrary")}</span>}
+          </p>
+        </div>
+        <div className="tool-header-actions">
+          {headerActions}
+          {hasTool && (mode === "minimized" || mode === "stopped") && (
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={t("tool.restore")}
+              title={t("tool.restore")}
+              onClick={restore}
+            >
+              <HostIcon name="expand" />
+            </button>
+          )}
+          {hasTool && (
+            <button
+              type="button"
+              className="icon-button full-screen-opener"
+              aria-label={fullScreen ? t("tool.leaveFullScreen") : t("tool.fullScreen")}
+              title={fullScreen ? t("tool.leaveFullScreen") : t("tool.fullScreen")}
+              aria-pressed={fullScreen}
+              onClick={() => setFullScreen(!fullScreen)}
+            >
+              <HostIcon name="expand" />
+            </button>
+          )}
+          <button
+            type="button"
+            className="icon-button tool-more"
+            popoverTarget={menuId}
+            aria-label={t("tool.more")}
+            title={t("tool.more")}
+          >
+            <HostIcon name="more" />
+          </button>
+        </div>
+      </header>
+      <div id={menuId} popover="auto" className="tool-menu">
+        {menuActions}
+        {details && (
+          <button type="button" popoverTarget={detailsId}>
+            {t("details.heading")}
+          </button>
+        )}
         {hasTool && mode === "running" && (
           <button
             type="button"
-            onClick={() => {
+            onClick={(event) => {
+              event.currentTarget.closest<HTMLElement>("[popover]")?.hidePopover();
               runtime.current?.minimize();
               setMode("minimized");
             }}
@@ -170,26 +249,44 @@ export function ToolPanel({
             {t("tool.minimize")}
           </button>
         )}
-        {hasTool && (mode === "minimized" || mode === "stopped") && (
-          <button type="button" onClick={restore}>
-            {t("tool.restore")}
-          </button>
-        )}
         {hasTool && onExpand && !fullScreen && (
-          <button type="button" aria-pressed={expanded} onClick={() => onExpand(!expanded)}>
+          <button
+            type="button"
+            aria-pressed={expanded}
+            onClick={(event) => {
+              event.currentTarget.closest<HTMLElement>("[popover]")?.hidePopover();
+              onExpand(!expanded);
+            }}
+          >
             {expanded ? t("tool.leaveExpanded") : t("tool.expand")}
           </button>
         )}
         {hasTool && (
           <button
             type="button"
-            aria-pressed={fullScreen}
-            onClick={() => setFullScreen(!fullScreen)}
+            className="menu-full-screen"
+            onClick={(event) => {
+              event.currentTarget.closest<HTMLElement>("[popover]")?.hidePopover();
+              setFullScreen(!fullScreen);
+            }}
           >
             {fullScreen ? t("tool.leaveFullScreen") : t("tool.fullScreen")}
           </button>
         )}
       </div>
+      {details && (
+        <div
+          id={detailsId}
+          popover="auto"
+          className="host-panel"
+          onToggle={(event) => setDetailsShown(event.newState === "open")}
+        >
+          <button type="button" popoverTarget={detailsId} popoverTargetAction="hide">
+            {t("tool.closePanel")}
+          </button>
+          {detailsShown && details}
+        </div>
+      )}
       <p role="status" className="tool-status">
         {!hasTool && t("tool.noTool", { name })}
         {hasTool && mode === "minimized" && t("tool.minimized", { name })}

@@ -7,10 +7,12 @@ implements: [RUN-01, RUN-02, RUN-03, RUN-05, RUN-07, GEN-06, CAP-04, SEC-05, VER
 tests: [../../../packages/runtime/test/runtime.test.ts, ../../../packages/runtime/test/checks.test.ts, ../../../packages/runtime/test/bridge.test.ts, ../../../packages/runtime/test/server-data.test.ts, ../../../packages/runtime/test/staging.test.ts, ../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts, ../../../packages/web/e2e/bridge-port.spec.ts, ../../../packages/web/e2e/bridge.spec.ts, ../../../packages/web/e2e/bridge-data.spec.ts, ../../../packages/web/e2e/boundary.spec.ts, ../../../packages/web/e2e/boundary-host.spec.ts, ../../../packages/web/e2e/lifecycle.spec.ts, ../../../packages/web/e2e/staging.spec.ts, ../../../packages/web/e2e/styles.spec.ts, ../../../packages/web/e2e/assets.spec.ts, ../../../packages/web/e2e/file-pick.spec.ts, ../../../packages/web/e2e/first-sight-check.spec.ts, ../../../packages/web/e2e/file-system.spec.ts, ../../../packages/web/e2e/smoke.spec.ts, ../../../packages/web/e2e/drive.spec.ts, ../../../packages/web/e2e/profile-checks.spec.ts, ../../../packages/web/e2e/filtering-check.spec.ts, ../../../packages/web/e2e/form-check.spec.ts, ../../../packages/web/e2e/chart.spec.ts, ../../../packages/web/e2e/chart-profile-check.spec.ts, ../../../packages/web/e2e/cards-profile-check.spec.ts, ../../../packages/web/e2e/search-results-profile-check.spec.ts, ../../../packages/web/e2e/items-over-time-profile-check.spec.ts, ../../../packages/web/e2e/editing-with-files-profile-check.spec.ts, ../../../packages/web/e2e/scheduling-check.spec.ts, ../../../packages/web/e2e/acceptance-check.spec.ts]
 tags: [code, runtime, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-19T13:59:52Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T15:05:19Z }
 ---
 
 # Purpose
+
+A stopped bridge cannot save a file whose confirmation was still pending when it stopped, even if a late answer allows it (`RUN-02`, A81). The bridge test records the absence of a download after that late answer.
 
 Generated staging receives the candidate's required one-use activation token (`StagingOptions.activationToken`) from the [browser request](../web/package.md). Its deadline signal stops mounting/checks and removes the panel before activation. Once activation has been asked, staging retains the actual server response, since a synchronous commit may have completed (`GEN-08`, `DATA-10`); server authority independently enforces expiry before writes.
 

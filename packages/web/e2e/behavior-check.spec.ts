@@ -1,3 +1,5 @@
+import { openToolHistory } from "./support/tool-actions.ts";
+import { openToolDetails } from "./support/tool-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import type { Creation, Intent } from "../../contracts/src/index.ts";
 import { RequestLedger } from "../../server/src/ledger/index.ts";
@@ -129,12 +131,13 @@ test("TEST-03, VER-03, GEN-09: a list that doesn't keep what it adds fails the i
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk Remove"]);
   // The history says the version was tried out, and how; the details give the check's rules
   // (VER-08).
+  await openToolHistory(page);
   const history = page.getByRole("region", { name: en["history.heading"] });
   await expect(history).toContainText(
     en["history.triedOut"].replace("{what}", en["history.tried.item-list"]),
   );
   const details = page.getByRole("region", { name: en["details.heading"] });
-  await details.getByRole("button", { name: en["details.show"] }).click();
+  await openToolDetails(page);
   await expect(details).toContainText(
     en["details.check.behavior"].replace("{what}", en["history.tried.item-list"]),
   );

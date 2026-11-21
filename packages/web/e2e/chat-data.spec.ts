@@ -126,11 +126,11 @@ test("DATA-02 DATA-04: confirm the host plan and undo its one data change", asyn
   await expect(newestReply(page)).toContainText(
     "Changed one entry in Shopping list. Prepared the entry change.",
   );
-  await expect(page.getByRole("button", { name: en["tool.minimize"], exact: true })).toBeVisible();
+  await expect(page.locator(".tool-panel[data-mode=running]")).toBeVisible();
   await expect(frame(page).getByRole("listitem")).toHaveText(["Oat milk", "Eggs", "Bread"]);
   await page.getByRole("button", { name: en["history.undo"] }).click();
   await expect(page.getByText(en["history.undone"], { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: en["tool.minimize"], exact: true })).toBeVisible();
+  await expect(page.locator(".tool-panel[data-mode=running]")).toBeVisible();
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs", "Bread"]);
 });
 test("DATA-02 GEN-08: a newer target edit wins over a reviewed removal", async ({ page }) => {

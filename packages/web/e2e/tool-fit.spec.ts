@@ -1,3 +1,4 @@
+import { clickToolAction } from "./support/tool-actions.ts";
 import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "@tessera/contracts";
@@ -127,7 +128,7 @@ addEventListener("resize", () => { resizes += 1; document.getElementById("resize
 
 test("APP-01, A89: full screen still fills the screen with a short tool", async ({ page }) => {
   await open(page, "Short", testTool("Short"));
-  await page.getByRole("button", { name: en["tool.fullScreen"] }).click();
+  await clickToolAction(page, en["tool.fullScreen"]);
   const viewport = page.viewportSize()!;
   await expect.poll(() => frameHeight(page)).toBeGreaterThan(viewport.height * 0.7);
 });

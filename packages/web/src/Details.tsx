@@ -98,6 +98,8 @@ type Props = {
    * data changed. An open view loads again, so a failure's reasons show without reopening it.
    */
   changes: number;
+  /** Already opened inside the tool header's details panel. */
+  embedded?: boolean;
 };
 
 type Details = HostResult<"details.get">;
@@ -119,9 +121,9 @@ export function toldMessages(
   return { shown, gone: told.numbers.length - shown.length };
 }
 
-export function Details({ workspace, changes }: Props) {
+export function Details({ workspace, changes, embedded = false }: Props) {
   const id = workspace?.id ?? null;
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(embedded);
   const [details, setDetails] = useState<Details | null>(null);
   const [message, setMessage] = useState("");
   const [chats, setChats] = useState<Chats>({});
@@ -188,14 +190,16 @@ export function Details({ workspace, changes }: Props) {
   return (
     <section aria-labelledby="details-heading" className="details">
       <h2 id="details-heading">{t("details.heading")}</h2>
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls="details-body"
-        onClick={() => setOpen(!open)}
-      >
-        {open ? t("details.hide") : t("details.show")}
-      </button>
+      {!embedded && (
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="details-body"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? t("details.hide") : t("details.show")}
+        </button>
+      )}
       {open && (
         <div id="details-body">
           <p role="status">{message || (details ? "" : t("details.loading"))}</p>

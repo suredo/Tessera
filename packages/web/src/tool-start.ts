@@ -66,12 +66,14 @@ export function withPermission(
   askToWrite: StartOptions["askToWrite"],
   deps: Pick<StartDeps, "ask">,
   onConnectionUsed?: StartOptions["onConnectionUsed"],
+  signal?: AbortSignal,
 ): NonNullable<DataHandlers["connection"]> {
   // One question per connection at a time: changes that wait on it share its answer.
   const asking = new Map<string, Promise<boolean>>();
   const decide = async (args: BridgeArgs<"connection.request">): Promise<boolean> => {
-    if (!askToWrite) return false;
+    if (!askToWrite || signal?.aborted) return false;
     const { connections } = await deps.ask("connections.list", {});
+    if (signal?.aborted) return false;
     const found = connections.find((c) => c.name === args.connection);
     if (!found) return false;
     const origin = args.origin ?? found.origins[0]!;
@@ -82,6 +84,7 @@ export function withPermission(
       address: `${origin}${args.path}`,
       body: args.body ?? null,
     });
+    if (signal?.aborted) return false;
     if (allowed) {
       await deps.ask("connections.allowWrites", { workspaceId, connection: args.connection });
       onConnectionUsed?.();
@@ -89,6 +92,7 @@ export function withPermission(
     return allowed;
   };
   const request: NonNullable<DataHandlers["connection"]> = async (args, context) => {
+    if (signal?.aborted) throw new BridgeError("not-allowed", DECLINED);
     try {
       return await connection(args, context);
     } catch (error) {
@@ -98,7 +102,7 @@ export function withPermission(
         answer = decide(args).finally(() => asking.delete(args.connection));
         asking.set(args.connection, answer);
       }
-      if (!(await answer)) throw new BridgeError("not-allowed", DECLINED);
+      if (!(await answer) || signal?.aborted) throw new BridgeError("not-allowed", DECLINED);
       return connection(args, context);
     }
   };
@@ -129,7 +133,13 @@ export async function startTool(
     capabilities,
     // A file the tool offers is saved only once the person says so, asked with its name (A81).
     ...(askToSave
-      ? { askToSave: (offer: SaveOffer) => askToSave({ ...offer, tool: workspace.title }) }
+      ? {
+          askToSave: async (offer: SaveOffer) => {
+            if (signal.aborted) return false;
+            const allowed = await askToSave({ ...offer, tool: workspace.title });
+            return !signal.aborted && allowed;
+          },
+        }
       : {}),
     data: {
       ...data,
@@ -147,6 +157,7 @@ export async function startTool(
               askToWrite,
               deps,
               onConnectionUsed,
+              signal,
             ),
           }
         : {}),

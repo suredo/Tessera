@@ -1,3 +1,4 @@
+import { openToolDetails } from "./support/tool-actions.ts";
 import { expect, test } from "@playwright/test";
 import type { Intent } from "@tessera/contracts";
 import { UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.ts";
@@ -74,7 +75,7 @@ test("L-101, A62: 'remove what I just listed' is told the list it means, right a
   expect(steps).toHaveLength(0);
 
   // The details view shows what that request was told, read from the chat (A62, ENG-16).
-  await page.getByRole("button", { name: en["details.show"] }).click();
+  await openToolDetails(page);
   const shownTold = page
     .locator(".details-requests > li")
     .filter({ hasText: en["details.told"].replace("{count}", "2") });

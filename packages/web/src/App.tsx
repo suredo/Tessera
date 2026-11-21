@@ -32,6 +32,7 @@ import { useRequestProgress, type Progress } from "./progress.ts";
 import { ToolPanel } from "./ToolPanel.tsx";
 import { Trash } from "./Trash.tsx";
 import { Workspaces } from "./Workspaces.tsx";
+import { WorkspaceActions } from "./WorkspaceActions.tsx";
 
 // The host's main screen (APP-01, APP-02, APP-03): the workspaces beside the open workspace's
 // chat and tool. With no workspaces it invites the person to describe what they need, with no
@@ -611,6 +612,45 @@ export function App() {
     open(id);
     setView("workspaces");
   };
+  const deleteWorkspace = async (id: string) => {
+    const name = workspaces.find((w) => w.id === id)?.title ?? "";
+    try {
+      await ask("workspaces.delete", { id });
+      setNotice(t("workspaces.deleted", { name }));
+      const left = await refresh();
+      if (id === openId) open(left[0]?.id ?? null);
+    } catch (error) {
+      report(error);
+    }
+  };
+  const saveAsNew = async (tool: SavedTool, name: string) => {
+    try {
+      const result = await ask("library.useAgain", { id: tool.id, title: name });
+      if (!result.ok) return report(new Error(result.message));
+      await ask("library.save", { workspaceId: result.workspace.id, name });
+      await refresh();
+      setNotice(t("library.savedAsNew", { name }));
+    } catch (error) {
+      report(error);
+    }
+  };
+  const workspaceActions = (workspace: Workspace, kind: "save" | "menu") => (
+    <WorkspaceActions
+      workspace={workspace}
+      kind={kind}
+      savedTool={savedTools.find((tool) => tool.workspaceId === workspace.id)}
+      onRename={(title) => act(() => ask("workspaces.rename", { id: workspace.id, title }))}
+      onSave={(name) =>
+        act(
+          () => ask("library.save", { workspaceId: workspace.id, name }),
+          t("workspaces.savedAs", { name }),
+        )
+      }
+      onSaveAsNew={saveAsNew}
+      onExport={() => exportFile({ exported: "workspace", id: workspace.id }, workspace.title)}
+      onTrash={() => deleteWorkspace(workspace.id)}
+    />
+  );
 
   return (
     <div className={view === "workspaces" ? "app" : "app one-section"}>
@@ -673,17 +713,7 @@ export function App() {
                   t("workspaces.savedAs", { name }),
                 )
               }
-              onDelete={async (id) => {
-                const name = workspaces.find((w) => w.id === id)?.title ?? "";
-                try {
-                  await ask("workspaces.delete", { id });
-                  setNotice(t("workspaces.deleted", { name }));
-                  const left = await refresh();
-                  if (id === openId) open(left[0]?.id ?? null);
-                } catch (error) {
-                  report(error);
-                }
-              }}
+              onDelete={deleteWorkspace}
               onExport={(id) =>
                 exportFile(
                   { exported: "workspace", id },
@@ -706,12 +736,41 @@ export function App() {
               );
               const toolPane = current && (
                 <ToolPanel
-                  key={`${current.id}:${reloads}`}
+                  key={current.id}
+                  reload={reloads}
                   workspace={current}
                   onDataChanged={() => setToolChanges((n) => n + 1)}
                   onConnectionUsed={() => setConnectionUses((n) => n + 1)}
                   expanded={toolExpanded}
                   onExpand={chatPane ? setExpanded : undefined}
+                  saved={savedTools.some((tool) => tool.workspaceId === current.id)}
+                  headerActions={
+                    <>
+                      {current.currentVersion && (
+                        <History
+                          key={current.id}
+                          workspace={current}
+                          changes={toolChanges}
+                          inHeader
+                          onChanged={async (done) => {
+                            await refresh().catch(report);
+                            setReloads((n) => n + 1);
+                            setNotice(done);
+                          }}
+                        />
+                      )}
+                      {workspaceActions(current, "save")}
+                    </>
+                  }
+                  menuActions={workspaceActions(current, "menu")}
+                  details={
+                    <Details
+                      key={`details-${current.id}`}
+                      workspace={current}
+                      changes={toolChanges + settledRequests + connectionUses}
+                      embedded
+                    />
+                  }
                 />
               );
               return chatPane && toolPane ? (
@@ -723,25 +782,6 @@ export function App() {
                 </>
               );
             })()}
-            {current?.currentVersion && (
-              <History
-                key={current.id}
-                workspace={current}
-                changes={toolChanges}
-                onChanged={async (done) => {
-                  await refresh().catch(report);
-                  setReloads((n) => n + 1);
-                  setNotice(done);
-                }}
-              />
-            )}
-            {current && (
-              <Details
-                key={`details-${current.id}`}
-                workspace={current}
-                changes={toolChanges + settledRequests + connectionUses}
-              />
-            )}
           </main>
         </>
       ) : view === "status" ? (
@@ -852,19 +892,7 @@ export function App() {
                 report(error);
               }
             }}
-            onSaveAsNew={async (tool, name) => {
-              try {
-                // A variant: a new workspace from the tool's starting data, saved under its own
-                // name, so it changes apart from the original (DATA-08).
-                const result = await ask("library.useAgain", { id: tool.id, title: name });
-                if (!result.ok) return report(new Error(result.message));
-                await ask("library.save", { workspaceId: result.workspace.id, name });
-                await refresh();
-                setNotice(t("library.savedAsNew", { name }));
-              } catch (error) {
-                report(error);
-              }
-            }}
+            onSaveAsNew={saveAsNew}
             onRename={(tool, name) => act(() => ask("library.rename", { id: tool.id, name }))}
             onDescribe={(tool, description) =>
               act(() => ask("library.describe", { id: tool.id, description }))
