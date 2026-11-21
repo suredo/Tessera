@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Fixed**: The [drawer browser consumers](code/web/package.md) delete the last workspace through its public menu and wait for asynchronous naming forms and More to close before opening Workspaces. The request failure-details check uses the request field's Enter action while Details remains open, retaining its live-refresh assertions. The inherited tool-window checks also select workspaces through the drawer. These address the two independent review findings and the pointer-overlay and unmigrated-navigation CI failures; no product behavior, timeout or guard changed. Recorded by `codex/gpt-6` at 2026-11-21T15:39:01Z.
+
 * **Changed**: The [workspace drawer slice](code/web/package.md) now includes merged PR 417 and its foundation/runtime fixes, including the keyboard Restore regression. The [roadmap](roadmap/ui-redesign.md) records the merged header and pending drawer review. Existing drawer review findings remain open; no guard or timeout changed. Recorded by `codex/gpt-6` at 2026-11-21T15:29:46Z.
 
 * **Changed**: The [header slice](code/web/package.md) now includes merged PR 410 and the approved foundation. Its keyboard Restore regression opens History's new popover and verifies real underlying frame growth with focus and data-loss assertions retained. The [roadmap](roadmap/ui-redesign.md) records the completed width slice; header integration remains draft. Recorded by `codex/gpt-6` at 2026-11-21T15:05:19Z.

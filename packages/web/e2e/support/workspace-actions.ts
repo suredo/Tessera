@@ -5,7 +5,14 @@ import { en } from "../../src/i18n/en.ts";
 export async function openWorkspaces(page: Page) {
   const drawer = page.getByRole("dialog", { name: en["workspaces.heading"], exact: true });
   if (!(await drawer.isVisible())) {
-    if (await page.locator(".tool-menu").isVisible()) await page.keyboard.press("Escape");
+    const menu = page.locator(".tool-menu");
+    if (await menu.isVisible()) {
+      // A submitted naming form closes asynchronously. Escape must reach More, rather than
+      // dismissing only its child popover and leaving the menu over the drawer opener.
+      await expect(menu.locator(".name-panel:popover-open")).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
+    }
     await page.getByRole("button", { name: en["workspaces.heading"], exact: true }).click();
   }
   await expect(drawer).toBeVisible();

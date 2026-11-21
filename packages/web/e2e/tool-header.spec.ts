@@ -87,13 +87,16 @@ test("APP-03, APP-04: the header renames the workspace and saves a separate vari
   const rename = page.getByRole("dialog", { name: en["workspaces.renameShort"] });
   await rename.getByRole("textbox").fill(`${name} renamed`);
   await rename.getByRole("button", { name: en["library.confirm"], exact: true }).click();
+  await expect(rename).toBeHidden();
   await expect(page.locator(".tool-heading > h1")).toHaveText(`${name} renamed`);
   await page.keyboard.press("Escape");
   await clickToolAction(page, en["library.saveAsNew"]);
   const variant = page.getByRole("dialog", { name: en["library.saveAsNew"] });
   await variant.getByRole("textbox").fill(`${name} variant`);
   await variant.getByRole("button", { name: en["library.confirm"], exact: true }).click();
+  await expect(variant).toBeHidden();
   await openWorkspaces(page);
+  await expect(page.locator(".tool-menu")).toBeHidden();
   await expect(page.getByRole("button", { name: `Open ${name} variant` })).toBeVisible();
   await closeWorkspaces(page);
   await expect(page.locator(".tool-heading > h1")).toHaveText(`${name} renamed`);

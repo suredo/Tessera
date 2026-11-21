@@ -188,13 +188,18 @@ test("GEN-09, GEN-08, GEN-10: a tool that fails its checks, even after its repai
   await expect(details).toContainText(en["details.unattachedHeading"]);
   const unattached = details.locator(".details-requests").last().locator(":scope > li");
   const before = await unattached.count();
-  await ask(page, "A page that shows a website");
+  // Keep the non-modal Details panel open to check its live refresh. Its popover can cover the
+  // pointer target for Make it, so submit from the request field with its public Enter action.
+  const request = page.getByRole("textbox", { name: en["request.label"] });
+  await request.fill("A page that shows a website");
+  await request.press("Enter");
   await expect(newestReply(page)).toContainText(
     "That didn't work. The tool Tessera made didn't pass its checks, so nothing was changed.",
     { timeout: 30_000 },
   );
   expect(listWorkspaces(app.folder)).toHaveLength(1);
   // The failed creation made no workspace, and its reasons are still there to see (GEN-10).
+  await expect(details).toBeVisible();
   await openToolDetails(page);
   await expect(unattached).toHaveCount(before + 1);
   const failed = unattached.first();
