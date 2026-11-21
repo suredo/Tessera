@@ -209,6 +209,7 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
         options.appLocation,
         controller.signal,
         options.watchdog,
+        true,
       );
     } catch (error) {
       verdict = { check: "start", outcome: { ok: false, reason: (error as Error).message } };
@@ -234,6 +235,7 @@ export async function stageCandidate(options: StagingOptions): Promise<StagingRe
           options.appLocation,
           controller.signal,
           options.watchdog,
+          true,
         );
       // The candidate in the panel now, whether it is rehearsing, and the throwaway copy that one
       // check's rehearsals share. Each check starts on a candidate in the staging phase, which

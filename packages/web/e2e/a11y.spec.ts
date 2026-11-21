@@ -120,6 +120,14 @@ async function opened(page: Page, name: string) {
   await expect(toolHeading(page)).toHaveText(name, TOOL_START);
 }
 
+async function activateRestore(page: Page) {
+  // This is the keyboard accessibility path; pointer restoration remains in history.spec.ts.
+  // Keep keyboard activation independent of the underlying tool frame's fitted height.
+  const restore = page.getByRole("button", { name: "Restore version 1", exact: true });
+  await tabTo(page, restore);
+  await page.keyboard.press("Enter");
+}
+
 test("APP-11: the main screen, full screen and a restore that loses data have no violations, and nothing moves", async ({
   page,
 }) => {
@@ -130,7 +138,35 @@ test("APP-11: the main screen, full screen and a restore that loses data have no
   await check(page);
   await clickToolAction(page, en["tool.leaveFullScreen"]);
   await openToolHistory(page);
-  await page.getByRole("button", { name: "Restore version 1" }).click();
+  await activateRestore(page);
+  await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
+    en["history.losesData"],
+  );
+  await check(page);
+});
+
+test("APP-11, DATA-10: Restore remains keyboard-accessible through a late frame fit", async ({
+  page,
+}) => {
+  await opened(page, "Shopping list");
+  await openToolHistory(page);
+  const restore = page.getByRole("button", { name: "Restore version 1", exact: true });
+  // A89 can deliver another fitted height as a control receives focus. History now sits in a
+  // popover; exercise visible keyboard focus and activation while the underlying frame grows.
+  await restore.evaluate((button) => {
+    button.addEventListener(
+      "focus",
+      () => {
+        const frame = document.querySelector<HTMLElement>(".tool-frame")!;
+        const before = frame.getBoundingClientRect().height;
+        frame.style.height = `${before + 180}px`;
+        button.dataset["fitGrowth"] = String(frame.getBoundingClientRect().height - before);
+      },
+      { once: true },
+    );
+  });
+  await activateRestore(page);
+  expect(Number(await restore.getAttribute("data-fit-growth"))).toBeGreaterThan(0);
   await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
     en["history.losesData"],
   );

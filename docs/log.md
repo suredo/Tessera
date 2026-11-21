@@ -2,9 +2,17 @@
 
 ## 2026-11-21
 
-* **Fixed**: Restarting the [tool panel](code/web/package.md) rejects and dismisses its waiting Save/Allow questions; aborted starts cannot ask a delayed connection question or keep its permission. The [bridge](code/runtime/package.md) also refuses a late Save after disposal. Independent header review found the stale question path. Unit regressions cover delayed answers and lookups, and a browser regression exercises Undo while Save waits. Recorded by `codex/gpt-6` at 2026-11-21T02:28:19Z.
+* **Changed**: The [header slice](code/web/package.md) now includes merged PR 410 and the approved foundation. Its keyboard Restore regression opens History's new popover and verifies real underlying frame growth with focus and data-loss assertions retained. The [roadmap](roadmap/ui-redesign.md) records the completed width slice; header integration remains draft. Recorded by `codex/gpt-6` at 2026-11-21T15:05:19Z.
+
+* **Changed**: The width slice now includes the merged [UI redesign foundation](roadmap/ui-redesign.md) and its accessibility CI correction. Its [web code doc](code/web/package.md) preserves both the contract 5 fixture notes and the distinction between current host behavior and the approved target. PR 410 remains a draft; its integration checks are separate from the completed foundation review. Recorded by `codex/gpt-6` at 2026-11-21T14:28:21Z.
+
+* **Fixed**: The [host accessibility check](code/web/package.md) reaches Restore by Tab with visible focus and activates it with Enter after full-screen exit. A controlled late frame-fit case covers keyboard access while History moves; the existing data-loss assertions and pointer-based history tests remain. CI 44907794544 recorded a missing confirmation after a pointer action on a moving control. Local diagnostics confirmed layout changes but did not reproduce that exact missed click, so they are not claimed as a reproduction. No product behavior, timeout or guard changed. Recorded by `codex/gpt-6` at 2026-11-21T13:57:09Z.
+
+* **Changed**: The [UI redesign foundation](roadmap/ui-redesign.md) records the owner's approved decisions, separate milestone, six tracked slices and exit criteria. The approved [main-screen target](spec/app.md) now lives in the foundation; the [web code doc](code/web/package.md) distinguishes current implementation from that target. The consumed task handoff is removed for merge readiness. The offline mockup renderer uses actual filenames and a lint-safe browser callback, and creates its output folder. No product implementation or model call was added. Recorded by `codex/gpt-6` at 2026-11-21T12:47:40Z.
 
 * **Corrected**: The [prompt assembly doc](code/server/prompts.md) now records the completed [width-selection check](../evals/reports/2026-11-20-ui-width.md), replacing a stale pending-budget claim found in the independent review of PR 410. No code or prompt changed and no further model calls were made. Recorded by `codex/gpt-6` at 2026-11-21T02:04:03Z.
+
+* **Fixed**: Restarting the [tool panel](code/web/package.md) rejects and dismisses its waiting Save/Allow questions; aborted starts cannot ask a delayed connection question or keep its permission. The [bridge](code/runtime/package.md) also refuses a late Save after disposal. Independent header review found the stale question path. Unit regressions cover delayed answers and lookups, and a browser regression exercises Undo while Save waits. Recorded by `codex/gpt-6` at 2026-11-21T02:28:19Z.
 
 * **Fixed**: The [scenario runner](code/evals/runner.md) opens History before data undo or version restore. CI for the header redesign found that its earlier assumption of an always-visible history blocked T1 and falsely reported no earlier version in T6. The expected replay outcomes and time limits are unchanged. Recorded by `codex/gpt-6` at 2026-11-21T01:43:09Z.
 
@@ -27,6 +35,10 @@
 * **Changed**: The owner approved the separate [UI redesign milestone](roadmap/ui-redesign.md), the new [main-screen requirement](spec/app.md) (`APP-01`), the comfortable/wide contract declaration and Focus as the default. The milestone now has exit criteria; implementation and contract migration remain to be delivered. No model was called. Recorded by `codex/gpt-6` at 2026-11-20T20:52:00Z.
 
 * **New**: A proposed redesign of the host app ([UI redesign](roadmap/ui-redesign.md)): the tool first at its declared width, chat and workspaces hidden by default, the chat floating or docked on the right, one ask bar, a 64 px header and a phone layout, with its mockups in design/ui-redesign/; four decisions await the owner. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-20T20:18:05Z.
+
+## 2026-11-19
+
+* **Changed**: The sandbox limits what a tool reaches, not what it does in its own window when the person acts (A92; [decision log](decisions/decision-log.md), [runtime](spec/runtime.md), [threat model](spec/threat-model.md), [ADR 0014](decisions/adr/0014-chart-library.md), [runtime code](code/runtime/package.md)): a tool may copy to the clipboard after the person's click, and its charts show values on hover. Reading the clipboard stays refused (SBX-13), and so do the browser's own dialogs, which show over the whole host page and could pass for Tessera's; dialogs Tessera draws in the tool's panel are to come. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-19T13:59:52Z.
 
 ## 2026-11-18
 

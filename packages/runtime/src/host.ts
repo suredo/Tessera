@@ -2,6 +2,7 @@ import {
   MOUNT_MESSAGE,
   runtimeOriginFor,
   TOOL_EVENTS,
+  TOOL_FRAME_PERMISSIONS,
   type DriveStep,
   type ToolEvent,
 } from "./protocol.ts";
@@ -143,7 +144,8 @@ export const FIT_HEIGHT_PROPERTY = "--tool-fit-height";
  * Mounts the tool the server knows as `mountId` inside `container`. Resolves once the wrapper has
  * loaded and holds the channel; the tool's own document follows on its own. Aborting `signal`
  * before then removes the frame and rejects, so a mount that is no longer wanted never runs.
- * The watchdog runs from the start, so a tool stuck while it starts is stopped too.
+ * The watchdog runs from the start, so a tool stuck while it starts is stopped too. A tool mounted
+ * for a check (`checked`) may not use the clipboard (A92).
  */
 export function mountTool(
   container: HTMLElement,
@@ -151,10 +153,13 @@ export function mountTool(
   appLocation: { protocol: string; port: string } = location,
   signal?: AbortSignal,
   watchdog: WatchdogOptions = {},
+  checked = false,
 ): Promise<MountedTool> {
   const limits = { ...WATCHDOG_DEFAULTS, ...watchdog };
   const runtimeOrigin = runtimeOriginFor(appLocation);
   const frame = document.createElement("iframe");
+  // The person's tool may copy and paste in its own window; one mounted for a check may not (A92).
+  if (!checked) frame.allow = TOOL_FRAME_PERMISSIONS;
   frame.src = `${runtimeOrigin}/runtime/wrapper`;
   frame.title = "Tool";
   const instanceId = crypto.randomUUID();
@@ -286,7 +291,7 @@ export function mountTool(
         signal?.removeEventListener("abort", abort);
         failStart = undefined;
         frame.contentWindow?.postMessage(
-          { type: MOUNT_MESSAGE, mountId, instanceId },
+          { type: MOUNT_MESSAGE, mountId, instanceId, checked },
           runtimeOrigin,
           [channel.port2],
         );

@@ -1,15 +1,22 @@
 // Renders Codex's HTML mockups to PNG at their stated sizes.
 import { chromium } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 const [dir, outDir, list] = process.argv.slice(2);
 const defaults = [
-  ["mockup-desktop.html", 1440, 900],
-  ["mockup-mobile.html", 390, 844],
-  ["mockup-annotated.html", 1900, 900],
+  ["a-focus.html", 1440, 900],
+  ["b-chat-floating.html", 1440, 900],
+  ["c-chat-docked.html", 1440, 900],
+  ["d-workspaces-open.html", 1440, 900],
+  ["g-wide-tool.html", 1440, 900],
+  ["e-mobile.html", 390, 844],
+  ["f-mobile-chat.html", 390, 844],
+  ["overview.html", 1600, 1000],
 ];
 const jobs = list ? JSON.parse(list) : defaults;
+await mkdir(outDir, { recursive: true });
 const browser = await chromium.launch({ channel: "chrome" });
 for (const [file, width, height] of jobs) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 2 });
