@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Changed**: The [header slice](code/web/package.md) now includes merged PR 410 and the approved foundation. Its keyboard Restore regression opens History's new popover and verifies real underlying frame growth with focus and data-loss assertions retained. The [roadmap](roadmap/ui-redesign.md) records the completed width slice; header integration remains draft. Recorded by `codex/gpt-6` at 2026-11-21T15:05:19Z.
+
 * **Changed**: The width slice now includes the merged [UI redesign foundation](roadmap/ui-redesign.md) and its accessibility CI correction. Its [web code doc](code/web/package.md) preserves both the contract 5 fixture notes and the distinction between current host behavior and the approved target. PR 410 remains a draft; its integration checks are separate from the completed foundation review. Recorded by `codex/gpt-6` at 2026-11-21T14:28:21Z.
 
 * **Fixed**: The [host accessibility check](code/web/package.md) reaches Restore by Tab with visible focus and activates it with Enter after full-screen exit. A controlled late frame-fit case covers keyboard access while History moves; the existing data-loss assertions and pointer-based history tests remain. CI 44907794544 recorded a missing confirmation after a pointer action on a moving control. Local diagnostics confirmed layout changes but did not reproduce that exact missed click, so they are not claimed as a reproduction. No product behavior, timeout or guard changed. Recorded by `codex/gpt-6` at 2026-11-21T13:57:09Z.
@@ -9,6 +11,14 @@
 * **Changed**: The [UI redesign foundation](roadmap/ui-redesign.md) records the owner's approved decisions, separate milestone, six tracked slices and exit criteria. The approved [main-screen target](spec/app.md) now lives in the foundation; the [web code doc](code/web/package.md) distinguishes current implementation from that target. The consumed task handoff is removed for merge readiness. The offline mockup renderer uses actual filenames and a lint-safe browser callback, and creates its output folder. No product implementation or model call was added. Recorded by `codex/gpt-6` at 2026-11-21T12:47:40Z.
 
 * **Corrected**: The [prompt assembly doc](code/server/prompts.md) now records the completed [width-selection check](../evals/reports/2026-11-20-ui-width.md), replacing a stale pending-budget claim found in the independent review of PR 410. No code or prompt changed and no further model calls were made. Recorded by `codex/gpt-6` at 2026-11-21T02:04:03Z.
+
+* **Fixed**: Restarting the [tool panel](code/web/package.md) rejects and dismisses its waiting Save/Allow questions; aborted starts cannot ask a delayed connection question or keep its permission. The [bridge](code/runtime/package.md) also refuses a late Save after disposal. Independent header review found the stale question path. Unit regressions cover delayed answers and lookups, and a browser regression exercises Undo while Save waits. Recorded by `codex/gpt-6` at 2026-11-21T02:28:19Z.
+
+* **Fixed**: The [scenario runner](code/evals/runner.md) opens History before data undo or version restore. CI for the header redesign found that its earlier assumption of an always-visible history blocked T1 and falsely reported no earlier version in T6. The expected replay outcomes and time limits are unchanged. Recorded by `codex/gpt-6` at 2026-11-21T01:43:09Z.
+
+* **Fixed**: Entering full screen through the [tool header](code/web/package.md)'s More menu dismisses that menu first. The narrow accessibility check found it obstructing a header control; a browser regression now checks dismissal and accessibility in full screen. Recorded by `codex/gpt-6` at 2026-11-21T00:41:14Z.
+
+* **Changed**: The [host tool header](code/web/package.md) puts the tool's name, truthful local-save/library status, Undo, History, Save and one More menu beside the tool. History and Details open in native popovers; runtime reloads after data restores keep the header mounted. Header/panel controls use 44 px targets. Browser interactions now open those public controls, and a new layout spec checks keyboard dismissal/focus return and preserved tool input/scroll. Drawer, conversation and phone redesign slices remain pending. Recorded by `codex/gpt-6` at 2026-11-21T00:16:26Z.
 
 * **Fixed**: The [width check](code/evals/ui-width.md)'s replay test narrows the creation answer before passing it to the host's tool-only candidate check. CI caught the missing TypeScript narrowing after the replay test was added; its runtime assertions already passed. No further live calls. Recorded by `codex/gpt-6` at 2026-11-21T00:20:00Z.
 

@@ -1,0 +1,31 @@
+import { expect, type Page } from "@playwright/test";
+import { en } from "../../src/i18n/en.ts";
+
+// The same visible controls a person uses; no request markers or test-only host behavior (ENG-11).
+export async function clickToolAction(page: Page, name: string) {
+  const header = page.locator(".tool-header");
+  await expect(header).toBeVisible();
+  const direct = header.getByRole("button", { name, exact: true });
+  if (await direct.isVisible()) return direct.click();
+  const menu = page.locator(".tool-menu");
+  if (!(await menu.isVisible()))
+    await header.getByRole("button", { name: en["tool.more"] }).click();
+  await menu.getByRole("button", { name, exact: true }).click();
+}
+
+export async function openToolHistory(page: Page) {
+  if (!(await page.getByRole("region", { name: en["history.heading"] }).isVisible())) {
+    await page.getByRole("button", { name: en["history.heading"], exact: true }).click();
+  }
+}
+
+export async function openToolDetails(page: Page) {
+  const show = page.getByRole("button", { name: en["details.show"], exact: true });
+  if (await show.isVisible()) return show.click();
+  if (await page.getByRole("region", { name: en["details.heading"] }).isVisible()) return;
+  if (await page.getByRole("button", { name: en["tool.more"] }).isVisible()) {
+    await clickToolAction(page, en["details.heading"]);
+  } else {
+    await page.getByRole("button", { name: en["details.show"] }).click();
+  }
+}

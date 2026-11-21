@@ -7,10 +7,12 @@ implements: [OBS-03, EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../evals/test/metrics.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-18T10:23:56Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T01:43:09Z }
 ---
 
 # Purpose
+
+Undo and interface restore open the host's History panel before locating their controls (`APP-05`). The T1 and T6 recorded replays exercise this after the header redesign; the runner does not treat a closed panel as missing version history.
 
 The second part of the scenario runner (#155). It plays a [scenario file](scenarios.md) against a real Tessera, as a person would: an empty Tessera on the run's own data folder, the host app in Chrome, and every model call through the [harness](harness.md), which caps and records it. After each step it reads what Tessera stored and checks the step's host facts (`EVAL-02`), then writes a report. A rehearsal plays hand-written answers to try a scenario at no cost; a replay plays a live run's recorded answers (`EVAL-07`, `TEST-04`). A live run (`--live --cap <n>`) calls Claude Code within the owner's approved cap and is recorded as answers that replay offline.
 

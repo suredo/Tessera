@@ -22,7 +22,7 @@ const traceFailures = !!process.env["CI"] || record;
  * `chat-layout.spec.ts` sets its own 1280 and 320 px viewports, so it needs only the one project.
  * A spec that checks how something is laid out on a narrow screen joins this list.
  */
-const LAYOUT_SPECS = ["shell.spec.ts", "app.spec.ts", "a11y.spec.ts"];
+const LAYOUT_SPECS = ["shell.spec.ts", "app.spec.ts", "a11y.spec.ts", "tool-header.spec.ts"];
 
 export default defineConfig({
   testDir: "packages/web/e2e",

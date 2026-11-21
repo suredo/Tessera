@@ -1,3 +1,5 @@
+import { openToolHistory } from "./support/tool-actions.ts";
+import { openToolDetails } from "./support/tool-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import type { Creation, Intent } from "../../contracts/src/index.ts";
 import { UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.ts";
@@ -156,13 +158,14 @@ test("TEST-03, GEN-05, APP-05, UX-03: a request becomes a running tool, staged a
   await expect(toolText(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
   expect(listWorkspaces(app.folder).map((w) => w.title)).toEqual(["Shopping list"]);
   // The version keeps what it was made for and the checks it passed, in its history (APP-05).
+  await openToolHistory(page);
   const history = page.getByRole("region", { name: en["history.heading"] });
   await expect(history).toContainText("A list of what to buy.");
   await expect(history).toContainText(en["history.checkedBoth"]);
   // It fits no verification profile, so it says its behavior isn't verified (VER-08, UX-03).
   await expect(history).toContainText(en["history.notTriedOut"]);
   const details = page.getByRole("region", { name: en["details.heading"] });
-  await details.getByRole("button", { name: en["details.show"] }).click();
+  await openToolDetails(page);
   await expect(details).toContainText(en["details.check.noBehavior"]);
 });
 
@@ -181,7 +184,7 @@ test("GEN-09, GEN-08, GEN-10: a tool that fails its checks, even after its repai
   await page.goto(app.url);
   // Details opened before asking load again when the request settles, though it changed nothing.
   const details = page.getByRole("region", { name: en["details.heading"] });
-  await details.getByRole("button", { name: en["details.show"] }).click();
+  await openToolDetails(page);
   await expect(details).toContainText(en["details.unattachedHeading"]);
   const unattached = details.locator(".details-requests").last().locator(":scope > li");
   const before = await unattached.count();
@@ -192,6 +195,7 @@ test("GEN-09, GEN-08, GEN-10: a tool that fails its checks, even after its repai
   );
   expect(listWorkspaces(app.folder)).toHaveLength(1);
   // The failed creation made no workspace, and its reasons are still there to see (GEN-10).
+  await openToolDetails(page);
   await expect(unattached).toHaveCount(before + 1);
   const failed = unattached.first();
   await expect(failed).toContainText(en["details.ended.failed"]);
@@ -263,7 +267,7 @@ test("GEN-09, GEN-05, APP-09, UX-06: a smoke failure gets one repair, staged aga
   // and usage nobody reported as unknown, never 0 (APP-09, UX-06, OBS-01, GEN-10, CLI-04).
   const details = page.getByRole("region", { name: en["details.heading"] });
   await expect(details.getByRole("table")).toHaveCount(0);
-  await details.getByRole("button", { name: en["details.show"] }).click();
+  await openToolDetails(page);
   // The workspace's own requests come first; requests that made no tool follow in their own list.
   const requests = details.locator(".details-requests").first().locator(":scope > li");
   await expect(requests).toHaveCount(2);
@@ -283,7 +287,7 @@ test("GEN-09, GEN-05, APP-09, UX-06: a smoke failure gets one repair, staged aga
   await expect(html.locator("xpath=..").locator("pre code")).toContainText(
     "<h1>Shopping list</h1>",
   );
-  await details.getByRole("button", { name: en["details.hide"] }).click();
+  await page.keyboard.press("Escape");
   await expect(details.locator(".details-requests")).toHaveCount(0);
 });
 

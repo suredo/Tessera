@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
+import { patchWorkspaceData } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, TOOL_START, workspaceWith, type AppHost } from "./support/app-host.ts";
 
@@ -100,4 +101,54 @@ test("CAP-03: an image the tool drew is saved as the PNG it is", async ({ page }
   const bytes = fs.readFileSync(await saved.path());
   expect([...bytes.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
   await expect(tool(page).locator("#text")).toHaveText("Saved");
+});
+
+test("RUN-02 A81: undo dismisses an old Save question and the restarted tool can ask again", async ({
+  page,
+}) => {
+  let downloads = 0;
+  page.on("download", () => downloads++);
+  const title = `Restart saver ${Math.random().toString(36).slice(2, 7)}`;
+  const artifact = structuredClone(saver);
+  artifact.data = {
+    schemaVersion: 1,
+    schema: {
+      type: "object",
+      properties: {
+        notes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: { id: { type: "string" }, title: { type: "string" } },
+            required: ["id", "title"],
+          },
+        },
+      },
+    },
+    defaults: { notes: [] },
+    migrations: [],
+  };
+  const id = workspaceWith(app.folder, title, artifact);
+  const changed = patchWorkspaceData(app.folder, id, {
+    operations: [{ op: "add", collection: "notes", record: { title: "A note" } }],
+  });
+  expect(changed.ok).toBe(true);
+  await page.goto(app.url);
+  await page.getByRole("button", { name: new RegExp(`^(Open ${title}|${title}, open)$`) }).click();
+  await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
+  await tool(page).getByRole("button", { name: "Save the list" }).click();
+  await expect(question(page)).toBeVisible();
+  await page
+    .locator(".tool-header")
+    .getByRole("button", { name: en["history.undo"], exact: true })
+    .click();
+  await expect(question(page)).toBeHidden();
+  await expect(tool(page).locator("#text")).toHaveText("Ready", TOOL_START);
+  expect(downloads).toBe(0);
+  await tool(page).getByRole("button", { name: "Save the list" }).click();
+  await expect(question(page)).toBeVisible();
+  const download = page.waitForEvent("download");
+  await question(page).getByRole("button", { name: en["save.save"], exact: true }).click();
+  await download;
+  expect(downloads).toBe(1);
 });
