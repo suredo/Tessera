@@ -4,7 +4,7 @@ title: "Threat model and boundary checks"
 description: "Tessera's trust boundaries, what M1 tests and what it leaves open, and the numbered negative checks for the sandbox, bridge, connections, files, imports, assets and migrations (SBX, BRG, CNX, FIL, IMP, AST, MIG)."
 tags: [spec, security, threat-model, sandbox]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-15T23:23:08Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-19T13:59:52Z }
 ---
 # Threat model and boundary checks
 
@@ -97,7 +97,7 @@ Each check is a hand-written tool that attempts the forbidden thing from inside 
 | SBX-07 | Navigating its own frame: assigning `location`, clicking a link, a `<meta http-equiv="refresh">` | The frame still shows the tool, and no request arrives at the probe server. Chrome and Edge still resolve and connect to an outside address the frame is sent to, as for `SBX-06`'s frames from a URL ([#72](https://github.com/suredo/Tessera/issues/72)). |
 | SBX-08 | Submitting a form, to the probe server and to the host | No submission is sent and the frame does not navigate. |
 | SBX-09 | Navigating the host page: `top.location` and `parent.location` | The host page stays where it is. |
-| SBX-10 | Popups, dialogs and downloads: `window.open`, a `target="_blank"` link, `alert`, `confirm`, `prompt`, `print`, a link with `download` | No window opens, no dialog blocks the host, and no file is downloaded. |
+| SBX-10 | Popups, dialogs and downloads: `window.open`, a `target="_blank"` link, `alert`, `confirm`, `prompt`, `print`, a link with `download` | No window opens, no dialog blocks the host, and no file is downloaded. The browser's dialogs show over the whole host page, need no click, and could pass for Tessera's, so they stay off (A92). |
 | SBX-11 | Reaching the host: `parent.document`, `top.document`, the wrapper's and host's storage and functions, `window.opener`; reading its own origin | Each access throws or gives nothing; the tool's origin is `null`. The wrapper, on the opposite loopback host, cannot read the host page either. |
 | SBX-12 | Talking outside the bridge: `postMessage` with a bridge-shaped request to `parent` and `top`; reusing a port from an earlier mount; a bridge message from another frame | No reply, and nothing changes in the host. Only the fresh MessageChannel port of the current instance is answered (`RUN-01`). |
 | SBX-13 | Device and powerful features: geolocation, camera and microphone, reading the clipboard, fullscreen, pointer lock | Each is refused without a permission prompt reaching the person. |

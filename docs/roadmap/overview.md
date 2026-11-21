@@ -4,7 +4,7 @@ title: "Overview"
 description: "Build order, the milestone diagram, sizes and sign-off."
 tags: [roadmap, overview]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-20T20:54:02Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T12:47:40Z }
 ---
 # Roadmap
 
