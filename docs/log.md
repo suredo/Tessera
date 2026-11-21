@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Fixed**: Restarting the [tool panel](code/web/package.md) rejects and dismisses its waiting Save/Allow questions; aborted starts cannot ask a delayed connection question or keep its permission. The [bridge](code/runtime/package.md) also refuses a late Save after disposal. Independent header review found the stale question path. Unit regressions cover delayed answers and lookups, and a browser regression exercises Undo while Save waits. Recorded by `codex/gpt-6` at 2026-11-21T02:28:19Z.
+
 * **Corrected**: The [prompt assembly doc](code/server/prompts.md) now records the completed [width-selection check](../evals/reports/2026-11-20-ui-width.md), replacing a stale pending-budget claim found in the independent review of PR 410. No code or prompt changed and no further model calls were made. Recorded by `codex/gpt-6` at 2026-11-21T02:04:03Z.
 
 * **Fixed**: The [scenario runner](code/evals/runner.md) opens History before data undo or version restore. CI for the header redesign found that its earlier assumption of an always-visible history blocked T1 and falsely reported no earlier version in T6. The expected replay outcomes and time limits are unchanged. Recorded by `codex/gpt-6` at 2026-11-21T01:43:09Z.

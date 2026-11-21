@@ -171,6 +171,69 @@ describe("CNX-07: a tool's first change through a connection asks the person (A7
     }
   });
 
+  it("RUN-02: a replaced runtime cannot grant a waiting permission or send its change", async () => {
+    const { deps, asked, sent, connection } = host();
+    const controller = new AbortController();
+    let allow!: (allowed: boolean) => void;
+    const askToWrite = vi.fn(() => new Promise<boolean>((resolve) => (allow = resolve)));
+    const handler = withPermission(
+      connection,
+      "w1",
+      "Movie finder",
+      askToWrite,
+      deps,
+      undefined,
+      controller.signal,
+    );
+    const pending = handler(post, context);
+    await vi.waitFor(() => expect(askToWrite).toHaveBeenCalledOnce());
+    controller.abort();
+    allow(true);
+    await expect(pending).rejects.toMatchObject({ code: "not-allowed" });
+    expect(asked).not.toContain("connections.allowWrites");
+    expect(sent).toHaveLength(1);
+  });
+
+  it("RUN-02: a connection lookup completed after replacement asks no stale question", async () => {
+    const { deps, connection } = host();
+    const controller = new AbortController();
+    let finish!: () => void;
+    vi.mocked(deps.ask).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = () =>
+            resolve({
+              connections: [
+                {
+                  name: "movies",
+                  origins: ["https://api.example.com"],
+                  auth: { kind: "none" },
+                  hasKey: false,
+                  addedAt: "2026-11-21T02:28:19Z",
+                },
+              ],
+            });
+        }),
+    );
+    const askToWrite = vi.fn(() => Promise.resolve(true));
+    const handler = withPermission(
+      connection,
+      "w1",
+      "Movie finder",
+      askToWrite,
+      deps,
+      undefined,
+      controller.signal,
+    );
+    const pending = handler(post, context);
+    await vi.waitFor(() => expect(deps.ask).toHaveBeenCalledOnce());
+    controller.abort();
+    finish();
+    await expect(pending).rejects.toMatchObject({ code: "not-allowed" });
+    expect(askToWrite).not.toHaveBeenCalled();
+    expect(connection).toHaveBeenCalledOnce();
+  });
+
   it("asks once for changes made while the question is open, and passes any other refusal on", async () => {
     const { deps, connection } = host();
     let allow!: (allowed: boolean) => void;
