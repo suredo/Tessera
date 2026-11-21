@@ -4,7 +4,7 @@ title: "Host app"
 description: "What the person sees and can do: main screen, workspaces, library, versions, trash, details (APP-01 to APP-11)."
 tags: [spec, host-app, ui]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-20T20:52:00Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T12:47:40Z }
 ---
 # Host app (`APP`)
 
