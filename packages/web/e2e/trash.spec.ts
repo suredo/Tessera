@@ -1,3 +1,8 @@
+import {
+  openAppSection,
+  clickWorkspaceAction,
+  openWorkspaces,
+} from "./support/workspace-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { deleteSavedTool, deleteWorkspace } from "../../server/src/trash/index.ts";
 import { saveTool } from "../../server/src/workspaces/index.ts";
@@ -21,34 +26,30 @@ const entry = (page: Page, name: string) =>
   trash(page)
     .getByRole("listitem")
     .filter({ has: page.getByRole("heading", { name, exact: true }) });
-const toTrash = (page: Page) =>
-  page.getByRole("button", { name: en["nav.trash"], exact: true }).click();
+const toTrash = (page: Page) => openAppSection(page, en["nav.trash"]);
 const toolText = (page: Page) =>
   page
     .frameLocator(".tool-frame iframe")
     .frameLocator("iframe")
     .frameLocator("iframe")
     .locator("#text");
-
 test("DATA-09: after the last workspace is deleted, the first screen still reaches the trash", async ({
   page,
 }) => {
   const name = `Only one ${unique()}`;
   workspaceWith(app.folder, name, testTool(`The only tool`));
   await page.goto(app.url);
-  await page.getByRole("button", { name: `Move ${name} to the trash` }).click();
+  await clickWorkspaceAction(page, `Move ${name} to the trash`);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
-
   await page.getByRole("button", { name: en["home.trash"] }).click();
   await entry(page, name)
     .getByRole("button", { name: `Restore ${name}` })
     .click();
   await expect(page.getByText(`${name} is back.`)).toBeVisible();
   // It opens again, since nothing else was open.
-  await page.getByRole("button", { name: en["nav.workspaces"], exact: true }).click();
+  await openAppSection(page, en["nav.workspaces"]);
   await expect(toolText(page)).toHaveText("The only tool");
 });
-
 test("APP-08: the trash lists what was deleted and when it goes, and restores each", async ({
   page,
 }) => {
@@ -60,7 +61,6 @@ test("APP-08: the trash lists what was deleted and when it goes, and restores ea
   const { id: toolId } = saveTool(app.folder, kept, tool);
   deleteWorkspace(app.folder, workspaceId);
   deleteSavedTool(app.folder, toolId);
-
   await page.goto(app.url);
   await toTrash(page);
   await expect(entry(page, workspace)).toContainText(en["trash.workspace"]);
@@ -72,7 +72,6 @@ test("APP-08: the trash lists what was deleted and when it goes, and restores ea
   await expect(entry(page, workspace)).toContainText(
     `Deleted ${deleted} · Goes for good ${removed}`,
   );
-
   await entry(page, workspace)
     .getByRole("button", { name: `Restore ${workspace}` })
     .click();
@@ -82,10 +81,10 @@ test("APP-08: the trash lists what was deleted and when it goes, and restores ea
     .getByRole("button", { name: `Restore ${tool}` })
     .click();
   await expect(page.getByText(`${tool} is back.`)).toBeVisible();
-
-  await page.getByRole("button", { name: en["nav.library"], exact: true }).click();
+  await openAppSection(page, en["nav.library"]);
   await expect(page.getByRole("heading", { name: tool, exact: true })).toBeVisible();
-  await page.getByRole("button", { name: en["nav.workspaces"], exact: true }).click();
+  await openAppSection(page, en["nav.workspaces"]);
+  await openWorkspaces(page);
   await expect(page.getByRole("button", { name: `Open ${workspace}` })).toBeVisible();
 });
 

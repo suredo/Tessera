@@ -1,3 +1,4 @@
+import { openAppSection, openWorkspaces, closeWorkspaces } from "./support/workspace-actions.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -179,7 +180,6 @@ test("APP-07: the status screen shows Claude Code, Node.js and the data folder, 
   await expect(probeButton(page)).toBeVisible();
   expect(await violations(page)).toEqual([]);
 });
-
 test("PLAT-03: the main screen says what is wrong and reaches the status screen; once ready, it says nothing", async ({
   page,
 }) => {
@@ -190,23 +190,27 @@ test("PLAT-03: the main screen says what is wrong and reaches the status screen;
   await expect(alert).toContainText("older than");
   await alert.getByRole("button", { name: en["setup.openStatus"] }).click();
   await expect(status(page)).toBeVisible();
+  await openWorkspaces(page);
   await expect(page.getByRole("button", { name: en["nav.status"] })).toHaveAttribute(
     "aria-current",
     "page",
   );
+  await closeWorkspaces(page);
   state = "ready";
   await page.goto(app.url);
+  await openWorkspaces(page);
+  await page.getByRole("button", { name: "Actions for Errands", exact: true }).click();
   await expect(page.getByRole("button", { name: "Move Errands to the trash" })).toBeVisible();
+  await closeWorkspaces(page);
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
-
 test("CLI-02: the probe says it costs a call, runs only when asked, and says how it went in plain words", async ({
   page,
 }) => {
-  test.setTimeout(90_000); // Two probe answers, each allowed PROBE_ANSWER.
+  test.setTimeout(90000); // Two probe answers, each allowed PROBE_ANSWER.
   state = "ready";
   await page.goto(app.url);
-  await page.getByRole("button", { name: en["nav.status"] }).click();
+  await openAppSection(page, en["nav.status"]);
   await expect(status(page).getByText(en["setup.probe.intro"])).toBeVisible();
   expect(probesMade()).toBe(0);
   await probeButton(page).click();
@@ -260,7 +264,6 @@ test("PLAT-03: a check that couldn't be made says so, never looks endless, and c
   await expect(probeButton(page)).toBeVisible();
   expect(await violations(page)).toEqual([]);
 });
-
 test("CLI-01: chooses the program on the status screen, keeps the choice, and the notice follows it", async ({
   page,
 }) => {
@@ -278,7 +281,7 @@ test("CLI-01: chooses the program on the status screen, keeps the choice, and th
     await page.goto(host.url);
     // Claude Code is chosen until a choice is made, and it is ready: no notice.
     await expect(page.getByRole("alert")).toHaveCount(0);
-    await page.getByRole("button", { name: en["nav.status"] }).click();
+    await openAppSection(page, en["nav.status"]);
     const programs = status(page).getByRole("group", { name: en["setup.provider.heading"] });
     const claude = programs.getByRole("radio", { name: en["setup.provider.claude"] });
     const codexChoice = programs.getByRole("radio", { name: en["setup.provider.codex"] });
@@ -300,7 +303,7 @@ test("CLI-01: chooses the program on the status screen, keeps the choice, and th
     codex = { ok: true, executable: "C:\\Tools\\codex.exe", version: "0.166.0" };
     await page.reload();
     await expect(page.getByRole("alert")).toHaveCount(0);
-    await page.getByRole("button", { name: en["nav.status"] }).click();
+    await openAppSection(page, en["nav.status"]);
     await expect(codexChoice).toBeChecked();
     await expect(
       programs.getByText("Codex 0.166.0 is ready, at C:\\Tools\\codex.exe."),
@@ -310,7 +313,6 @@ test("CLI-01: chooses the program on the status screen, keeps the choice, and th
     await host.close();
   }
 });
-
 test("CLI-01: a check and a choice never overlap, so an old check can't put the old program back", async ({
   page,
 }) => {
@@ -322,7 +324,7 @@ test("CLI-01: a check and a choice never overlap, so an old check can't put the 
   });
   try {
     await page.goto(host.url);
-    await page.getByRole("button", { name: en["nav.status"] }).click();
+    await openAppSection(page, en["nav.status"]);
     const programs = status(page).getByRole("group", { name: en["setup.provider.heading"] });
     const codexChoice = programs.getByRole("radio", { name: en["setup.provider.codex"] });
     const recheck = status(page).getByRole("button", { name: en["setup.recheck"] });

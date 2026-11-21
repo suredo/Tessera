@@ -1,8 +1,10 @@
 import { expect, type Page } from "@playwright/test";
 import { en } from "../../src/i18n/en.ts";
+import { closeWorkspaces } from "./workspace-actions.ts";
 
 // The same visible controls a person uses; no request markers or test-only host behavior (ENG-11).
 export async function clickToolAction(page: Page, name: string) {
+  await closeWorkspaces(page);
   const header = page.locator(".tool-header");
   await expect(header).toBeVisible();
   const direct = header.getByRole("button", { name, exact: true });
@@ -14,12 +16,14 @@ export async function clickToolAction(page: Page, name: string) {
 }
 
 export async function openToolHistory(page: Page) {
+  await closeWorkspaces(page);
   if (!(await page.getByRole("region", { name: en["history.heading"] }).isVisible())) {
     await page.getByRole("button", { name: en["history.heading"], exact: true }).click();
   }
 }
 
 export async function openToolDetails(page: Page) {
+  await closeWorkspaces(page);
   const show = page.getByRole("button", { name: en["details.show"], exact: true });
   if (await show.isVisible()) return show.click();
   if (await page.getByRole("region", { name: en["details.heading"] }).isVisible()) return;

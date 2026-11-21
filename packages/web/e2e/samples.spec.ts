@@ -1,3 +1,4 @@
+import { clickWorkspaceAction, openAppSection } from "./support/workspace-actions.ts";
 import { openToolHistory } from "./support/tool-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { seedSamples } from "../../../scripts/seed.ts";
@@ -20,7 +21,7 @@ test.afterAll(() => app.close());
 const tool = (page: Page) =>
   page.frameLocator(".tool-frame iframe").frameLocator("iframe").frameLocator("iframe");
 const openWorkspace = (page: Page, name: string) =>
-  page.getByRole("button", { name: new RegExp(`^(Open ${name}|${name}, open)$`) }).click();
+  clickWorkspaceAction(page, new RegExp(`^(Open ${name}|${name}, open)$`));
 
 // Quarantined (ENG-20): on a busy machine the sample list was sometimes drawn about 11 s after the
 // workspace opened, past even the 10 s wait for a tool's start. Find why and remove this (#214).
@@ -50,15 +51,14 @@ test.fixme("ENG-19, APP-05, DATA-04: the sample shopping list saves what the per
   await expect(confirm.getByRole("listitem").filter({ hasText: "done was true" })).toHaveCount(2);
   await confirm.getByRole("button", { name: en["history.cancel"] }).click();
 });
-
 test("ENG-19, APP-04, APP-08: the sample library, trash and workspace without a tool each have something to show", async ({
   page,
 }) => {
   await page.goto(app.url);
   await openWorkspace(page, "Ideas");
   await expect(page.getByText("Ideas has no tool yet.")).toBeVisible();
-  await page.getByRole("button", { name: en["nav.library"], exact: true }).click();
+  await openAppSection(page, en["nav.library"]);
   await expect(page.getByRole("heading", { name: "Garden journal" })).toBeVisible();
-  await page.getByRole("button", { name: en["nav.trash"], exact: true }).click();
+  await openAppSection(page, en["nav.trash"]);
   await expect(page.getByRole("heading", { name: "Old packing list" })).toBeVisible();
 });

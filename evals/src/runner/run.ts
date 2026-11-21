@@ -34,6 +34,12 @@ import {
   type StepTarget,
 } from "../scenarios/index.ts";
 import { featuresMissed, outcomeOf, say } from "./messages.ts";
+import {
+  clickWorkspaceAction,
+  closeWorkspaces,
+  openAppSection,
+  selectWorkspace,
+} from "../../../packages/web/e2e/support/workspace-actions.ts";
 import { startServices, type Services } from "./services.ts";
 
 // The scenario runner (EVAL-01, EVAL-02): it starts an empty Tessera on the run's own data folder,
@@ -657,10 +663,11 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
   if ("save" in s) {
     const id = await openWorkspace(page);
     if (!id) throw new Error("No workspace is open to save.");
-    await button(page, say("workspaces.save", { name: workspaceTitle(id) })).click();
+    await clickWorkspaceAction(page, say("workspaces.save", { name: workspaceTitle(id) }));
     await page.getByLabel(say("workspaces.saveLabel")).fill(s.save);
     await button(page, say("workspaces.saveConfirm")).click();
     await page.getByText(say("workspaces.savedAs", { name: s.save })).waitFor();
+    await closeWorkspaces(page);
     return { claim: "none" };
   }
   if ("continue" in s || "use-again" in s) {
@@ -676,7 +683,7 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     );
     if (await offered.count()) await offered.click();
     else {
-      await button(page, say("nav.library")).click();
+      await openAppSection(page, say("nav.library"));
       await page
         .getByRole("button", {
           name:
@@ -733,10 +740,9 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
       // would, through the store, then opened in the app like any other.
       createWorkspace(store, NEW_WORKSPACE);
       await page.reload();
-      await button(page, say("workspaces.open", { name: NEW_WORKSPACE })).click();
+      await selectWorkspace(page, NEW_WORKSPACE);
     } else {
-      await button(page, say("nav.workspaces")).click();
-      await button(page, say("workspaces.open", { name: s.switch })).click();
+      await selectWorkspace(page, s.switch);
     }
     await page.locator(".tool-panel[data-workspace-id]").waitFor();
     return { claim: "none" };
@@ -745,13 +751,14 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     const match = listWorkspaces(store).filter((w) => w.title === s.delete);
     if (match.length !== 1) throw new Error(`${match.length} workspaces are named ${s.delete}.`);
     target.trashes = match[0]!.id;
-    await button(page, say("nav.workspaces")).click();
-    await button(page, say("workspaces.delete", { name: s.delete })).click();
+    await clickWorkspaceAction(page, say("workspaces.delete", { name: s.delete }));
     await page.getByText(say("workspaces.deleted", { name: s.delete })).waitFor();
     return { claim: "none" };
   }
   if ("restore" in s) {
-    await button(page, say("nav.trash")).click();
+    const firstScreen = button(page, say("home.trash"));
+    if (await firstScreen.isVisible()) await firstScreen.click();
+    else await openAppSection(page, say("nav.trash"));
     await button(page, say("trash.restoreLabel", { name: s.restore })).click();
     await page.getByText(say("trash.restored", { name: s.restore })).waitFor();
     return { claim: "none" };
@@ -763,7 +770,7 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     // first screen from that file (APP-06, DATA-05).
     const [download] = await Promise.all([
       page.waitForEvent("download"),
-      button(page, say("workspaces.export", { name: workspaceTitle(id) })).click(),
+      clickWorkspaceAction(page, say("workspaces.export", { name: workspaceTitle(id) })),
     ]);
     const file = {
       name: download.suggestedFilename(),

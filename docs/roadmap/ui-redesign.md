@@ -4,7 +4,7 @@ title: "UI redesign: the tool comes first"
 description: "The separate UI redesign milestone: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout."
 tags: [roadmap, ux, app, redesign]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-21T00:16:26Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T04:35:53Z }
 ---
 # UI redesign: the tool comes first
 
@@ -51,7 +51,7 @@ Width evidence: the [2026-11-20 live check](../../evals/reports/2026-11-20-ui-wi
 
 ## Suggested pull requests
 
-Tracked in the [UI redesign milestone](https://github.com/suredo/Tessera/milestone/8). The first slice is implemented in [PR 410](https://github.com/suredo/Tessera/pull/410), with contract 4 compatibility and generated schemas. Header work has started; the rest of the host layout is pending. The owner separately approved at most four live width-check calls on 2026-11-20: a focused list and a wide board, with one repair reserve each. The [stage check](../code/evals/ui-width.md) has a free fake-CLI rehearsal (`ENG-07`, `ENG-16`). This approval does not authorize other live runs.
+Tracked in the [UI redesign milestone](https://github.com/suredo/Tessera/milestone/8). The first slice is implemented in [PR 410](https://github.com/suredo/Tessera/pull/410), with contract 4 compatibility and generated schemas. The header and workspace drawer are implemented in stacked slices; drawer verification is in progress. Focus, width consumption, conversation and phone layout remain pending. Header review cleared its lifecycle fix; CI startup transport failure is tracked in [issue 418](https://github.com/suredo/Tessera/issues/418). The owner separately approved at most four live width-check calls on 2026-11-20: a focused list and a wide board, with one repair reserve each. The [stage check](../code/evals/ui-width.md) has a free fake-CLI rehearsal (`ENG-07`, `ENG-16`). This approval does not authorize other live runs.
 
 1. [Issue 411](https://github.com/suredo/Tessera/issues/411): `APP-01` reworded and the width declaration in the contract, prompt and check, with tests.
 2. [Issue 412](https://github.com/suredo/Tessera/issues/412): the header and the single More menu; Undo and History in it; history as a panel.

@@ -1,3 +1,4 @@
+import { clickWorkspaceAction } from "./support/workspace-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import type { Artifact } from "../../contracts/src/index.ts";
 import { saveVersion } from "../../server/src/versions/index.ts";
@@ -82,9 +83,7 @@ const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 /** Opens a workspace, whether or not it is the one that opens by default. */
 async function openWorkspace(page: Page, name: string) {
   await page.goto(app.url);
-  await page
-    .getByRole("button", { name: new RegExp(`^(Open ${escape(name)}|${escape(name)}, open)$`) })
-    .click();
+  await clickWorkspaceAction(page, new RegExp(`^(Open ${escape(name)}|${escape(name)}, open)$`));
   await openToolHistory(page);
 }
 
@@ -197,7 +196,6 @@ test("DATA-04: Undo never undoes a change the person hasn't seen", async ({ page
   await expect(history(page)).toContainText("2 records changed");
   expect(tasksOf(id)).toHaveLength(4);
 });
-
 test("DATA-04: a change the running tool saves can be undone at once, without leaving it", async ({
   page,
 }) => {
@@ -220,7 +218,6 @@ test("DATA-04: a change the running tool saves can be undone at once, without le
     .frameLocator("iframe")
     .frameLocator("iframe")
     .getByRole("button", { name: "Add a task" });
-
   await page.keyboard.press("Escape");
   await add.click();
   await openToolHistory(page);
@@ -229,7 +226,6 @@ test("DATA-04: a change the running tool saves can be undone at once, without le
   await history(page).getByRole("button", { name: en["history.undo"] }).click();
   await expect(history(page)).toContainText(en["history.nothingToUndo"]);
   expect(tasksOf(id)).toEqual([{ id: "t-1", title: "Buy milk" }]);
-
   // And again after that undo: the tool started afresh, and its next change shows too.
   await page.keyboard.press("Escape");
   await add.click();

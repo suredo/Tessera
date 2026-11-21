@@ -7,10 +7,12 @@ implements: [OBS-03, EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../evals/test/metrics.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-21T01:43:09Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T04:35:53Z }
 ---
 
 # Purpose
+
+Workspace save, switch, delete, export and section navigation follow the modal drawer and its public row menus through the shared browser navigation helpers. Save closes the drawer before the next scenario step. Existing scenario facts, expected outcomes and time limits are unchanged; rehearsals/replays still make no model calls.
 
 Undo and interface restore open the host's History panel before locating their controls (`APP-05`). The T1 and T6 recorded replays exercise this after the header redesign; the runner does not treat a closed panel as missing version history.
 

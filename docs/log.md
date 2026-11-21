@@ -2,6 +2,10 @@
 
 ## 2026-11-21
 
+* **Fixed**: The [tool panel](code/web/package.md)'s grid column may shrink below its header's intrinsic width. The drawer's 320 px checks found horizontal overflow after adding its opener; the constrained column keeps every header control reachable. Desktop and phone drawer screenshots were inspected. Recorded by `codex/gpt-6` at 2026-11-21T05:09:41Z.
+
+* **Changed**: The [host app](code/web/package.md) opens Workspaces in a modal drawer over the running tool: New tool, My tools, searchable recent work, one row menu, Import and secondary sections. A boundary focus check found Chrome focusing the document between controls; explicit wrapping keeps focus inside. Browser consumers and the [scenario runner](code/evals/runner.md) now use the public drawer controls. Focus/chat/phone slices remain pending. Recorded by `codex/gpt-6` at 2026-11-21T04:35:53Z.
+
 * **Fixed**: Restarting the [tool panel](code/web/package.md) rejects and dismisses its waiting Save/Allow questions; aborted starts cannot ask a delayed connection question or keep its permission. The [bridge](code/runtime/package.md) also refuses a late Save after disposal. Independent header review found the stale question path. Unit regressions cover delayed answers and lookups, and a browser regression exercises Undo while Save waits. Recorded by `codex/gpt-6` at 2026-11-21T02:28:19Z.
 
 * **Corrected**: The [prompt assembly doc](code/server/prompts.md) now records the completed [width-selection check](../evals/reports/2026-11-20-ui-width.md), replacing a stale pending-budget claim found in the independent review of PR 410. No code or prompt changed and no further model calls were made. Recorded by `codex/gpt-6` at 2026-11-21T02:04:03Z.
