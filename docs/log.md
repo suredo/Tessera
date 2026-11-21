@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Fixed**: The [conversation slice](code/web/package.md) keeps floating chat below the tool header, hides it behind full screen, and gives an empty conversation visible guidance. The connection browser consumer now closes Details and its parent More menu before outside pointer actions, reopening Details for its existing permission/request assertions; the prior CI failure showed Details intercepting Allow. Consent, request counts, timeouts and sandbox guards remain unchanged. Recorded by `codex/gpt-6` at 2026-11-21T16:39:00Z.
+
 * **Fixed**: The new [host-width regression](code/server/host-api.md) activates its second version against the current data revision. The full unit run caught the stale fixture revision, then its failed assertion left the test database open during cleanup; the focused host API suite passes after the fixture correction. The revision guard is unchanged. Recorded by `codex/gpt-6` at 2026-11-21T16:28:17Z.
 
 * **Changed**: The [redesign roadmap](roadmap/ui-redesign.md) records the merged foundation, width, header and drawer slices, and the next conversation slice in progress. The [web host](code/web/package.md) adds Focus, a footer ask bar, floating/right-docked chat with remembered placement, and stable tool panes across panel changes. [Workspace opening](code/server/host-api.md) carries the artifact's width using the [shared contract](code/contracts/package.md); the host centres comfortable tools and gives wide/expanded tools the available width. Keyboard opening focus is synchronous with rendering; the chat log uses valid non-list log markup. The phone modal sheet and final visual acceptance remain pending. No live model calls. Recorded by `codex/gpt-6` at 2026-11-21T16:15:20Z.

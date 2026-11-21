@@ -183,6 +183,14 @@ test.describe("desktop", () => {
     await expect(page.locator(".tool-panel")).toHaveAttribute("data-width", "wide");
     expect((await frame(page).boundingBox())!.width).toBeGreaterThan(comfortable);
     await expect(conversation(page)).toBeHidden();
+    await openChat(page);
+    await clickToolAction(page, en["tool.fullScreen"]);
+    await expect(conversation(page)).toBeHidden();
+    const full = (await page.locator(".tool-panel.full-screen").boundingBox())!;
+    expect(full.width).toBe(1280);
+    expect(full.height).toBe(900);
+    await clickToolAction(page, en["tool.leaveFullScreen"]);
+    await expect(conversation(page)).toBeVisible();
   });
 
   test("APP-01, GEN-08: a reply reaches the notice if the conversation is closed while waiting", async ({

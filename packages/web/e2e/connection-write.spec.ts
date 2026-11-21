@@ -96,6 +96,18 @@ async function clickAdd(page: Page) {
   return { id, title };
 }
 
+async function closeDetails(page: Page) {
+  const details = page.getByRole("region", { name: en["details.heading"] });
+  if (await details.isVisible()) {
+    await page.getByRole("button", { name: en["tool.closePanel"], exact: true }).click();
+    await expect(details).toBeHidden();
+  }
+  if (await page.locator(".tool-menu").isVisible()) {
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".tool-menu")).toBeHidden();
+  }
+}
+
 test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, the next one doesn't ask, taken back in the details it asks again, and the details list each request", async ({
   page,
 }) => {
@@ -118,6 +130,7 @@ test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, t
   await expect(entry).toContainText(en["details.connection.asks"]);
   await expect(takeBack).toHaveCount(0);
 
+  await closeDetails(page);
   await asked.getByRole("button", { name: en["write.allow"], exact: true }).click();
   await openToolDetails(page);
   await expect(tool(page).locator("#text")).toHaveText("Sent 201");
@@ -129,6 +142,7 @@ test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, t
   await expect(takeBack).toBeVisible();
 
   // Allowed: the next change goes straight through.
+  await closeDetails(page);
   await tool(page).getByRole("button", { name: "Add Alien" }).click();
   await expect.poll(() => seen.length).toBe(2);
   await expect(question(page)).toBeHidden();
@@ -140,11 +154,13 @@ test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, t
   await expect(takenBack).toBeVisible();
   await expect(entry).toContainText(en["details.connection.asks"]);
   expect(writesAllowed(app.folder, id, "lists")).toBe(false);
+  await closeDetails(page);
   await tool(page).getByRole("button", { name: "Add Alien" }).click();
   await expect(question(page)).toBeVisible();
   expect(seen).toHaveLength(2);
 
   // Allowed again: the details say so, and no longer that it will ask.
+  await closeDetails(page);
   await question(page).getByRole("button", { name: en["write.allow"], exact: true }).click();
   await expect.poll(() => seen.length).toBe(3);
   await openToolDetails(page);

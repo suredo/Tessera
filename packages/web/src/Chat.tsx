@@ -23,6 +23,7 @@ export function Chat({ messages, children }: Props) {
   }, [newest]);
   return (
     <section className="chat" aria-label={t("chat.label")}>
+      {messages.length === 0 && <p>{t("chat.empty")}</p>}
       <div className="chat-log" role="log" aria-label={t("chat.log")}>
         {messages.map((message, index) => (
           <div

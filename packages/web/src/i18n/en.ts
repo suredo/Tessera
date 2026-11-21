@@ -12,6 +12,7 @@ export const en = {
   "home.intro": "Tessera writes a small tool for you and keeps its data on this computer.",
   "chat.label": "Chat",
   "chat.open": "Open conversation",
+  "chat.empty": "Your conversation will appear here.",
   "chat.close": "Close conversation",
   "chat.position": "Conversation position",
   "chat.float": "Float over tool",
