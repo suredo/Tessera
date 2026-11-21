@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-21
+
+* **Changed**: The [UI redesign foundation](roadmap/ui-redesign.md) records the owner's approved decisions, separate milestone, six tracked slices and exit criteria. The approved [main-screen target](spec/app.md) now lives in the foundation; the [web code doc](code/web/package.md) distinguishes current implementation from that target. The consumed task handoff is removed for merge readiness. The offline mockup renderer uses actual filenames and a lint-safe browser callback, and creates its output folder. No product implementation or model call was added. Recorded by `codex/gpt-6` at 2026-11-21T12:47:40Z.
+
 ## 2026-11-20
 
 * **New**: A proposed redesign of the host app ([UI redesign](roadmap/ui-redesign.md)): the tool first at its declared width, chat and workspaces hidden by default, the chat floating or docked on the right, one ask bar, a 64 px header and a phone layout, with its mockups in design/ui-redesign/; four decisions await the owner. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-20T20:18:05Z.
