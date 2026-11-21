@@ -4,7 +4,7 @@ title: "ADR 0014. The chart library: a host helper over Chart.js"
 description: "The first vetted library (CAP-04, A25): tools draw charts through a small declarative host helper, which renders with a pinned Chart.js, styles charts by the UI standard, gives screen readers the data, and records what it drew so the chart profile's check can verify it."
 tags: [decisions, capabilities, charts, verification]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T22:10:06Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-19T13:30:47Z }
 ---
 # ADR 0014. The chart library: a host helper over Chart.js
 
@@ -40,4 +40,4 @@ A tool runs in a sandbox with no network (`RUN-01`), so a library has to be inje
 - **New pieces:** the `chart` capability in the bridge contract and its prompt text, generated from one definition (`CON-03`, `P3`); the helper in the runtime; the static check's rule; a chart step in the driver; and the chart profile with its check, built on them, in later pull requests.
 - **Security:** Chart.js runs inside the tool's sandbox with the tool's own privileges, so it widens nothing the tool could already do; it makes no requests. The threat model's note that vetted libraries weren't covered in M1 is updated when the helper lands.
 - **Size:** Chart.js is about 70 KB gzipped (to be confirmed at the pinned version), paid only by tools that draw charts.
-- **Limits:** chart types beyond the helper's need a change to the helper, not just a prompt. Animation and interaction (tooltips on hover) are left out at first.
+- **Limits:** chart types beyond the helper's need a change to the helper, not just a prompt. Animation is left out. Tooltips on hover, left out at first, came in with A92 on 2026-11-19: hovering a point or bar shows its value.

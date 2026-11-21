@@ -687,12 +687,10 @@ import type { BridgeMethodName } from "@tessera/contracts";
       },
       options: {
         animation: false,
-        events: [],
         responsive: true,
         plugins: {
           title: { display: true, text: checked.title },
           legend: { display: round || checked.series.length > 1 },
-          tooltip: { enabled: false },
         },
       },
     });
