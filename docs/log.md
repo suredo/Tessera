@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Corrected**: The [prompt assembly doc](code/server/prompts.md) now records the completed [width-selection check](../evals/reports/2026-11-20-ui-width.md), replacing a stale pending-budget claim found in the independent review of PR 410. No code or prompt changed and no further model calls were made. Recorded by `codex/gpt-6` at 2026-11-21T02:04:03Z.
+
 * **Fixed**: The [scenario runner](code/evals/runner.md) opens History before data undo or version restore. CI for the header redesign found that its earlier assumption of an always-visible history blocked T1 and falsely reported no earlier version in T6. The expected replay outcomes and time limits are unchanged. Recorded by `codex/gpt-6` at 2026-11-21T01:43:09Z.
 
 * **Fixed**: Entering full screen through the [tool header](code/web/package.md)'s More menu dismisses that menu first. The narrow accessibility check found it obstructing a header control; a browser regression now checks dismissal and accessibility in full screen. Recorded by `codex/gpt-6` at 2026-11-21T00:41:14Z.
