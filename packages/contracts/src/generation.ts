@@ -78,6 +78,11 @@ export const creationSchema = z
         .describe(
           "custom only when the person asked for their own design or to drop the standard.",
         ),
+      uiWidth: artifactSchema.shape.ui.shape.width
+        .optional()
+        .describe(
+          "The host panel's width: comfortable for focused forms and lists; wide for boards, timelines or tools that need the whole width. Left out means comfortable (APP-01).",
+        ),
     }),
     z.strictObject({
       outcome: z.literal("cannot"),

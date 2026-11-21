@@ -7,10 +7,12 @@ implements: [RUN-01, SEC-03]
 tests: [../../../packages/server/test/runtime-routes.test.ts, ../../../packages/web/e2e/sandbox.spec.ts]
 tags: [code, server, runtime]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T22:33:49Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T21:34:00Z }
 ---
 
 # Purpose
+
+Typed document fixtures declare comfortable width under artifact contract 5. The host owns this width; it does not change the tool document's styles or sandbox policy (`APP-01`, `RUN-01`).
 
 Serves the two documents of the [runtime](../runtime/package.md) (`RUN-01`): `/runtime/wrapper` and `/runtime/tool?mount=<id>`. They are routes of the [local server](local-server.md), whose guard has already checked that the request is for localhost, as a frame of the host app or the runtime (`SEC-03`).
 

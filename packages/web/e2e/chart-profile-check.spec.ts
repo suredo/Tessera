@@ -97,7 +97,7 @@ test.beforeAll(async () => {
         flaw,
         {
           code: spending(flaw),
-          ui: { standardVersion: 1, mode: "standard" as const },
+          ui: { standardVersion: 1, mode: "standard" as const, width: "comfortable" },
           capabilities: ["chart"],
         },
       ]),

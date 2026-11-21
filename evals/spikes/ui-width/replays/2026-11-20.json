@@ -1,0 +1,132 @@
+[
+  {
+    "stage": "create",
+    "answer": {
+      "outcome": "tool",
+      "name": "Shopping checklist",
+      "summary": "A simple checklist with milk, eggs and bread. Tick items off as you shop, add more, or clear the ones you've got.",
+      "code": {
+        "html": "<h1>Shopping list</h1>\n<p id=\"count\" class=\"muted\" aria-live=\"polite\"></p>\n<form id=\"addForm\" class=\"add\">\n  <label for=\"newItem\">Add an item</label>\n  <div class=\"row\">\n    <input id=\"newItem\" type=\"text\" autocomplete=\"off\" maxlength=\"100\">\n    <button type=\"submit\" id=\"addBtn\">Add</button>\n  </div>\n</form>\n<p id=\"msg\" class=\"muted\" role=\"status\"></p>\n<ul id=\"list\" class=\"list\"></ul>\n<p id=\"empty\" class=\"muted\" hidden>The list is empty. Add something above.</p>\n<button type=\"button\" id=\"clearBtn\" class=\"secondary\" hidden>Remove ticked items</button>",
+        "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);font-size:var(--ui-size-body);line-height:var(--ui-line-height);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-1)}\n.muted{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary);margin:var(--ui-space-1) 0}\n.add label{display:block;margin:var(--ui-space-3) 0 var(--ui-space-1)}\n.row{display:flex;gap:var(--ui-space-2);flex-wrap:wrap}\ninput[type=text]{flex:1 1 160px;min-height:var(--ui-target);box-sizing:border-box;padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text)}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-4);border:1px solid var(--ui-accent);background:var(--ui-accent);color:#fff;border-radius:var(--ui-radius-control);font:inherit;cursor:pointer}\nbutton.secondary{background:var(--ui-surface);color:var(--ui-accent);margin-top:var(--ui-space-4)}\n:focus-visible{outline:3px solid var(--ui-text);outline-offset:2px}\n.list{list-style:none;margin:var(--ui-space-3) 0 0;padding:0;border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);background:var(--ui-surface)}\n.list li{border-bottom:1px solid var(--ui-divider)}\n.list li:last-child{border-bottom:0}\n.list label{display:flex;align-items:center;gap:var(--ui-space-3);min-height:var(--ui-target);padding:var(--ui-space-2) var(--ui-space-4);cursor:pointer}\n.list input{width:24px;height:24px;flex:none;accent-color:var(--ui-accent)}\n.list li.done span{text-decoration:line-through;color:var(--ui-text-secondary)}",
+        "js": "const list=document.getElementById('list');\nconst countEl=document.getElementById('count');\nconst emptyEl=document.getElementById('empty');\nconst clearBtn=document.getElementById('clearBtn');\nconst msg=document.getElementById('msg');\nconst input=document.getElementById('newItem');\nlet items=[];let revs={};\n\nfunction render(){\n  list.textContent='';\n  for(const it of items){\n    const li=document.createElement('li');\n    if(it.done)li.className='done';\n    const lab=document.createElement('label');\n    const cb=document.createElement('input');\n    cb.type='checkbox';cb.checked=!!it.done;\n    const sp=document.createElement('span');sp.textContent=it.name;\n    cb.addEventListener('change',()=>toggle(it.id,cb.checked));\n    lab.appendChild(cb);lab.appendChild(sp);li.appendChild(lab);list.appendChild(li);\n  }\n  const left=items.filter(i=>!i.done).length;\n  const anyDone=items.some(i=>i.done);\n  countEl.textContent=items.length?(left===0?'All done!':left+' of '+items.length+' left to get'):'';\n  emptyEl.hidden=items.length>0;\n  clearBtn.hidden=!anyDone;\n}\n\nasync function load(){\n  try{\n    const r=await tessera.call('data.read',{});\n    items=r.data.items||[];revs=(r.revisions&&r.revisions.items)||{};\n    render();\n  }catch(e){msg.textContent='Could not load the list. Please try again.';}\n}\n\nasync function toggle(id,done){\n  try{\n    await tessera.call('data.patch',{operations:[{op:'replace',collection:'items',id:id,revisionCount:revs[id],fields:{done:done}}]});\n    msg.textContent='';\n  }catch(e){msg.textContent='Could not update that item. The list was refreshed.';}\n  await load();\n}\n\ndocument.getElementById('addForm').addEventListener('submit',async ev=>{\n  ev.preventDefault();\n  const name=input.value.trim();\n  if(!name){msg.textContent='Type an item to add.';return;}\n  try{\n    await tessera.call('data.patch',{operations:[{op:'add',collection:'items',record:{name:name,done:false}}]});\n    input.value='';msg.textContent='Added '+name+'.';\n  }catch(e){msg.textContent='Could not add the item. What you typed is still here.';return;}\n  await load();input.focus();\n});\n\nclearBtn.addEventListener('click',async()=>{\n  const ops=items.filter(i=>i.done).map(i=>({op:'remove',collection:'items',id:i.id,revisionCount:revs[i.id]}));\n  if(!ops.length)return;\n  try{\n    await tessera.call('data.patch',{operations:ops});\n    msg.textContent='Removed '+ops.length+' ticked item'+(ops.length>1?'s':'')+'.';\n  }catch(e){msg.textContent='Could not remove the items.';}\n  await load();\n});\n\nload();"
+      },
+      "data": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "done": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["id", "name", "done"]
+              }
+            }
+          },
+          "required": ["items"]
+        },
+        "reusableDefaults": {
+          "items": []
+        },
+        "initialState": {
+          "items": [
+            {
+              "id": "i-milk",
+              "name": "Milk",
+              "done": false
+            },
+            {
+              "id": "i-eggs",
+              "name": "Eggs",
+              "done": false
+            },
+            {
+              "id": "i-bread",
+              "name": "Bread",
+              "done": false
+            }
+          ]
+        }
+      },
+      "capabilities": [],
+      "uiMode": "standard"
+    }
+  },
+  {
+    "stage": "create",
+    "answer": {
+      "outcome": "tool",
+      "name": "Task board",
+      "summary": "Three columns, To do, Doing and Done, side by side. Add cards, and move each card between columns with buttons or by dragging.",
+      "code": {
+        "html": "<h1>Task board</h1>\n<form id=\"addForm\" class=\"add\">\n  <label for=\"newTitle\">New card</label>\n  <input id=\"newTitle\" type=\"text\" autocomplete=\"off\">\n  <button type=\"submit\" id=\"addBtn\">Add to To do</button>\n</form>\n<p id=\"msg\" role=\"status\"></p>\n<div id=\"board\" class=\"board\"></div>",
+        "css": "body{font-family:var(--ui-font);background:var(--ui-background);color:var(--ui-text);margin:0;padding:var(--ui-padding)}\nh1{font-size:var(--ui-size-title);font-weight:600;margin:0 0 var(--ui-space-3)}\nh2{font-size:var(--ui-size-section);font-weight:600;margin:0 0 var(--ui-space-3)}\n.add{display:flex;flex-wrap:wrap;gap:var(--ui-space-2);align-items:end;margin-bottom:var(--ui-space-2)}\n.add label{width:100%;font-size:var(--ui-size-secondary);color:var(--ui-text-secondary)}\n.add input{flex:1 1 200px;min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);font:inherit;background:var(--ui-surface);color:var(--ui-text);box-sizing:border-box}\nbutton{min-height:var(--ui-target);padding:0 var(--ui-space-3);border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);background:var(--ui-surface);color:var(--ui-text);font:inherit;cursor:pointer}\n#addBtn{background:var(--ui-accent);color:#fff;border-color:var(--ui-accent)}\nbutton:focus-visible,input:focus-visible{outline:3px solid var(--ui-accent);outline-offset:2px}\n#msg{min-height:1.5em;font-size:var(--ui-size-secondary);color:var(--ui-text-secondary);margin:0 0 var(--ui-space-2)}\n.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--ui-space-3);align-items:start}\n.col{background:var(--ui-surface);border:1px solid var(--ui-divider);border-radius:var(--ui-radius-panel);padding:var(--ui-space-3);min-height:160px}\n.col.over{outline:2px dashed var(--ui-accent)}\n.col ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--ui-space-2)}\n.card{border:1px solid var(--ui-control-border);border-radius:var(--ui-radius-control);padding:var(--ui-space-2) var(--ui-space-3);background:var(--ui-background)}\n.card p{margin:0 0 var(--ui-space-2);overflow-wrap:anywhere}\n.acts{display:flex;flex-wrap:wrap;gap:var(--ui-space-1)}\n.empty{color:var(--ui-text-secondary);font-size:var(--ui-size-secondary)}\n@media (max-width:480px){.board{grid-template-columns:1fr}}",
+        "js": "const COLS=[{id:'todo',name:'To do'},{id:'doing',name:'Doing'},{id:'done',name:'Done'}];\nlet cards=[],revs={};\nconst board=document.getElementById('board');\nconst msg=document.getElementById('msg');\nconst input=document.getElementById('newTitle');\nlet focusKey=null;\n\nasync function load(){\n  const r=await tessera.call('data.read',{});\n  cards=Array.isArray(r.data.cards)?r.data.cards:[];\n  revs=(r.revisions&&r.revisions.cards)||{};\n  render();\n}\nfunction say(t){msg.textContent=t}\nasync function patch(ops,okText){\n  try{await tessera.call('data.patch',{operations:ops});await load();say(okText)}\n  catch(e){say('That did not work. Nothing was changed; please try again.');await load()}\n}\nfunction moveCard(c,to){\n  if(c.column===to)return;\n  const name=COLS.find(x=>x.id===to).name;\n  patch([{op:'replace',collection:'cards',id:c.id,revisionCount:revs[c.id],fields:{column:to}}],'Moved \"'+c.title+'\" to '+name+'.');\n}\nfunction render(){\n  board.textContent='';\n  for(const col of COLS){\n    const sec=document.createElement('section');\n    sec.className='col';\n    sec.setAttribute('aria-labelledby','h-'+col.id);\n    const h=document.createElement('h2');h.id='h-'+col.id;\n    const list=cards.filter(c=>c.column===col.id);\n    h.textContent=col.name+' ('+list.length+')';\n    sec.appendChild(h);\n    const ul=document.createElement('ul');\n    if(!list.length){const li=document.createElement('li');li.className='empty';li.textContent='No cards here.';ul.appendChild(li)}\n    for(const c of list){\n      const li=document.createElement('li');li.className='card';li.draggable=true;\n      li.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',c.id)});\n      const p=document.createElement('p');p.textContent=c.title;li.appendChild(p);\n      const acts=document.createElement('div');acts.className='acts';\n      const idx=COLS.findIndex(x=>x.id===col.id);\n      if(idx>0){const b=document.createElement('button');b.type='button';b.textContent='← '+COLS[idx-1].name;b.setAttribute('aria-label','Move \"'+c.title+'\" to '+COLS[idx-1].name);b.addEventListener('click',()=>moveCard(c,COLS[idx-1].id));acts.appendChild(b)}\n      if(idx<2){const b=document.createElement('button');b.type='button';b.textContent=COLS[idx+1].name+' →';b.setAttribute('aria-label','Move \"'+c.title+'\" to '+COLS[idx+1].name);b.addEventListener('click',()=>moveCard(c,COLS[idx+1].id));acts.appendChild(b)}\n      const d=document.createElement('button');d.type='button';d.textContent='Delete';d.setAttribute('aria-label','Delete \"'+c.title+'\"');\n      d.addEventListener('click',()=>{if(confirm('Delete \"'+c.title+'\"?')){patch([{op:'remove',collection:'cards',id:c.id,revisionCount:revs[c.id]}],'Deleted \"'+c.title+'\".')}});\n      acts.appendChild(d);\n      li.appendChild(acts);ul.appendChild(li);\n    }\n    sec.appendChild(ul);\n    sec.addEventListener('dragover',e=>{e.preventDefault();sec.classList.add('over')});\n    sec.addEventListener('dragleave',()=>sec.classList.remove('over'));\n    sec.addEventListener('drop',e=>{e.preventDefault();sec.classList.remove('over');const id=e.dataTransfer.getData('text/plain');const c=cards.find(x=>x.id===id);if(c)moveCard(c,col.id)});\n    board.appendChild(sec);\n  }\n}\ndocument.getElementById('addForm').addEventListener('submit',e=>{\n  e.preventDefault();\n  const t=input.value.trim();\n  if(!t){say('Type a title for the card first.');input.focus();return}\n  input.value='';\n  patch([{op:'add',collection:'cards',record:{title:t,column:'todo'}}],'Added \"'+t+'\" to To do.');\n});\nload();"
+      },
+      "data": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "cards": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "title": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "column": {
+                    "type": "string",
+                    "enum": ["todo", "doing", "done"]
+                  }
+                },
+                "required": ["id", "title", "column"]
+              }
+            }
+          },
+          "required": ["cards"]
+        },
+        "reusableDefaults": {
+          "cards": []
+        },
+        "initialState": {
+          "cards": [
+            {
+              "id": "c-1",
+              "title": "Plan the trip",
+              "column": "todo"
+            },
+            {
+              "id": "c-2",
+              "title": "Book the train",
+              "column": "doing"
+            },
+            {
+              "id": "c-3",
+              "title": "Choose dates",
+              "column": "done"
+            }
+          ]
+        }
+      },
+      "capabilities": [],
+      "uiMode": "standard",
+      "uiWidth": "wide"
+    }
+  }
+]

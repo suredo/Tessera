@@ -4,6 +4,7 @@ import { z } from "zod";
 import {
   artifactSchema,
   canonicalJson,
+  creationSchema,
   readArtifact,
   toJsonSchema,
   type Artifact,
@@ -13,7 +14,7 @@ import {
 const validateWithJsonSchema = new Ajv({ strict: true }).compile(toJsonSchema("artifact"));
 
 export const sampleArtifact: Artifact = {
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: "<ul id='items'></ul>", css: "ul { margin: 0; }", js: "console.log('hi');" },
   data: {
@@ -24,17 +25,31 @@ export const sampleArtifact: Artifact = {
   },
   capabilities: ["clock"],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 };
 
 // The sample as an earlier contract stored it, before tools named their connections.
 const withoutConnections = (): Record<string, unknown> => {
   const copy: Record<string, unknown> = { ...sampleArtifact };
   delete copy["connections"];
+  copy["ui"] = { standardVersion: 1, mode: "standard" };
   return copy;
 };
 
 describe("artifact contract (CON-04, DATA-04)", () => {
+  it("APP-01, CON-01: accepts only declared tool widths in zod and JSON Schema", () => {
+    for (const width of ["comfortable", "wide", "full", "", 1100, null, undefined]) {
+      const sample = { ...sampleArtifact, ui: { ...sampleArtifact.ui, width } };
+      const accepted = width === "comfortable" || width === "wide";
+      expect(artifactSchema.safeParse(sample).success).toBe(accepted);
+      expect(validateWithJsonSchema(sample)).toBe(accepted);
+    }
+    // Creation uses the artifact field's schema; leaving it out selects the host's default.
+    const declaration = creationSchema.options[0].shape.uiWidth;
+    expect(declaration.safeParse(undefined).success).toBe(true);
+    expect(declaration.safeParse("wide").success).toBe(true);
+    expect(declaration.safeParse("full").success).toBe(false);
+  });
   it("accepts a tool version in zod and in its JSON Schema alike", () => {
     const uses = (count: number, samples = {}) =>
       Object.fromEntries(Array.from({ length: count }, (_, i) => [`c-${i}`, { samples }]));
@@ -63,9 +78,9 @@ describe("artifact contract (CON-04, DATA-04)", () => {
   it("refuses the same broken versions in zod and in its JSON Schema (CON-01)", () => {
     const broken: unknown[] = [
       { ...sampleArtifact, code: { html: "", css: "" } },
-      { ...sampleArtifact, ui: { standardVersion: 1, mode: "legacy" } },
+      { ...sampleArtifact, ui: { standardVersion: 1, mode: "legacy", width: "comfortable" } },
       { ...sampleArtifact, extra: true },
-      { ...sampleArtifact, contractVersion: 5 },
+      { ...sampleArtifact, contractVersion: 6 },
       { ...sampleArtifact, connections: ["movies"] },
       { ...sampleArtifact, connections: { Movies: { samples: {} } } },
       { ...sampleArtifact, connections: { movies: {} } },
@@ -135,7 +150,7 @@ describe("artifact contract (CON-04, DATA-04)", () => {
 
   it("writes the same canonical JSON whatever the key order, so a version has one hash", () => {
     const reordered = {
-      ui: { mode: "standard", standardVersion: 1 },
+      ui: { mode: "standard", standardVersion: 1, width: "comfortable" },
       pins: [],
       capabilities: ["clock"],
       data: {
@@ -145,7 +160,7 @@ describe("artifact contract (CON-04, DATA-04)", () => {
         migrations: [],
       },
       code: { js: "console.log('hi');", css: "ul { margin: 0; }", html: "<ul id='items'></ul>" },
-      contractVersion: 4,
+      contractVersion: 5,
       connections: {},
     };
     expect(canonicalJson(reordered)).toBe(canonicalJson(sampleArtifact));
@@ -182,6 +197,27 @@ describe("a tool version's migrations (DATA-03, SEC-01)", () => {
 });
 
 describe("reading a stored tool version (CON-04)", () => {
+  it("APP-01, CON-04: upgrades a stored contract 4 tool to comfortable without repairing malformed UI", () => {
+    const stored = {
+      ...sampleArtifact,
+      contractVersion: 4,
+      ui: { standardVersion: 1, mode: "standard" },
+    };
+    expect(readArtifact(stored)).toEqual({
+      kind: "ok",
+      artifact: sampleArtifact,
+      upgradedFromVersion: 4,
+    });
+    expect(stored.ui).toEqual({ standardVersion: 1, mode: "standard" });
+    for (const ui of [
+      null,
+      {},
+      { ...stored.ui, mode: "legacy" },
+      { ...stored.ui, width: "wide" },
+    ]) {
+      expect(readArtifact({ ...stored, ui }).kind).toBe("incompatible");
+    }
+  });
   it("reads a current version as it is", () => {
     expect(readArtifact(JSON.parse(JSON.stringify(sampleArtifact)))).toEqual({
       kind: "ok",
@@ -250,24 +286,24 @@ describe("reading a stored tool version (CON-04)", () => {
   });
 
   it("upgrades an older version step by step, or says it can't", () => {
-    // A made-up contract 5 that renamed `ui` to `look`, to exercise the upgrade path.
-    const v5 = artifactSchema
+    // A made-up contract 6 that renamed `ui` to `look`, to exercise the upgrade path.
+    const v6 = artifactSchema
       .omit({ ui: true, contractVersion: true })
-      .extend({ contractVersion: z.literal(5), look: artifactSchema.shape.ui });
+      .extend({ contractVersion: z.literal(6), look: artifactSchema.shape.ui });
     const upgrades = {
-      4: ({ ui, ...rest }: Record<string, unknown>) => ({ ...rest, contractVersion: 5, look: ui }),
+      5: ({ ui, ...rest }: Record<string, unknown>) => ({ ...rest, contractVersion: 6, look: ui }),
     };
     const reading = readArtifact(sampleArtifact, {
-      current: 5,
+      current: 6,
       upgrades,
-      schema: v5 as unknown as z.ZodType<Artifact>,
+      schema: v6 as unknown as z.ZodType<Artifact>,
     });
-    expect(reading).toMatchObject({ kind: "ok", upgradedFromVersion: 4 });
+    expect(reading).toMatchObject({ kind: "ok", upgradedFromVersion: 5 });
     expect(reading.kind === "ok" && "look" in reading.artifact).toBe(true);
 
-    expect(readArtifact(sampleArtifact, { current: 5, upgrades: {} })).toEqual({
+    expect(readArtifact(sampleArtifact, { current: 6, upgrades: {} })).toEqual({
       kind: "incompatible",
-      reason: "There is no way to upgrade it from contract 4.",
+      reason: "There is no way to upgrade it from contract 5.",
     });
   });
 });

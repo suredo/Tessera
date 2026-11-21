@@ -578,13 +578,13 @@ describe("assembling a stage's prompt (GEN-03)", () => {
       uiMode: "standard",
       source: shoppingList,
       editArtifact: {
-        contractVersion: 4,
+        contractVersion: 5,
         code: shoppingList,
         data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
         capabilities: ["files"],
         connections: {},
         pins: [],
-        ui: { standardVersion: 1, mode: "standard" },
+        ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
       },
     });
     expect(names(edit.parts)).toContain("files");
@@ -989,7 +989,7 @@ describe("connections in the generation prompt (CAP-02, A66, A74, #349 step 4)",
       intent: intent(),
       connections: connections.slice(0, 1),
       editArtifact: {
-        contractVersion: 4,
+        contractVersion: 5,
         code: shoppingList,
         data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
         capabilities: ["connection"],
@@ -999,7 +999,7 @@ describe("connections in the generation prompt (CAP-02, A66, A74, #349 step 4)",
           },
         },
         pins: [],
-        ui: { standardVersion: 1, mode: "standard" },
+        ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
       },
     });
     expect(prompt.prompt).toContain('"connections":{"movies":["/search"]}');

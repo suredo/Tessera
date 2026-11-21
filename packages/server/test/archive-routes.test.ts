@@ -30,7 +30,7 @@ const newFolder = async () => {
 };
 
 const tool: Artifact = {
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: "<p>Errands</p>", css: "", js: "" },
   data: {
@@ -41,7 +41,7 @@ const tool: Artifact = {
   },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 };
 
 type Answer = { status: number; headers: http.IncomingHttpHeaders; body: Buffer };

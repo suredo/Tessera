@@ -60,13 +60,13 @@ const toV2: Migration = {
   operations: [{ op: "renameField", collection: "tasks", from: "name", to: "title" }],
 };
 const artifact = (code: Artifact["code"], data: Artifact["data"]): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code,
   data,
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 // The candidate's reusable defaults: what it runs against in the panel.
 const synthetic = { tasks: [{ id: "d-1", title: "A starting task" }] };

@@ -8,9 +8,12 @@ import { migrationSchema } from "./migration.ts";
 // the library refer to it; they are not part of it.
 
 /** The artifact contract's current version. Raise it with an upgrade in ARTIFACT_UPGRADES. */
-export const ARTIFACT_CONTRACT_VERSION = 4;
+export const ARTIFACT_CONTRACT_VERSION = 5;
 
 export const UI_MODES = ["standard", "custom"] as const;
+/** Host layout widths (APP-01); the tool's code never controls the surrounding panel. */
+export const TOOL_WIDTHS = ["comfortable", "wide"] as const;
+export const toolWidthSchema = z.enum(TOOL_WIDTHS);
 
 export const artifactSchema = z
   .strictObject({
@@ -52,7 +55,11 @@ export const artifactSchema = z
       .array(z.strictObject({ id: z.string().min(1), version: z.int().min(1) }))
       .describe("The exact dependency versions it was built against, such as engines (DATA-04)."),
     ui: z
-      .strictObject({ standardVersion: z.int().min(1), mode: z.enum(UI_MODES) })
+      .strictObject({
+        standardVersion: z.int().min(1),
+        mode: z.enum(UI_MODES),
+        width: toolWidthSchema,
+      })
       .describe("Which UI standard it follows, and whether in standard or custom mode (VER-06)."),
   })
   .describe("An immutable tool version: code, data shape, defaults and pins (CON-04, DATA-04).");
@@ -87,6 +94,7 @@ export type ArtifactUpgrades = Readonly<Record<number, (artifact: RawArtifact) =
  * Version 2 adds the data's migrations: a version 1 tool declared none. Version 3 adds the
  * connections a tool may use (A66): every earlier tool used none. Version 4 gives each its sample
  * answers (A69): a version 3 tool's connections get none, so a check's request finds no sample.
+ * Version 5 adds the host panel's width (APP-01): earlier tools open at comfortable width.
  */
 export const ARTIFACT_UPGRADES: ArtifactUpgrades = {
   1: (artifact) => ({
@@ -103,6 +111,14 @@ export const ARTIFACT_UPGRADES: ArtifactUpgrades = {
     connections: Object.fromEntries(
       CONTRACT_3_CONNECTIONS.parse(artifact["connections"]).map((name) => [name, { samples: {} }]),
     ),
+  }),
+  4: (artifact) => ({
+    ...artifact,
+    contractVersion: 5,
+    ui: {
+      ...artifactSchema.shape.ui.omit({ width: true }).parse(artifact["ui"]),
+      width: "comfortable",
+    },
   }),
 };
 

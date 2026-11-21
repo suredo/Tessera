@@ -155,6 +155,8 @@ export {
   canonicalJson,
   readArtifact,
   UI_MODES,
+  TOOL_WIDTHS,
+  toolWidthSchema,
   type Artifact,
   type ArtifactReading,
   type ArtifactUpgrades,

@@ -181,6 +181,14 @@
             "custom"
           ],
           "description": "custom only when the person asked for their own design or to drop the standard."
+        },
+        "uiWidth": {
+          "description": "The host panel's width: comfortable for focused forms and lists; wide for boards, timelines or tools that need the whole width. Left out means comfortable (APP-01).",
+          "type": "string",
+          "enum": [
+            "comfortable",
+            "wide"
+          ]
         }
       },
       "required": [

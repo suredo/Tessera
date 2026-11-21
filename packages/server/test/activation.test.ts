@@ -56,13 +56,13 @@ const version = (
   html: string,
   data: Partial<Artifact["data"]> & Pick<Artifact["data"], "schemaVersion" | "schema">,
 ): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html, css: "", js: "" },
   data: { defaults: {}, migrations: [], ...data },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 const first = version("<p>Errands</p>", {
   schemaVersion: 1,

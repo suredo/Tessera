@@ -48,13 +48,13 @@ const png = new Uint8Array(fs.readFileSync(path.join(fixtures, "photo.png")));
 const jpeg = new Uint8Array(fs.readFileSync(path.join(fixtures, "photo.jpg")));
 
 const tool = (capabilities: string[]): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: "<p>Photos</p>", css: "", js: "" },
   data: { schemaVersion: 1, schema: {}, defaults: {}, migrations: [] },
   capabilities,
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 
 const HOUR = 3_600_000;

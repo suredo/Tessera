@@ -489,13 +489,13 @@ describe("carrying out a request (GEN-01, GEN-05)", () => {
     const folder = await newFolder();
     const workspace = createWorkspace(folder, "Shopping list");
     const hash = saveVersion(folder.db, {
-      contractVersion: 4,
+      contractVersion: 5,
       connections: {},
       code: { html: "<p>List</p>", css: "", js: "" },
       data: { schemaVersion: 1, schema: listSchema, defaults: { items: [] }, migrations: [] },
       capabilities: [],
       pins: [],
-      ui: { standardVersion: 1, mode: "standard" },
+      ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
     });
     expect(activateVersion(folder, workspace.id, hash, 0).ok).toBe(true);
     const provider = script(

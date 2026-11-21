@@ -51,7 +51,7 @@ const testClock = (start = "2026-10-19T09:00:00.000Z") => {
   return { now, advance: (ms: number) => (at += ms) };
 };
 
-const artifact = (html: string, contractVersion = 4) =>
+const artifact = (html: string, contractVersion = 5) =>
   ({
     contractVersion,
     code: { html, css: "", js: "" },
@@ -59,7 +59,7 @@ const artifact = (html: string, contractVersion = 4) =>
     capabilities: [],
     connections: {},
     pins: [],
-    ui: { standardVersion: 1, mode: "standard" },
+    ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
   }) as Artifact;
 
 /**
@@ -151,6 +151,40 @@ async function refused(bytes: Uint8Array, message: string | RegExp) {
 }
 
 describe("export and import (DATA-05)", () => {
+  it("APP-01, CON-04, DATA-05: imports contract 4 tools at comfortable width and re-exports their original bytes", async () => {
+    const { manifest } = await exportedFiles();
+    const stored = {
+      ...artifact("<p>Older tool</p>"),
+      contractVersion: 4,
+      ui: { standardVersion: 1, mode: "standard" },
+    };
+    const body = canonicalJson(stored);
+    const hash = createHash("sha256").update(body).digest("hex");
+    const older = {
+      ...manifest,
+      workspaces: manifest.workspaces.map((w) => ({
+        ...w,
+        versions: w.versions.map((version) => ({ ...version, hash })),
+      })),
+    };
+    const folder = await openDataFolder(newFolder());
+    try {
+      const imported = await importArchive(
+        folder,
+        pack(older, new Map([[`versions/${hash}.json`, encode(body)]])),
+      );
+      expect(loadVersion(folder.db, hash)).toMatchObject({
+        kind: "ok",
+        artifact: { ui: { width: "comfortable" } },
+        upgradedFromVersion: 4,
+      });
+      const files = readZip(exportWorkspace(folder, imported.workspaces[0]!.id), ARCHIVE_LIMITS);
+      expect(new TextDecoder().decode(files.get(`versions/${hash}.json`))).toBe(body);
+    } finally {
+      folder.close();
+    }
+  });
+
   it("DATA-05: export, wipe and import restores a workspace exactly", async () => {
     const root = newFolder();
     const clock = testClock();

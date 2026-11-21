@@ -7,10 +7,12 @@ implements: [ENG-19]
 tests: [../../../scripts/test/dev-data.test.ts, ../../../packages/web/e2e/samples.spec.ts]
 tags: [code, scripts, development]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-02T02:38:06Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T20:54:02Z }
 ---
 
 # Purpose
+
+Hand-written tools declare contract 5 with comfortable width (`APP-01`); the seed still creates development data only and makes no model calls.
 
 Gives the owner, and anyone developing Tessera, a Tessera with something in it before tools can be generated (M2), without touching a person's own work (`ENG-19`, `PLAT-04`). `pnpm seed` fills a development data folder with hand-written sample tools that exercise every screen of the host app, and `pnpm dev` builds the app and starts Tessera on that folder.
 

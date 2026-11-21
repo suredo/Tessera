@@ -4,7 +4,7 @@
   "properties": {
     "contractVersion": {
       "type": "number",
-      "const": 4
+      "const": 5
     },
     "code": {
       "type": "object",
@@ -454,11 +454,19 @@
             "standard",
             "custom"
           ]
+        },
+        "width": {
+          "type": "string",
+          "enum": [
+            "comfortable",
+            "wide"
+          ]
         }
       },
       "required": [
         "standardVersion",
-        "mode"
+        "mode",
+        "width"
       ],
       "additionalProperties": false,
       "description": "Which UI standard it follows, and whether in standard or custom mode (VER-06)."

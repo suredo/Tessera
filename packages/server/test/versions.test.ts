@@ -21,16 +21,38 @@ const newDatabase = () => {
 const count = z.object({ n: z.number() });
 
 const artifact: Artifact = {
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: "<ul></ul>", css: "", js: "" },
   data: { schemaVersion: 1, schema: { type: "object" }, defaults: { items: [] }, migrations: [] },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 };
 
 describe("tool versions (DATA-04, CON-04)", () => {
+  it("APP-01, CON-04: reads a contract 4 tool at comfortable width without rewriting its stored bytes or hash", () => {
+    const db = newDatabase();
+    const stored = {
+      ...artifact,
+      contractVersion: 4,
+      ui: { standardVersion: 1, mode: "standard" },
+    };
+    const body = JSON.stringify(stored);
+    const hash = createHash("sha256").update(body).digest("hex");
+    db.run(
+      "INSERT INTO tool_versions (hash, contract_version, body, created_at) VALUES (?, ?, ?, ?)",
+      hash,
+      4,
+      body,
+      "2026-11-20T00:00:00Z",
+    );
+    expect(loadVersion(db, hash)).toEqual({ kind: "ok", artifact, upgradedFromVersion: 4 });
+    expect(
+      db.get(z.object({ body: z.string() }), "SELECT body FROM tool_versions WHERE hash = ?", hash),
+    ).toEqual({ body });
+    db.close();
+  });
   it("stores a version under its hash and reads it back", () => {
     const db = newDatabase();
     const hash = saveVersion(db, artifact);
@@ -45,7 +67,10 @@ describe("tool versions (DATA-04, CON-04)", () => {
     const db = newDatabase();
     const first = saveVersion(db, artifact);
     // The same content with its keys in another order is the same version.
-    const reordered = { ...artifact, ui: { mode: "standard", standardVersion: 1 } } as Artifact;
+    const reordered = {
+      ...artifact,
+      ui: { mode: "standard", standardVersion: 1, width: "comfortable" },
+    } as Artifact;
     expect(saveVersion(db, reordered)).toBe(first);
     const changed = saveVersion(db, { ...artifact, code: { ...artifact.code, css: "ul{}" } });
     expect(changed).not.toBe(first);
@@ -67,7 +92,7 @@ describe("tool versions (DATA-04, CON-04)", () => {
     const db = newDatabase();
     const broken = {
       ...artifact,
-      ui: { standardVersion: 1, mode: "legacy" },
+      ui: { standardVersion: 1, mode: "legacy", width: "comfortable" },
     } as unknown as Artifact;
     expect(() => saveVersion(db, broken)).toThrow();
     expect(db.get(count, "SELECT COUNT(*) AS n FROM tool_versions")).toEqual({ n: 0 });
@@ -91,9 +116,9 @@ describe("tool versions (DATA-04, CON-04)", () => {
       reason: "It was changed after it was saved.",
     });
     // A body from a newer Tessera, correctly named.
-    const newer = JSON.stringify({ ...artifact, contractVersion: 5 });
+    const newer = JSON.stringify({ ...artifact, contractVersion: 6 });
     const newerHash = createHash("sha256").update(newer).digest("hex");
-    insert(newerHash, 5, newer);
+    insert(newerHash, 6, newer);
     const reading = loadVersion(db, newerHash);
     expect(reading?.kind).toBe("incompatible");
     expect(reading?.kind === "incompatible" ? reading.reason : "").toMatch(

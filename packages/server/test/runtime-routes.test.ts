@@ -8,8 +8,8 @@ import { runtimeRoutes, toolDocument } from "../src/runtime/index.ts";
 
 // The runtime's documents through the real local server and its guard (RUN-01, SEC-03).
 type Tool = Pick<Artifact, "code" | "ui">;
-const standard = { standardVersion: 1, mode: "standard" } as const;
-const custom = { standardVersion: 1, mode: "custom" } as const;
+const standard = { standardVersion: 1, mode: "standard", width: "comfortable" } as const;
+const custom = { standardVersion: 1, mode: "custom", width: "comfortable" } as const;
 const tools: Record<string, Tool> = {
   "mount-1": {
     code: { html: "<p id='hi'>Hi</p>", css: "p{color:red}", js: "console.log('</script>')" },

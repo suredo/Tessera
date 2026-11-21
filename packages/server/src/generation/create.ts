@@ -266,7 +266,11 @@ export function candidateFrom(
     capabilities: withConnectionCapability(creation.capabilities, connections),
     connections,
     pins: [],
-    ui: { standardVersion: UI_STANDARD_VERSION, mode: creation.uiMode },
+    ui: {
+      standardVersion: UI_STANDARD_VERSION,
+      mode: creation.uiMode,
+      width: creation.uiWidth ?? "comfortable",
+    },
   };
   const artifact = artifactSchema.safeParse(built);
   if (!artifact.success) {

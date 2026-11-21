@@ -7,10 +7,12 @@ implements: [EVAL-03, EVAL-04]
 tests: [../../../evals/test/review.test.ts]
 tags: [code, evals, review, live-evaluation]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-17T13:18:42Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T20:54:02Z }
 ---
 
 # Purpose
+
+The review's hand-written current-artifact fixture declares contract 5 and comfortable width. Historical recorded outputs keep their original contracts and use the normal version reader (`CON-04`); the review behavior is unchanged.
 
 The AI technical review of a recorded run (`EVAL-03`, A22, A27). After the [scenario runner](runner.md) has played a scenario, this reads the run's folder and asks the review stage, once, how the tools did against the scenario's review items, from the one rubric in the [contracts](../contracts/package.md). The review is kept with the run, and its report gains the review and a line for the owner's verdict (`EVAL-04`). It never plays the scenario again.
 

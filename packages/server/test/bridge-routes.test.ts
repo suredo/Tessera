@@ -33,13 +33,13 @@ const newFolder = () => {
 };
 
 const tool = (capabilities: string[], schema: Artifact["data"]["schema"] = {}): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: "<p>Errands</p>", css: "", js: "" },
   data: { schemaVersion: 1, schema, defaults: {}, migrations: [] },
   capabilities,
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 const tasks = {
   tasks: [

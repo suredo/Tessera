@@ -30,7 +30,8 @@ try {
 }`,
 });
 
-const ui = (mode: "standard" | "custom") => ({ standardVersion: 1, mode }) as const;
+const ui = (mode: "standard" | "custom") =>
+  ({ standardVersion: 1, mode, width: "comfortable" }) as const;
 
 /** A tool that draws the spending chart, then takes it away, as a render that starts over does. */
 const cleared: Artifact["code"] = {

@@ -34,7 +34,7 @@ const task = (properties: object) => ({
 });
 /** A hand-written tool that shows `text`, with the data shape given. */
 const tool = (text: string, data: Partial<Artifact["data"]> = {}): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html: `<p id="text">${text}</p>`, css: "", js: "" },
   data: {
@@ -46,7 +46,7 @@ const tool = (text: string, data: Partial<Artifact["data"]> = {}): Artifact => (
   },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 
 /** A workspace that ran each tool in turn; its name and ID. */

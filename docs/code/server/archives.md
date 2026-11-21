@@ -7,10 +7,12 @@ implements: [DATA-05, IMP-01, IMP-02, IMP-03, IMP-04, IMP-05, IMP-06, IMP-07]
 tests: [../../../packages/server/test/archives.test.ts]
 tags: [code, server, data, archives, security]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T20:08:03Z }
+generated: { by: codex/gpt-6, at: 2026-11-20T21:34:00Z }
 ---
 
 # Purpose
+
+The width-contract regression imports a contract 4 tool at comfortable width and re-exports its original bytes and hash (`CON-04`, `APP-01`). Current fixtures use contract 5; earlier archive formats are still exercised separately.
 
 Moves a person's work in one file (`DATA-05`): a [workspace](workspaces.md), with its version history, data and saved tools, or one saved tool with the workspace it follows, exports to an archive and imports back exactly, into the same data folder or another. Importing is a trust boundary in the [threat model](../../spec/threat-model.md), whose import checks IMP-01 to IMP-07 are this module's tests. The host app reaches it through two routes of its own, export and import, which move files; the screens come with #53.
 

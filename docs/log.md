@@ -2,11 +2,27 @@
 
 ## 2026-11-21
 
+* **Changed**: The width slice now includes the merged [UI redesign foundation](roadmap/ui-redesign.md) and its accessibility CI correction. Its [web code doc](code/web/package.md) preserves both the contract 5 fixture notes and the distinction between current host behavior and the approved target. PR 410 remains a draft; its integration checks are separate from the completed foundation review. Recorded by `codex/gpt-6` at 2026-11-21T14:28:21Z.
+
 * **Fixed**: The [host accessibility check](code/web/package.md) reaches Restore by Tab with visible focus and activates it with Enter after full-screen exit. A controlled late frame-fit case covers keyboard access while History moves; the existing data-loss assertions and pointer-based history tests remain. CI 44907794544 recorded a missing confirmation after a pointer action on a moving control. Local diagnostics confirmed layout changes but did not reproduce that exact missed click, so they are not claimed as a reproduction. No product behavior, timeout or guard changed. Recorded by `codex/gpt-6` at 2026-11-21T13:57:09Z.
 
 * **Changed**: The [UI redesign foundation](roadmap/ui-redesign.md) records the owner's approved decisions, separate milestone, six tracked slices and exit criteria. The approved [main-screen target](spec/app.md) now lives in the foundation; the [web code doc](code/web/package.md) distinguishes current implementation from that target. The consumed task handoff is removed for merge readiness. The offline mockup renderer uses actual filenames and a lint-safe browser callback, and creates its output folder. No product implementation or model call was added. Recorded by `codex/gpt-6` at 2026-11-21T12:47:40Z.
 
+* **Corrected**: The [prompt assembly doc](code/server/prompts.md) now records the completed [width-selection check](../evals/reports/2026-11-20-ui-width.md), replacing a stale pending-budget claim found in the independent review of PR 410. No code or prompt changed and no further model calls were made. Recorded by `codex/gpt-6` at 2026-11-21T02:04:03Z.
+
+* **Fixed**: The [width check](code/evals/ui-width.md)'s replay test narrows the creation answer before passing it to the host's tool-only candidate check. CI caught the missing TypeScript narrowing after the replay test was added; its runtime assertions already passed. No further live calls. Recorded by `codex/gpt-6` at 2026-11-21T00:20:00Z.
+
 ## 2026-11-20
+
+* **Checked**: The [width prompt's live check](../evals/reports/2026-11-20-ui-width.md) produced a list defaulted to comfortable (the optional field was omitted) and a board explicitly declaring wide at `a9b7108`, two of four separately approved calls, no repair. Both passed server candidate checks; browser layout and usability were not evaluated. Input 19,226 tokens (8,922 cached), output 5,772, model time 32.484 s. Recorded answers replay offline. Recorded by `codex/gpt-6` at 2026-11-20T23:14:30Z.
+
+* **Added**: The [UI redesign milestone](roadmap/ui-redesign.md) now links its six implementation issues (411-416). Its [width check](code/evals/ui-width.md) has a separately approved hard cap of four calls, with no more than a creation and one repair per case; a free fake-CLI rehearsal passed both width cases. Recorded scenario replays also passed, 17 checks. Live results are still pending. Recorded by `codex/gpt-6` at 2026-11-20T22:57:18Z.
+
+* **Fixed**: The [redesign mockup renderer](roadmap/ui-redesign.md) reads the HTML element through Playwright's locator, so its browser callback passes the Node script lint rules. The width migration's archive regression checks that older contract 4 tools import at comfortable width and export with their original bytes. Recorded by `codex/gpt-6` at 2026-11-20T21:24:31Z.
+
+* **Changed**: The [width contract](code/contracts/package.md) is version 5: `ui.width` is comfortable or wide, with contract 4 tools upgraded in memory without rewriting stored hashes. [Creation](code/server/generation.md) defaults omitted `uiWidth` to comfortable; its [prompt](code/server/prompts.md) asks for the declaration. Current typed fixtures and development tools declare contract 5; recorded outputs are retained. The [host layout](code/web/package.md) remains pending. No live model was called. Recorded by `codex/gpt-6` at 2026-11-20T20:54:02Z.
+
+* **Changed**: The owner approved the separate [UI redesign milestone](roadmap/ui-redesign.md), the new [main-screen requirement](spec/app.md) (`APP-01`), the comfortable/wide contract declaration and Focus as the default. The milestone now has exit criteria; implementation and contract migration remain to be delivered. No model was called. Recorded by `codex/gpt-6` at 2026-11-20T20:52:00Z.
 
 * **New**: A proposed redesign of the host app ([UI redesign](roadmap/ui-redesign.md)): the tool first at its declared width, chat and workspaces hidden by default, the chat floating or docked on the right, one ask bar, a 64 px header and a phone layout, with its mockups in design/ui-redesign/; four decisions await the owner. No model was called. Recorded by `claude-code/claude-opus-5-5` at 2026-11-20T20:18:05Z.
 

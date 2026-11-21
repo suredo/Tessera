@@ -47,13 +47,13 @@ const testClock = (start = "2026-10-19T09:00:00.000Z") => {
 };
 
 const artifact = (html: string): Artifact => ({
-  contractVersion: 4,
+  contractVersion: 5,
   connections: {},
   code: { html, css: "", js: "" },
   data: { schemaVersion: 1, schema: { type: "object" }, defaults: { items: [] }, migrations: [] },
   capabilities: [],
   pins: [],
-  ui: { standardVersion: 1, mode: "standard" },
+  ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
 });
 
 const count = z.object({ n: z.number() });

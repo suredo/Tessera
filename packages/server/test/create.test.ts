@@ -168,6 +168,17 @@ describe("starting data (GEN-05)", () => {
 });
 
 describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
+  it("APP-01, CON-04: keeps a declared wide panel and defaults earlier creation answers to comfortable", () => {
+    for (const uiWidth of [undefined, "comfortable", "wide"] as const) {
+      const result = candidateFrom(tool({ uiWidth }));
+      expect(result.kind).toBe("candidate");
+      if (result.kind === "candidate") {
+        expect(result.artifact.ui.width).toBe(uiWidth ?? "comfortable");
+      }
+    }
+    const result = candidateFrom(tool({ uiWidth: "full" as "wide" }));
+    expect(result).toMatchObject({ kind: "failed", failure: "schema-shape" });
+  });
   it("CON-04: a good answer becomes an artifact of the current contract, with its name and summary", () => {
     const result = candidateFrom(tool({ capabilities: ["clock", "clock"] }));
     expect(result).toMatchObject({
@@ -175,12 +186,12 @@ describe("the host's checks on a created tool (GEN-09, CON-04)", () => {
       name: "Shopping list",
       summary: "A list to tick off at the store.",
       artifact: {
-        contractVersion: 4,
+        contractVersion: 5,
         connections: {},
         data: { schemaVersion: 1, schema: listSchema, migrations: [] },
         capabilities: ["clock"],
         pins: [],
-        ui: { standardVersion: 1, mode: "standard" },
+        ui: { standardVersion: 1, mode: "standard", width: "comfortable" },
       },
     });
   });
