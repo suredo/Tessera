@@ -119,6 +119,14 @@ async function opened(page: Page, name: string) {
   await expect(toolHeading(page)).toHaveText(name, TOOL_START);
 }
 
+async function activateRestore(page: Page) {
+  // This is the keyboard accessibility path; pointer restoration remains in history.spec.ts.
+  // Fitted frame heights can change History's screen coordinates after leaving full screen.
+  const restore = page.getByRole("button", { name: "Restore version 1", exact: true });
+  await tabTo(page, restore);
+  await page.keyboard.press("Enter");
+}
+
 test("APP-11: the main screen, full screen and a restore that loses data have no violations, and nothing moves", async ({
   page,
 }) => {
@@ -128,7 +136,34 @@ test("APP-11: the main screen, full screen and a restore that loses data have no
   await expect(page.locator(".tool-panel.full-screen")).toBeVisible();
   await check(page);
   await page.getByRole("button", { name: en["tool.leaveFullScreen"] }).click();
-  await page.getByRole("button", { name: "Restore version 1" }).click();
+  await activateRestore(page);
+  await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
+    en["history.losesData"],
+  );
+  await check(page);
+});
+
+test("APP-11, DATA-10: Restore remains keyboard-accessible when a late frame fit moves History", async ({
+  page,
+}) => {
+  await opened(page, "Shopping list");
+  const restore = page.getByRole("button", { name: "Restore version 1", exact: true });
+  // A89 can deliver another fitted height as a control receives focus. Exercise visible keyboard
+  // focus and activation through that movement without relying on pointer coordinates.
+  await restore.evaluate((button) => {
+    button.addEventListener(
+      "focus",
+      () => {
+        const before = button.getBoundingClientRect().top + scrollY;
+        const frame = document.querySelector<HTMLElement>(".tool-frame")!;
+        frame.style.height = `${frame.getBoundingClientRect().height + 180}px`;
+        button.dataset["fitShift"] = String(button.getBoundingClientRect().top + scrollY - before);
+      },
+      { once: true },
+    );
+  });
+  await activateRestore(page);
+  expect(Number(await restore.getAttribute("data-fit-shift"))).toBeGreaterThan(0);
   await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
     en["history.losesData"],
   );

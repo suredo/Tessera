@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Fixed**: The [host accessibility check](code/web/package.md) reaches Restore by Tab with visible focus and activates it with Enter after full-screen exit. A controlled late frame-fit case covers keyboard access while History moves; the existing data-loss assertions and pointer-based history tests remain. CI 44907794544 recorded a missing confirmation after a pointer action on a moving control. Local diagnostics confirmed layout changes but did not reproduce that exact missed click, so they are not claimed as a reproduction. No product behavior, timeout or guard changed. Recorded by `codex/gpt-6` at 2026-11-21T13:57:09Z.
+
 * **Changed**: The [UI redesign foundation](roadmap/ui-redesign.md) records the owner's approved decisions, separate milestone, six tracked slices and exit criteria. The approved [main-screen target](spec/app.md) now lives in the foundation; the [web code doc](code/web/package.md) distinguishes current implementation from that target. The consumed task handoff is removed for merge readiness. The offline mockup renderer uses actual filenames and a lint-safe browser callback, and creates its output folder. No product implementation or model call was added. Recorded by `codex/gpt-6` at 2026-11-21T12:47:40Z.
 
 ## 2026-11-20
