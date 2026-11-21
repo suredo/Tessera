@@ -213,7 +213,7 @@ describe("CNX-07: a tool's first change through a connection asks the person (A7
                 },
               ],
             });
-        }) as ReturnType<StartDeps["ask"]>,
+        }),
     );
     const askToWrite = vi.fn(() => Promise.resolve(true));
     const handler = withPermission(
