@@ -662,6 +662,8 @@ button.primary {
 }
 .app > main:has(.split) {
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 .split {
   position: relative;
@@ -669,6 +671,7 @@ button.primary {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100%;
+  flex: 1;
   min-height: 0;
   isolation: isolate;
 }

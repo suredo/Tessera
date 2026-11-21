@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Fixed**: The [conversation layout](code/web/package.md) reserves the New tool introduction's height before sizing its panes. A viewport regression exposed the ask bar ending at 951 px in a 900 px window; desktop and narrow checks now require its entire footer to fit. No request, consent or runtime guard changed. Recorded by `codex/gpt-6` at 2026-11-21T16:53:07Z.
+
 * **Corrected**: The [web code doc](code/web/package.md)'s request-box invariant now says footer placement, removing the stale above-the-tool description found by independent review of PR 421. No product code changed. Recorded by `codex/gpt-6` at 2026-11-21T16:45:33Z.
 
 * **Fixed**: The [conversation slice](code/web/package.md) keeps floating chat below the tool header, hides it behind full screen, and gives an empty conversation visible guidance. The connection browser consumer now closes Details and its parent More menu before outside pointer actions, reopening Details for its existing permission/request assertions; the prior CI failure showed Details intercepting Allow. Consent, request counts, timeouts and sandbox guards remain unchanged. Recorded by `codex/gpt-6` at 2026-11-21T16:39:00Z.

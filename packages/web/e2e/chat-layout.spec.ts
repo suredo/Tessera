@@ -5,7 +5,7 @@ import { UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.t
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, TOOL_START, workspaceWith, type AppHost } from "./support/app-host.ts";
 import { clickToolAction } from "./support/tool-actions.ts";
-import { selectWorkspace } from "./support/workspace-actions.ts";
+import { openWorkspaces, selectWorkspace } from "./support/workspace-actions.ts";
 
 // Focus, floating and right-docked conversation (APP-01), without live model calls (ENG-19).
 const clarify = {
@@ -83,6 +83,16 @@ test.describe("desktop", () => {
     await expect(request).toBeDisabled();
     await expect(conversation(page)).toContainText(en["request.clarify"], { timeout: 30_000 });
     await expect(request).toBeEnabled();
+  });
+
+  test("APP-01, APP-02: New tool keeps the ask bar inside the viewport", async ({ page }) => {
+    await open(page);
+    const drawer = await openWorkspaces(page);
+    await drawer.getByRole("button", { name: en["workspaces.new"], exact: true }).click();
+    await expect(page.locator(".tool-panel")).toHaveCount(0);
+    const footer = (await page.locator(".ask-footer").boundingBox())!;
+    expect(footer.y + footer.height).toBeLessThanOrEqual(900);
+    await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeInViewport();
   });
 
   test("APP-01, APP-11: dock is on the right, keyboard resizes it, preference survives reload while Focus resets", async ({
@@ -223,5 +233,17 @@ test.describe("narrow fallback before the phone-sheet slice", () => {
     );
     await page.getByRole("button", { name: en["chat.close"] }).click();
     await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeVisible();
+  });
+  test("APP-01, APP-02: New tool keeps its entire ask bar in a narrow viewport", async ({
+    page,
+  }) => {
+    await open(page);
+    const drawer = await openWorkspaces(page);
+    await drawer.getByRole("button", { name: en["workspaces.new"], exact: true }).click();
+    const footer = (await page.locator(".ask-footer").boundingBox())!;
+    expect(footer.y + footer.height).toBeLessThanOrEqual(900);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      320,
+    );
   });
 });
