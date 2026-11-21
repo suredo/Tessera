@@ -99,16 +99,21 @@ describe("the host app's API (APP-03 to APP-08)", () => {
     folder.close();
   });
 
-  it("CAP-01: opening a workspace gives what its tool declares, and none without a tool", async () => {
+  it("APP-01, CAP-01: opening a workspace gives its tool's width and capabilities", async () => {
     const folder = await newFolder();
     const { workspace } = ask(folder, "workspaces.create", { title: "Clock" });
     expect(ask(folder, "workspaces.open", { id: workspace.id })).toEqual({
       workspace,
       capabilities: [],
+      uiWidth: "comfortable",
     });
     const clock = saveVersion(folder.db, { ...tool, capabilities: ["clock"] });
     expect(activateVersion(folder, workspace.id, clock, 0).ok).toBe(true);
     expect(ask(folder, "workspaces.open", { id: workspace.id }).capabilities).toEqual(["clock"]);
+    expect(ask(folder, "workspaces.open", { id: workspace.id }).uiWidth).toBe("comfortable");
+    const wide = saveVersion(folder.db, { ...tool, ui: { ...tool.ui, width: "wide" } });
+    expect(activateVersion(folder, workspace.id, wide, 0).ok).toBe(true);
+    expect(ask(folder, "workspaces.open", { id: workspace.id }).uiWidth).toBe("wide");
     ask(folder, "workspaces.delete", { id: workspace.id });
     expect(refusal(folder, "workspaces.open", { id: workspace.id })).toEqual({
       ok: false,

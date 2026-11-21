@@ -111,6 +111,7 @@ const said = (page: Page) => log(page).locator(".chat-text");
 async function openWorkspace(page: Page, name: string) {
   await selectWorkspace(page, name);
   await expect(page.getByRole("region", { name: `Tool: ${name}` })).toBeVisible();
+  await page.getByRole("button", { name: en["chat.open"] }).click();
 }
 
 async function ask(page: Page, request: string) {
@@ -143,6 +144,7 @@ test("APP-03: the workspace a request made keeps its turn, there after a reload"
   await expect(said(page)).toHaveText(["A page for my notes", ready]);
   await expect(page.getByText(ready)).toHaveCount(1);
   await page.reload();
+  await page.getByRole("button", { name: en["chat.open"] }).click();
   await expect(said(page)).toHaveText(["A page for my notes", ready]);
   expect(listWorkspaces(app.folder).map((w) => w.title)).toEqual(["Notes"]);
 });
@@ -227,6 +229,7 @@ test("APP-03, PLAT-03: a kept chat shows while setup fails, with no way to ask",
       { from: "tessera", text: "A kept reply." },
     ]);
     await page.goto(failing.url);
+    await page.getByRole("button", { name: en["chat.open"] }).click();
     await expect(said(page)).toHaveText(["A kept request", "A kept reply."]);
     await expect(page.getByRole("textbox", { name: en["request.label"] })).toHaveCount(0);
     // Expanding is the host's own control, so it works without the model too (APP-01).

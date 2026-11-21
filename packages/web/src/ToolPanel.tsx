@@ -1,4 +1,4 @@
-import type { Workspace } from "@tessera/contracts";
+import type { Artifact, Workspace } from "@tessera/contracts";
 import { createRuntime, type ToolRuntime } from "@tessera/runtime";
 import { useEffect, useEffectEvent, useId, useRef, useState, type ReactNode } from "react";
 import { HostIcon } from "./HostIcon.tsx";
@@ -76,6 +76,7 @@ export function ToolPanel({
     left?.mode === "minimized" ? "minimized" : left?.mode === "stopped" ? "stopped" : "starting",
   );
   const [fullScreen, setFullScreen] = useState(false);
+  const [width, setWidth] = useState<Artifact["ui"]["width"]>("comfortable");
   // The question before a tool's first change through a connection, while it waits (A70).
   const [question, setQuestion] = useState<{ run: string; value: Question } | null>(null);
   const answering = useRef<((allowed: boolean) => void) | null>(null);
@@ -133,6 +134,7 @@ export function ToolPanel({
     );
     startTool(current, id, open, controller.signal, {
       onWrite: () => dataChanged.current?.(),
+      onWidth: setWidth,
       askToWrite,
       askToSave,
       onConnectionUsed: () => connectionUsed.current?.(),
@@ -185,6 +187,7 @@ export function ToolPanel({
       // A stable hook for the scenario runner and tests (VER-03): titles repeat, IDs don't.
       data-workspace-id={id}
       data-mode={mode}
+      data-width={expanded || fullScreen ? "wide" : width}
     >
       {question?.run === run && <WriteQuestion question={question.value} onAnswer={answer} />}
       {offer?.run === run && <SaveQuestion question={offer.value} onAnswer={decide} />}

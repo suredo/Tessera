@@ -1,90 +1,85 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { t } from "./i18n/translate.ts";
 
-// The chat beside the tool, with a divider between them (APP-01): a window splitter the person can
-// drag, or move with the keyboard (APP-11): arrows by a step, Home and End to the limits. Where
-// they don't fit side by side, the CSS stacks them and hides the divider. The width is the
-// person's own, kept in this browser only; without storage it starts at the default each time.
-
-/** The chat's share of the width, in percent: its default and limits, and a key press's step. */
-export const SPLIT = { initial: 40, min: 25, max: 75, step: 5 } as const;
-const KEY = "tessera.chatWidth";
-
-/** A share kept within the limits, as a whole percent. */
+// Stable panes (APP-01, RUN-02): hiding or moving chat never reparents the sandbox.
+export const SPLIT = { initial: 35, min: 25, max: 60, step: 5 } as const;
 export const clampShare = (share: number): number =>
   Math.round(Math.min(SPLIT.max, Math.max(SPLIT.min, share)));
-
-const rememberedShare = (): number => {
-  try {
-    const kept = Number(localStorage.getItem(KEY));
-    return kept ? clampShare(kept) : SPLIT.initial;
-  } catch {
-    return SPLIT.initial;
-  }
-};
-
-/** The share a key moves the divider to, or undefined for a key it doesn't take. */
 export function keyShare(key: string, share: number): number | undefined {
-  if (key === "ArrowLeft" || key === "ArrowDown") return clampShare(share - SPLIT.step);
-  if (key === "ArrowRight" || key === "ArrowUp") return clampShare(share + SPLIT.step);
+  if (key === "ArrowLeft" || key === "ArrowUp") return clampShare(share + SPLIT.step);
+  if (key === "ArrowRight" || key === "ArrowDown") return clampShare(share - SPLIT.step);
   if (key === "Home") return SPLIT.min;
   if (key === "End") return SPLIT.max;
   return undefined;
 }
-
+const CORNERS = ["top-right", "bottom-right", "bottom-left", "top-left"] as const;
+type Corner = (typeof CORNERS)[number];
+const read = (key: string) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const keep = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Storage can be disabled; controls still work for this visit.
+  }
+};
 type Props = {
-  /** The chat. */
   first: ReactNode;
-  /** The tool. */
   second: ReactNode;
-  /** The tool takes the whole width: the chat and the divider step aside. */
+  footer: ReactNode;
+  open: boolean;
+  onOpen: (open: boolean) => void;
   expanded?: boolean;
 };
-
-export function Split({ first, second, expanded = false }: Props) {
-  const [share, setShare] = useState(rememberedShare);
-  // While dragging, the panes take no pointer events: a tool's frame would swallow the moves.
+export function Split({ first, second, footer, open, onOpen, expanded = false }: Props) {
+  const [position, setPosition] = useState(() =>
+    read("tessera.chatPosition") === "docked" ? "docked" : "floating",
+  );
+  const [corner, setCorner] = useState<Corner>(
+    () => CORNERS.find((item) => item === read("tessera.chatCorner")) ?? "top-right",
+  );
+  const [share, setShare] = useState(() => {
+    const value = Number(read("tessera.chatWidth"));
+    return Number.isFinite(value) && value > 0 ? clampShare(value) : SPLIT.initial;
+  });
   const [dragging, setDragging] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  const keep = (next: number) => {
-    setShare(next);
-    try {
-      localStorage.setItem(KEY, String(next));
-    } catch {
-      // Storage can be off; the divider still moves, it just isn't remembered.
+  const opener = useRef<HTMLButtonElement>(null);
+  const closer = useRef<HTMLButtonElement>(null);
+  const focusOnOpen = useRef(false);
+  const id = useId();
+  const visible = open && !expanded;
+  useLayoutEffect(() => {
+    if (visible && focusOnOpen.current) {
+      closer.current?.focus();
+      focusOnOpen.current = false;
     }
+  }, [visible]);
+  const move = (next: Corner) => {
+    setCorner(next);
+    keep("tessera.chatCorner", next);
   };
-  // Dragging: the share follows the pointer across the box, wherever it goes, until it is let go.
-  const drag = (clientX: number) => {
-    const rect = box.current?.getBoundingClientRect();
-    if (!rect || rect.width === 0) return;
-    keep(clampShare(((clientX - rect.left) / rect.width) * 100));
-  };
-  const startDrag = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const move = (moved: PointerEvent) => drag(moved.clientX);
-    setDragging(true);
-    const stop = () => {
-      setDragging(false);
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", stop);
-      window.removeEventListener("pointercancel", stop);
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", stop);
-    window.addEventListener("pointercancel", stop);
+  const close = () => {
+    onOpen(false);
+    opener.current?.focus();
   };
   return (
     <div
       ref={box}
-      className={["split", expanded && "expanded", dragging && "dragging"]
+      className={["split", position, corner, visible && "conversation-open", dragging && "dragging"]
         .filter(Boolean)
         .join(" ")}
-      style={{ "--chat-share": `${share}%` } as React.CSSProperties}
+      style={{ "--chat-share": share + "%" } as React.CSSProperties}
     >
-      <div className="split-first">{first}</div>
+      <div className="split-second">{second}</div>
       <div
         className="split-divider"
+        hidden={!visible || position !== "docked"}
         role="separator"
         tabIndex={0}
         aria-orientation="vertical"
@@ -97,11 +92,122 @@ export function Split({ first, second, expanded = false }: Props) {
           const next = keyShare(event.key, share);
           if (next === undefined) return;
           event.preventDefault();
-          keep(next);
+          setShare(next);
+          keep("tessera.chatWidth", String(next));
         }}
-        onPointerDown={startDrag}
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          setDragging(true);
+        }}
+        onPointerMove={(event) => {
+          if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+          const rect = box.current!.getBoundingClientRect();
+          const next = clampShare(((rect.right - event.clientX) / rect.width) * 100);
+          setShare(next);
+          keep("tessera.chatWidth", String(next));
+        }}
+        onLostPointerCapture={() => setDragging(false)}
       />
-      <div className="split-second">{second}</div>
+      <div
+        id={id}
+        className="split-first"
+        hidden={!visible}
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && !event.defaultPrevented) {
+            event.preventDefault();
+            close();
+          }
+        }}
+      >
+        <header className="conversation-controls">
+          <strong>{t("chat.label")}</strong>
+          <select
+            aria-label={t("chat.position")}
+            value={position}
+            onChange={(event) => {
+              setPosition(event.target.value);
+              keep("tessera.chatPosition", event.target.value);
+            }}
+          >
+            <option value="floating">{t("chat.float")}</option>
+            <option value="docked">{t("chat.dock")}</option>
+          </select>
+          <button ref={closer} type="button" onClick={close}>
+            {t("chat.close")}
+          </button>
+        </header>
+        {position === "floating" && (
+          <div className="conversation-placement">
+            <label>
+              {t("chat.corner")}
+              <select value={corner} onChange={(event) => move(event.target.value as Corner)}>
+                {CORNERS.map((item) => (
+                  <option key={item} value={item}>
+                    {t(`chat.${item}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className="conversation-drag"
+              aria-label={t("chat.move")}
+              onPointerDown={(event) => {
+                event.currentTarget.setPointerCapture(event.pointerId);
+                setDragging(true);
+              }}
+              onPointerUp={(event) => {
+                if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
+                const rect = box.current!.getBoundingClientRect();
+                move(
+                  ((event.clientY < rect.y + rect.height / 2 ? "top" : "bottom") +
+                    "-" +
+                    (event.clientX < rect.x + rect.width / 2 ? "left" : "right")) as Corner,
+                );
+              }}
+              onLostPointerCapture={() => setDragging(false)}
+              onKeyDown={(event) => {
+                if (!event.key.startsWith("Arrow")) return;
+                event.preventDefault();
+                const vertical =
+                  event.key === "ArrowUp"
+                    ? "top"
+                    : event.key === "ArrowDown"
+                      ? "bottom"
+                      : corner.split("-")[0];
+                const horizontal =
+                  event.key === "ArrowLeft"
+                    ? "left"
+                    : event.key === "ArrowRight"
+                      ? "right"
+                      : corner.split("-")[1];
+                move((vertical + "-" + horizontal) as Corner);
+              }}
+            >
+              {t("chat.move")}
+            </button>
+          </div>
+        )}
+        {first}
+      </div>
+      <footer className="ask-footer">
+        <button
+          ref={opener}
+          type="button"
+          aria-expanded={visible}
+          aria-controls={id}
+          onClick={() => {
+            if (visible) closer.current?.focus();
+            else {
+              focusOnOpen.current = true;
+              onOpen(true);
+            }
+          }}
+        >
+          {t("chat.open")}
+        </button>
+        {footer}
+      </footer>
     </div>
   );
 }

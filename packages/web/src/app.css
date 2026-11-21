@@ -497,6 +497,12 @@ button.primary {
   overflow: hidden;
   min-height: 20rem;
 }
+.tool-panel[data-width="comfortable"] .tool-frame {
+  width: 100%;
+  max-width: 1100px;
+  justify-self: center;
+  box-sizing: border-box;
+}
 /* The tool's frame fits its page, as tall as the runtime says it lays out, at least 20rem (A89);
    full screen, it fills the screen and the page scrolls inside. */
 .tool-frame iframe {
@@ -648,23 +654,114 @@ button.primary {
   margin: var(--ui-space-4) 0 var(--ui-space-2);
 }
 
-/* The chat beside the tool, with the divider between them (APP-01); stacked, chat first, where
-   they don't fit side by side. Expanded, the tool takes the chat's place too. */
+/* The ask bar stays outside the tool's scroll area. Pane DOM stays stable across positions. */
+.app:has(.split) {
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+.app > main:has(.split) {
+  min-height: 0;
+}
 .split {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(0, var(--chat-share)) auto minmax(0, 1fr);
-  align-items: start;
-  margin-bottom: var(--ui-space-4);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+  isolation: isolate;
+}
+.split.docked.conversation-open {
+  grid-template-columns: minmax(0, 1fr) 12px minmax(0, var(--chat-share));
 }
 .split-first {
-  padding-right: var(--ui-space-2);
+  grid-column: 3;
+  grid-row: 1;
+  overflow: auto;
+  padding: 1rem;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-divider);
+  border-radius: var(--ui-radius-panel);
   min-width: 0;
 }
 .split-second {
-  padding-left: var(--ui-space-2);
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.split.floating .split-first {
+  position: absolute;
+  z-index: 2;
+  width: min(380px, calc(100% - 1rem));
+  max-height: min(calc(100% - 5.5rem), 38rem);
+  box-sizing: border-box;
+  box-shadow: 0 8px 32px #29362e26;
+  grid-area: 1 / 1 / 2 / -1;
+}
+.split.top-right .split-first {
+  top: 5rem;
+  right: 0.5rem;
+}
+.split.top-left .split-first {
+  top: 5rem;
+  left: 0.5rem;
+}
+.split.bottom-right .split-first {
+  bottom: 0.5rem;
+  right: 0.5rem;
+}
+.split.bottom-left .split-first {
+  bottom: 0.5rem;
+  left: 0.5rem;
+}
+.split.docked .split-first {
+  inset: auto;
+}
+.conversation-controls,
+.conversation-placement {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.conversation-controls strong {
+  margin-right: auto;
+}
+.conversation-controls select,
+.conversation-placement select {
+  font: inherit;
+  min-height: 44px;
+  max-width: 100%;
+}
+.conversation-placement label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.conversation-drag {
+  touch-action: none;
+  cursor: move;
+}
+.ask-footer {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--ui-divider);
+  background: var(--ui-background);
+}
+.ask-footer .request {
+  margin: 0;
+}
+.ask-footer > button {
+  float: right;
 }
 .split-divider {
+  grid-column: 2;
+  grid-row: 1;
   align-self: stretch;
   width: var(--ui-space-3);
   min-height: var(--ui-target);
@@ -677,31 +774,23 @@ button.primary {
 .split-divider:focus-visible {
   background-color: var(--ui-accent-soft);
 }
-.split.dragging .split-first,
 .split.dragging .split-second {
   pointer-events: none;
   user-select: none;
 }
-.split.expanded {
-  grid-template-columns: minmax(0, 1fr);
-}
-.split.expanded .split-first,
-.split.expanded .split-divider {
-  display: none;
-}
-.split.expanded .split-second {
-  padding-left: 0;
-}
 @container work (max-width: 44rem) {
-  .split {
+  .split.docked.conversation-open {
     grid-template-columns: minmax(0, 1fr);
   }
   .split-divider {
     display: none;
   }
-  .split-first,
-  .split-second {
-    padding: 0;
+  .split.docked .split-first {
+    position: absolute;
+    z-index: 2;
+    inset: auto 0 0.5rem 0;
+    grid-area: 1 / 1 / 2 / -1;
+    max-height: 60%;
   }
 }
 
@@ -719,7 +808,7 @@ button.primary {
 .chat-log:empty {
   display: none;
 }
-.chat-log li {
+.chat-log > div {
   padding: var(--ui-space-2) var(--ui-space-3);
   border-radius: var(--ui-radius-control);
   border: 1px solid var(--ui-control-border);

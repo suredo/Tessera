@@ -7,10 +7,12 @@ implements: [CON-01, APP-09, UX-06]
 tests: [../../../packages/server/test/host-api.test.ts]
 tags: [code, server, api, host]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-14T19:17:56Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T16:15:20Z }
 ---
 
 # Purpose
+
+Opening a workspace also reports `uiWidth` from its validated current artifact (`APP-01`); no current readable tool means comfortable. The host consumes that declaration before mounting the tool. Its schema comes from the artifact's one width definition.
 
 Connects the host app's screens (#53) to the server's modules. Everything the app asks for, from listing workspaces to restoring a version or emptying the trash, is one action in the contracts' `HOST_ACTIONS` ([contracts package](../contracts/package.md)), sent to one route, `HOST_ROUTE` (`POST /api/host`). The work is the existing modules': [workspaces](workspaces.md), restore, undo, the library and the [trash](trash.md). This module only checks requests and answers, and connects them.
 

@@ -7,10 +7,12 @@ implements: [CON-01, CON-02, CON-03, CON-04, CON-05, CAP-01, GEN-01, CLI-04, OBS
 tests: [../../../packages/contracts/test/artifact.test.ts, ../../../packages/contracts/test/bridge.test.ts, ../../../packages/contracts/test/intent.test.ts, ../../../packages/contracts/test/profiles.test.ts, ../../../packages/contracts/test/chart.test.ts, ../../../packages/contracts/test/connection.test.ts, ../../../packages/contracts/test/json.test.ts, ../../../packages/contracts/test/patch.test.ts, ../../../packages/contracts/test/provider.test.ts, ../../../packages/contracts/test/schemas.test.ts, ../../../packages/contracts/test/units.test.ts]
 tags: [code, contracts]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-20T20:54:02Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T16:15:20Z }
 ---
 
 # Purpose
+
+The `workspaces.open` reply carries `uiWidth` using `toolWidthSchema`, for the host's layout. Missing values in older replies default to comfortable; unsupported declarations are still refused. The generated host-reply schema agrees, and artifacts retain the same contract version and stored bytes.
 
 Contract version 5 adds `ui.width`, validated by `toolWidthSchema` (`TOOL_WIDTHS`), for the host panel's comfortable or wide layout (`APP-01`). Contract 4 tools upgrade in memory to comfortable after their old UI declaration is validated; their stored bytes and hashes stay unchanged. Creation's optional `uiWidth` uses the same field schema; leaving it out means comfortable, so recorded creation answers remain readable. Edits keep the width with the rest of `ui`.
 

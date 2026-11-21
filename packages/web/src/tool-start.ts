@@ -1,4 +1,4 @@
-import type { BridgeArgs } from "@tessera/contracts";
+import type { Artifact, BridgeArgs } from "@tessera/contracts";
 import type { DataHandlers, RuntimeState, SaveOffer, ToolRuntime } from "@tessera/runtime";
 import { BridgeError, serveBridge, serverData } from "@tessera/runtime";
 import { ask } from "./host-api.ts";
@@ -14,6 +14,8 @@ const defaults: StartDeps = { ask, serveBridge, serverData };
 
 /** What the panel hears about the running tool. */
 export type StartOptions = {
+  /** The validated host width declaration, before mounting the tool (APP-01). */
+  onWidth?: (width: Artifact["ui"]["width"]) => void;
   /** Called after each change the tool saved to its data, so the history can show it (APP-05). */
   onWrite?: () => void;
   /**
@@ -121,11 +123,14 @@ export async function startTool(
   workspaceId: string,
   open: (runtime: ToolRuntime) => ReturnType<ToolRuntime["open"]>,
   signal: AbortSignal,
-  { onWrite, askToWrite, onConnectionUsed, askToSave }: StartOptions = {},
+  { onWrite, askToWrite, onConnectionUsed, askToSave, onWidth }: StartOptions = {},
   deps: StartDeps = defaults,
 ): Promise<boolean> {
-  const { workspace, capabilities } = await deps.ask("workspaces.open", { id: workspaceId });
+  const { workspace, capabilities, uiWidth } = await deps.ask("workspaces.open", {
+    id: workspaceId,
+  });
   if (signal.aborted) return false;
+  onWidth?.(uiWidth);
   const tool = await open(runtime);
   if (signal.aborted) return false;
   const data = deps.serverData(workspaceId);

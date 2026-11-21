@@ -93,6 +93,7 @@ const run: {
     return {
       workspace,
       capabilities: version && version.kind === "ok" ? version.artifact.capabilities : [],
+      uiWidth: version && version.kind === "ok" ? version.artifact.ui.width : "comfortable",
     };
   },
   "workspaces.create": (store, { title }) => ({ workspace: createWorkspace(store, title) }),
