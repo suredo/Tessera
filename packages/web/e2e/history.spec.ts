@@ -9,6 +9,7 @@ import {
 } from "../../server/src/workspaces/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, type AppHost } from "./support/app-host.ts";
+import { openToolHistory } from "./support/tool-actions.ts";
 
 // The open workspace's history (APP-05): restoring a version, with its plan confirmed first
 // (DATA-10), undoing the last data change (DATA-04), and bringing back the copy kept before a
@@ -84,6 +85,7 @@ async function openWorkspace(page: Page, name: string) {
   await page
     .getByRole("button", { name: new RegExp(`^(Open ${escape(name)}|${escape(name)}, open)$`) })
     .click();
+  await openToolHistory(page);
 }
 
 test("APP-05: restoring a version that keeps the data asks first, and Cancel changes nothing", async ({
@@ -219,7 +221,9 @@ test("DATA-04: a change the running tool saves can be undone at once, without le
     .frameLocator("iframe")
     .getByRole("button", { name: "Add a task" });
 
+  await page.keyboard.press("Escape");
   await add.click();
+  await openToolHistory(page);
   await expect(history(page)).toContainText("One record changed");
   expect(tasksOf(id)).toHaveLength(2);
   await history(page).getByRole("button", { name: en["history.undo"] }).click();
@@ -227,7 +231,9 @@ test("DATA-04: a change the running tool saves can be undone at once, without le
   expect(tasksOf(id)).toEqual([{ id: "t-1", title: "Buy milk" }]);
 
   // And again after that undo: the tool started afresh, and its next change shows too.
+  await page.keyboard.press("Escape");
   await add.click();
+  await openToolHistory(page);
   await expect(history(page)).toContainText("One record changed");
 });
 

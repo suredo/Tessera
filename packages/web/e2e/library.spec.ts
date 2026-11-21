@@ -27,7 +27,7 @@ async function expectToolText(page: Page, workspace: string, text: string) {
   });
   // Selection changes before the replacement runtime finishes starting.
   await panel.scrollIntoViewIfNeeded();
-  await expect(panel.getByRole("button", { name: en["tool.minimize"], exact: true })).toBeVisible();
+  await expect(page.locator(".tool-panel[data-mode=running]")).toBeVisible();
   await expect(
     panel
       .frameLocator(".tool-frame iframe")

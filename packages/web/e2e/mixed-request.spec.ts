@@ -144,7 +144,7 @@ test("GEN-04 DATA-02: activate and display the edited interface before its separ
   try {
     // Data planning starts only after generation, staging, smoke and activation finish.
     await expect.poll(() => dataBegan, { timeout: 30_000 }).toBe(true);
-    await expect(page.getByRole("button", { name: en["tool.minimize"] })).toBeVisible();
+    await expect(page.locator(".tool-panel[data-mode=running]")).toBeVisible();
     await expect(frame(page).locator("body")).toHaveCSS("background-color", "rgb(17, 17, 17)");
     await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs"]);
     expect(workspace().data).toEqual(before.data);
@@ -165,7 +165,7 @@ test("GEN-04 DATA-02: activate and display the edited interface before its separ
   expect(sent(data)).not.toContain("Make it dark");
   await expect(newestReply(page)).toContainText("Shopping list was updated.");
   await expect(newestReply(page)).toContainText("Changed one entry");
-  await expect(page.getByRole("button", { name: en["tool.minimize"] })).toBeVisible();
+  await expect(page.locator(".tool-panel[data-mode=running]")).toBeVisible();
   await expect(frame(page).getByRole("listitem")).toHaveText(["Milk", "Eggs", "Bread"]);
   const items = workspace().data?.["items"];
   if (!Array.isArray(items)) throw new Error("Expected entries");

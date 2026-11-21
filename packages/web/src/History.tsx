@@ -6,7 +6,8 @@ import type {
   Workspace,
   WorkspaceVersion,
 } from "@tessera/contracts";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
+import { HostIcon } from "./HostIcon.tsx";
 import { ask, problemText } from "./host-api.ts";
 import { t } from "./i18n/translate.ts";
 
@@ -32,6 +33,8 @@ type Props = {
   changes: number;
   /** Called after a restore or an undo changed the workspace, so the app reloads it. */
   onChanged: (message: string) => Promise<void>;
+  /** Undo and the History opener sit in the tool header; the history itself is a popover. */
+  inHeader?: boolean;
 };
 
 /** A lost value as the person reads it: where it was, and what it held. */
@@ -61,7 +64,9 @@ export const lossText = (loss: Loss) => {
   return field ? t("history.loss", { where, field, value }) : t("history.lossItem", { where });
 };
 
-export function History({ workspace, changes, onChanged }: Props) {
+export function History({ workspace, changes, onChanged, inHeader = false }: Props) {
+  const panelId = useId();
+  const [panelOpen, setPanelOpen] = useState(false);
   const id = workspace.id;
   const [versions, setVersions] = useState<WorkspaceVersion[]>([]);
   const [entries, setEntries] = useState<UndoEntry[]>([]);
@@ -164,120 +169,159 @@ export function History({ workspace, changes, onChanged }: Props) {
 
   const latest = entries[0];
   return (
-    <section aria-labelledby="history-heading" className="history">
-      <h2 id="history-heading">{t("history.heading")}</h2>
-      <p role="status">{message}</p>
-
-      <h3>{t("history.undoHeading")}</h3>
-      {latest ? (
-        <p>
-          <button type="button" onClick={() => void undo(latest)}>
-            {t("history.undo")}
-          </button>{" "}
-          <span className="detail">
-            {latest.kind === "whole"
-              ? t("history.changeWhole", { when: at(latest.createdAt) })
-              : latest.recordCount === 1
-                ? t("history.changeRecord", { when: at(latest.createdAt) })
-                : t("history.changeRecords", {
-                    count: latest.recordCount,
-                    when: at(latest.createdAt),
-                  })}
-          </span>
-        </p>
-      ) : (
-        <p>{t("history.nothingToUndo")}</p>
-      )}
-
-      <h3>{t("history.versionsHeading")}</h3>
-      <ul>
-        {versions.map((version, place) => (
-          <li key={version.index}>
-            <span>{t("history.version", { index: version.index })}</span>{" "}
-            <span className="detail">{at(version.createdAt)}</span>{" "}
-            {place === 0 ? (
-              <span className="badge">{t("history.current")}</span>
-            ) : (
-              <button
-                type="button"
-                aria-label={t("history.restoreLabel", { index: version.index })}
-                disabled={pending !== null}
-                onClick={() => void plan(version)}
-              >
-                {t("history.restore")}
-              </button>
-            )}
-            {/* What the version was made for and which of the host's checks it passed (APP-05). */}
-            {version.summary && <p className="version-summary">{version.summary}</p>}
-            {version.checks.length > 0 && (
-              <p className="detail">
-                {t(
-                  version.checks.includes("code") && version.checks.includes("start")
-                    ? "history.checkedBoth"
-                    : version.checks.includes("code")
-                      ? "history.checkedCode"
-                      : "history.checkedStart",
-                )}
-              </p>
-            )}
-            {/* Whether its behavior was tried out, and how, or said plainly that it wasn't (VER-08, UX-03). */}
-            <p className="detail">
-              {version.checks.includes("behavior") && version.profile
-                ? t("history.triedOut", { what: t(`history.tried.${version.profile}`) })
-                : version.checks.includes("acceptance")
-                  ? t("history.checkedAgainstRequest")
-                  : t("history.notTriedOut")}
-            </p>
-          </li>
-        ))}
-      </ul>
-
-      {pending && (
-        <div role="group" aria-labelledby="restore-heading" className="confirm">
-          <h3 id="restore-heading">
-            {t("history.confirmHeading", { index: pending.version.index })}
-          </h3>
-          {pending.confirmation === undefined ? (
-            <p>{t("history.keepsData")}</p>
-          ) : (
-            <>
-              <p>{t("history.losesData")}</p>
-              <ul>
-                {pending.losses.map((loss) => (
-                  <li key={loss.path.join("\u0000")}>{lossText(loss)}</li>
-                ))}
-              </ul>
-              <p>{t("history.keptCopy")}</p>
-            </>
-          )}
-          <button type="button" className="primary" onClick={() => void restore(pending)}>
-            {pending.confirmation === undefined ? t("history.confirm") : t("history.confirmLoss")}
-          </button>{" "}
-          <button type="button" onClick={() => setPending(null)}>
-            {t("history.cancel")}
-          </button>
-        </div>
-      )}
-
-      {snapshots.length > 0 && (
+    <>
+      {inHeader && (
         <>
-          <h3>{t("history.snapshotsHeading")}</h3>
-          <ul>
-            {snapshots.map((snapshot) => (
-              <li key={snapshot.id}>
-                <span>{t("history.snapshot", { when: at(snapshot.createdAt) })}</span>{" "}
-                <button
-                  type="button"
-                  aria-label={t("history.bringBackLabel", { when: at(snapshot.createdAt) })}
-                  onClick={() => void bringBack(snapshot)}
-                >
-                  {t("history.bringBack")}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={t("history.undo")}
+            title={latest ? t("history.undo") : t("history.nothingToUndo")}
+            disabled={!latest}
+            onClick={() => latest && void undo(latest)}
+          >
+            <HostIcon name="undo" />
+          </button>
+          <button
+            type="button"
+            className="icon-button history-opener"
+            aria-label={t("history.heading")}
+            title={t("history.heading")}
+            popoverTarget={panelId}
+          >
+            <HostIcon name="history" />
+          </button>
+          <p role="status" className="visually-hidden">
+            {panelOpen ? "" : message}
+          </p>
         </>
       )}
-    </section>
+      <section
+        id={panelId}
+        popover={inHeader ? "auto" : undefined}
+        onToggle={(event) => setPanelOpen(event.newState === "open")}
+        aria-labelledby="history-heading"
+        className={inHeader ? "history host-panel" : "history"}
+      >
+        <h2 id="history-heading">{t("history.heading")}</h2>
+        {inHeader && (
+          <button type="button" popoverTarget={panelId} popoverTargetAction="hide">
+            {t("tool.closePanel")}
+          </button>
+        )}
+        <p role="status">{inHeader && !panelOpen ? "" : message}</p>
+
+        <h3>{t("history.undoHeading")}</h3>
+        {latest ? (
+          <p>
+            <button type="button" onClick={() => void undo(latest)}>
+              {t("history.undo")}
+            </button>{" "}
+            <span className="detail">
+              {latest.kind === "whole"
+                ? t("history.changeWhole", { when: at(latest.createdAt) })
+                : latest.recordCount === 1
+                  ? t("history.changeRecord", { when: at(latest.createdAt) })
+                  : t("history.changeRecords", {
+                      count: latest.recordCount,
+                      when: at(latest.createdAt),
+                    })}
+            </span>
+          </p>
+        ) : (
+          <p>{t("history.nothingToUndo")}</p>
+        )}
+
+        <h3>{t("history.versionsHeading")}</h3>
+        <ul>
+          {versions.map((version, place) => (
+            <li key={version.index}>
+              <span>{t("history.version", { index: version.index })}</span>{" "}
+              <span className="detail">{at(version.createdAt)}</span>{" "}
+              {place === 0 ? (
+                <span className="badge">{t("history.current")}</span>
+              ) : (
+                <button
+                  type="button"
+                  aria-label={t("history.restoreLabel", { index: version.index })}
+                  disabled={pending !== null}
+                  onClick={() => void plan(version)}
+                >
+                  {t("history.restore")}
+                </button>
+              )}
+              {/* What the version was made for and which of the host's checks it passed (APP-05). */}
+              {version.summary && <p className="version-summary">{version.summary}</p>}
+              {version.checks.length > 0 && (
+                <p className="detail">
+                  {t(
+                    version.checks.includes("code") && version.checks.includes("start")
+                      ? "history.checkedBoth"
+                      : version.checks.includes("code")
+                        ? "history.checkedCode"
+                        : "history.checkedStart",
+                  )}
+                </p>
+              )}
+              {/* Whether its behavior was tried out, and how, or said plainly that it wasn't (VER-08, UX-03). */}
+              <p className="detail">
+                {version.checks.includes("behavior") && version.profile
+                  ? t("history.triedOut", { what: t(`history.tried.${version.profile}`) })
+                  : version.checks.includes("acceptance")
+                    ? t("history.checkedAgainstRequest")
+                    : t("history.notTriedOut")}
+              </p>
+            </li>
+          ))}
+        </ul>
+
+        {pending && (
+          <div role="group" aria-labelledby="restore-heading" className="confirm">
+            <h3 id="restore-heading">
+              {t("history.confirmHeading", { index: pending.version.index })}
+            </h3>
+            {pending.confirmation === undefined ? (
+              <p>{t("history.keepsData")}</p>
+            ) : (
+              <>
+                <p>{t("history.losesData")}</p>
+                <ul>
+                  {pending.losses.map((loss) => (
+                    <li key={loss.path.join("\u0000")}>{lossText(loss)}</li>
+                  ))}
+                </ul>
+                <p>{t("history.keptCopy")}</p>
+              </>
+            )}
+            <button type="button" className="primary" onClick={() => void restore(pending)}>
+              {pending.confirmation === undefined ? t("history.confirm") : t("history.confirmLoss")}
+            </button>{" "}
+            <button type="button" onClick={() => setPending(null)}>
+              {t("history.cancel")}
+            </button>
+          </div>
+        )}
+
+        {snapshots.length > 0 && (
+          <>
+            <h3>{t("history.snapshotsHeading")}</h3>
+            <ul>
+              {snapshots.map((snapshot) => (
+                <li key={snapshot.id}>
+                  <span>{t("history.snapshot", { when: at(snapshot.createdAt) })}</span>{" "}
+                  <button
+                    type="button"
+                    aria-label={t("history.bringBackLabel", { when: at(snapshot.createdAt) })}
+                    onClick={() => void bringBack(snapshot)}
+                  >
+                    {t("history.bringBack")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
+    </>
   );
 }

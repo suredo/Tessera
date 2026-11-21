@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Changed**: The [host tool header](code/web/package.md) puts the tool's name, truthful local-save/library status, Undo, History, Save and one More menu beside the tool. History and Details open in native popovers; runtime reloads after data restores keep the header mounted. Header/panel controls use 44 px targets. Browser interactions now open those public controls, and a new layout spec checks keyboard dismissal/focus return and preserved tool input/scroll. Drawer, conversation and phone redesign slices remain pending. Recorded by `codex/gpt-6` at 2026-11-21T00:16:26Z.
+
 * **Fixed**: The [width check](code/evals/ui-width.md)'s replay test narrows the creation answer before passing it to the host's tool-only candidate check. CI caught the missing TypeScript narrowing after the replay test was added; its runtime assertions already passed. No further live calls. Recorded by `codex/gpt-6` at 2026-11-21T00:20:00Z.
 
 ## 2026-11-20

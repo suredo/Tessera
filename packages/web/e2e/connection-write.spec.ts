@@ -1,3 +1,4 @@
+import { openToolDetails } from "./support/tool-actions.ts";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
@@ -109,7 +110,7 @@ test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, t
   expect(seen).toEqual([]);
 
   // The details, open while it asks, say the tool asks first (A72).
-  await page.getByRole("button", { name: en["details.show"] }).click();
+  await openToolDetails(page);
   const details = page.getByRole("region", { name: en["details.heading"] });
   const entry = details.getByRole("listitem").filter({ hasText: "lists:" });
   const takeBack = entry.getByRole("button", {
@@ -119,6 +120,7 @@ test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, t
   await expect(takeBack).toHaveCount(0);
 
   await asked.getByRole("button", { name: en["write.allow"], exact: true }).click();
+  await openToolDetails(page);
   await expect(tool(page).locator("#text")).toHaveText("Sent 201");
   await expect(asked).toBeHidden();
   expect(seen).toEqual([{ method: "POST", url: "/items", body: '{"title":"Alien"}' }]);
@@ -133,6 +135,7 @@ test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, t
   await expect(question(page)).toBeHidden();
 
   // Taken back, the next change asks again.
+  await openToolDetails(page);
   await takeBack.click();
   const takenBack = details.getByText("Its next change through lists will ask you first.");
   await expect(takenBack).toBeVisible();
@@ -145,6 +148,7 @@ test("CNX-07 A72 A73: on Allow, the permission is kept and the change is sent, t
   // Allowed again: the details say so, and no longer that it will ask.
   await question(page).getByRole("button", { name: en["write.allow"], exact: true }).click();
   await expect.poll(() => seen.length).toBe(3);
+  await openToolDetails(page);
   await expect(entry).toContainText(en["details.connection.allowed"]);
   await expect(takenBack).toBeHidden();
 

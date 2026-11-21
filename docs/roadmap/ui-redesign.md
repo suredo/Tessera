@@ -4,7 +4,7 @@ title: "UI redesign: the tool comes first"
 description: "The separate UI redesign milestone: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout."
 tags: [roadmap, ux, app, redesign]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-20T22:57:18Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T00:16:26Z }
 ---
 # UI redesign: the tool comes first
 

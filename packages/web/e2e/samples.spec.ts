@@ -1,3 +1,4 @@
+import { openToolHistory } from "./support/tool-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { seedSamples } from "../../../scripts/seed.ts";
 import { en } from "../src/i18n/en.ts";
@@ -35,6 +36,7 @@ test.fixme("ENG-19, APP-05, DATA-04: the sample shopping list saves what the per
   await tool(page).getByLabel("Item").fill("Apples");
   await tool(page).getByRole("button", { name: "Add" }).click();
   await expect(items).toHaveText([/Milk/, /Bread/, /Eggs/, /Apples/]);
+  await openToolHistory(page);
   await expect(page.getByRole("region", { name: en["history.heading"] })).toContainText(
     "One record changed",
   );

@@ -1,3 +1,4 @@
+import { clickToolAction, openToolHistory } from "./support/tool-actions.ts";
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { seedSamples } from "../../../scripts/seed.ts";
@@ -124,10 +125,11 @@ test("APP-11: the main screen, full screen and a restore that loses data have no
 }) => {
   await opened(page, "Shopping list");
   await check(page);
-  await page.getByRole("button", { name: en["tool.fullScreen"] }).click();
+  await clickToolAction(page, en["tool.fullScreen"]);
   await expect(page.locator(".tool-panel.full-screen")).toBeVisible();
   await check(page);
-  await page.getByRole("button", { name: en["tool.leaveFullScreen"] }).click();
+  await clickToolAction(page, en["tool.leaveFullScreen"]);
+  await openToolHistory(page);
   await page.getByRole("button", { name: "Restore version 1" }).click();
   await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
     en["history.losesData"],
@@ -150,6 +152,7 @@ test("APP-11: a restore that keeps the data has no violations, and nothing moves
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(app.url);
   await workspaceButton(page, "Two versions").click();
+  await openToolHistory(page);
   await page.getByRole("button", { name: "Restore version 1" }).click();
   await expect(page.getByRole("group", { name: "Restore version 1?" })).toContainText(
     en["history.keepsData"],
@@ -234,7 +237,9 @@ test("APP-11: the app works by keyboard alone, with the focus always visible", a
   await page.keyboard.press("Enter");
   await expect(toolHeading(page)).toHaveText("Garden notes", TOOL_START);
 
-  // Minimize and show the tool again: Tab to each, Enter, then Space.
+  // Reach the tool menu and minimize by keyboard, then show the tool again.
+  await tabTo(page, page.getByRole("button", { name: en["tool.more"] }));
+  await page.keyboard.press("Enter");
   await tabTo(page, page.getByRole("button", { name: en["tool.minimize"] }));
   await page.keyboard.press("Enter");
   await expect(page.getByText("Garden notes is minimized.")).toBeVisible();
@@ -254,6 +259,8 @@ test("APP-11: the app works by keyboard alone, with the focus always visible", a
   // A confirmation: Tab to Restore, Enter; Tab on to its Cancel, Enter closes it.
   await workspaceButton(page, "Shopping list").click();
   await expect(toolHeading(page)).toHaveText("Shopping list", TOOL_START);
+  await tabTo(page, page.getByRole("button", { name: en["history.heading"], exact: true }));
+  await page.keyboard.press("Enter");
   await tabTo(page, page.getByRole("button", { name: "Restore version 1" }));
   await page.keyboard.press("Enter");
   const confirm = page.getByRole("group", { name: "Restore version 1?" });

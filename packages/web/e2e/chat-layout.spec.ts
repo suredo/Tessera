@@ -1,3 +1,4 @@
+import { clickToolAction } from "./support/tool-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import type { Intent } from "../../contracts/src/index.ts";
 import { UNKNOWN_USAGE, type Provider } from "../../server/src/providers/index.ts";
@@ -120,21 +121,22 @@ test.describe("on a wide screen", () => {
   }) => {
     await open(page);
     const inline = await box(page, "tool");
-    const expand = tool(page).getByRole("button", { name: en["tool.expand"] });
-    await expand.click();
+    await clickToolAction(page, en["tool.expand"]);
     await expect(chat(page)).toBeHidden();
     await expect(divider(page)).toBeHidden();
+    await page.getByRole("button", { name: en["tool.more"] }).click();
     const back = tool(page).getByRole("button", { name: en["tool.leaveExpanded"] });
     await expect(back).toHaveAttribute("aria-pressed", "true");
     expect((await box(page, "tool")).width).toBeGreaterThan(inline.width);
-    await back.click();
+    await clickToolAction(page, en["tool.leaveExpanded"]);
     await expect(chat(page)).toBeVisible();
-    await tool(page).getByRole("button", { name: en["tool.fullScreen"] }).click();
+    await clickToolAction(page, en["tool.fullScreen"]);
     // Full screen covers the window; expanding isn't offered there.
     await expect(tool(page).getByRole("button", { name: en["tool.expand"] })).toHaveCount(0);
     const full = await box(page, "tool");
     expect(full.width).toBeGreaterThanOrEqual(1280 - 1);
-    await tool(page).getByRole("button", { name: en["tool.leaveFullScreen"] }).click();
+    await clickToolAction(page, en["tool.leaveFullScreen"]);
+    await page.getByRole("button", { name: en["tool.more"] }).click();
     await expect(tool(page).getByRole("button", { name: en["tool.expand"] })).toBeVisible();
   });
 
@@ -144,11 +146,11 @@ test.describe("on a wide screen", () => {
     await open(page);
     await page.getByRole("textbox", { name: en["request.label"] }).fill("Something");
     await page.getByRole("button", { name: en["request.send"] }).click();
-    await tool(page).getByRole("button", { name: en["tool.expand"] }).click();
+    await clickToolAction(page, en["tool.expand"]);
     await expect(page.locator(".notice [role=status]").first()).toHaveText(en["request.clarify"], {
       timeout: 30_000,
     });
-    await tool(page).getByRole("button", { name: en["tool.leaveExpanded"] }).click();
+    await clickToolAction(page, en["tool.leaveExpanded"]);
     // Back beside the chat: the reply is there, and on the page once.
     await expect(page.getByText(en["request.clarify"])).toHaveCount(1);
   });
