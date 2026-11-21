@@ -233,7 +233,6 @@ test("APP-03, PLAT-03: a kept chat shows while setup fails, with no way to ask",
     await expect(said(page)).toHaveText(["A kept request", "A kept reply."]);
     await expect(page.getByRole("textbox", { name: en["request.label"] })).toHaveCount(0);
     // Expanding is the host's own control, so it works without the model too (APP-01).
-    const tool = page.getByRole("region", { name: "Tool: Kept" });
     await clickToolAction(page, en["tool.expand"]);
     await expect(page.getByRole("region", { name: en["chat.label"] })).toBeHidden();
     await clickToolAction(page, en["tool.leaveExpanded"]);
