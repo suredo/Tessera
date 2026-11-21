@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Corrected**: The [prompt assembly doc](code/server/prompts.md) now records the completed [width-selection check](../evals/reports/2026-11-20-ui-width.md), replacing a stale pending-budget claim found in the independent review of PR 410. No code or prompt changed and no further model calls were made. Recorded by `codex/gpt-6` at 2026-11-21T02:04:03Z.
+
 * **Fixed**: The [width check](code/evals/ui-width.md)'s replay test narrows the creation answer before passing it to the host's tool-only candidate check. CI caught the missing TypeScript narrowing after the replay test was added; its runtime assertions already passed. No further live calls. Recorded by `codex/gpt-6` at 2026-11-21T00:20:00Z.
 
 ## 2026-11-20
