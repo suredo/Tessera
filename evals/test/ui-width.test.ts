@@ -55,6 +55,8 @@ it("APP-01, TEST-04: recorded live creations produce the expected default or exp
   for (const [index, reply] of answers.entries()) {
     const expected = PLAN.cases[index]!.expected;
     expect(reply.answer).toMatchObject({ outcome: "tool" });
+    if (reply.answer.outcome !== "tool")
+      throw new Error("The recorded creation did not make a tool.");
     if (expected === "wide") expect(reply.answer).toMatchObject({ uiWidth: "wide" });
     else expect(reply.answer).not.toHaveProperty("uiWidth");
     expect(candidateFrom(reply.answer)).toMatchObject({
