@@ -4,7 +4,7 @@ title: "Host app"
 description: "What the person sees and can do: main screen, workspaces, library, versions, trash, details (APP-01 to APP-11)."
 tags: [spec, host-app, ui]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-12T19:00:00Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T12:47:40Z }
 ---
 # Host app (`APP`)
 
@@ -12,7 +12,7 @@ What the person sees and can do. Visual design follows the same UI standard as g
 
 | ID | Requirement |
 | --- | --- |
-| APP-01 | **Main screen.** A chat and a tool panel side by side on wide screens, stacked on narrow ones, with a resizable divider. The tool panel can be inline, expanded or full screen. Window controls (minimize, expand, full screen, versions, save, details) belong to the host, never to generated tools. |
+| APP-01 | **Main screen.** Every tool opens in Focus, with chat and workspaces hidden. On wide screens the chat can float over the tool or dock beside it on the right with a resizable divider; on narrow screens it opens as a bottom sheet. The chat's preferred position is remembered for when it opens. One ask bar stays in a footer outside the tool's scroll area; typing leaves the layout alone, sending opens the chat, and the conversation can also be opened without sending. A tool declares a comfortable centred width (the default, at most about 1,100 px) or the full available width; expand always uses the full width. The tool panel can be expanded or full screen. Opening, closing or repositioning chat and workspaces preserves the running tool, its scroll position and unfinished input. Window controls (minimize, expand, full screen, versions, save, details) belong to the host, never to generated tools. |
 | APP-02 | **First run and empty state.** With no workspaces, the screen invites the person to describe what they need. There are no example tools (A12). |
 | APP-03 | **Workspaces.** A list of workspaces (name, last used, saved or not), with switching, renaming, and deleting to the trash. Switching keeps exactly one tool running (`RUN-02`), and the chat belongs to its workspace; what is said with no tool open is kept in the empty screen's own chat (A62). |
 | APP-04 | **Saved tools library.** The person's saved tools with name, short description, last update and search. Each entry offers **Continue** and **Use again** (`DATA-07`), plus rename, **Save as a new tool**, and delete to the trash. |
