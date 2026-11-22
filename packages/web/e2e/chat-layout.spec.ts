@@ -164,9 +164,14 @@ test.describe("desktop", () => {
   }) => {
     await open(page);
     await dock(page);
-    const pane = (await page.locator(".split-second").boundingBox())!;
+    // The tool's body keeps clear of the conversation, which sits under the full-width header
+    // (c-chat-docked).
+    const body = (await page.locator(".tool-body").boundingBox())!;
     const chat = (await page.locator(".split-first").boundingBox())!;
-    expect(chat.x).toBeGreaterThanOrEqual(pane.x + pane.width);
+    const header = (await page.locator(".tool-header").boundingBox())!;
+    expect(chat.x).toBeGreaterThanOrEqual(body.x + body.width);
+    expect(header.x + header.width).toBeGreaterThanOrEqual(chat.x + chat.width);
+    expect(chat.y).toBeGreaterThanOrEqual(header.y + header.height);
     await expect(divider(page)).toHaveAttribute("aria-valuenow", "35");
     await divider(page).focus();
     await page.keyboard.press("ArrowLeft");

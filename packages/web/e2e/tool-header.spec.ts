@@ -115,9 +115,9 @@ test("APP-01, APP-11: the header runs edge to edge and labels Undo, History and 
   const header = page.locator(".tool-header");
   const box = (await header.boundingBox())!;
   const width = page.viewportSize()!.width;
-  // From the window's left edge to the tool area's scrollbar gutter, 64 px tall, as in a-focus.
+  // From edge to edge of the window, past the body's scrollbar, 64 px tall, as in a-focus.
   expect(box.x).toBe(0);
-  expect(box.width).toBeGreaterThanOrEqual(width - 20);
+  expect(box.width).toBe(width);
   expect(box.height).toBe(64);
   const labels = header.locator(".header-label");
   const names = [en["history.undo"], en["history.heading"], en["tool.more"]];
