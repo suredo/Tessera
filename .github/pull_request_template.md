@@ -9,7 +9,7 @@
 ## Checks run
 <!-- The head they ran on, each check and its result, why they are enough, any earlier results reused and their head, and what wasn't run (ENG-31). Not a full-suite pass unless every check ran; CI runs the full suite. -->
 ## Design comparison (host app look, ENG-32)
-<!-- Each mockup state the brief names, at its width: matches, or each difference and what happens to it (fixed here, issue #N, or approved by the owner). Or "Not applicable: <reason>". -->
+<!-- Each mockup state the brief names, at its width: matches, or each difference and what happens to it, as ENG-32 allows: fixed here, a later issue the approved plan already gives it (#N), or the owner's approval (link). Or "Not applicable: <reason>". -->
 ## Prompt parts changed (if any), with replay results
 ## Docs read
 ## Docs changed

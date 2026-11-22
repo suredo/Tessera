@@ -2,7 +2,7 @@
 
 ## 2026-11-22
 
-* **Update**: New rule [`ENG-32`](practices/assistants.md) (decision A93): a pull request that changes the host app's look, where an approved design exists, compares each named mockup state side by side with the app and lists every difference; the reviewer repeats the comparison (review checklist item 9). The pull request and task brief templates gained a place for it. `pnpm design:compare` (the [web package](code/web/package.md)) puts each UI redesign mockup beside the app in the same state. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T01:03:55Z.
+* **Update**: New rule [`ENG-32`](practices/assistants.md) (decision A93): a pull request that changes the host app's look, where an approved design exists, compares each named mockup state side by side with the app and lists every difference; the reviewer repeats the comparison (review checklist item 9). A difference may be left only to a later issue the approved plan already gives it, or with the owner's approval. The pull request and task brief templates gained a place for it. `pnpm design:compare` (the [web package](code/web/package.md)) puts each UI redesign mockup beside the app in the same state. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T01:03:55Z.
 
 * **Fixed**: The [web host](code/web/package.md)'s More menu, History and Details panels and workspace row menus open beside their openers. They had opened in the top-left corner, because Chrome does not anchor a popover to the button that opens it and the right-edge rule was also miscomputed; found by comparing the app with the redesign mockups. A browser check now measures the placement at 1280 and 320 px. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T00:54:00Z.
 

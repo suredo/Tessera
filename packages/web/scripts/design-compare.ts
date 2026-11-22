@@ -165,20 +165,25 @@ if (unknown.length) {
 fs.mkdirSync(out, { recursive: true });
 const app = await startApp();
 let failed = false;
-const browser = await chromium.launch({ channel: "chrome" });
+// The app and its temporary folder are removed however the run ends, even when Chrome doesn't
+// start or doesn't close.
 try {
   seedSamples(app.folder);
   workspaceWith(app.folder, WIDE, wideBoard());
-  for (const state of STATES.filter((s) => !wanted.length || wanted.includes(s.id))) {
-    try {
-      await shoot(browser, state, app.url);
-    } catch (error) {
-      failed = true;
-      console.error(`${state.id}: couldn't reach this state: ${String(error).split("\n")[0]}`);
+  const browser = await chromium.launch({ channel: "chrome" });
+  try {
+    for (const state of STATES.filter((s) => !wanted.length || wanted.includes(s.id))) {
+      try {
+        await shoot(browser, state, app.url);
+      } catch (error) {
+        failed = true;
+        console.error(`${state.id}: couldn't reach this state: ${String(error).split("\n")[0]}`);
+      }
     }
+  } finally {
+    await browser.close();
   }
 } finally {
-  await browser.close();
   await app.close();
 }
 if (failed) process.exitCode = 1;
