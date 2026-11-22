@@ -12,12 +12,12 @@ describe("the divider (APP-01)", () => {
   });
 
   it("APP-11: arrows move it a step, Home and End to the limits, and other keys do nothing", () => {
-    expect(keyShare("ArrowRight", 40)).toBe(40 + SPLIT.step);
+    expect(keyShare("ArrowRight", 40)).toBe(40 - SPLIT.step);
     expect(keyShare("ArrowUp", 40)).toBe(40 + SPLIT.step);
-    expect(keyShare("ArrowLeft", 40)).toBe(40 - SPLIT.step);
+    expect(keyShare("ArrowLeft", 40)).toBe(40 + SPLIT.step);
     expect(keyShare("ArrowDown", 40)).toBe(40 - SPLIT.step);
-    expect(keyShare("ArrowRight", SPLIT.max)).toBe(SPLIT.max);
-    expect(keyShare("ArrowLeft", SPLIT.min)).toBe(SPLIT.min);
+    expect(keyShare("ArrowLeft", SPLIT.max)).toBe(SPLIT.max);
+    expect(keyShare("ArrowRight", SPLIT.min)).toBe(SPLIT.min);
     expect(keyShare("Home", 50)).toBe(SPLIT.min);
     expect(keyShare("End", 50)).toBe(SPLIT.max);
     expect(keyShare("Enter", 50)).toBeUndefined();

@@ -519,6 +519,13 @@ export async function dataSettled(
  * hook the tool doesn't show once, or shows more than once, fails the step in plain words.
  */
 async function useControl(page: Page, action: DoAction): Promise<void> {
+  // Conversation can float over the control. Return to Focus through the public control,
+  // retaining the tool and its unfinished input, before finding and using its profile hooks.
+  const closeConversation = button(page, say("chat.close"));
+  if (await closeConversation.isVisible()) {
+    await closeConversation.click();
+    await expect(closeConversation).toBeHidden();
+  }
   const tool = toolFrame(page);
   const marked = (hook: string) => `[data-hook~="${hook}"]:visible`;
   const hook = "click" in action ? action.click : action.fill;

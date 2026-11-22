@@ -12,7 +12,7 @@ function setup() {
     ask: vi.fn(
       () =>
         new Promise((resolve) => {
-          answer = () => resolve({ workspace: {}, capabilities: [] });
+          answer = () => resolve({ workspace: {}, capabilities: [], uiWidth: "wide" });
         }),
     ),
     serveBridge: vi.fn(),
@@ -26,10 +26,12 @@ const runtime = {} as ToolRuntime;
 describe("RUN-02: a panel closed while the server answers never starts its tool", () => {
   it("starts and serves the tool when nothing was cancelled", async () => {
     const { deps, open, answer } = setup();
-    const started = startTool(runtime, "w1", open, new AbortController().signal, {}, deps);
+    const onWidth = vi.fn();
+    const started = startTool(runtime, "w1", open, new AbortController().signal, { onWidth }, deps);
     answer();
     await expect(started).resolves.toBe(true);
     expect(open).toHaveBeenCalledOnce();
+    expect(onWidth).toHaveBeenCalledWith("wide");
     expect(deps.serveBridge).toHaveBeenCalledOnce();
   });
 

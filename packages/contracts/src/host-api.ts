@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { toolWidthSchema } from "./artifact.ts";
 import { chatEntrySchema, chatMessageSchema } from "./chat.ts";
 import { BRIDGE_ERROR_CODES } from "./bridge.ts";
 import {
@@ -160,6 +161,7 @@ export const HOST_ACTIONS = {
     args: z.strictObject({ id }),
     result: z.strictObject({
       workspace: workspaceSchema,
+      uiWidth: toolWidthSchema.default("comfortable"),
       capabilities: z
         .array(z.string())
         .describe("What its current tool declares (CAP-01); none without a tool."),

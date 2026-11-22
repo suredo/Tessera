@@ -7,10 +7,12 @@ implements: [OBS-03, EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../evals/test/metrics.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-21T04:35:53Z }
+generated: { by: codex/gpt-6, at: 2026-11-21T23:57:17Z }
 ---
 
 # Purpose
+
+Before a tool-control step, the runner closes any visible conversation through the host's Close conversation control and waits for it to hide. Floating chat can cover a tool's right-hand controls; returning to Focus preserves the runtime and unfinished input without forcing a click through the overlay. The control-hooks regression includes a right-hand Add action. Recorded answers, expected host facts, timeouts and call caps are unchanged.
 
 Workspace save, switch, delete, export and section navigation follow the modal drawer and its public row menus through the shared browser navigation helpers. Save closes the drawer before the next scenario step. Existing scenario facts, expected outcomes and time limits are unchanged; rehearsals/replays still make no model calls.
 

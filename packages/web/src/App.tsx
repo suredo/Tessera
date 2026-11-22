@@ -185,6 +185,7 @@ export function App() {
   const [connections, setConnections] = useState<Connection[] | null>(null);
   // The tool taking the chat's place too (APP-01); only an open tool can, and only beside a chat.
   const [expanded, setExpanded] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
   const [setup, setSetup] = useState<SetupReport | null>(null);
   // A request running, and a saved tool a request matched, waiting for the person's choice.
@@ -210,7 +211,7 @@ export function App() {
       ? outsideChat(view)
         ? undefined
         : null
-      : view === "workspaces" && !toolExpanded
+      : view === "workspaces" && chatOpen && !toolExpanded
         ? openId
         : undefined;
   // A reply is said in its workspace's chat, and in the notice too, so it reaches the person
@@ -387,6 +388,10 @@ export function App() {
 
   const open = (id: string | null) => {
     movingOn();
+    if (id !== openId) {
+      setChatOpen(false);
+      setExpanded(false);
+    }
     setOpenId(id);
     remember(id);
   };
@@ -430,6 +435,8 @@ export function App() {
   // or to use again, and nothing opens until the person chooses (GEN-18).
   const request = async (text: string) => {
     if (requesting) return;
+    setExpanded(false);
+    setChatOpen(true);
     // The request shows in the chat at once; its reply goes with it, once, into the workspace the
     // request made or opened, such as a new tool's staged before its checks end, or else the one
     // open when it was sent (APP-03).
@@ -465,6 +472,7 @@ export function App() {
           madeIn = id;
           await refresh();
           open(id);
+          setChatOpen(true);
           setView("workspaces");
         },
         owner,
@@ -495,6 +503,7 @@ export function App() {
       }
       if (outcome.openWorkspaceId) {
         open(outcome.openWorkspaceId);
+        setChatOpen(true);
         setView("workspaces");
       }
       if (outcome.dataChanged || outcome.reloadData) {
@@ -621,6 +630,8 @@ export function App() {
     }
   };
   const showWorkspace = (id: string) => {
+    setChatOpen(false);
+    setExpanded(false);
     open(id);
     setView("workspaces");
   };
@@ -751,14 +762,10 @@ export function App() {
               </>
             )}
             {(() => {
-              // The chat beside the tool, with the divider between them, where both are shown. The
-              // kept conversation shows whatever the setup; asking needs it (PLAT-03).
+              // Kept conversation remains available whatever the setup; asking needs it (PLAT-03).
+              // Stable pane positions preserve the running tool through conversation changes.
               const chatPane = (setup?.ready || chat.messages(openId).length > 0) && (
-                <Chat messages={chat.messages(openId)}>
-                  {setup?.ready && (
-                    <RequestBox working={requesting} progress={progress} onRequest={request} />
-                  )}
-                </Chat>
+                <Chat messages={chat.messages(openId)} />
               );
               const toolPane = current && (
                 <ToolPanel
@@ -800,13 +807,22 @@ export function App() {
                   }
                 />
               );
-              return chatPane && toolPane ? (
-                <Split first={chatPane} second={toolPane} expanded={toolExpanded} />
-              ) : (
-                <>
-                  {chatPane}
-                  {toolPane}
-                </>
+              return (
+                <Split
+                  first={chatPane}
+                  second={toolPane}
+                  expanded={toolExpanded}
+                  open={chatOpen}
+                  onOpen={(shown) => {
+                    if (shown) setExpanded(false);
+                    setChatOpen(shown);
+                  }}
+                  footer={
+                    setup?.ready && (
+                      <RequestBox working={requesting} progress={progress} onRequest={request} />
+                    )
+                  }
+                />
               );
             })()}
           </main>
