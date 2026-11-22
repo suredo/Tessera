@@ -68,6 +68,46 @@ test("APP-01, APP-05, RUN-02: header panels keep the running tool, unfinished in
   ).toBe(150);
 });
 
+// Each menu or panel opens just below its opener, lined up with one of its edges (it may flip to
+// fit a narrow window), not in a corner of the page.
+async function expectBelow(
+  opener: ReturnType<Page["locator"]>,
+  popover: ReturnType<Page["locator"]>,
+) {
+  await expect(popover).toBeVisible();
+  const from = (await opener.boundingBox())!;
+  const box = (await popover.boundingBox())!;
+  expect(box.y).toBeGreaterThanOrEqual(from.y + from.height - 1);
+  expect(box.y).toBeLessThanOrEqual(from.y + from.height + 16);
+  const offset = Math.min(
+    Math.abs(box.x - from.x),
+    Math.abs(box.x + box.width - (from.x + from.width)),
+  );
+  expect(offset).toBeLessThanOrEqual(2);
+}
+
+test("APP-01, APP-05: More, History and workspace menus open beside their openers", async ({
+  page,
+}) => {
+  const name = await open(page);
+  const more = page.getByRole("button", { name: en["tool.more"] });
+  await more.click();
+  await expectBelow(more, page.locator(".tool-menu"));
+  await page.keyboard.press("Escape");
+  await openToolHistory(page);
+  await expectBelow(
+    page.getByRole("button", { name: en["history.heading"], exact: true }),
+    page.getByRole("region", { name: en["history.heading"] }),
+  );
+  await page.keyboard.press("Escape");
+  const drawer = await openWorkspaces(page);
+  const rowMore = drawer.getByRole("button", {
+    name: en["workspaces.actions"].replace("{name}", name),
+  });
+  await rowMore.click();
+  await expectBelow(rowMore, drawer.locator(".workspace-menu:popover-open"));
+});
+
 test("APP-01, APP-11: entering full screen dismisses More and leaves its controls unobstructed", async ({
   page,
 }) => {

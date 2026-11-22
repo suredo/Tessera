@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+* **Fixed**: The [web host](code/web/package.md)'s More menu, History and Details panels and workspace row menus open beside their openers. They had opened in the top-left corner, because Chrome does not anchor a popover to the button that opens it and the right-edge rule was also miscomputed; found by comparing the app with the redesign mockups. A browser check now measures the placement at 1280 and 320 px. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T00:54:00Z.
+
 * **Corrected**: The [redesign roadmap](roadmap/ui-redesign.md) records the conversation slice as merged in PR 421, which closed issue 414; it had still called that issue in progress. The phone sheet (issue 415) and final acceptance (issue 416) remain pending. A status correction, not a scope change. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T00:33:56Z.
 
 ## 2026-11-21

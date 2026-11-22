@@ -92,10 +92,23 @@ body {
   border-radius: var(--ui-radius-panel);
   box-shadow: 0 8px 32px #29362e26;
   padding: 1rem;
-  top: anchor(bottom);
-  right: calc(100% - anchor(right));
+  /* A popover opener is not an implicit anchor in the Chrome we test with, so each opener names
+     itself. Inside `right`, anchor(right) is the distance from the viewport's right edge. The
+     fallbacks keep the panel at the top right if its opener is hidden. */
+  position-anchor: --tool-more;
+  top: anchor(bottom, 5rem);
+  right: anchor(right, 1rem);
   margin-top: 0.5rem;
   position-try-fallbacks: flip-block, flip-inline;
+}
+.tool-panel {
+  anchor-scope: --tool-more, --tool-history;
+}
+.tool-more {
+  anchor-name: --tool-more;
+}
+.history-opener {
+  anchor-name: --tool-history;
 }
 .host-panel {
   width: 30rem;
@@ -120,6 +133,7 @@ body {
 }
 .history.host-panel {
   margin-top: 0;
+  position-anchor: --tool-history;
 }
 @container tool (max-width: 42rem) {
   .tool-heading p,
@@ -330,10 +344,18 @@ button.primary {
   background: var(--ui-surface);
   color: var(--ui-text);
   box-shadow: 0 8px 32px #29362e26;
-  top: anchor(bottom);
-  left: anchor(left);
+  /* Each row's More names itself; see .tool-menu. */
+  position-anchor: --workspace-more;
+  top: anchor(bottom, 5rem);
+  left: anchor(left, 1rem);
   max-width: calc(100vw - 2rem);
   position-try-fallbacks: flip-block, flip-inline;
+}
+.workspace {
+  anchor-scope: --workspace-more;
+}
+.workspace-more {
+  anchor-name: --workspace-more;
 }
 .workspace-menu button {
   display: block;
