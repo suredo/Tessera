@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+* **Changed**: The [conversation panel](code/web/package.md) follows the UI redesign's mockups: a grip, the title "Conversation", a Position menu with Float or Dock and the four corners, an icon close button, a full-height floating panel, softer messages and a hint pointing back to the ask bar. Second slice of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T02:40:17Z.
+
 * **Changed**: The [ask bar](code/web/package.md) is one rounded bar, as in the UI redesign's `a-focus` mockup: an icon, the field, Open conversation and an icon Send button, centred in the footer. While a tool is open the field asks for a change. First slice of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T01:45:04Z.
 
 * **Update**: New rule [`ENG-32`](practices/assistants.md) (decision A93): a pull request that changes the host app's look, where an approved design exists, compares each named mockup state side by side with the app and lists every difference; the reviewer repeats the comparison (review checklist item 9). A difference may be left only to a later issue the approved plan already gives it, or with the owner's approval. The pull request and task brief templates gained a place for it. `pnpm design:compare` (the [web package](code/web/package.md)) puts each UI redesign mockup beside the app in the same state. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T01:03:55Z.

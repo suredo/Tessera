@@ -39,9 +39,12 @@ async function openTool(page: Page, name = LIST) {
 async function openConversation(page: Page, position?: "float" | "dock") {
   await page.getByRole("button", { name: en["chat.open"], exact: true }).click();
   if (position) {
+    // Choose in the position menu, then close it, as the mockups show the panel without it.
+    await page.getByRole("button", { name: en["chat.position"], exact: true }).click();
     await page
-      .getByLabel(en["chat.position"], { exact: true })
-      .selectOption({ label: en[position === "float" ? "chat.float" : "chat.dock"] });
+      .getByRole("radio", { name: en[position === "float" ? "chat.float" : "chat.dock"] })
+      .check();
+    await page.keyboard.press("Escape");
   }
 }
 
