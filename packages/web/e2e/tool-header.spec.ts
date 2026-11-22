@@ -130,6 +130,7 @@ test("APP-01, APP-11: the header runs edge to edge and labels Undo, History and 
       en["history.heading"],
       en["tool.moreLabel"],
     ]);
+    for (const label of await labels.all()) await expect(label).toBeVisible();
   } else {
     // A narrow panel keeps the icons; the names stay for screen readers.
     for (const label of await labels.all()) await expect(label).toBeHidden();

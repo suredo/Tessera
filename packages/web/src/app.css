@@ -274,6 +274,10 @@ button.primary {
   .drawer-opener span {
     display: none;
   }
+  .tool-header .drawer-opener {
+    justify-content: center;
+    padding: 0;
+  }
 }
 
 .drawer-opener {
@@ -285,6 +289,16 @@ button.primary {
   background: transparent;
   border-color: transparent;
   flex-shrink: 0;
+}
+.drawer-opener > svg {
+  color: var(--ui-accent);
+}
+/* In the tool header, as the mockups' Workspaces: flush with the header's edge, 14 px. */
+.tool-header .drawer-opener {
+  gap: 9px;
+  padding-left: 0;
+  font-size: 0.875rem;
+  color: var(--ui-text);
 }
 .workspace-drawer {
   position: fixed;
