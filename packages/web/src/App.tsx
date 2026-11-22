@@ -817,9 +817,18 @@ export function App() {
                     if (shown) setExpanded(false);
                     setChatOpen(shown);
                   }}
-                  footer={
-                    setup?.ready && (
-                      <RequestBox working={requesting} progress={progress} onRequest={request} />
+                  footer={(opener) =>
+                    setup?.ready ? (
+                      <RequestBox
+                        working={requesting}
+                        progress={progress}
+                        onRequest={request}
+                        placeholder={current ? t("request.placeholderChange") : undefined}
+                        conversation={opener}
+                      />
+                    ) : (
+                      // Kept conversation can still be read before the setup check passes.
+                      <div className="ask-bar">{opener}</div>
                     )
                   }
                 />

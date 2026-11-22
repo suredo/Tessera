@@ -5,6 +5,8 @@ const paths = {
   history: "M12 8v5l3 2M3 12a9 9 0 1 0 3-7M3 3v5h5",
   more: "M5 12h.01M12 12h.01M19 12h.01",
   expand: "M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5",
+  chat: "M5 18 3 21v-6a8 8 0 1 1 4 4ZM8 9h8M8 13h5",
+  send: "m5 12 14-7-5 14-3-6-6-1Zm6 1 8-8",
 } as const;
 
 export function HostIcon({ name }: { name: keyof typeof paths }) {

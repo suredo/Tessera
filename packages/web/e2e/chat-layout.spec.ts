@@ -85,6 +85,25 @@ test.describe("desktop", () => {
     await expect(request).toBeEnabled();
   });
 
+  test("APP-01: one ask bar holds the field, Open conversation and Send, and asks for a change while a tool is open", async ({
+    page,
+  }) => {
+    await open(page);
+    const bar = page.locator(".ask-footer .ask-bar");
+    await expect(bar).toHaveCount(1);
+    const field = bar.getByRole("textbox", { name: en["request.label"] });
+    await expect(field).toHaveAttribute("placeholder", en["request.placeholderChange"]);
+    await expect(bar.getByRole("button", { name: en["chat.open"], exact: true })).toBeVisible();
+    await expect(bar.getByRole("button", { name: en["request.send"], exact: true })).toBeVisible();
+    // The bar is centred, at most about 790 px wide as in the a-focus mockup.
+    const box = (await bar.boundingBox())!;
+    expect(box.width).toBeLessThanOrEqual(801);
+    expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThanOrEqual(2);
+    const drawer = await openWorkspaces(page);
+    await drawer.getByRole("button", { name: en["workspaces.new"], exact: true }).click();
+    await expect(field).toHaveAttribute("placeholder", en["request.placeholder"]);
+  });
+
   test("APP-01, APP-02: New tool keeps the ask bar inside the viewport", async ({ page }) => {
     await open(page);
     const drawer = await openWorkspaces(page);
