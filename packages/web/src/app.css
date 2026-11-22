@@ -872,6 +872,8 @@ button.primary {
   box-sizing: border-box;
   min-height: 3.25rem;
   padding: 0.25rem 0.375rem 0.25rem var(--ui-space-4);
+  /* The mockup's paler #cad5bf outline would fall under the 3:1 a field's edge needs, so the bar
+     keeps the controls' border until the general look settles borders (#416). */
   background: var(--ui-surface);
   border: 1px solid var(--ui-control-border);
   border-radius: 0.75rem;
@@ -888,10 +890,11 @@ button.primary {
 .ask-bar textarea {
   flex: 1;
   min-width: 0;
-  height: 2.75rem;
+  height: 2.625rem;
   box-sizing: border-box;
-  padding: 0.625rem 0.3rem;
+  padding: 0.5625rem 0.3rem;
   font: inherit;
+  font-size: 0.9375rem;
   line-height: 1.5;
   color: inherit;
   background: transparent;
@@ -917,6 +920,7 @@ button.primary {
   border-left: 1px solid var(--ui-divider);
   border-radius: 0;
   color: inherit;
+  font-size: 0.8125rem;
   white-space: nowrap;
 }
 .ask-open:hover {
