@@ -769,6 +769,10 @@ button.primary {
 .split.floating .conversation-head {
   padding-left: 0.25rem;
 }
+/* The roadmap's 44 px targets: the shared token is 40 px, so the panel's buttons set their own. */
+.conversation-head button {
+  min-height: 44px;
+}
 .conversation-head h2 {
   flex: 1;
   margin: 0;

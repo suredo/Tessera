@@ -124,6 +124,11 @@ test.describe("desktop", () => {
     const box = (await panel.boundingBox())!;
     expect(box.width).toBeLessThanOrEqual(381);
     expect(box.height).toBeGreaterThan(500);
+    for (const control of await panel.locator(".conversation-head button").all()) {
+      const size = (await control.boundingBox())!;
+      expect(size.width).toBeGreaterThanOrEqual(44);
+      expect(size.height).toBeGreaterThanOrEqual(44);
+    }
     const position = panel.getByRole("button", { name: en["chat.position"], exact: true });
     await position.click();
     await expect(chosen(page, en["chat.float"])).toBeChecked();
