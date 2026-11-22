@@ -7,6 +7,9 @@ const paths = {
   expand: "M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5",
   chat: "M5 18 3 21v-6a8 8 0 1 1 4 4ZM8 9h8M8 13h5",
   send: "m5 12 14-7-5 14-3-6-6-1Zm6 1 8-8",
+  grip: "M8 8h.01M16 8h.01M8 12h.01M16 12h.01M8 16h.01M16 16h.01",
+  panel: "M6 4h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3ZM14 4v16",
+  close: "m6 6 12 12M6 18 18 6",
 } as const;
 
 export function HostIcon({ name }: { name: keyof typeof paths }) {
@@ -15,7 +18,7 @@ export function HostIcon({ name }: { name: keyof typeof paths }) {
       <path
         d={paths[name]}
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth={name === "grip" ? 3 : 1.8}
         strokeLinecap="round"
         strokeLinejoin="round"
       />

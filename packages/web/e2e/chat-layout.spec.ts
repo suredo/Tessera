@@ -56,9 +56,17 @@ async function open(page: Page) {
   await selectWorkspace(page, "Notes");
   await expect(tool(page).getByLabel("Note")).toBeVisible(TOOL_START);
 }
+/** Chooses in the conversation's position menu, then closes the menu. */
+async function choose(page: Page, choice: string) {
+  await page.getByRole("button", { name: en["chat.position"], exact: true }).click();
+  await page.getByRole("radio", { name: choice, exact: true }).check();
+  await page.keyboard.press("Escape");
+}
+const chosen = (page: Page, choice: string) =>
+  page.getByRole("radio", { name: choice, exact: true, includeHidden: true });
 async function dock(page: Page) {
   await openChat(page);
-  await page.getByLabel(en["chat.position"]).selectOption("docked");
+  await choose(page, en["chat.dock"]);
 }
 
 test.describe("desktop", () => {
@@ -104,6 +112,43 @@ test.describe("desktop", () => {
     await expect(field).toHaveAttribute("placeholder", en["request.placeholder"]);
   });
 
+  test("APP-01, APP-11: the conversation panel has a title, a position menu, a close button and a hint", async ({
+    page,
+  }) => {
+    await open(page);
+    await openChat(page);
+    const panel = page.locator(".split-first");
+    await expect(panel.getByRole("heading", { name: en["chat.label"] })).toBeVisible();
+    await expect(panel.getByText(en["chat.hint"])).toBeVisible();
+    // Floating, as in b-chat-floating: about 380 px wide, nearly the tool area's height.
+    const box = (await panel.boundingBox())!;
+    expect(box.width).toBeLessThanOrEqual(381);
+    expect(box.height).toBeGreaterThan(500);
+    for (const control of await panel.locator(".conversation-head button").all()) {
+      const size = (await control.boundingBox())!;
+      expect(size.width).toBeGreaterThanOrEqual(44);
+      expect(size.height).toBeGreaterThanOrEqual(44);
+    }
+    const position = panel.getByRole("button", { name: en["chat.position"], exact: true });
+    await position.click();
+    await expect(chosen(page, en["chat.float"])).toBeChecked();
+    // A corner choice moves the panel at once, and arrow keys move between corners.
+    await page.getByRole("radio", { name: en["chat.top-left"], exact: true }).check();
+    expect((await panel.boundingBox())!.x).toBeLessThan(100);
+    await page.keyboard.press("ArrowLeft");
+    await expect(chosen(page, en["chat.top-right"])).toBeChecked();
+    // Escape closes the menu first, then the conversation.
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".conversation-menu")).toBeHidden();
+    await expect(panel).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeHidden();
+    await openChat(page);
+    await panel.getByRole("button", { name: en["chat.close"], exact: true }).click();
+    await expect(panel).toBeHidden();
+    await expect(page.getByRole("button", { name: en["chat.open"], exact: true })).toBeFocused();
+  });
+
   test("APP-01, APP-02: New tool keeps the ask bar inside the viewport", async ({ page }) => {
     await open(page);
     const drawer = await openWorkspaces(page);
@@ -134,7 +179,7 @@ test.describe("desktop", () => {
     await expect(frame(page)).toBeVisible(TOOL_START);
     await expect(conversation(page)).toBeHidden();
     await openChat(page);
-    await expect(page.getByLabel(en["chat.position"])).toHaveValue("docked");
+    await expect(chosen(page, en["chat.dock"])).toBeChecked();
     await expect(divider(page)).toHaveAttribute("aria-valuenow", "25");
   });
 
@@ -174,17 +219,17 @@ test.describe("desktop", () => {
     await move.focus();
     await page.keyboard.press("ArrowDown");
     await page.keyboard.press("ArrowLeft");
-    await expect(page.getByLabel(en["chat.corner"])).toHaveValue("bottom-left");
+    await expect(chosen(page, en["chat.bottom-left"])).toBeChecked();
     const from = (await move.boundingBox())!;
     const area = (await page.locator(".split").boundingBox())!;
     await page.mouse.move(from.x + 10, from.y + 10);
     await page.mouse.down();
     await page.mouse.move(area.x + area.width - 20, area.y + 20);
     await page.mouse.up();
-    await expect(page.getByLabel(en["chat.corner"])).toHaveValue("top-right");
+    await expect(chosen(page, en["chat.top-right"])).toBeChecked();
     await page.screenshot({ path: test.info().outputPath("floating.png") });
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
-    await page.getByLabel(en["chat.position"]).selectOption("docked");
+    await choose(page, en["chat.dock"]);
     await page.screenshot({ path: test.info().outputPath("docked.png") });
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     await page.getByRole("button", { name: en["chat.close"] }).click();

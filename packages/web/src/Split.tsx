@@ -13,7 +13,8 @@ export function keyShare(key: string, share: number): number | undefined {
   if (key === "End") return SPLIT.max;
   return undefined;
 }
-const CORNERS = ["top-right", "bottom-right", "bottom-left", "top-left"] as const;
+// In the order the position menu shows them, two to a row.
+const CORNERS = ["top-right", "top-left", "bottom-right", "bottom-left"] as const;
 type Corner = (typeof CORNERS)[number];
 const read = (key: string) => {
   try {
@@ -55,6 +56,7 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
   const closer = useRef<HTMLButtonElement>(null);
   const focusOnOpen = useRef(false);
   const id = useId();
+  const menuId = `${id}-menu`;
   const visible = open && !expanded;
   useLayoutEffect(() => {
     if (visible && focusOnOpen.current) {
@@ -115,45 +117,21 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
         className="split-first"
         hidden={!visible}
         onKeyDown={(event) => {
-          if (event.key === "Escape" && !event.defaultPrevented) {
+          // Escape first closes an open position menu, wherever focus is; then the conversation.
+          const menuOpen = event.currentTarget.querySelector(":popover-open");
+          if (event.key === "Escape" && !event.defaultPrevented && !menuOpen) {
             event.preventDefault();
             close();
           }
         }}
       >
-        <header className="conversation-controls">
-          <strong>{t("chat.label")}</strong>
-          <select
-            aria-label={t("chat.position")}
-            value={position}
-            onChange={(event) => {
-              setPosition(event.target.value);
-              keep("tessera.chatPosition", event.target.value);
-            }}
-          >
-            <option value="floating">{t("chat.float")}</option>
-            <option value="docked">{t("chat.dock")}</option>
-          </select>
-          <button ref={closer} type="button" onClick={close}>
-            {t("chat.close")}
-          </button>
-        </header>
-        {position === "floating" && (
-          <div className="conversation-placement">
-            <label>
-              {t("chat.corner")}
-              <select value={corner} onChange={(event) => move(event.target.value as Corner)}>
-                {CORNERS.map((item) => (
-                  <option key={item} value={item}>
-                    {t(`chat.${item}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
+        <header className="conversation-head">
+          {position === "floating" && (
             <button
               type="button"
-              className="conversation-drag"
+              className="icon-button conversation-drag"
               aria-label={t("chat.move")}
+              title={t("chat.move")}
               onPointerDown={(event) => {
                 event.currentTarget.setPointerCapture(event.pointerId);
                 setDragging(true);
@@ -186,11 +164,72 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
                 move((vertical + "-" + horizontal) as Corner);
               }}
             >
-              {t("chat.move")}
+              <HostIcon name="grip" />
             </button>
+          )}
+          <h2>{t("chat.label")}</h2>
+          <button
+            type="button"
+            className="conversation-position"
+            popoverTarget={menuId}
+            aria-label={t("chat.position")}
+          >
+            <HostIcon name="panel" />
+            {t("chat.positionShort")}
+            <span aria-hidden="true">⌄</span>
+          </button>
+          {/* Float or dock, then, while floating, the corner: radio groups, so arrow keys move
+              between choices, and a choice moves the panel at once. */}
+          <div id={menuId} popover="auto" className="conversation-menu">
+            <fieldset>
+              <legend className="visually-hidden">{t("chat.position")}</legend>
+              {(["floating", "docked"] as const).map((value) => (
+                <label key={value}>
+                  <input
+                    type="radio"
+                    name={`${id}-position`}
+                    value={value}
+                    checked={position === value}
+                    onChange={() => {
+                      setPosition(value);
+                      keep("tessera.chatPosition", value);
+                    }}
+                  />
+                  {t(value === "floating" ? "chat.float" : "chat.dock")}
+                </label>
+              ))}
+            </fieldset>
+            {position === "floating" && (
+              <fieldset className="conversation-corners">
+                <legend>{t("chat.corner")}</legend>
+                {CORNERS.map((item) => (
+                  <label key={item}>
+                    <input
+                      type="radio"
+                      name={`${id}-corner`}
+                      value={item}
+                      checked={corner === item}
+                      onChange={() => move(item)}
+                    />
+                    {t(`chat.${item}`)}
+                  </label>
+                ))}
+              </fieldset>
+            )}
           </div>
-        )}
+          <button
+            ref={closer}
+            type="button"
+            className="icon-button"
+            aria-label={t("chat.close")}
+            title={t("chat.close")}
+            onClick={close}
+          >
+            <HostIcon name="close" />
+          </button>
+        </header>
         {first}
+        <p className="conversation-hint">{t("chat.hint")}</p>
       </div>
       <footer className="ask-footer">
         {footer(

@@ -700,15 +700,23 @@ button.primary {
 .split.docked.conversation-open {
   grid-template-columns: minmax(0, 1fr) 12px minmax(0, var(--chat-share));
 }
+/* The conversation panel (b-chat-floating, c-chat-docked): a header, the messages scrolling on
+   their own, and a hint pointing back to the ask bar. */
 .split-first {
   grid-column: 3;
   grid-row: 1;
-  overflow: auto;
-  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--ui-surface);
   border: 1px solid var(--ui-divider);
   border-radius: var(--ui-radius-panel);
   min-width: 0;
+  min-height: 0;
+  anchor-scope: --chat-position;
+}
+.split-first[hidden] {
+  display: none;
 }
 .split-second {
   grid-column: 1;
@@ -717,13 +725,16 @@ button.primary {
   overflow: auto;
   scrollbar-gutter: stable;
 }
+/* Floating: about 380 px, nearly the height of the tool area, below the tool's header. */
 .split.floating .split-first {
   position: absolute;
   z-index: 2;
-  width: min(380px, calc(100% - 1rem));
-  max-height: min(calc(100% - 5.5rem), 38rem);
+  width: min(23.75rem, calc(100% - 1rem));
+  height: calc(100% - 5.5rem);
   box-sizing: border-box;
-  box-shadow: 0 8px 32px #29362e26;
+  border-color: var(--ui-control-border);
+  border-radius: 0.875rem;
+  box-shadow: 0 16px 55px #29362e24;
   grid-area: 1 / 1 / 2 / -1;
 }
 .split.top-right .split-first {
@@ -735,41 +746,163 @@ button.primary {
   left: 0.5rem;
 }
 .split.bottom-right .split-first {
-  bottom: 0.5rem;
+  bottom: 0.25rem;
   right: 0.5rem;
 }
 .split.bottom-left .split-first {
-  bottom: 0.5rem;
+  bottom: 0.25rem;
   left: 0.5rem;
 }
+/* Docked: a plain column beside the tool, the divider its edge. */
 .split.docked .split-first {
   inset: auto;
+  border: 0;
+  border-radius: 0;
 }
-.conversation-controls,
-.conversation-placement {
+.conversation-head {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: 2px;
+  padding: 0.5rem 0.5rem 0.5rem 1.125rem;
+  flex-shrink: 0;
 }
-.conversation-controls strong {
-  margin-right: auto;
+.split.floating .conversation-head {
+  padding-left: 0.25rem;
 }
-.conversation-controls select,
-.conversation-placement select {
-  font: inherit;
+/* The roadmap's 44 px targets: the shared token is 40 px, so the panel's buttons set their own. */
+.conversation-head button {
   min-height: 44px;
-  max-width: 100%;
 }
-.conversation-placement label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.conversation-head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+  white-space: nowrap;
 }
 .conversation-drag {
   touch-action: none;
   cursor: move;
+  color: var(--ui-text-secondary);
+}
+.conversation-position {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  anchor-name: --chat-position;
+}
+.conversation-position:hover {
+  background: var(--ui-accent-soft);
+}
+.conversation-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0.25rem 0 0;
+  box-sizing: border-box;
+  width: 17rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.4375rem;
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-divider);
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 40px #29362e20;
+  position-anchor: --chat-position;
+  top: anchor(bottom, 5rem);
+  right: anchor(right, 1rem);
+  position-try-fallbacks: flip-block, flip-inline;
+}
+.conversation-menu fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+/* Float or dock: menu rows, the chosen one ticked; the radio stays for keyboard and screen
+   readers, out of sight. */
+.conversation-menu fieldset:first-child label {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border-radius: var(--ui-radius-control);
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.conversation-menu fieldset:first-child label {
+  position: relative;
+}
+.conversation-menu fieldset:first-child input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.conversation-menu fieldset:first-child label:has(:checked) {
+  background: var(--ui-accent-soft);
+  font-weight: 600;
+}
+.conversation-menu fieldset:first-child label:has(:checked)::before {
+  /* Empty alternative text: the tick is shown, not read; the radio says what is chosen. */
+  content: "✓ " / "";
+  white-space: pre;
+}
+.conversation-menu fieldset:first-child label:has(:focus-visible) {
+  outline: 3px solid var(--ui-accent);
+  outline-offset: -3px;
+}
+.conversation-corners {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 0.3rem !important;
+  padding: 0.3rem 0.3rem 0.4rem !important;
+  border-top: 1px solid var(--ui-divider) !important;
+}
+.conversation-corners legend {
+  float: left;
+  grid-column: 1 / -1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--ui-text-secondary);
+}
+.conversation-corners label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0 0.375rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.conversation-corners input {
+  accent-color: var(--ui-accent);
+}
+.split-first > .chat {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.5rem 1.5rem 1.5rem;
+}
+.split-first .chat-log {
+  max-height: none;
+  overflow: visible;
+}
+.conversation-hint {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.75rem 1.375rem;
+  font-size: 0.75rem;
+  color: var(--ui-text-secondary);
+  border-top: 1px solid var(--ui-divider);
 }
 /* The ask bar's footer (APP-01): the bar centred, at most about 790 px wide as in the mockup. */
 .ask-footer {
@@ -833,26 +966,28 @@ button.primary {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--ui-space-2);
+  gap: 1.625rem;
+  font-size: 0.9375rem;
+  line-height: 1.65;
 }
 .chat-log:empty {
   display: none;
 }
+/* Your messages in a soft bubble, Tessera's as plain text, each under its speaker's name. */
 .chat-log > div {
-  padding: var(--ui-space-2) var(--ui-space-3);
-  border-radius: var(--ui-radius-control);
-  border: 1px solid var(--ui-control-border);
   overflow-wrap: anywhere;
 }
 .chat-log .from-person {
-  align-self: flex-end;
-  max-width: 85%;
-  background: var(--ui-surface);
+  margin-left: 0.875rem;
+  padding: 0.875rem 1rem;
+  background: var(--ui-accent-soft);
+  border-radius: 12px 12px 3px 12px;
 }
 .chat-speaker {
   display: block;
-  font-size: var(--ui-size-secondary);
-  color: var(--ui-text-secondary);
+  margin-bottom: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 .chat-text {
   margin: 0;
