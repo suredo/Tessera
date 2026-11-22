@@ -70,10 +70,10 @@ test("DATA-08: a workspace is saved to my tools by name, and found there by sear
   const workspace = `Garden ${id}`;
   workspaceWith(app.folder, workspace, testTool(`Garden tool ${id}`));
   await page.goto(app.url);
-  await clickWorkspaceAction(page, `Save ${workspace} to my tools`);
+  await clickWorkspaceAction(page, `Save ${workspace} to My tools`);
   await page.getByLabel(en["workspaces.saveLabel"]).fill(`Garden plan ${id}`);
   await page.getByRole("button", { name: en["workspaces.saveConfirm"], exact: true }).click();
-  await expect(page.getByText(`Garden plan ${id} is in my tools.`)).toBeVisible();
+  await expect(page.getByText(`Garden plan ${id} is in My tools.`)).toBeVisible();
   await toLibrary(page);
   await expect(entry(page, `Garden plan ${id}`)).toContainText(`Continue opens ${workspace}`);
   await library(page).getByLabel(en["library.search"]).fill(`garden plan ${id}`);
@@ -166,7 +166,7 @@ test("APP-04: Save as a new tool makes a separate entry with its own workspace",
     .click();
   await library(page).getByLabel(en["library.newName"]).fill(`Party errands ${id}`);
   await library(page).getByRole("button", { name: en["library.confirm"], exact: true }).click();
-  await expect(page.getByText(`Party errands ${id} is a new tool in my tools.`)).toBeVisible();
+  await expect(page.getByText(`Party errands ${id} is a new tool in My tools.`)).toBeVisible();
   await expect(entry(page, `Party errands ${id}`)).toContainText(
     `Continue opens Party errands ${id}`,
   );

@@ -60,7 +60,7 @@ test("APP-06, DATA-05: a workspace exports to a file, and that file moves it to 
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
     await importFrom(page, file.name, file.bytes);
     await expect(
-      page.getByText(`${name} is imported, with Weekly ${id} in my tools.`),
+      page.getByText(`${name} is imported, with Weekly ${id} in My tools.`),
     ).toBeVisible();
     // It opens, with its tool.
     await expect(toolText(page)).toHaveText(`Garden tool ${id}`);

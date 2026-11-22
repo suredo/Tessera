@@ -227,12 +227,13 @@ export function ToolPanel({
           )}
           <button
             type="button"
-            className="icon-button tool-more"
+            className="header-action tool-more"
             popoverTarget={menuId}
             aria-label={t("tool.more")}
             title={t("tool.more")}
           >
             <HostIcon name="more" />
+            <span className="header-label">{t("tool.moreLabel")}</span>
           </button>
         </div>
       </header>

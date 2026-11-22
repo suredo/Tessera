@@ -24,21 +24,24 @@ body {
 .tool-panel {
   container: tool / inline-size;
 }
+/* The tool's header (a-focus): 64 px, edge to edge, a divider below. */
 .tool-header {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1.375rem;
   min-height: 64px;
+  box-sizing: border-box;
   background: var(--ui-surface);
   border-bottom: 1px solid var(--ui-divider);
-  padding-inline: 0.75rem;
+  padding-inline: 1.5rem;
 }
 .tool-heading {
   flex: 1;
   min-width: 0;
 }
 .tool-heading h1 {
-  font-size: 1rem;
+  font-size: 1.1875rem;
+  letter-spacing: -0.3px;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
@@ -73,7 +76,24 @@ body {
   border-color: transparent;
   background: transparent;
 }
+/* An icon with its name beside it, as the mockup's Undo, History and More. */
+.header-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ui-text);
+  background: transparent;
+  border-color: transparent;
+  white-space: nowrap;
+}
+.header-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 .icon-button:hover,
+.header-action:hover:not(:disabled),
 .tool-menu button:hover {
   background: var(--ui-accent-soft);
 }
@@ -138,8 +158,18 @@ body {
 @container tool (max-width: 42rem) {
   .tool-heading p,
   .save-tool,
-  .full-screen-opener {
+  .full-screen-opener,
+  .header-label {
     display: none;
+  }
+  .tool-header {
+    gap: 0.5rem;
+    padding-inline: 0.75rem;
+  }
+  .header-action {
+    justify-content: center;
+    width: 44px;
+    padding: 0;
   }
   .tool-menu .menu-save-tool,
   .tool-menu .menu-full-screen {
@@ -244,6 +274,10 @@ button.primary {
   .drawer-opener span {
     display: none;
   }
+  .tool-header .drawer-opener {
+    justify-content: center;
+    padding: 0;
+  }
 }
 
 .drawer-opener {
@@ -255,6 +289,16 @@ button.primary {
   background: transparent;
   border-color: transparent;
   flex-shrink: 0;
+}
+.drawer-opener > svg {
+  color: var(--ui-accent);
+}
+/* In the tool header, as the mockups' Workspaces: flush with the header's edge, 14 px. */
+.tool-header .drawer-opener {
+  gap: 9px;
+  padding-left: 0;
+  font-size: 0.875rem;
+  color: var(--ui-text);
 }
 .workspace-drawer {
   position: fixed;
@@ -682,10 +726,22 @@ button.primary {
   min-height: 0;
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
+/* The tool's header runs edge to edge: main has no padding here, and what sits below the header
+   keeps the page's side padding itself. */
 .app > main:has(.split) {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  padding: 0;
+}
+.app > main:has(.split) > :not(.split) {
+  margin-inline: var(--ui-padding);
+}
+.split .tool-panel:not(.full-screen) {
+  padding-inline: var(--ui-padding);
+}
+.split .tool-panel:not(.full-screen) > .tool-header {
+  margin-inline: calc(-1 * var(--ui-padding));
 }
 .split {
   position: relative;

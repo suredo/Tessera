@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+* **Changed**: The [tool header](code/web/package.md) follows the UI redesign's `a-focus` mockup: 64 px, edge to edge, with Undo, History and More labelled beside their icons where there is room, and the sidebar icon for Workspaces. "My tools" is written as a name everywhere, as in the mockups ("Save to My tools"). Slice 3a of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T04:34:52Z.
+
 * **Changed**: The [conversation panel](code/web/package.md) follows the UI redesign's mockups: a grip, the title "Conversation", a Position menu with Float or Dock and the four corners, an icon close button, a full-height floating panel, softer messages and a hint pointing back to the ask bar. Second slice of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Decision A94 records the owner's two approved departures: no date line, and the menu aligned to its button. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T02:40:17Z.
 
 * **Changed**: The [ask bar](code/web/package.md) is one rounded bar, as in the UI redesign's `a-focus` mockup: an icon, the field, Open conversation and an icon Send button, centred in the footer. While a tool is open the field asks for a change. First slice of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T01:45:04Z.
