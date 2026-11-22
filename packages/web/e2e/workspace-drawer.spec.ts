@@ -85,3 +85,34 @@ test("APP-03 APP-04: search filters recent work, its row menu renames, and New t
   await selectWorkspace(page, `${name} renamed`);
   await expect(page.locator(".tool-heading h1")).toHaveText(`${name} renamed`);
 });
+
+test("APP-01, APP-03, APP-11: the drawer reads as the mockup: a close cross, short dates, the open row marked, More on hover or focus", async ({
+  page,
+}) => {
+  const open = `Open ${Math.random().toString(36).slice(2, 7)}`;
+  const other = `Other ${Math.random().toString(36).slice(2, 7)}`;
+  workspaceWith(app.folder, other, testTool(""));
+  workspaceWith(app.folder, open, testTool(""));
+  await page.goto(app.url);
+  await selectWorkspace(page, open);
+  const drawer = await openWorkspaces(page);
+  await expect(drawer.getByRole("button", { name: en["workspaces.close"] })).toHaveText("");
+  const row = (name: string) => drawer.locator(".workspace", { hasText: name });
+  // Used today, so the short date says so, as in d-workspaces-open.
+  await expect(row(open).locator(".detail")).toHaveText(en["workspaces.today"]);
+  await expect(row(open)).toHaveClass(/open/);
+  const more = (name: string) => row(name).locator(".workspace-more");
+  if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
+    await page.mouse.move(600, 400);
+    await expect(more(open)).toHaveCSS("opacity", "1");
+    await expect(more(other)).toHaveCSS("opacity", "0");
+    await row(other).hover();
+    await expect(more(other)).toHaveCSS("opacity", "1");
+    await page.mouse.move(600, 400);
+    await more(other).focus();
+    await expect(more(other)).toHaveCSS("opacity", "1");
+  }
+  // Import is a row like the others; its file field stays reachable by label.
+  await expect(drawer.getByLabel(en["archive.importLabel"])).toBeAttached();
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});

@@ -8,7 +8,15 @@ import { NameForm } from "./NameForm.tsx";
 // it is saved to the library, with switching, renaming, saving to my tools (DATA-08), exporting
 // to a file (APP-06) and deleting to the trash.
 
-const when = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
+const full = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
+const thisYear = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+const otherYear = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
+
+/** When a workspace was last used, short as in the mockups: "Today", "Nov 12", or "Jan 1, 2020". */
+export function shortDay(day: Date, now = new Date()): string {
+  if (day.toDateString() === now.toDateString()) return t("workspaces.today");
+  return (day.getFullYear() === now.getFullYear() ? thisYear : otherYear).format(day);
+}
 
 type Editing = { id: string; kind: "rename" | "save" } | null;
 
@@ -43,13 +51,16 @@ export function Workspaces(props: Props) {
       <label className="visually-hidden" htmlFor={searchId}>
         {t("workspaces.find")}
       </label>
-      <input
-        id={searchId}
-        type="search"
-        placeholder={t("workspaces.find")}
-        value={query}
-        onChange={(event) => setQuery(event.target.value)}
-      />
+      <div className="workspace-search">
+        <HostIcon name="search" />
+        <input
+          id={searchId}
+          type="search"
+          placeholder={t("workspaces.find")}
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
       {shown.length === 0 && wanted && <p>{t("workspaces.noMatch", { query: query.trim() })}</p>}
       <ul>
         {shown.map((workspace) => {
@@ -89,14 +100,18 @@ export function Workspaces(props: Props) {
                     onClick={() => props.onOpen(workspace.id)}
                   >
                     <span>{name}</span>
-                    <span className="detail">
-                      {t("workspaces.lastUsed", {
-                        when: when.format(new Date(lastUsed[workspace.id] ?? workspace.updatedAt)),
-                      })}
-                    </span>
-                    {saved.has(workspace.id) && (
-                      <span className="badge">{t("workspaces.saved")}</span>
-                    )}
+                    {(() => {
+                      const used = new Date(lastUsed[workspace.id] ?? workspace.updatedAt);
+                      return (
+                        <span
+                          className="detail"
+                          title={t("workspaces.lastUsed", { when: full.format(used) })}
+                        >
+                          {shortDay(used)}
+                          {saved.has(workspace.id) && ` · ${t("tool.inLibrary")}`}
+                        </span>
+                      );
+                    })()}
                   </button>
                   <button
                     type="button"

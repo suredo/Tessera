@@ -10,6 +10,9 @@ const paths = {
   grip: "M8 8h.01M16 8h.01M8 12h.01M16 12h.01M8 16h.01M16 16h.01",
   panel: "M6 4h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3ZM14 4v16",
   close: "m6 6 12 12M6 18 18 6",
+  leaf: "M5 19C2 8 10 3 20 4c0 11-7 17-15 15Zm0 0L16 8",
+  plus: "M12 5v14M5 12h14",
+  search: "M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0Zm-1 5 5 5",
 } as const;
 
 export function HostIcon({ name }: { name: keyof typeof paths }) {

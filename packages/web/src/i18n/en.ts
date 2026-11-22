@@ -123,7 +123,7 @@ export const en = {
   "workspaces.actions": "Actions for {name}",
   "workspaces.setup": "Setup & status",
   "workspaces.lastUsed": "Last used {when}",
-  "workspaces.saved": "Saved",
+  "workspaces.today": "Today",
   "workspaces.open": "Open {name}",
   "workspaces.opened": "{name}, open",
   "workspaces.rename": "Rename {name}",

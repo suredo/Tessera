@@ -53,7 +53,7 @@ test("APP-03, RUN-02: lists the workspaces, opens one's tool, and switching runs
   await expect(workspaceButton(page, shopping)).toBeVisible();
   // The saved one says so.
   await expect(
-    list.locator(".workspace", { hasText: shopping }).getByText(en["workspaces.saved"]),
+    list.locator(".workspace", { hasText: shopping }).getByText(en["tool.inLibrary"]),
   ).toBeVisible();
   await selectWorkspace(page, garden);
   await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`, TOOL_START);
@@ -129,7 +129,6 @@ function backdate(id: string) {
   app.folder.db.run("UPDATE workspace_use SET used_at = ? WHERE workspace_id = ?", old, id);
 }
 const lastUsedOf = (page: Page, name: string) => workspaceButton(page, name).locator(".detail");
-const thisYear = String(new Date().getFullYear());
 test("APP-03: opening a workspace shows it as used at once, even minimized, and a new tab lists it first", async ({
   page,
 }) => {
@@ -137,6 +136,7 @@ test("APP-03: opening a workspace shows it as used at once, even minimized, and 
   ids.forEach(backdate);
   await page.goto(app.url);
   await openWorkspaces(page);
+  // Short, as in the mockups: "Jan 1, 2020" for another year, "Today" once used now.
   await expect(lastUsedOf(page, garden)).toContainText("2020");
   const names = () =>
     workspaceList(page).locator(".workspace-name > span:first-child").allTextContents();
@@ -145,7 +145,7 @@ test("APP-03: opening a workspace shows it as used at once, even minimized, and 
   await selectWorkspace(page, garden);
   await expect(toolText(page)).toHaveText(`The garden tool ${suffix}`, TOOL_START);
   await openWorkspaces(page);
-  await expect(lastUsedOf(page, garden)).toContainText(thisYear);
+  await expect(lastUsedOf(page, garden)).toContainText(en["workspaces.today"]);
   expect(await names()).toEqual(before);
   // A minimized tool doesn't start when it is opened again, but opening it is still using it.
   await clickToolAction(page, en["tool.minimize"]);
@@ -158,7 +158,7 @@ test("APP-03: opening a workspace shows it as used at once, even minimized, and 
   await selectWorkspace(page, garden);
   await expect(page.getByText(`${garden} is minimized.`)).toBeVisible();
   await openWorkspaces(page);
-  await expect(lastUsedOf(page, garden)).toContainText(thisYear);
+  await expect(lastUsedOf(page, garden)).toContainText(en["workspaces.today"]);
   // A new tab remembers nothing, so it opens the most recently used workspace, listed first.
   const fresh = await page.context().newPage();
   await fresh.goto(app.url);
