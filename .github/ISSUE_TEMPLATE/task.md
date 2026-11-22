@@ -18,6 +18,7 @@ The roadmap row this delivers (a link) and the spec IDs it implements or changes
 - Observable result 1 (how it is tested)
 - Observable result 2
 - What must NOT change
+- For a change to the host app's look: the mockup states it must match, and at which widths (ENG-32)
 
 ## Out of scope
 …
