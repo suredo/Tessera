@@ -1,4 +1,5 @@
 import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 
 // Stable panes (APP-01, RUN-02): hiding or moving chat never reparents the sandbox.
@@ -31,7 +32,8 @@ const keep = (key: string, value: string) => {
 type Props = {
   first: ReactNode;
   second: ReactNode;
-  footer: ReactNode;
+  /** The ask bar, given the control that opens the conversation to place inside it. */
+  footer: (opener: ReactNode) => ReactNode;
   open: boolean;
   onOpen: (open: boolean) => void;
   expanded?: boolean;
@@ -191,22 +193,25 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
         {first}
       </div>
       <footer className="ask-footer">
-        <button
-          ref={opener}
-          type="button"
-          aria-expanded={visible}
-          aria-controls={id}
-          onClick={() => {
-            if (visible) closer.current?.focus();
-            else {
-              focusOnOpen.current = true;
-              onOpen(true);
-            }
-          }}
-        >
-          {t("chat.open")}
-        </button>
-        {footer}
+        {footer(
+          <button
+            ref={opener}
+            type="button"
+            className="ask-open"
+            aria-expanded={visible}
+            aria-controls={id}
+            onClick={() => {
+              if (visible) closer.current?.focus();
+              else {
+                focusOnOpen.current = true;
+                onOpen(true);
+              }
+            }}
+          >
+            <HostIcon name="chat" />
+            <span>{t("chat.open")}</span>
+          </button>,
+        )}
       </footer>
     </div>
   );
