@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-22
+
+* **Corrected**: The [redesign roadmap](roadmap/ui-redesign.md) records the conversation slice as merged in PR 421, which closed issue 414; it had still called that issue in progress. The phone sheet (issue 415) and final acceptance (issue 416) remain pending. A status correction, not a scope change. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T00:33:56Z.
+
 ## 2026-11-21
 
 * **Fixed**: The [scenario runner](code/evals/runner.md) returns to Focus through the public conversation control before tool actions. CI's T2, T7 and T10 replays timed out with floating chat left over tool controls; the local T2 screenshot showed Add covered after its fields were filled. The hook-control fixture now puts Add on the right to retain this regression. Expected outcomes, recorded answers, timeouts and budgets are unchanged; no live calls. Recorded by `codex/gpt-6` at 2026-11-21T23:57:17Z.
