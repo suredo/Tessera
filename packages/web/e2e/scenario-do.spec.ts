@@ -36,7 +36,9 @@ const list: Creation = {
     // Two fields share the item-name hook, so a step finds one by its label; the item-list check
     // fills the first, the item's name.
     html: '<h1>Shopping list</h1><label for="name">Item</label> <input id="name" data-hook="item-name"> <label for="note">Note</label> <input id="note" data-hook="item-name"> <button data-hook="item-add">Add</button><ul id="items" aria-label="Items"></ul>',
-    css: "",
+    // A right-hand action sits under floating chat after creation. The runner must use the
+    // public Close conversation control before tool interaction, rather than force-clicking it.
+    css: "[data-hook=item-add] { position: absolute; top: 4rem; right: 1rem; }",
     js: `let state;
 const list = document.getElementById("items");
 const render = () => list.replaceChildren(...state.data.items.map((record) => {
@@ -114,7 +116,7 @@ const scenario = scenarioSchema.parse({
   ],
 });
 
-test("EVAL-01, VER-03: a scenario's do steps type into and click the tool's hooked controls, inside one item, and are checked by their host facts", async () => {
+test("APP-01, EVAL-01, VER-03: a scenario closes floating conversation and uses the tool's hooked controls, checked by host facts", async () => {
   const info = test.info();
   test.skip(info.project.name !== "chrome-1280", "The runner starts its own Chrome.");
   test.setTimeout(240_000);

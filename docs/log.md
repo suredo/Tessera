@@ -2,6 +2,8 @@
 
 ## 2026-11-21
 
+* **Fixed**: The [scenario runner](code/evals/runner.md) returns to Focus through the public conversation control before tool actions. CI's T2, T7 and T10 replays timed out with floating chat left over tool controls; the local T2 screenshot showed Add covered after its fields were filled. The hook-control fixture now puts Add on the right to retain this regression. Expected outcomes, recorded answers, timeouts and budgets are unchanged; no live calls. Recorded by `codex/gpt-6` at 2026-11-21T23:57:17Z.
+
 * **Fixed**: The [conversation layout](code/web/package.md) reserves the New tool introduction's height before sizing its panes. A viewport regression exposed the ask bar ending at 951 px in a 900 px window; desktop and narrow checks now require its entire footer to fit. No request, consent or runtime guard changed. Recorded by `codex/gpt-6` at 2026-11-21T16:53:07Z.
 
 * **Corrected**: The [web code doc](code/web/package.md)'s request-box invariant now says footer placement, removing the stale above-the-tool description found by independent review of PR 421. No product code changed. Recorded by `codex/gpt-6` at 2026-11-21T16:45:33Z.
