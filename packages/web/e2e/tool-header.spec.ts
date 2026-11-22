@@ -108,6 +108,34 @@ test("APP-01, APP-05: More, History and workspace menus open beside their opener
   await expectBelow(rowMore, drawer.locator(".workspace-menu:popover-open"));
 });
 
+test("APP-01, APP-11: the header runs edge to edge and labels Undo, History and More where there is room", async ({
+  page,
+}) => {
+  await open(page);
+  const header = page.locator(".tool-header");
+  const box = (await header.boundingBox())!;
+  const width = page.viewportSize()!.width;
+  // From the window's left edge to the tool area's scrollbar gutter, 64 px tall, as in a-focus.
+  expect(box.x).toBe(0);
+  expect(box.width).toBeGreaterThanOrEqual(width - 20);
+  expect(box.height).toBe(64);
+  const labels = header.locator(".header-label");
+  const names = [en["history.undo"], en["history.heading"], en["tool.more"]];
+  for (const name of names) {
+    await expect(header.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  if (width >= 1000) {
+    await expect(labels).toHaveText([
+      en["history.undoLabel"],
+      en["history.heading"],
+      en["tool.moreLabel"],
+    ]);
+  } else {
+    // A narrow panel keeps the icons; the names stay for screen readers.
+    for (const label of await labels.all()) await expect(label).toBeHidden();
+  }
+});
+
 test("APP-01, APP-11: entering full screen dismisses More and leaves its controls unobstructed", async ({
   page,
 }) => {

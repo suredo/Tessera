@@ -172,24 +172,28 @@ export function History({ workspace, changes, onChanged, inHeader = false }: Pro
     <>
       {inHeader && (
         <>
+          {/* Labelled as in the redesign's header; the label hides on a narrow panel, and the
+              accessible name, which contains it, stays. */}
           <button
             type="button"
-            className="icon-button"
+            className="header-action"
             aria-label={t("history.undo")}
             title={latest ? t("history.undo") : t("history.nothingToUndo")}
             disabled={!latest}
             onClick={() => latest && void undo(latest)}
           >
             <HostIcon name="undo" />
+            <span className="header-label">{t("history.undoLabel")}</span>
           </button>
           <button
             type="button"
-            className="icon-button history-opener"
+            className="header-action history-opener"
             aria-label={t("history.heading")}
             title={t("history.heading")}
             popoverTarget={panelId}
           >
             <HostIcon name="history" />
+            <span className="header-label">{t("history.heading")}</span>
           </button>
           <p role="status" className="visually-hidden">
             {panelOpen ? "" : message}

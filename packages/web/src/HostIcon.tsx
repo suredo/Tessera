@@ -1,6 +1,6 @@
 // Small host controls; their buttons supply the translated accessible names (APP-11, UX-05).
 const paths = {
-  workspaces: "M3 5h18M3 12h18M3 19h18",
+  workspaces: "M6 4h12a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3ZM9 4v16",
   undo: "M9 5 4 10l5 5M4 10h10a6 6 0 0 1 0 12",
   history: "M12 8v5l3 2M3 12a9 9 0 1 0 3-7M3 3v5h5",
   more: "M5 12h.01M12 12h.01M19 12h.01",
@@ -18,7 +18,7 @@ export function HostIcon({ name }: { name: keyof typeof paths }) {
       <path
         d={paths[name]}
         stroke="currentColor"
-        strokeWidth={name === "grip" ? 3 : 1.8}
+        strokeWidth={name === "grip" || name === "more" ? 3 : 1.8}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
