@@ -189,8 +189,6 @@ export function ToolPanel({
       data-mode={mode}
       data-width={expanded || fullScreen ? "wide" : width}
     >
-      {question?.run === run && <WriteQuestion question={question.value} onAnswer={answer} />}
-      {offer?.run === run && <SaveQuestion question={offer.value} onAnswer={decide} />}
       <header className="tool-header">
         {navigation}
         <div className="tool-heading">
@@ -294,16 +292,22 @@ export function ToolPanel({
           {detailsShown && details}
         </div>
       )}
-      <p role="status" className="tool-status">
-        {!hasTool && t("tool.noTool", { name })}
-        {hasTool && mode === "minimized" && t("tool.minimized", { name })}
-        {hasTool && mode === "stopped" && t("tool.stopped", { name })}
-      </p>
-      <div
-        ref={container}
-        className="tool-frame"
-        hidden={!hasTool || (mode !== "running" && mode !== "starting")}
-      />
+      {/* Everything under the header scrolls here, so the header stays put and spans the panel,
+          and, docked, the conversation can sit under it (APP-01, c-chat-docked). */}
+      <div className="tool-body">
+        {question?.run === run && <WriteQuestion question={question.value} onAnswer={answer} />}
+        {offer?.run === run && <SaveQuestion question={offer.value} onAnswer={decide} />}
+        <p role="status" className="tool-status">
+          {!hasTool && t("tool.noTool", { name })}
+          {hasTool && mode === "minimized" && t("tool.minimized", { name })}
+          {hasTool && mode === "stopped" && t("tool.stopped", { name })}
+        </p>
+        <div
+          ref={container}
+          className="tool-frame"
+          hidden={!hasTool || (mode !== "running" && mode !== "starting")}
+        />
+      </div>
     </section>
   );
 }

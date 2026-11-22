@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+* **Changed**: The [tool panel](code/web/package.md) is a header above a scrolling body, so the header reaches the window's edges and, with the conversation docked, spans the full width with the conversation under it, as in the UI redesign's `c-chat-docked` mockup. Questions before a tool's change now show under the header. Slice 3b of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T16:17:25Z.
+
 * **Changed**: The [tool header](code/web/package.md) follows the UI redesign's `a-focus` mockup: 64 px, edge to edge, with Undo, History and More labelled beside their icons where there is room, and the sidebar icon for Workspaces. "My tools" is written as a name everywhere, as in the mockups ("Save to My tools"). Slice 3a of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T04:34:52Z.
 
 * **Changed**: The [conversation panel](code/web/package.md) follows the UI redesign's mockups: a grip, the title "Conversation", a Position menu with Float or Dock and the four corners, an icon close button, a full-height floating panel, softer messages and a hint pointing back to the ask bar. Second slice of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Decision A94 records the owner's two approved departures: no date line, and the menu aligned to its button. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T02:40:17Z.

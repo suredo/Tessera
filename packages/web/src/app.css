@@ -510,12 +510,20 @@ button.primary {
   color: var(--ui-text-secondary);
 }
 
+/* The header, then the body: the questions, the status and the tool's frame. */
 .tool-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto 1fr;
-  gap: var(--ui-space-2);
+  grid-template-rows: auto minmax(0, 1fr);
   min-height: 24rem;
+}
+.tool-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--ui-space-2);
+  min-height: 0;
+  padding-top: var(--ui-space-2);
 }
 .tool-panel.full-screen {
   position: fixed;
@@ -523,6 +531,15 @@ button.primary {
   z-index: 10;
   background: var(--ui-background);
   padding: var(--ui-padding);
+}
+/* Full screen, the frame fills what the header leaves. */
+.tool-panel.full-screen .tool-body {
+  display: flex;
+  flex-direction: column;
+}
+.tool-panel.full-screen .tool-frame {
+  flex: 1;
+  min-height: 0;
 }
 .tool-controls {
   display: flex;
@@ -737,11 +754,19 @@ button.primary {
 .app > main:has(.split) > :not(.split) {
   margin-inline: var(--ui-padding);
 }
+/* In the workspace the header stays put and the body scrolls under it, so the header reaches
+   the window's right edge, past the body's scrollbar. */
 .split .tool-panel:not(.full-screen) {
-  padding-inline: var(--ui-padding);
+  height: 100%;
+  min-height: 0;
 }
 .split .tool-panel:not(.full-screen) > .tool-header {
-  margin-inline: calc(-1 * var(--ui-padding));
+  height: 64px;
+}
+.split .tool-panel:not(.full-screen) > .tool-body {
+  overflow: auto;
+  scrollbar-gutter: stable;
+  padding: var(--ui-space-4) var(--ui-padding);
 }
 .split {
   position: relative;
@@ -778,8 +803,25 @@ button.primary {
   grid-column: 1;
   grid-row: 1;
   min-width: 0;
+  min-height: 0;
   overflow: auto;
-  scrollbar-gutter: stable;
+}
+.split-second:has(> .tool-panel:not(.full-screen)) {
+  overflow: hidden;
+}
+/* Docked (c-chat-docked): the tool's pane spans the width, so its header does; the body keeps
+   clear of the conversation, which sits under the header beside it. */
+.split.docked.conversation-open:has(.tool-panel:not(.full-screen)) .split-second {
+  grid-column: 1 / -1;
+}
+.split.docked.conversation-open .tool-panel:not(.full-screen) > .tool-body {
+  margin-right: calc(var(--chat-share) + 12px);
+}
+.split.docked.conversation-open:has(.tool-panel:not(.full-screen))
+  :is(.split-first, .split-divider) {
+  position: relative;
+  z-index: 1;
+  margin-top: 64px;
 }
 /* Floating: about 380 px, nearly the height of the tool area, below the tool's header. */
 .split.floating .split-first {
@@ -1010,6 +1052,17 @@ button.primary {
     inset: auto 0 0.5rem 0;
     grid-area: 1 / 1 / 2 / -1;
     max-height: 60%;
+  }
+  /* A narrow panel lays the docked conversation over the tool instead. */
+  .split.docked.conversation-open:has(.tool-panel:not(.full-screen)) .split-second {
+    grid-column: 1;
+  }
+  .split.docked.conversation-open .tool-panel:not(.full-screen) > .tool-body {
+    margin-right: 0;
+  }
+  .split.docked.conversation-open:has(.tool-panel:not(.full-screen)) .split-first {
+    position: absolute;
+    margin-top: 0;
   }
 }
 
