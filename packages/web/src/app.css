@@ -338,12 +338,24 @@ button.primary {
   margin: 0;
   font-size: 1.25rem;
 }
+/* Only the recent rows scroll; New tool, My tools and search stay in view, as in the mockup. */
 .drawer-content {
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  overflow: hidden;
   flex: 1;
   min-height: 0;
+}
+.drawer-content > .workspaces {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.drawer-content .workspaces ul {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 .drawer-footer {
   margin-top: 0.75rem;
@@ -774,19 +786,10 @@ button.primary {
   margin-top: var(--ui-space-4);
 }
 
-/* Importing from a file (APP-06): under the workspaces, and on the first-run screen. */
+/* Importing from a file (APP-06): in the drawer and on the first-run screen, a row whose label
+   shows (the row's look is with the drawer's rows). */
 .import-file {
   margin-top: var(--ui-space-4);
-}
-.import-file label {
-  display: block;
-  margin-bottom: var(--ui-space-1);
-}
-.import-file input {
-  width: 100%;
-  max-width: 24rem;
-  padding: var(--ui-space-1);
-  box-sizing: border-box;
 }
 
 /* The setup check's notice, the whole width under the sections (PLAT-03). */

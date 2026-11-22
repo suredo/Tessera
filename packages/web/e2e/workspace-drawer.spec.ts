@@ -112,7 +112,28 @@ test("APP-01, APP-03, APP-11: the drawer reads as the mockup: a close cross, sho
     await more(other).focus();
     await expect(more(other)).toHaveCSS("opacity", "1");
   }
-  // Import is a row like the others; its file field stays reachable by label.
+  // Import is a row like the others, its name centred; its file field stays reachable by label.
   await expect(drawer.getByLabel(en["archive.importLabel"])).toBeAttached();
+  await expect(drawer.locator(".import-file label")).toHaveCSS("display", "flex");
+  await expect(drawer.locator(".import-file label")).toHaveCSS("align-items", "center");
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+});
+
+test("APP-01, APP-03: with many workspaces only the recent rows scroll; New tool and search stay in view", async ({
+  page,
+}) => {
+  for (let i = 0; i < 16; i++) workspaceWith(app.folder, `Many ${i}`, testTool(""));
+  await page.goto(app.url);
+  const drawer = await openWorkspaces(page);
+  const list = drawer.locator(".workspaces ul");
+  await list.evaluate((node) => {
+    node.scrollTop = node.scrollHeight;
+  });
+  expect(await list.evaluate((node) => node.scrollTop)).toBeGreaterThan(0);
+  await expect(
+    drawer.getByRole("button", { name: en["workspaces.new"], exact: true }),
+  ).toBeInViewport();
+  await expect(drawer.getByRole("searchbox", { name: en["workspaces.find"] })).toBeInViewport();
+  await expect(drawer.getByRole("button", { name: en["nav.trash"], exact: true })).toBeInViewport();
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
 });
