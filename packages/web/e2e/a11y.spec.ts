@@ -204,7 +204,7 @@ test("APP-11: a workspace's rename and save forms have no violations, and nothin
   await clickWorkspaceAction(page, "Rename Shopping list");
   await check(page);
   await cancel(page);
-  await clickWorkspaceAction(page, "Save Shopping list to my tools");
+  await clickWorkspaceAction(page, "Save Shopping list to My tools");
   await expect(page.getByLabel(en["workspaces.saveLabel"])).toBeVisible();
   await check(page);
 });
