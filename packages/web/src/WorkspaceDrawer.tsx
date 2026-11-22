@@ -1,4 +1,5 @@
 import { useId, type ReactNode, type RefObject } from "react";
+import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 
 // A native modal leaves the running frame mounted and makes the rest of the host inert (APP-01,
@@ -51,14 +52,23 @@ export function WorkspaceDrawer({
         }
       }}
     >
+      {/* As in the redesign's d-workspaces-open: a title with the leaf, a close cross. */}
       <div className="drawer-heading">
+        <HostIcon name="leaf" />
         <h2 id={heading}>{t("workspaces.heading")}</h2>
-        <button type="button" onClick={onClose}>
-          {t("workspaces.close")}
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={t("workspaces.close")}
+          title={t("workspaces.close")}
+          onClick={onClose}
+        >
+          <HostIcon name="close" />
         </button>
       </div>
       <div className="drawer-content">
         <button type="button" className="primary drawer-new" onClick={onNew}>
+          <HostIcon name="plus" />
           {t("workspaces.new")}
         </button>
         <button

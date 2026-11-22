@@ -7,9 +7,12 @@ import { t } from "./i18n/translate.ts";
 export function ImportFile({ onImport }: { onImport: (file: File) => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   return (
+    // A row like the drawer's others: the label is what shows; the file field stays for the
+    // keyboard and screen readers, out of sight.
     <div className="import-file">
       <label htmlFor="import-file">{t("archive.importLabel")}</label>
       <input
+        className="visually-hidden"
         id="import-file"
         type="file"
         accept=".tessera"
