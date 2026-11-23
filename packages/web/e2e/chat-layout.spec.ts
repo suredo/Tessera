@@ -293,8 +293,45 @@ test.describe("desktop", () => {
   });
 });
 
-test.describe("narrow fallback before the phone-sheet slice", () => {
+test.describe("phone: the conversation as a bottom sheet (f-mobile-chat)", () => {
   test.use({ viewport: { width: 320, height: 900 } });
+  test("APP-01, APP-11, RUN-02: the sheet is modal: the tool is inert, Tab stays in the sheet and the ask bar, Escape and the scrim close it", async ({
+    page,
+  }) => {
+    await open(page);
+    await tool(page).getByLabel("Note").fill("Unfinished");
+    await frame(page).evaluate((node) => {
+      node.dataset["kept"] = "same";
+    });
+    await openChat(page);
+    const sheet = page.getByRole("dialog", { name: en["chat.label"] });
+    await expect(sheet).toBeVisible();
+    await expect(page.locator(".split-second")).toHaveAttribute("inert", "");
+    const close = sheet.getByRole("button", { name: en["chat.close"] });
+    await expect(close).toBeFocused();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    // Only the title and close in the sheet's header, as in the mockup.
+    await expect(sheet.getByRole("button", { name: en["chat.position"] })).toBeHidden();
+    // Tab wraps: back from the sheet's first control to the ask bar's last, and on round again.
+    const send = page.getByRole("button", { name: en["request.send"], exact: true });
+    await page.keyboard.press("Shift+Tab");
+    await expect(send).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(close).toBeFocused();
+    // The ask bar stays usable under the sheet.
+    await page.getByRole("textbox", { name: en["request.label"] }).fill("Draft");
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+    await expect(page.getByRole("button", { name: en["chat.open"], exact: true })).toBeFocused();
+    await expect(page.locator(".split-second")).not.toHaveAttribute("inert", "");
+    // The scrim closes it too.
+    await openChat(page);
+    await page.locator(".sheet-scrim").click({ position: { x: 20, y: 20 } });
+    await expect(sheet).toBeHidden();
+    await expect(frame(page)).toHaveAttribute("data-kept", "same");
+    await expect(tool(page).getByLabel("Note")).toHaveValue("Unfinished");
+    await expect(page.getByRole("textbox", { name: en["request.label"] })).toHaveValue("Draft");
+  });
   test("APP-01, TEST-06: Focus and conversation controls remain reachable without horizontal overflow", async ({
     page,
   }) => {
@@ -307,6 +344,46 @@ test.describe("narrow fallback before the phone-sheet slice", () => {
     );
     await page.getByRole("button", { name: en["chat.close"] }).click();
     await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeVisible();
+  });
+  test("APP-01, APP-11: with Dock saved, the sheet still sits above its scrim and keeps 16 px gutters", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => localStorage.setItem("tessera.chatPosition", "docked"));
+    await open(page);
+    await openChat(page);
+    const sheet = page.getByRole("dialog", { name: en["chat.label"] });
+    await expect(sheet).toBeVisible();
+    const box = (await sheet.boundingBox())!;
+    const onTop = await page.evaluate(
+      ({ x, y }) => document.elementFromPoint(x, y)?.closest(".split-first") !== null,
+      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    );
+    expect(onTop).toBe(true);
+    // A click inside the sheet stays in it.
+    await sheet.getByText(en["chat.hint"]).click();
+    await expect(sheet).toBeVisible();
+    // 16 px on each side, as the mockup's final phone rules.
+    await expect(sheet.locator(".conversation-head")).toHaveCSS("padding-left", "16px");
+    await expect(sheet.locator(".conversation-head")).toHaveCSS("padding-right", "16px");
+    await expect(sheet.locator(".chat")).toHaveCSS("padding-left", "16px");
+  });
+  test("APP-10, APP-11: while a request runs, Cancel stays reachable by keyboard with the sheet open", async ({
+    page,
+  }) => {
+    await open(page);
+    const request = page.getByRole("textbox", { name: en["request.label"] });
+    await request.fill("Something");
+    await request.press("Enter");
+    const sheet = page.getByRole("dialog", { name: en["chat.label"] });
+    await expect(sheet).toBeVisible();
+    const cancel = page.getByRole("button", { name: en["request.cancel"] });
+    await expect(cancel).toBeVisible();
+    // The notices, with Cancel, are the last stop: Shift+Tab from the sheet's first control.
+    await sheet.getByRole("button", { name: en["chat.close"] }).focus();
+    await page.keyboard.press("Shift+Tab");
+    await expect(cancel).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(sheet.getByRole("button", { name: en["chat.close"] })).toBeFocused();
   });
   test("APP-01, APP-02: New tool keeps its entire ask bar in a narrow viewport", async ({
     page,

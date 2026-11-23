@@ -944,13 +944,13 @@ button.primary {
 }
 /* Docked (c-chat-docked): the tool's pane spans the width, so its header does; the body keeps
    clear of the conversation, which sits under the header beside it. */
-.split.docked.conversation-open:has(.tool-panel:not(.full-screen)) .split-second {
+.split.docked.conversation-open:not(.sheet):has(.tool-panel:not(.full-screen)) .split-second {
   grid-column: 1 / -1;
 }
-.split.docked.conversation-open .tool-panel:not(.full-screen) > .tool-body {
+.split.docked.conversation-open:not(.sheet) .tool-panel:not(.full-screen) > .tool-body {
   margin-right: calc(var(--chat-share) + 12px);
 }
-.split.docked.conversation-open:has(.tool-panel:not(.full-screen))
+.split.docked.conversation-open:not(.sheet):has(.tool-panel:not(.full-screen))
   :is(.split-first, .split-divider) {
   position: relative;
   z-index: 1;
@@ -1201,6 +1201,57 @@ button.primary {
     position: absolute;
     margin-top: 0;
   }
+}
+
+/* The phone's conversation (f-mobile-chat): a sheet from the bottom of the tool's area, above
+   the ask bar, with a handle, over a scrim on the tool. Whether it floats or docks elsewhere, here
+   it is a sheet; its grip and Position menu have no use and go. After the rules above, which it
+   overrides. */
+.split.sheet .split-first {
+  position: absolute;
+  z-index: 3;
+  grid-area: 1 / 1 / 2 / -1;
+  inset: auto 0 0 0;
+  width: auto;
+  /* About 85% of the tool's area under the 76 px header, as the mockup's 570 of 674 px. */
+  height: calc((100% - 76px) * 0.85);
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 19px 19px 0 0;
+  background: var(--host-panel);
+  box-shadow: 0 -12px 45px #29362e1c;
+}
+.split.sheet .split-first::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  translate: -50% 0;
+  width: 38px;
+  height: 3px;
+  border-radius: 3px;
+  background: #b3bea8;
+}
+/* 16 px on each side, as the mockup's final phone rules. */
+.split.sheet .conversation-head {
+  padding: 19px 16px 13px;
+}
+.split.sheet .split-first > .chat {
+  padding-inline: 16px;
+}
+.split.sheet .conversation-head h2 {
+  font-size: 1.0625rem;
+}
+.split.sheet .conversation-position {
+  display: none;
+}
+.sheet-scrim {
+  position: absolute;
+  z-index: 2;
+  grid-area: 1 / 1 / 2 / -1;
+  inset: 76px 0 0 0;
+  background: #25372a25;
 }
 
 /* The chat (APP-01): the conversation, newest last, scrolling on its own, the request box under it. */
