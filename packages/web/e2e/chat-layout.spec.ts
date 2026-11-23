@@ -105,7 +105,9 @@ test.describe("desktop", () => {
     await expect(bar.getByRole("button", { name: en["request.send"], exact: true })).toBeVisible();
     // The bar is centred, at most about 790 px wide as in the a-focus mockup.
     const box = (await bar.boundingBox())!;
-    expect(box.width).toBeLessThanOrEqual(801);
+    expect(box.width).toBeLessThanOrEqual(791);
+    // The footer is 88 px, as in the mockups.
+    expect((await page.locator(".ask-footer").boundingBox())!.height).toBeGreaterThanOrEqual(88);
     expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThanOrEqual(2);
     const drawer = await openWorkspaces(page);
     await drawer.getByRole("button", { name: en["workspaces.new"], exact: true }).click();
@@ -123,6 +125,9 @@ test.describe("desktop", () => {
     // Floating, as in b-chat-floating: about 380 px wide, nearly the tool area's height.
     const box = (await panel.boundingBox())!;
     expect(box.width).toBeLessThanOrEqual(381);
+    // 24 px in from the right and 24 px below the 64 px header.
+    expect(Math.round(1280 - (box.x + box.width))).toBe(24);
+    expect(Math.round(box.y)).toBe(88);
     expect(box.height).toBeGreaterThan(500);
     for (const control of await panel.locator(".conversation-head button").all()) {
       const size = (await control.boundingBox())!;
