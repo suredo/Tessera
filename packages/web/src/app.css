@@ -915,12 +915,13 @@ button.primary {
   z-index: 1;
   margin-top: 64px;
 }
-/* Floating: about 380 px, nearly the height of the tool area, below the tool's header. */
+/* Floating: about 380 px, 24 px in from the side and below the tool's 64 px header (12 px from
+   the bottom in a lower corner), as in b-chat-floating. */
 .split.floating .split-first {
   position: absolute;
   z-index: 2;
   width: min(23.75rem, calc(100% - 1rem));
-  height: calc(100% - 5.5rem);
+  height: calc(100% - 6.25rem);
   box-sizing: border-box;
   border-color: var(--host-panel-border);
   border-radius: 0.875rem;
@@ -928,20 +929,20 @@ button.primary {
   grid-area: 1 / 1 / 2 / -1;
 }
 .split.top-right .split-first {
-  top: 5rem;
-  right: 0.5rem;
+  top: 5.5rem;
+  right: 1.5rem;
 }
 .split.top-left .split-first {
-  top: 5rem;
-  left: 0.5rem;
+  top: 5.5rem;
+  left: 1.5rem;
 }
 .split.bottom-right .split-first {
-  bottom: 0.25rem;
-  right: 0.5rem;
+  bottom: 0.75rem;
+  right: 1.5rem;
 }
 .split.bottom-left .split-first {
-  bottom: 0.25rem;
-  left: 0.5rem;
+  bottom: 0.75rem;
+  left: 1.5rem;
 }
 /* Docked: a plain column beside the tool, the divider its edge. */
 .split.docked .split-first {
@@ -953,7 +954,7 @@ button.primary {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 0.5rem 0.5rem 0.5rem 1.125rem;
+  padding: 0.8125rem 0.5rem 0.8125rem 1.125rem;
   flex-shrink: 0;
 }
 .split.floating .conversation-head {
@@ -1100,14 +1101,17 @@ button.primary {
   grid-row: 2;
   display: flex;
   justify-content: center;
-  padding: var(--ui-space-3) var(--ui-space-4) var(--ui-space-2);
+  align-items: center;
+  box-sizing: border-box;
+  min-height: 88px;
+  padding: var(--ui-space-4) var(--ui-space-5);
   border-top: 1px solid var(--host-line);
   background: var(--host-page);
 }
 .ask-footer .request,
 .ask-footer > .ask-bar {
   margin: 0;
-  width: min(100%, 50rem);
+  width: min(100%, 49.375rem);
 }
 .split-divider {
   grid-column: 2;
