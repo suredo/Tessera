@@ -125,6 +125,9 @@ test("APP-01, APP-11: the header runs edge to edge and labels Undo, History and 
   expect(box.x).toBe(0);
   expect(box.width).toBe(width);
   expect(box.height).toBe(width >= 1000 ? 64 : 76);
+  // The tool's card sits 24 px below the header, or 10 px on a phone (a-focus, e-mobile).
+  const card = (await page.locator(".tool-frame").boundingBox())!;
+  expect(Math.round(card.y - (box.y + box.height))).toBe(width >= 1000 ? 24 : 10);
   const labels = header.locator(".header-label");
   const names =
     width >= 1000

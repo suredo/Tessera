@@ -181,13 +181,20 @@ body {
   }
   .tool-header {
     gap: 6px;
-    padding: 10px 12px;
+    padding: 10px 16px;
   }
+  /* A long name wraps instead of being cut short (the mockup's final phone rules). */
   .tool-heading h1 {
     font-size: 1.0625rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.2;
   }
   .tool-heading p {
+    margin-top: 3px;
     font-size: 0.625rem;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
   }
   .header-action {
     justify-content: center;
@@ -664,6 +671,11 @@ button.primary {
 .tool-status {
   margin: 0;
 }
+/* With nothing to say, the status takes no row, so the card sits where the design puts it; it
+   stays in the page, so what it later says is still announced. */
+.tool-status:empty {
+  position: absolute;
+}
 .data-review {
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -882,10 +894,11 @@ button.primary {
     position-anchor: --tool-more;
   }
   .split .tool-panel:not(.full-screen) > .tool-header {
-    height: 76px;
+    height: auto;
+    min-height: 76px;
   }
   .split .tool-panel:not(.full-screen) > .tool-body {
-    padding: 10px;
+    padding: 10px 16px;
   }
 }
 .split {
@@ -1307,7 +1320,7 @@ button.primary {
   .ask-footer {
     align-items: flex-start;
     min-height: 94px;
-    padding: 10px 12px 24px;
+    padding: 10px 16px 24px;
   }
   .ask-bar {
     gap: 3px;
