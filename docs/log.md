@@ -2,6 +2,8 @@
 
 ## 2026-11-22
 
+* **Changed**: The [host's look](code/web/package.md) takes the UI redesign's tints: a sage page and footer, a white header with soft lines, a softer card edge with 24 px around the tool, and near-white conversation and drawer panels, as host variables, not UI standard tokens. The tool's page keeps the standard's background and the ask bar the controls' border (decision A96, the owner's choice). Slice 5 of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T23:59:15Z.
+
 * **Changed**: The [workspaces drawer](code/web/package.md) follows the UI redesign's `d-workspaces-open` mockup: a leaf and close cross, short dates, "In My tools", the open row marked by a bar, recent work under small capitals with a search magnifier, and Import as a plain row. Row menus show on hover or focus (decision A95, the owner's choice). Slice 4 of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T17:37:44Z.
 
 * **Changed**: The [tool panel](code/web/package.md) is a header above a scrolling body, so the header reaches the window's edges and, with the conversation docked, spans the full width with the conversation under it, as in the UI redesign's `c-chat-docked` mockup. Questions before a tool's change now show under the header. Slice 3b of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T16:17:25Z.

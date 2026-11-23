@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A95), with its choice and reasons."
+description: "Every decision made so far (A1–A96), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-22T17:37:44Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-22T18:47:26Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -110,6 +110,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A93 | How a change to the host app's look is checked against its design | **The brief names the mockup states to match; the author compares each side by side with the app on seeded data, at 1280 px and, for phone states, 320 px, and lists every difference with what happens to it; the reviewer repeats the comparison on the same head; only the owner approves a departure from the design (`ENG-32`)** | The owner's request of 2026-11-22, after comparing the app with the UI redesign mockups: the slices met behaviour-only acceptance criteria and passed review, but a menu opened in the wrong corner and most of the mockups' look was missing. Automated pixel comparison was not chosen: the mockups use their own sample content. The owner also asked for `pnpm design:compare`, which makes the side-by-side pairs. |
 | A94 | Two departures from the conversation panel mockups | **The panel shows no "Today · <tool name>" line above the messages, and the Position menu lines up with its button's right edge instead of reaching past the panel's edge as in `b-chat-floating`** | The owner's choice of 2026-11-22, asked under `ENG-32` in PR 426: the date line was left out; aligning the menu to its button keeps it on screen when the panel is at the window's right edge. |
 | A95 | How the drawer's recent-work rows offer their actions | **Each row keeps its More menu (Save to My tools, Rename, Export, Move to trash, `APP-03`), which `d-workspaces-open` does not show. With a pointer that hovers, More is faded out except on the open row, the row under the pointer, a row with keyboard focus and a row whose menu is open; on touch screens it always shows. Faded, it stays in the tab order** | The owner's choice of 2026-11-22, asked under `ENG-32` for #416 slice 4: the list reads as the mockup while the actions stay reachable by pointer, keyboard and touch. |
+| A96 | Two departures from the redesign's general look | **The tool's card keeps the UI standard's background (#f9faf8) inside, not the mockups' white, and the ask bar keeps the controls' border (#81867e), not the mockups' paler #cad5bf. The host's own tints (the sage page, the near-white panels and drawer, the softer lines) are host variables, not UI standard tokens** | The owner's choice of 2026-11-22, asked under `ENG-32` for #416 slice 5: the tool's page is the tool's, and its token values are listed in the generation prompts, so whitening it would change every tool and need recordings made again; the paler outline would fall under the 3:1 contrast a field's edge needs (`APP-11`). |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2

@@ -2,6 +2,18 @@
    from the one definition the tools' stylesheets use, and an accessible host (APP-11): visible
    focus, reduced motion, no sideways scrolling at 320 px. */
 
+/* The redesign's tints (#416, the mockups' palette): the host's own, not tokens, so tools keep
+   the UI standard's colors and its listed values (VER-06). The page is sage; panels and the
+   drawer are near white; lines are a soft sage. None carries text contrast or a control's edge. */
+:root {
+  --host-page: #f4f6f0;
+  --host-line: #e1e7d9;
+  --host-card-border: #dce3d4;
+  --host-panel: #fcfdf9;
+  --host-panel-border: #d5decc;
+  --host-drawer: #fafcf7;
+}
+
 html {
   font-family: var(--ui-font);
   font-size: var(--ui-size-body);
@@ -32,7 +44,7 @@ body {
   min-height: 64px;
   box-sizing: border-box;
   background: var(--ui-surface);
-  border-bottom: 1px solid var(--ui-divider);
+  border-bottom: 1px solid var(--host-line);
   padding-inline: 1.5rem;
 }
 .tool-heading {
@@ -311,7 +323,7 @@ button.primary {
   box-sizing: border-box;
   border: 0;
   padding: 1.25rem 1.375rem;
-  background: var(--ui-surface);
+  background: var(--host-drawer);
   color: var(--ui-text);
   box-shadow: 12px 0 46px #29362e20;
 }
@@ -663,7 +675,7 @@ button.primary {
   overflow: auto;
 }
 .tool-frame {
-  border: 1px solid var(--ui-divider);
+  border: 1px solid var(--host-card-border);
   border-radius: var(--ui-radius-panel);
   overflow: hidden;
   min-height: 20rem;
@@ -829,6 +841,7 @@ button.primary {
   display: flex;
   flex-direction: column;
   padding: 0;
+  background: var(--host-page);
 }
 .app > main:has(.split) > :not(.split) {
   margin-inline: var(--ui-padding);
@@ -845,7 +858,7 @@ button.primary {
 .split .tool-panel:not(.full-screen) > .tool-body {
   overflow: auto;
   scrollbar-gutter: stable;
-  padding: var(--ui-space-4) var(--ui-padding);
+  padding: var(--ui-space-5);
 }
 .split {
   position: relative;
@@ -868,12 +881,12 @@ button.primary {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--ui-surface);
   border: 1px solid var(--ui-divider);
   border-radius: var(--ui-radius-panel);
   min-width: 0;
   min-height: 0;
   anchor-scope: --chat-position;
+  background: var(--host-panel);
 }
 .split-first[hidden] {
   display: none;
@@ -909,7 +922,7 @@ button.primary {
   width: min(23.75rem, calc(100% - 1rem));
   height: calc(100% - 5.5rem);
   box-sizing: border-box;
-  border-color: var(--ui-control-border);
+  border-color: var(--host-panel-border);
   border-radius: 0.875rem;
   box-shadow: 0 16px 55px #29362e24;
   grid-area: 1 / 1 / 2 / -1;
@@ -1088,8 +1101,8 @@ button.primary {
   display: flex;
   justify-content: center;
   padding: var(--ui-space-3) var(--ui-space-4) var(--ui-space-2);
-  border-top: 1px solid var(--ui-divider);
-  background: var(--ui-background);
+  border-top: 1px solid var(--host-line);
+  background: var(--host-page);
 }
 .ask-footer .request,
 .ask-footer > .ask-bar {
@@ -1196,7 +1209,7 @@ button.primary {
   min-height: 3.25rem;
   padding: 0.25rem 0.375rem 0.25rem var(--ui-space-4);
   /* The mockup's paler #cad5bf outline would fall under the 3:1 a field's edge needs, so the bar
-     keeps the controls' border until the general look settles borders (#416). */
+     keeps the controls' border (decision A96). */
   background: var(--ui-surface);
   border: 1px solid var(--ui-control-border);
   border-radius: 0.75rem;

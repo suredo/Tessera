@@ -196,3 +196,16 @@ test("APP-01, APP-09, APP-11: More opens Details and the header fits with access
   await page.keyboard.press("Escape");
   await page.screenshot({ path: test.info().outputPath("tool-header.png"), fullPage: true });
 });
+
+test("APP-01: the workspace has the redesign's tints: a sage page and footer, a soft card edge, a white header", async ({
+  page,
+}) => {
+  await open(page);
+  const sage = "rgb(244, 246, 240)";
+  await expect(page.locator(".app > main")).toHaveCSS("background-color", sage);
+  await expect(page.locator(".ask-footer")).toHaveCSS("background-color", sage);
+  await expect(page.locator(".tool-header")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(page.locator(".tool-frame")).toHaveCSS("border-top-color", "rgb(220, 227, 212)");
+  // The ask bar keeps the controls' border, which has 3:1 contrast (decision A96).
+  await expect(page.locator(".ask-bar")).toHaveCSS("border-top-color", "rgb(129, 134, 126)");
+});
