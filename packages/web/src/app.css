@@ -944,13 +944,13 @@ button.primary {
 }
 /* Docked (c-chat-docked): the tool's pane spans the width, so its header does; the body keeps
    clear of the conversation, which sits under the header beside it. */
-.split.docked.conversation-open:has(.tool-panel:not(.full-screen)) .split-second {
+.split.docked.conversation-open:not(.sheet):has(.tool-panel:not(.full-screen)) .split-second {
   grid-column: 1 / -1;
 }
-.split.docked.conversation-open .tool-panel:not(.full-screen) > .tool-body {
+.split.docked.conversation-open:not(.sheet) .tool-panel:not(.full-screen) > .tool-body {
   margin-right: calc(var(--chat-share) + 12px);
 }
-.split.docked.conversation-open:has(.tool-panel:not(.full-screen))
+.split.docked.conversation-open:not(.sheet):has(.tool-panel:not(.full-screen))
   :is(.split-first, .split-divider) {
   position: relative;
   z-index: 1;
@@ -1233,9 +1233,12 @@ button.primary {
   border-radius: 3px;
   background: #b3bea8;
 }
+/* 16 px on each side, as the mockup's final phone rules. */
 .split.sheet .conversation-head {
-  padding-top: 19px;
-  padding-left: 1.125rem;
+  padding: 19px 16px 13px;
+}
+.split.sheet .split-first > .chat {
+  padding-inline: 16px;
 }
 .split.sheet .conversation-head h2 {
   font-size: 1.0625rem;

@@ -1,4 +1,6 @@
 import {
+  useEffect,
+  useEffectEvent,
   useId,
   useLayoutEffect,
   useRef,
@@ -79,9 +81,24 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
   const menuId = `${id}-menu`;
   const visible = open && !expanded;
   const phone = useSyncExternalStore(onPhoneChange, onPhone, () => false);
-  // The sheet is modal: the tool and its header are inert, focus stays in the sheet and the ask
-  // bar under it, and Escape or the scrim closes it, focus returning to Open conversation.
+  // The sheet is modal: everything but the sheet, the ask bar under it and the app's notices
+  // (Cancel, a request's choices) is inert, focus stays in those, and Escape or the scrim closes
+  // it, focus returning to Open conversation. Inert, not aria-modal, makes the boundary, so the
+  // ask bar and its progress stay inside it for screen readers too.
   const sheet = visible && phone;
+  useEffect(() => {
+    if (!sheet) return;
+    const app = box.current?.closest(".app");
+    const outside = [
+      ...(app?.querySelectorAll<HTMLElement>(
+        ":scope > header, :scope > .setup-banner, :scope > main > :not(.split)",
+      ) ?? []),
+    ];
+    for (const element of outside) element.inert = true;
+    return () => {
+      for (const element of outside) element.inert = false;
+    };
+  }, [sheet]);
   useLayoutEffect(() => {
     if (visible && focusOnOpen.current) {
       closer.current?.focus();
@@ -96,6 +113,37 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
     onOpen(false);
     opener.current?.focus();
   };
+  // Keys while the sheet is open, wherever focus is in what stays usable, notices included:
+  // Escape closes it, and Tab wraps through the sheet, the ask bar and the notices.
+  const sheetKey = useEffectEvent((event: KeyboardEvent) => {
+    if (event.key === "Escape" && !event.defaultPrevented) {
+      event.preventDefault();
+      close();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const app = box.current?.closest(".app") ?? box.current;
+    if (!app) return;
+    const controls = [
+      ...app.querySelectorAll<HTMLElement>(
+        `.split-first :is(${FOCUSABLE}), .ask-footer :is(${FOCUSABLE}), :scope > .notice :is(${FOCUSABLE})`,
+      ),
+    ].filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0);
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  });
+  useEffect(() => {
+    if (!sheet) return;
+    document.addEventListener("keydown", sheetKey);
+    return () => document.removeEventListener("keydown", sheetKey);
+  }, [sheet]);
   return (
     <div
       ref={box}
@@ -110,30 +158,6 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
         .filter(Boolean)
         .join(" ")}
       style={{ "--chat-share": share + "%" } as React.CSSProperties}
-      onKeyDown={(event) => {
-        if (!sheet) return;
-        if (event.key === "Escape" && !event.defaultPrevented) {
-          event.preventDefault();
-          close();
-          return;
-        }
-        if (event.key !== "Tab") return;
-        // Tab wraps between the sheet and the ask bar, the only parts not inert.
-        const controls = [
-          ...event.currentTarget.querySelectorAll<HTMLElement>(
-            `.split-first :is(${FOCUSABLE}), .ask-footer :is(${FOCUSABLE})`,
-          ),
-        ].filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0);
-        const first = controls[0];
-        const last = controls.at(-1);
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last?.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first?.focus();
-        }
-      }}
     >
       <div className="split-second" inert={sheet}>
         {second}
@@ -175,7 +199,6 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
         className="split-first"
         hidden={!visible}
         role={sheet ? "dialog" : undefined}
-        aria-modal={sheet ? true : undefined}
         aria-label={sheet ? t("chat.label") : undefined}
         onKeyDown={(event) => {
           // Escape first closes an open position menu, wherever focus is; then the conversation.
