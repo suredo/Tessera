@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-23
+
+* **Changed**: The [phone screen](code/web/package.md) follows the UI redesign's `e-mobile` mockup: a 76 px header with Workspaces, the title, Undo and More, History moved into More (focus returning to More), a wrapping title, the tool 10 px below the header and 16 px from the sides, and a 94 px footer with 16 px sides and the phone ask bar. An empty status line no longer takes a row, on desktop too, so the card sits 24 px (10 px on a phone) below the header. Updated at 2026-11-23T10:23:38Z after Codex's review. Part of [issue 415](https://github.com/suredo/Tessera/issues/415), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-23T02:34:22Z.
+
 ## 2026-11-22
 
 * **Changed**: The [host's look](code/web/package.md) takes the UI redesign's tints: a sage page and footer, a white header with soft lines, a softer card edge with 24 px around the tool, and near-white conversation and drawer panels, as host variables, not UI standard tokens. The tool's page keeps the standard's background and the ask bar the controls' border (decision A96, the owner's choice). Slice 5 of [issue 416](https://github.com/suredo/Tessera/issues/416), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-22T23:59:15Z.

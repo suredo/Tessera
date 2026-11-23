@@ -50,10 +50,13 @@ test("APP-01, APP-05, RUN-02: header panels keep the running tool, unfinished in
   await openToolHistory(page);
   await expect(page.getByRole("region", { name: en["history.heading"] })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(
-    page.getByRole("button", { name: en["history.heading"], exact: true }),
-  ).toBeFocused();
   const more = page.getByRole("button", { name: en["tool.more"] });
+  // Focus returns to History, or, on a phone where History is in More, to More.
+  await expect(
+    page.viewportSize()!.width >= 1000
+      ? page.getByRole("button", { name: en["history.heading"], exact: true })
+      : more,
+  ).toBeFocused();
   await more.focus();
   await page.keyboard.press("Enter");
   await expect(page.locator(".tool-menu")).toBeVisible();
@@ -96,7 +99,9 @@ test("APP-01, APP-05: More, History and workspace menus open beside their opener
   await page.keyboard.press("Escape");
   await openToolHistory(page);
   await expectBelow(
-    page.getByRole("button", { name: en["history.heading"], exact: true }),
+    page.viewportSize()!.width >= 1000
+      ? page.getByRole("button", { name: en["history.heading"], exact: true })
+      : more,
     page.getByRole("region", { name: en["history.heading"] }),
   );
   await page.keyboard.press("Escape");
@@ -115,14 +120,31 @@ test("APP-01, APP-11: the header runs edge to edge and labels Undo, History and 
   const header = page.locator(".tool-header");
   const box = (await header.boundingBox())!;
   const width = page.viewportSize()!.width;
-  // From edge to edge of the window, past the body's scrollbar, 64 px tall, as in a-focus.
+  // From edge to edge of the window, past the body's scrollbar: 64 px tall as in a-focus, 76 px
+  // on a phone as in e-mobile.
   expect(box.x).toBe(0);
   expect(box.width).toBe(width);
-  expect(box.height).toBe(64);
+  expect(box.height).toBe(width >= 1000 ? 64 : 76);
+  // The tool's card sits 24 px below the header, or 10 px on a phone (a-focus, e-mobile).
+  const card = (await page.locator(".tool-frame").boundingBox())!;
+  expect(Math.round(card.y - (box.y + box.height))).toBe(width >= 1000 ? 24 : 10);
   const labels = header.locator(".header-label");
-  const names = [en["history.undo"], en["history.heading"], en["tool.more"]];
+  const names =
+    width >= 1000
+      ? [en["history.undo"], en["history.heading"], en["tool.more"]]
+      : [en["history.undo"], en["tool.more"]];
   for (const name of names) {
     await expect(header.getByRole("button", { name, exact: true })).toBeVisible();
+  }
+  if (width < 1000) {
+    // On a phone, History is in More (e-mobile), and opens the same panel.
+    await expect(
+      header.getByRole("button", { name: en["history.heading"], exact: true }),
+    ).toBeHidden();
+    await header.getByRole("button", { name: en["tool.more"], exact: true }).click();
+    await page.locator(".tool-menu").getByRole("button", { name: en["history.heading"] }).click();
+    await expect(page.getByRole("region", { name: en["history.heading"] })).toBeVisible();
+    await page.keyboard.press("Escape");
   }
   if (width >= 1000) {
     await expect(labels).toHaveText([

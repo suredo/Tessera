@@ -35,6 +35,8 @@ type Props = {
   onChanged: (message: string) => Promise<void>;
   /** Undo and the History opener sit in the tool header; the history itself is a popover. */
   inHeader?: boolean;
+  /** The panel's ID, so another control, such as More's History on a phone, can open it too. */
+  panelId?: string;
 };
 
 /** A lost value as the person reads it: where it was, and what it held. */
@@ -64,8 +66,9 @@ export const lossText = (loss: Loss) => {
   return field ? t("history.loss", { where, field, value }) : t("history.lossItem", { where });
 };
 
-export function History({ workspace, changes, onChanged, inHeader = false }: Props) {
-  const panelId = useId();
+export function History({ workspace, changes, onChanged, inHeader = false, ...props }: Props) {
+  const ownId = useId();
+  const panelId = props.panelId ?? ownId;
   const [panelOpen, setPanelOpen] = useState(false);
   const id = workspace.id;
   const [versions, setVersions] = useState<WorkspaceVersion[]>([]);
