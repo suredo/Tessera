@@ -1203,6 +1203,54 @@ button.primary {
   }
 }
 
+/* The phone's conversation (f-mobile-chat): a sheet from the bottom of the tool's area, above
+   the ask bar, with a handle, over a scrim on the tool. Whether it floats or docks elsewhere, here
+   it is a sheet; its grip and Position menu have no use and go. After the rules above, which it
+   overrides. */
+.split.sheet .split-first {
+  position: absolute;
+  z-index: 3;
+  grid-area: 1 / 1 / 2 / -1;
+  inset: auto 0 0 0;
+  width: auto;
+  /* About 85% of the tool's area under the 76 px header, as the mockup's 570 of 674 px. */
+  height: calc((100% - 76px) * 0.85);
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 19px 19px 0 0;
+  background: var(--host-panel);
+  box-shadow: 0 -12px 45px #29362e1c;
+}
+.split.sheet .split-first::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  translate: -50% 0;
+  width: 38px;
+  height: 3px;
+  border-radius: 3px;
+  background: #b3bea8;
+}
+.split.sheet .conversation-head {
+  padding-top: 19px;
+  padding-left: 1.125rem;
+}
+.split.sheet .conversation-head h2 {
+  font-size: 1.0625rem;
+}
+.split.sheet .conversation-position {
+  display: none;
+}
+.sheet-scrim {
+  position: absolute;
+  z-index: 2;
+  grid-area: 1 / 1 / 2 / -1;
+  inset: 76px 0 0 0;
+  background: #25372a25;
+}
+
 /* The chat (APP-01): the conversation, newest last, scrolling on its own, the request box under it. */
 .chat-log {
   list-style: none;

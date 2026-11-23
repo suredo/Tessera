@@ -293,8 +293,45 @@ test.describe("desktop", () => {
   });
 });
 
-test.describe("narrow fallback before the phone-sheet slice", () => {
+test.describe("phone: the conversation as a bottom sheet (f-mobile-chat)", () => {
   test.use({ viewport: { width: 320, height: 900 } });
+  test("APP-01, APP-11, RUN-02: the sheet is modal: the tool is inert, Tab stays in the sheet and the ask bar, Escape and the scrim close it", async ({
+    page,
+  }) => {
+    await open(page);
+    await tool(page).getByLabel("Note").fill("Unfinished");
+    await frame(page).evaluate((node) => {
+      node.dataset["kept"] = "same";
+    });
+    await openChat(page);
+    const sheet = page.getByRole("dialog", { name: en["chat.label"] });
+    await expect(sheet).toBeVisible();
+    await expect(page.locator(".split-second")).toHaveAttribute("inert", "");
+    const close = sheet.getByRole("button", { name: en["chat.close"] });
+    await expect(close).toBeFocused();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    // Only the title and close in the sheet's header, as in the mockup.
+    await expect(sheet.getByRole("button", { name: en["chat.position"] })).toBeHidden();
+    // Tab wraps: back from the sheet's first control to the ask bar's last, and on round again.
+    const send = page.getByRole("button", { name: en["request.send"], exact: true });
+    await page.keyboard.press("Shift+Tab");
+    await expect(send).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(close).toBeFocused();
+    // The ask bar stays usable under the sheet.
+    await page.getByRole("textbox", { name: en["request.label"] }).fill("Draft");
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+    await expect(page.getByRole("button", { name: en["chat.open"], exact: true })).toBeFocused();
+    await expect(page.locator(".split-second")).not.toHaveAttribute("inert", "");
+    // The scrim closes it too.
+    await openChat(page);
+    await page.locator(".sheet-scrim").click({ position: { x: 20, y: 20 } });
+    await expect(sheet).toBeHidden();
+    await expect(frame(page)).toHaveAttribute("data-kept", "same");
+    await expect(tool(page).getByLabel("Note")).toHaveValue("Unfinished");
+    await expect(page.getByRole("textbox", { name: en["request.label"] })).toHaveValue("Draft");
+  });
   test("APP-01, TEST-06: Focus and conversation controls remain reachable without horizontal overflow", async ({
     page,
   }) => {

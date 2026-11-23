@@ -2,6 +2,8 @@
 
 ## 2026-11-23
 
+* **Changed**: On a phone the [conversation](code/web/package.md) opens as a modal bottom sheet, as in the UI redesign's `f-mobile-chat` mockup: a handle, the title and close, over a scrim; the tool is inert, focus stays in the sheet and the ask bar, and Escape or the scrim closes it, focus returning to Open conversation. Completes [issue 415](https://github.com/suredo/Tessera/issues/415), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-23T14:03:00Z.
+
 * **Changed**: The [phone screen](code/web/package.md) follows the UI redesign's `e-mobile` mockup: a 76 px header with Workspaces, the title, Undo and More, History moved into More (focus returning to More), a wrapping title, the tool 10 px below the header and 16 px from the sides, and a 94 px footer with 16 px sides and the phone ask bar. An empty status line no longer takes a row, on desktop too, so the card sits 24 px (10 px on a phone) below the header. Updated at 2026-11-23T10:23:38Z after Codex's review. Part of [issue 415](https://github.com/suredo/Tessera/issues/415), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-23T02:34:22Z.
 
 ## 2026-11-22

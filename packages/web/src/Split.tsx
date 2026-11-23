@@ -1,4 +1,11 @@
-import { useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 
@@ -30,6 +37,19 @@ const keep = (key: string, value: string) => {
     // Storage can be disabled; controls still work for this visit.
   }
 };
+// A phone, or any window this narrow (f-mobile-chat): the conversation opens as a modal sheet
+// above the ask bar. The workspace has no side padding here, so the window is its width.
+const PHONE = "(max-width: 44rem)";
+const onPhoneChange = (changed: () => void) => {
+  if (typeof matchMedia !== "function") return () => {};
+  const query = matchMedia(PHONE);
+  query.addEventListener("change", changed);
+  return () => query.removeEventListener("change", changed);
+};
+const onPhone = () => typeof matchMedia === "function" && matchMedia(PHONE).matches;
+const FOCUSABLE =
+  "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select, [tabindex]";
+
 type Props = {
   first: ReactNode;
   second: ReactNode;
@@ -58,6 +78,10 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
   const id = useId();
   const menuId = `${id}-menu`;
   const visible = open && !expanded;
+  const phone = useSyncExternalStore(onPhoneChange, onPhone, () => false);
+  // The sheet is modal: the tool and its header are inert, focus stays in the sheet and the ask
+  // bar under it, and Escape or the scrim closes it, focus returning to Open conversation.
+  const sheet = visible && phone;
   useLayoutEffect(() => {
     if (visible && focusOnOpen.current) {
       closer.current?.focus();
@@ -75,12 +99,46 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
   return (
     <div
       ref={box}
-      className={["split", position, corner, visible && "conversation-open", dragging && "dragging"]
+      className={[
+        "split",
+        position,
+        corner,
+        visible && "conversation-open",
+        sheet && "sheet",
+        dragging && "dragging",
+      ]
         .filter(Boolean)
         .join(" ")}
       style={{ "--chat-share": share + "%" } as React.CSSProperties}
+      onKeyDown={(event) => {
+        if (!sheet) return;
+        if (event.key === "Escape" && !event.defaultPrevented) {
+          event.preventDefault();
+          close();
+          return;
+        }
+        if (event.key !== "Tab") return;
+        // Tab wraps between the sheet and the ask bar, the only parts not inert.
+        const controls = [
+          ...event.currentTarget.querySelectorAll<HTMLElement>(
+            `.split-first :is(${FOCUSABLE}), .ask-footer :is(${FOCUSABLE})`,
+          ),
+        ].filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0);
+        const first = controls[0];
+        const last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }}
     >
-      <div className="split-second">{second}</div>
+      <div className="split-second" inert={sheet}>
+        {second}
+      </div>
+      {sheet && <div className="sheet-scrim" aria-hidden="true" onClick={close} />}
       <div
         className="split-divider"
         hidden={!visible || position !== "docked"}
@@ -116,6 +174,9 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
         id={id}
         className="split-first"
         hidden={!visible}
+        role={sheet ? "dialog" : undefined}
+        aria-modal={sheet ? true : undefined}
+        aria-label={sheet ? t("chat.label") : undefined}
         onKeyDown={(event) => {
           // Escape first closes an open position menu, wherever focus is; then the conversation.
           const menuOpen = event.currentTarget.querySelector(":popover-open");
@@ -126,7 +187,7 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
         }}
       >
         <header className="conversation-head">
-          {position === "floating" && (
+          {position === "floating" && !sheet && (
             <button
               type="button"
               className="icon-button conversation-drag"
