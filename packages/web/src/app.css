@@ -167,24 +167,39 @@ body {
   margin-top: 0;
   position-anchor: --tool-history;
 }
+.tool-menu .menu-history {
+  display: none;
+}
+/* A narrow panel, such as a phone (e-mobile): Workspaces, the title over a small "kept" line,
+   Undo and More; History, Save and full screen move into More. 44 px targets stay. */
 @container tool (max-width: 42rem) {
-  .tool-heading p,
   .save-tool,
   .full-screen-opener,
+  .history-opener,
   .header-label {
     display: none;
   }
   .tool-header {
-    gap: 0.5rem;
-    padding-inline: 0.75rem;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  .tool-heading h1 {
+    font-size: 1.0625rem;
+  }
+  .tool-heading p {
+    font-size: 0.625rem;
   }
   .header-action {
     justify-content: center;
     width: 44px;
     padding: 0;
   }
+  .tool-header-actions {
+    gap: 0;
+  }
   .tool-menu .menu-save-tool,
-  .tool-menu .menu-full-screen {
+  .tool-menu .menu-full-screen,
+  .tool-menu .menu-history {
     display: block;
   }
 }
@@ -860,6 +875,19 @@ button.primary {
   scrollbar-gutter: stable;
   padding: var(--ui-space-5);
 }
+/* A phone's header is 76 px, and the tool sits 10 px in (e-mobile); after the rules above. History
+   opens from More there, so its panel sits under More. */
+@container tool (max-width: 42rem) {
+  .history.host-panel {
+    position-anchor: --tool-more;
+  }
+  .split .tool-panel:not(.full-screen) > .tool-header {
+    height: 76px;
+  }
+  .split .tool-panel:not(.full-screen) > .tool-body {
+    padding: 10px;
+  }
+}
 .split {
   position: relative;
   display: grid;
@@ -1274,9 +1302,21 @@ button.primary {
 .ask-open > svg {
   display: none;
 }
+/* The phone's footer and ask bar (e-mobile): 94 px, the bar at its top, tighter inside. */
 @media (max-width: 30rem) {
+  .ask-footer {
+    align-items: flex-start;
+    min-height: 94px;
+    padding: 10px 12px 24px;
+  }
   .ask-bar {
-    padding-left: var(--ui-space-2);
+    gap: 3px;
+    min-height: 50px;
+    padding: 4px 5px 4px 9px;
+    border-radius: 11px;
+  }
+  .ask-bar textarea {
+    font-size: 0.8125rem;
   }
   .ask-bar > svg {
     display: none;

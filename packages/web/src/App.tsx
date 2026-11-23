@@ -5,7 +5,7 @@ import type {
   Trash as TrashList,
   Workspace,
 } from "@tessera/contracts";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { exportArchive, importArchive, saveFile } from "./archives.ts";
 import { Chat } from "./Chat.tsx";
 import { Connections } from "./Connections.tsx";
@@ -186,6 +186,8 @@ export function App() {
   // The tool taking the chat's place too (APP-01); only an open tool can, and only beside a chat.
   const [expanded, setExpanded] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  // History's panel, which a narrow header opens from More instead of its own button.
+  const historyPanelId = useId();
   // The setup check (PLAT-03): until it passes, nothing that needs the model is offered.
   const [setup, setSetup] = useState<SetupReport | null>(null);
   // A request running, and a saved tool a request matched, waiting for the person's choice.
@@ -786,6 +788,7 @@ export function App() {
                           workspace={current}
                           changes={toolChanges}
                           inHeader
+                          panelId={historyPanelId}
                           onChanged={async (done) => {
                             await refresh().catch(report);
                             setReloads((n) => n + 1);
@@ -796,7 +799,32 @@ export function App() {
                       {workspaceActions(current, "save")}
                     </>
                   }
-                  menuActions={workspaceActions(current, "menu")}
+                  menuActions={
+                    <>
+                      {current.currentVersion && (
+                        <button
+                          type="button"
+                          className="menu-history"
+                          onClick={(event) => {
+                            // Opened for More, so closing it returns focus to More, not to this
+                            // item in a menu that has closed.
+                            const more = event.currentTarget
+                              .closest(".tool-panel")
+                              ?.querySelector<HTMLElement>(".tool-more");
+                            event.currentTarget.closest<HTMLElement>("[popover]")?.hidePopover();
+                            document
+                              .getElementById(historyPanelId)
+                              ?.showPopover(more ? { source: more } : undefined);
+                            // Focus goes back to More, so the next Tab enters the panel.
+                            more?.focus();
+                          }}
+                        >
+                          {t("history.heading")}
+                        </button>
+                      )}
+                      {workspaceActions(current, "menu")}
+                    </>
+                  }
                   details={
                     <Details
                       key={`details-${current.id}`}

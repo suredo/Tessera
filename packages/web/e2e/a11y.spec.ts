@@ -297,7 +297,17 @@ test("APP-11: the app works by keyboard alone, with the focus always visible", a
   // A confirmation: Tab to Restore, Enter; Tab on to its Cancel, Enter closes it.
   await selectWorkspace(page, "Shopping list");
   await expect(toolHeading(page)).toHaveText("Shopping list", TOOL_START);
-  await tabTo(page, page.getByRole("button", { name: en["history.heading"], exact: true }));
+  if (page.viewportSize()!.width >= 1000) {
+    await tabTo(page, page.getByRole("button", { name: en["history.heading"], exact: true }));
+  } else {
+    // On a phone, History is in More (e-mobile).
+    await tabTo(page, page.getByRole("button", { name: en["tool.more"] }));
+    await page.keyboard.press("Enter");
+    await tabTo(
+      page,
+      page.locator(".tool-menu").getByRole("button", { name: en["history.heading"] }),
+    );
+  }
   await page.keyboard.press("Enter");
   await tabTo(page, page.getByRole("button", { name: "Restore version 1" }));
   await page.keyboard.press("Enter");

@@ -17,8 +17,9 @@ export async function clickToolAction(page: Page, name: string) {
 
 export async function openToolHistory(page: Page) {
   await closeWorkspaces(page);
+  // The header's History, or, on a narrow panel where it is in More, More's (e-mobile).
   if (!(await page.getByRole("region", { name: en["history.heading"] }).isVisible())) {
-    await page.getByRole("button", { name: en["history.heading"], exact: true }).click();
+    await clickToolAction(page, en["history.heading"]);
   }
 }
 
