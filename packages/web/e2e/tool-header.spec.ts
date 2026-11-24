@@ -2,6 +2,7 @@ import {
   clickWorkspaceAction,
   openWorkspaces,
   closeWorkspaces,
+  selectWorkspace,
 } from "./support/workspace-actions.ts";
 import { expect, test, type Page } from "@playwright/test";
 import { AxeBuilder } from "@axe-core/playwright";
@@ -217,6 +218,16 @@ test("APP-01, APP-09, APP-11: More opens Details and the header fits with access
   }
   await page.keyboard.press("Escape");
   await page.screenshot({ path: test.info().outputPath("tool-header.png"), fullPage: true });
+});
+
+test("APP-01: Save to My tools is 14 px text with no fill", async ({ page }) => {
+  const name = `Unsaved ${Math.random().toString(36).slice(2, 7)}`;
+  workspaceWith(app.folder, name, testTool(""));
+  await page.goto(app.url);
+  await selectWorkspace(page, name);
+  const save = page.locator(".save-tool > button");
+  await expect(save).toHaveCSS("font-size", "14px");
+  await expect(save).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
 
 test("APP-01: the workspace has the redesign's tints: a sage page and footer, a soft card edge, a white header", async ({
