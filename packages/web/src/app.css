@@ -967,6 +967,8 @@ button.primary {
 }
 .split.docked.conversation-open:not(.sheet) .tool-panel:not(.full-screen) > .tool-body {
   margin-right: calc(var(--chat-share) + 12px);
+  /* The 12 px divider is part of the card's 24 px. */
+  padding-right: 12px;
 }
 .split.docked.conversation-open:not(.sheet):has(.tool-panel:not(.full-screen))
   :is(.split-first, .split-divider) {
@@ -1004,10 +1006,11 @@ button.primary {
   bottom: 0.75rem;
   left: 1.5rem;
 }
-/* Docked: a plain column beside the tool, the divider its edge. */
+/* Docked: a plain column beside the tool, a line its edge, the divider just left of it. */
 .split.docked .split-first {
   inset: auto;
   border: 0;
+  border-left: 1px solid var(--host-card-border);
   border-radius: 0;
 }
 .conversation-head {
@@ -1186,7 +1189,6 @@ button.primary {
   cursor: col-resize;
   touch-action: none;
   border-radius: var(--ui-radius-control);
-  background: linear-gradient(var(--ui-divider), var(--ui-divider)) center / 2px 100% no-repeat;
 }
 .split-divider:hover,
 .split-divider:focus-visible {

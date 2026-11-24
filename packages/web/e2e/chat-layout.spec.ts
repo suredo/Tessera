@@ -186,10 +186,15 @@ test.describe("desktop", () => {
     expect(chat.x).toBeGreaterThanOrEqual(body.x + body.width);
     expect(header.x + header.width).toBeGreaterThanOrEqual(chat.x + chat.width);
     expect(chat.y).toBeGreaterThanOrEqual(header.y + header.height);
-    await expect(divider(page)).toHaveAttribute("aria-valuenow", "35");
+    // It opens 380 px wide, as in c-chat-docked, which is 30% of 1280 px.
+    expect(chat.width).toBe(380);
+    // The divider and 12 px make the card's 24 px beside it, past the scrollbar's room (A97).
+    const card = (await page.locator(".tool-frame").boundingBox())!;
+    expect(chat.x - (card.x + card.width)).toBeLessThanOrEqual(24 + 15);
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "30");
     await divider(page).focus();
     await page.keyboard.press("ArrowLeft");
-    await expect(divider(page)).toHaveAttribute("aria-valuenow", "40");
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "35");
     await page.keyboard.press("End");
     await expect(divider(page)).toHaveAttribute("aria-valuenow", "60");
     await page.keyboard.press("Home");
@@ -211,7 +216,7 @@ test.describe("desktop", () => {
     await page.mouse.down();
     await page.mouse.move(handle.x - 180, y, { steps: 5 });
     await page.mouse.up();
-    expect(Number(await divider(page).getAttribute("aria-valuenow"))).toBeGreaterThan(35);
+    expect(Number(await divider(page).getAttribute("aria-valuenow"))).toBeGreaterThan(30);
     const next = (await divider(page).boundingBox())!;
     await page.mouse.move(next.x + next.width / 2, y);
     await page.mouse.down();
