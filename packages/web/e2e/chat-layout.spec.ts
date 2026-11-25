@@ -189,6 +189,29 @@ test.describe("desktop", () => {
     expect(chat.y).toBeGreaterThanOrEqual(header.y + header.height);
     // It opens 380 px wide, as in c-chat-docked, which is 30% of 1280 px.
     expect(chat.width).toBe(380);
+    // Its resize handle shows on the edge, 36 px tall, with 3:1 contrast on both sides of it, as
+    // it is the only sign of the divider at rest (A99).
+    const handle = await divider(page).evaluate((node) => {
+      const style = getComputedStyle(node, "::after");
+      const color = (element: Element) => getComputedStyle(element).backgroundColor;
+      const luminance = (rgb: string) => {
+        const [r, g, b] = rgb.match(/[0-9.]+/g)!.map((part) => {
+          const value = Number(part) / 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+      };
+      const contrast = (one: string, other: string) => {
+        const [low, high] = [luminance(one), luminance(other)].sort((a, b) => a - b);
+        return (high! + 0.05) / (low! + 0.05);
+      };
+      const sides = [".app > main", ".split-first"].map((name) =>
+        contrast(style.backgroundColor, color(document.querySelector(name)!)),
+      );
+      return { size: [style.content, style.width, style.height], sides };
+    });
+    expect(handle.size).toEqual(['""', "3px", "36px"]);
+    for (const side of handle.sides) expect(side).toBeGreaterThanOrEqual(3);
     // The divider and 12 px make the card's 24 px beside it, past the scrollbar's room (A97).
     const card = (await page.locator(".tool-frame").boundingBox())!;
     expect(chat.x - (card.x + card.width)).toBeLessThanOrEqual(24 + 15);

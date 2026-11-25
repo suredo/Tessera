@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A98), with its choice and reasons."
+description: "Every decision made so far (A1–A99), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-25T13:57:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-25T22:24:11Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -113,6 +113,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A96 | Two departures from the redesign's general look | **The tool's card keeps the UI standard's background (#f9faf8) inside, not the mockups' white, and the ask bar keeps the controls' border (#81867e), not the mockups' paler #cad5bf. The host's own tints (the sage page, the near-white panels and drawer, the softer lines) are host variables, not UI standard tokens** | The owner's choice of 2026-11-22, asked under `ENG-32` for #416 slice 5: the tool's page is the tool's, and its token values are listed in the generation prompts, so whitening it would change every tool and need recordings made again; the paler outline would fall under the 3:1 contrast a field's edge needs (`APP-11`). |
 | A97 | What the redesign's final check found | **The docked conversation opens 380 px wide, as `c-chat-docked`, and stays resizable. These differences from the mockups stay: the scrollbar's reserved room, so the tool is 7.5 px left of centre, or 15 px narrower where it fills the width; Save to My tools keeps the controls' border (#81867e), not #9aa68f; the floating title starts 11 px further right, after its 44 px grip; host text and the hint's divider keep the UI standard's colors; Send and the phone's Open conversation are 44 px, not 40 (36 by 38 for the phone's Send), so the ask field is 4 px narrower (12 px on a phone); Save's right edge and the title sit 2 to 4 px off** | The owner's choice of 2026-11-24, asked under `ENG-32` in PR 433 after measuring app and mockups at the same window size: the reserved room keeps the tool from resizing as the scrollbar comes and goes, and the borders and targets keep 3:1 contrast and 44 px (`APP-11`). |
 | A98 | What the same-size comparison found after A97 | **Close conversation stays 44 px wide, not the mockup's 36, so the Position button sits 8 px further left. The drawer's search keeps the controls' border (#81867e), not #8c9983. A97's point that Save's right edge and the title sit 2 to 4 px off no longer applies: both now match** | The owner's choice of 2026-11-25, asked under `ENG-32` for #416 after `pnpm design:compare` gained same-size measuring (PR 434): 44 px targets, and one border for every field. |
+| A99 | The docked divider's handle | **The handle keeps the mockup's size and place but takes the controls' border color (#81867e), not #a6b49c** | The owner's choice of 2026-11-25, asked under `ENG-32` in PR 436 after Codex's review: at rest the handle is the only sign that the divider can be dragged, and the paler one has about 2:1 contrast, under the 3:1 that `APP-11` needs. |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2
