@@ -1220,7 +1220,8 @@ button.primary {
   touch-action: none;
   border-radius: var(--ui-radius-control);
 }
-/* The mockup's handle, on the conversation's edge a little above the middle. */
+/* The mockup's handle, on the conversation's edge a little above the middle, in the controls'
+   border color: at rest it is the only sign of the divider, so it needs 3:1 (decision A99). */
 .split-divider::after {
   content: "";
   position: absolute;
@@ -1229,7 +1230,7 @@ button.primary {
   width: 3px;
   height: 36px;
   border-radius: 3px;
-  background: #a6b49c;
+  background: var(--ui-control-border);
 }
 .split-divider:hover,
 .split-divider:focus-visible {

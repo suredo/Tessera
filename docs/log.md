@@ -2,7 +2,7 @@
 
 ## 2026-11-25
 
-* **Fixed**: The [web host](code/web/package.md)'s docked divider shows the mockup's handle again, which PR 433 had removed; the Undo, History, full screen and More icons, the gap between a message's paragraphs, and the phone's icon colors and ask field text follow the mockups. Found by looking at the same-size pairs, not by measuring. Part of [issue 416](https://github.com/suredo/Tessera/issues/416), under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-25T21:40:58Z.
+* **Fixed**: The [web host](code/web/package.md)'s docked divider shows the mockup's handle again, which PR 433 had removed; the Undo, History, full screen and More icons, the gap between a message's paragraphs, and the phone's icon colors and ask field text follow the mockups. The handle is darker than the mockup's, for contrast (decision [A99](decisions/decision-log.md); updated at 2026-11-25T22:24:11Z after Codex's review). Found by looking at the same-size pairs, not by measuring. Part of [issue 416](https://github.com/suredo/Tessera/issues/416), under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-25T21:40:58Z.
 
 * **Fixed**: The [web host](code/web/package.md)'s header buttons, title, Save, Position button, conversation header padding and drawer search corners take the sizes the same-size comparison measured in the mockups; the owner accepted the two differences left (decision [A98](decisions/decision-log.md)). Part of [issue 416](https://github.com/suredo/Tessera/issues/416), under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-25T13:57:00Z.
 
