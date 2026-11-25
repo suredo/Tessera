@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-24
+
+* **Fixed**: The [web host](code/web/package.md) corrects what the UI redesign's first final check measured: the strip under the footer is gone, drawer rows are 64 px, Send is a 44 px target, and Save to My tools' text, the message bubble, the open row, the messages' padding, the floating panel's and the phone sheet's height take the mockups' values. The docked conversation opens 380 px wide, and the owner accepted the differences that remain (decision [A97](decisions/decision-log.md)); updated at 2026-11-24T12:59:40Z. Part of [issue 416](https://github.com/suredo/Tessera/issues/416), measured against the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-24T04:46:10Z.
+
 ## 2026-11-23
 
 * **Changed**: On a phone the [conversation](code/web/package.md) opens as a modal bottom sheet, as in the UI redesign's `f-mobile-chat` mockup: a handle, the title and close, over a scrim; everything but the sheet, the ask bar and the notices (Cancel, a request's choices) is inert, Tab stays in those, and Escape or the scrim closes it, focus returning to Open conversation; it stays on top with Dock saved, and keeps 16 px sides (updated at 2026-11-23T14:34:23Z after Codex's review). Completes [issue 415](https://github.com/suredo/Tessera/issues/415), compared with the mockups under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-23T14:03:00Z.

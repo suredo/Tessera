@@ -12,6 +12,8 @@
   --host-panel: #fcfdf9;
   --host-panel-border: #d5decc;
   --host-drawer: #fafcf7;
+  --host-bubble: #eaf0e3;
+  --host-row: #e4edd9;
 }
 
 html {
@@ -63,6 +65,11 @@ body {
   margin: 0;
   font-size: 0.75rem;
   color: var(--ui-text-secondary);
+}
+/* The mockup's 14 px with no fill; the border stays the controls'. */
+.save-tool > button {
+  font-size: 0.875rem;
+  background: transparent;
 }
 .saved-label {
   margin-inline-start: 0.75rem;
@@ -300,6 +307,10 @@ button.primary {
   margin: 0;
   padding: 0 var(--ui-padding);
 }
+/* With nothing to say, the notice takes no room, so the footer ends at the window's edge. */
+.notice > [role="status"]:empty {
+  margin: 0;
+}
 /* The model's words follow the app's on a line of their own, never in its sentence (GEN-12). */
 [role="status"] {
   white-space: pre-line;
@@ -390,6 +401,8 @@ button.primary {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  /* A short list keeps its rows' height rather than sharing out the room. */
+  align-content: start;
 }
 .drawer-footer {
   margin-top: 0.75rem;
@@ -403,15 +416,21 @@ button.primary {
 .workspace-drawer input {
   min-height: 44px;
 }
+/* Two lines and their padding come to 62 px; the mockup's rows are 64. */
+.workspace-drawer .workspace-name {
+  min-height: 64px;
+}
 .drawer-new,
 .drawer-nav {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   width: 100%;
-  margin-bottom: 0.375rem;
   text-align: start;
   font-size: 0.875rem;
+}
+.drawer-new {
+  margin-bottom: 0.375rem;
 }
 .drawer-nav,
 .drawer-footer nav button,
@@ -540,7 +559,7 @@ button.primary {
   border-radius: var(--ui-radius-control);
 }
 .workspace.open {
-  background: var(--ui-accent-soft);
+  background: var(--host-row);
   box-shadow: inset 3px 0 var(--ui-accent);
 }
 .workspace-name {
@@ -548,7 +567,6 @@ button.primary {
   align-content: center;
   flex: 1;
   min-width: 0;
-  min-height: 64px;
   padding: 0.625rem 0.75rem;
   background: transparent;
   border: 0;
@@ -949,6 +967,8 @@ button.primary {
 }
 .split.docked.conversation-open:not(.sheet) .tool-panel:not(.full-screen) > .tool-body {
   margin-right: calc(var(--chat-share) + 12px);
+  /* The 12 px divider is part of the card's 24 px. */
+  padding-right: 12px;
 }
 .split.docked.conversation-open:not(.sheet):has(.tool-panel:not(.full-screen))
   :is(.split-first, .split-divider) {
@@ -962,7 +982,8 @@ button.primary {
   position: absolute;
   z-index: 2;
   width: min(23.75rem, calc(100% - 1rem));
-  height: calc(100% - 6.25rem);
+  /* The mockup's 688 of 812 px: 88 px above, 36 px below. */
+  height: calc(100% - 7.75rem);
   box-sizing: border-box;
   border-color: var(--host-panel-border);
   border-radius: 0.875rem;
@@ -985,10 +1006,11 @@ button.primary {
   bottom: 0.75rem;
   left: 1.5rem;
 }
-/* Docked: a plain column beside the tool, the divider its edge. */
+/* Docked: a plain column beside the tool, a line its edge, the divider just left of it. */
 .split.docked .split-first {
   inset: auto;
   border: 0;
+  border-left: 1px solid var(--host-card-border);
   border-radius: 0;
 }
 .conversation-head {
@@ -1122,11 +1144,15 @@ button.primary {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 0.5rem 1.5rem 1.5rem;
+  padding: 9px 1.5rem 26px;
 }
 .split-first .chat-log {
   max-height: none;
   overflow: visible;
+}
+/* The panel's own padding ends the messages. */
+.split-first .chat-log:last-child {
+  margin-bottom: 0;
 }
 .conversation-hint {
   flex-shrink: 0;
@@ -1163,7 +1189,6 @@ button.primary {
   cursor: col-resize;
   touch-action: none;
   border-radius: var(--ui-radius-control);
-  background: linear-gradient(var(--ui-divider), var(--ui-divider)) center / 2px 100% no-repeat;
 }
 .split-divider:hover,
 .split-divider:focus-visible {
@@ -1213,8 +1238,8 @@ button.primary {
   grid-area: 1 / 1 / 2 / -1;
   inset: auto 0 0 0;
   width: auto;
-  /* About 85% of the tool's area under the 76 px header, as the mockup's 570 of 674 px. */
-  height: calc((100% - 76px) * 0.85);
+  /* The mockup's 570 of the 674 px under the 76 px header. */
+  height: calc((100% - 76px) * 0.8457);
   max-height: none;
   margin: 0;
   border: 0;
@@ -1238,7 +1263,7 @@ button.primary {
   padding: 19px 16px 13px;
 }
 .split.sheet .split-first > .chat {
-  padding-inline: 16px;
+  padding: 2px 16px 26px;
 }
 .split.sheet .conversation-head h2 {
   font-size: 1.0625rem;
@@ -1277,7 +1302,7 @@ button.primary {
 .chat-log .from-person {
   margin-left: 0.875rem;
   padding: 0.875rem 1rem;
-  background: var(--ui-accent-soft);
+  background: var(--host-bubble);
   border-radius: 12px 12px 3px 12px;
 }
 .chat-speaker {
@@ -1359,6 +1384,7 @@ button.primary {
   background: var(--ui-accent-soft);
 }
 .ask-send {
+  min-height: 44px;
   border-radius: 0.5rem;
 }
 /* The bar's own icon only beside a field with room; on a narrow screen the opener keeps its icon
@@ -1368,6 +1394,9 @@ button.primary {
 }
 /* The phone's footer and ask bar (e-mobile): 94 px, the bar at its top, tighter inside. */
 @media (max-width: 30rem) {
+  .tool-frame {
+    border-radius: 10px;
+  }
   .ask-footer {
     align-items: flex-start;
     min-height: 94px;

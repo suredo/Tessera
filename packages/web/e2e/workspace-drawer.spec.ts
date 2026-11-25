@@ -101,6 +101,11 @@ test("APP-01, APP-03, APP-11: the drawer reads as the mockup: a close cross, sho
   // Used today, so the short date says so, as in d-workspaces-open.
   await expect(row(open).locator(".detail")).toHaveText(en["workspaces.today"]);
   await expect(row(open)).toHaveClass(/open/);
+  await expect(row(open)).toHaveCSS("background-color", "rgb(228, 237, 217)");
+  // A short list keeps the mockup's 64 px rows rather than stretching them over the drawer.
+  for (const name of [open, other]) {
+    expect((await row(name).boundingBox())!.height).toBe(64);
+  }
   const more = (name: string) => row(name).locator(".workspace-more");
   if (await page.evaluate(() => matchMedia("(hover: hover)").matches)) {
     await page.mouse.move(600, 400);

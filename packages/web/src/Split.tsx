@@ -12,13 +12,19 @@ import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 
 // Stable panes (APP-01, RUN-02): hiding or moving chat never reparents the sandbox.
-export const SPLIT = { initial: 35, min: 25, max: 60, step: 5 } as const;
-export const clampShare = (share: number): number =>
-  Math.round(Math.min(SPLIT.max, Math.max(SPLIT.min, share)));
-export function keyShare(key: string, share: number): number | undefined {
-  if (key === "ArrowLeft" || key === "ArrowUp") return clampShare(share + SPLIT.step);
-  if (key === "ArrowRight" || key === "ArrowDown") return clampShare(share - SPLIT.step);
-  if (key === "Home") return SPLIT.min;
+// Docked, the conversation opens `initial` px wide (decision A97); the rest are shares in percent.
+export const SPLIT = { initial: 380, min: 25, max: 60, step: 5 } as const;
+/** The opening width as a share of this room, so the divider can say where it is. */
+export const initialShare = (width: number): number =>
+  Math.min(SPLIT.max, Math.round((SPLIT.initial / width) * 100));
+/** The narrowest share: never wider than the conversation opens, as in a very wide window. */
+export const minShare = (width: number): number => Math.min(SPLIT.min, initialShare(width));
+export const clampShare = (share: number, min: number = SPLIT.min): number =>
+  Math.round(Math.min(SPLIT.max, Math.max(min, share)));
+export function keyShare(key: string, share: number, min: number = SPLIT.min): number | undefined {
+  if (key === "ArrowLeft" || key === "ArrowUp") return clampShare(share + SPLIT.step, min);
+  if (key === "ArrowRight" || key === "ArrowDown") return clampShare(share - SPLIT.step, min);
+  if (key === "Home") return min;
   if (key === "End") return SPLIT.max;
   return undefined;
 }
@@ -49,6 +55,10 @@ const onPhoneChange = (changed: () => void) => {
   return () => query.removeEventListener("change", changed);
 };
 const onPhone = () => typeof matchMedia === "function" && matchMedia(PHONE).matches;
+const onResize = (changed: () => void) => {
+  window.addEventListener("resize", changed);
+  return () => window.removeEventListener("resize", changed);
+};
 const FOCUSABLE =
   "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select, [tabindex]";
 
@@ -68,10 +78,18 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
   const [corner, setCorner] = useState<Corner>(
     () => CORNERS.find((item) => item === read("tessera.chatCorner")) ?? "top-right",
   );
-  const [share, setShare] = useState(() => {
+  // The share the person chose, if any; until then the conversation opens at SPLIT.initial px.
+  const [chosen, setChosen] = useState(() => {
     const value = Number(read("tessera.chatWidth"));
-    return Number.isFinite(value) && value > 0 ? clampShare(value) : SPLIT.initial;
+    return Number.isFinite(value) && value > 0 ? value : null;
   });
+  const width = useSyncExternalStore(onResize, () => window.innerWidth);
+  const min = minShare(width);
+  const share = chosen === null ? initialShare(width) : clampShare(chosen, min);
+  const resize = (next: number) => {
+    setChosen(next);
+    keep("tessera.chatWidth", String(next));
+  };
   const [dragging, setDragging] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -157,7 +175,11 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ "--chat-share": share + "%" } as React.CSSProperties}
+      style={
+        {
+          "--chat-share": chosen === null ? SPLIT.initial + "px" : share + "%",
+        } as React.CSSProperties
+      }
     >
       <div className="split-second" inert={sheet}>
         {second}
@@ -170,16 +192,15 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
         tabIndex={0}
         aria-orientation="vertical"
         aria-label={t("split.label")}
-        aria-valuemin={SPLIT.min}
+        aria-valuemin={min}
         aria-valuemax={SPLIT.max}
         aria-valuenow={share}
         aria-valuetext={t("split.value", { share: String(share) })}
         onKeyDown={(event) => {
-          const next = keyShare(event.key, share);
+          const next = keyShare(event.key, share, min);
           if (next === undefined) return;
           event.preventDefault();
-          setShare(next);
-          keep("tessera.chatWidth", String(next));
+          resize(next);
         }}
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -188,9 +209,7 @@ export function Split({ first, second, footer, open, onOpen, expanded = false }:
         onPointerMove={(event) => {
           if (!event.currentTarget.hasPointerCapture(event.pointerId)) return;
           const rect = box.current!.getBoundingClientRect();
-          const next = clampShare(((rect.right - event.clientX) / rect.width) * 100);
-          setShare(next);
-          keep("tessera.chatWidth", String(next));
+          resize(clampShare(((rect.right - event.clientX) / rect.width) * 100, min));
         }}
         onLostPointerCapture={() => setDragging(false)}
       />

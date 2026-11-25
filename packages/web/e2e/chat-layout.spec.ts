@@ -106,8 +106,15 @@ test.describe("desktop", () => {
     // The bar is centred, at most about 790 px wide as in the a-focus mockup.
     const box = (await bar.boundingBox())!;
     expect(box.width).toBeLessThanOrEqual(791);
-    // The footer is 88 px, as in the mockups.
-    expect((await page.locator(".ask-footer").boundingBox())!.height).toBeGreaterThanOrEqual(88);
+    // The footer is 88 px, as in the mockups, and ends at the window's edge (a-focus).
+    const footer = (await page.locator(".ask-footer").boundingBox())!;
+    expect(footer.height).toBe(88);
+    expect(footer.y + footer.height).toBe(900);
+    const send = (await bar
+      .getByRole("button", { name: en["request.send"], exact: true })
+      .boundingBox())!;
+    expect(send.width).toBeGreaterThanOrEqual(44);
+    expect(send.height).toBeGreaterThanOrEqual(44);
     expect(Math.abs(box.x + box.width / 2 - 640)).toBeLessThanOrEqual(2);
     const drawer = await openWorkspaces(page);
     await drawer.getByRole("button", { name: en["workspaces.new"], exact: true }).click();
@@ -128,7 +135,9 @@ test.describe("desktop", () => {
     // 24 px in from the right and 24 px below the 64 px header.
     expect(Math.round(1280 - (box.x + box.width))).toBe(24);
     expect(Math.round(box.y)).toBe(88);
-    expect(box.height).toBeGreaterThan(500);
+    // 688 px in a 900 px window.
+    expect(box.height).toBe(688);
+    await expect(panel.locator(".chat")).toHaveCSS("padding", "9px 24px 26px");
     for (const control of await panel.locator(".conversation-head button").all()) {
       const size = (await control.boundingBox())!;
       expect(size.width).toBeGreaterThanOrEqual(44);
@@ -177,10 +186,15 @@ test.describe("desktop", () => {
     expect(chat.x).toBeGreaterThanOrEqual(body.x + body.width);
     expect(header.x + header.width).toBeGreaterThanOrEqual(chat.x + chat.width);
     expect(chat.y).toBeGreaterThanOrEqual(header.y + header.height);
-    await expect(divider(page)).toHaveAttribute("aria-valuenow", "35");
+    // It opens 380 px wide, as in c-chat-docked, which is 30% of 1280 px.
+    expect(chat.width).toBe(380);
+    // The divider and 12 px make the card's 24 px beside it, past the scrollbar's room (A97).
+    const card = (await page.locator(".tool-frame").boundingBox())!;
+    expect(chat.x - (card.x + card.width)).toBeLessThanOrEqual(24 + 15);
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "30");
     await divider(page).focus();
     await page.keyboard.press("ArrowLeft");
-    await expect(divider(page)).toHaveAttribute("aria-valuenow", "40");
+    await expect(divider(page)).toHaveAttribute("aria-valuenow", "35");
     await page.keyboard.press("End");
     await expect(divider(page)).toHaveAttribute("aria-valuenow", "60");
     await page.keyboard.press("Home");
@@ -202,7 +216,7 @@ test.describe("desktop", () => {
     await page.mouse.down();
     await page.mouse.move(handle.x - 180, y, { steps: 5 });
     await page.mouse.up();
-    expect(Number(await divider(page).getAttribute("aria-valuenow"))).toBeGreaterThan(35);
+    expect(Number(await divider(page).getAttribute("aria-valuenow"))).toBeGreaterThan(30);
     const next = (await divider(page).boundingBox())!;
     await page.mouse.move(next.x + next.width / 2, y);
     await page.mouse.down();
@@ -365,7 +379,11 @@ test.describe("phone: the conversation as a bottom sheet (f-mobile-chat)", () =>
     // 16 px on each side, as the mockup's final phone rules.
     await expect(sheet.locator(".conversation-head")).toHaveCSS("padding-left", "16px");
     await expect(sheet.locator(".conversation-head")).toHaveCSS("padding-right", "16px");
-    await expect(sheet.locator(".chat")).toHaveCSS("padding-left", "16px");
+    await expect(sheet.locator(".chat")).toHaveCSS("padding", "2px 16px 26px");
+    // The footer ends at the window's edge and Send keeps a 44 px target (e-mobile).
+    const footer = (await page.locator(".ask-footer").boundingBox())!;
+    expect(footer.y + footer.height).toBe(900);
+    expect((await page.locator(".ask-send").boundingBox())!.height).toBeGreaterThanOrEqual(44);
   });
   test("APP-10, APP-11: while a request runs, Cancel stays reachable by keyboard with the sheet open", async ({
     page,
