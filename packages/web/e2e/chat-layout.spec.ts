@@ -189,6 +189,12 @@ test.describe("desktop", () => {
     expect(chat.y).toBeGreaterThanOrEqual(header.y + header.height);
     // It opens 380 px wide, as in c-chat-docked, which is 30% of 1280 px.
     expect(chat.width).toBe(380);
+    // Its resize handle shows on the edge, 36 px tall.
+    const handle = await divider(page).evaluate((node) => {
+      const style = getComputedStyle(node, "::after");
+      return [style.content, style.width, style.height, style.backgroundColor];
+    });
+    expect(handle).toEqual(['""', "3px", "36px", "rgb(166, 180, 156)"]);
     // The divider and 12 px make the card's 24 px beside it, past the scrollbar's room (A97).
     const card = (await page.locator(".tool-frame").boundingBox())!;
     expect(chat.x - (card.x + card.width)).toBeLessThanOrEqual(24 + 15);

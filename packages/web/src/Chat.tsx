@@ -34,7 +34,18 @@ export function Chat({ messages, children }: Props) {
             <span className="chat-speaker">
               {message.from === "person" ? t("chat.you") : t("chat.tessera")}
             </span>
-            <p className="chat-text">{message.text}</p>
+            <p className="chat-text">
+              {/* A blank line between paragraphs stays in the text, shown as the mockups' gap. */}
+              {message.text.split(/(\n{2,})/).map((part, at) =>
+                at % 2 ? (
+                  <span key={at} className="chat-gap">
+                    {part}
+                  </span>
+                ) : (
+                  part
+                ),
+              )}
+            </p>
           </div>
         ))}
       </div>

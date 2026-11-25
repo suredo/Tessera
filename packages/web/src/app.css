@@ -343,6 +343,12 @@ button.primary {
 .drawer-opener > svg {
   color: var(--ui-accent);
 }
+/* A phone's is the text's color, as in e-mobile. */
+@media (max-width: 40rem) {
+  .tool-header .drawer-opener > svg {
+    color: inherit;
+  }
+}
 /* In the tool header, as the mockups' Workspaces: flush with the header's edge, 14 px. */
 .tool-header .drawer-opener {
   gap: 9px;
@@ -989,6 +995,10 @@ button.primary {
   z-index: 1;
   margin-top: 64px;
 }
+/* Over the conversation's edge, which its handle straddles. */
+.split.docked.conversation-open:not(.sheet):has(.tool-panel:not(.full-screen)) .split-divider {
+  z-index: 2;
+}
 /* Floating: about 380 px, 24 px in from the side and below the tool's 64 px header (12 px from
    the bottom in a lower corner), as in b-chat-floating. */
 .split.floating .split-first {
@@ -1210,6 +1220,17 @@ button.primary {
   touch-action: none;
   border-radius: var(--ui-radius-control);
 }
+/* The mockup's handle, on the conversation's edge a little above the middle. */
+.split-divider::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - 28px);
+  right: -1.5px;
+  width: 3px;
+  height: 36px;
+  border-radius: 3px;
+  background: #a6b49c;
+}
 .split-divider:hover,
 .split-divider:focus-visible {
   background-color: var(--ui-accent-soft);
@@ -1335,6 +1356,11 @@ button.primary {
   margin: 0;
   white-space: pre-wrap;
 }
+.chat-gap {
+  display: block;
+  height: 14px;
+  overflow: hidden;
+}
 
 /* The request box (GEN-01): the ask bar, then the running request's progress below it. */
 .request {
@@ -1362,6 +1388,8 @@ button.primary {
 .ask-bar > svg,
 .ask-open > svg {
   flex-shrink: 0;
+}
+.ask-bar > svg {
   color: var(--ui-accent);
 }
 .ask-bar textarea {
@@ -1429,6 +1457,7 @@ button.primary {
     border-radius: 11px;
   }
   .ask-bar textarea {
+    padding: 11px 3px;
     font-size: 0.8125rem;
   }
   .ask-bar > svg {
