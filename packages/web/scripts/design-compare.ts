@@ -119,7 +119,10 @@ function wideBoard() {
  * state on screen are left out, as the app's are. */
 const PARTS: Record<string, [string, string]> = {
   header: [".t-header", ".tool-header"],
-  Workspaces: [".t-workspaces, .t-mobile-workspaces > summary", ".tool-header .drawer-opener"],
+  Workspaces: [
+    ".t-header > .t-workspaces, .t-mobile-workspaces > summary",
+    ".tool-header .drawer-opener",
+  ],
   Undo: [".t-actions > button:first-child", ".tool-header-actions > .header-action:first-of-type"],
   History: [".t-actions > details:not(.t-more) > summary", ".history-opener"],
   "Full screen": [".t-actions > [aria-label='Full screen tool']", ".full-screen-opener"],
