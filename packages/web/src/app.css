@@ -67,6 +67,10 @@ body {
   color: var(--ui-text-secondary);
 }
 /* The mockup's 14 px with no fill; the border stays the controls'. */
+/* Set a little apart, as in a-focus. */
+.save-tool {
+  margin-inline: 6px;
+}
 .save-tool > button {
   font-size: 0.875rem;
   background: transparent;
@@ -100,7 +104,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0 0.75rem;
+  /* 12 px with the 1 px border, which only a high-contrast mode shows. */
+  padding: 0 11px;
   font-size: 0.875rem;
   color: var(--ui-text);
   background: transparent;
@@ -345,6 +350,13 @@ button.primary {
   font-size: 0.875rem;
   color: var(--ui-text);
 }
+/* Its invisible border stays out of the mockup's measure; on a phone it is an icon alone. */
+@media (min-width: 40.01rem) {
+  .tool-header .drawer-opener {
+    margin-left: -1px;
+    padding-right: 11px;
+  }
+}
 .workspace-drawer {
   position: fixed;
   inset: 0 auto 0 0;
@@ -504,6 +516,7 @@ button.primary {
   box-sizing: border-box;
   width: 100%;
   padding-left: 2.4375rem;
+  border-radius: 7px;
   font-size: 0.875rem;
   background: transparent;
 }
@@ -1017,7 +1030,7 @@ button.primary {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 0.8125rem 0.5rem 0.8125rem 1.125rem;
+  padding: 0.8125rem 0.75rem 0.8125rem 1.125rem;
   flex-shrink: 0;
 }
 .split.floating .conversation-head {
@@ -1049,6 +1062,13 @@ button.primary {
   background: transparent;
   border: 0;
   anchor-name: --chat-position;
+}
+.conversation-position > svg {
+  width: 17px;
+}
+/* The chevron follows the name without the icon's gap. */
+.conversation-position > span {
+  margin-left: -5px;
 }
 .conversation-position:hover {
   background: var(--ui-accent-soft);

@@ -2,6 +2,8 @@
 
 ## 2026-11-25
 
+* **Fixed**: The [web host](code/web/package.md)'s header buttons, title, Save, Position button, conversation header padding and drawer search corners take the sizes the same-size comparison measured in the mockups; the owner accepted the two differences left (decision [A98](decisions/decision-log.md)). Part of [issue 416](https://github.com/suredo/Tessera/issues/416), under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-25T13:57:00Z.
+
 * **Changed**: `pnpm design:compare` ([web package](code/web/package.md)) also compares the app with each mockup at the mockup's own size, with a stored conversation, and lists the differences it measures, after the scaled pairs alone had hidden differences in [issue 416](https://github.com/suredo/Tessera/issues/416)'s slices. The `ENG-32` rule and its sizes are unchanged. Recorded by `claude-code/claude-opus-5-5` at 2026-11-25T12:36:23Z.
 
 ## 2026-11-24

@@ -228,6 +228,11 @@ test("APP-01: Save to My tools is 14 px text with no fill", async ({ page }) => 
   const save = page.locator(".save-tool > button");
   await expect(save).toHaveCSS("font-size", "14px");
   await expect(save).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  // On desktop, set 6 px apart from the buttons beside it, whose text starts 12 px in (a-focus).
+  if (page.viewportSize()!.width >= 1000) {
+    await expect(page.locator(".save-tool")).toHaveCSS("margin-left", "6px");
+    await expect(page.locator(".tool-more")).toHaveCSS("padding-left", "11px");
+  }
 });
 
 test("APP-01: the workspace has the redesign's tints: a sage page and footer, a soft card edge, a white header", async ({

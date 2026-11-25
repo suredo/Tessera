@@ -135,6 +135,7 @@ test.describe("desktop", () => {
     // 24 px in from the right and 24 px below the 64 px header.
     expect(Math.round(1280 - (box.x + box.width))).toBe(24);
     expect(Math.round(box.y)).toBe(88);
+    await expect(panel.locator(".conversation-head")).toHaveCSS("padding-right", "12px");
     // 688 px in a 900 px window.
     expect(box.height).toBe(688);
     await expect(panel.locator(".chat")).toHaveCSS("padding", "9px 24px 26px");
