@@ -4,11 +4,11 @@ title: "UI redesign: the tool comes first"
 description: "The separate UI redesign milestone: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout."
 tags: [roadmap, ux, app, redesign]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T00:38:13Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T00:47:07Z }
 ---
 # UI redesign: the tool comes first
 
-The owner approved this scope on 2026-11-20 as a separate **UI redesign** milestone. It changes how the host app frames tools (`APP-01` to `APP-11`), not how tools are generated, except for one new declaration (below). The mockups are in `design/ui-redesign/` (`overview.html` first). Render all seven states and the overview offline with `node design/ui-redesign/render.mjs design/ui-redesign test-output/ui-redesign`; an optional third argument selects a JSON job list, for example `'[["a-focus.html",1440,900]]'`.
+The owner approved this scope on 2026-11-20 as a separate **UI redesign** milestone. It changes how the host app frames tools (`APP-01` to `APP-11`), not how tools are generated, except for one new declaration (below). The mockups are in `design/ui-redesign/` (`overview.html` first). Render all 17 states and the overview offline with `node design/ui-redesign/render.mjs design/ui-redesign test-output/ui-redesign`; an optional third argument selects a JSON job list, for example `'[["a-focus.html",1440,900]]'`.
 
 ## Why
 
@@ -21,7 +21,7 @@ A review of the current app (ten screenshots, three design rounds) found: the to
 | Focus, the default | `design/ui-redesign/a-focus.html` | Workspaces closed, chat hidden, the tool at its declared width, an ask bar in a footer |
 | Floating chat | `design/ui-redesign/b-chat-floating.html` | The conversation over the tool on the right, about 380 px, movable, with a position menu |
 | Docked chat | `design/ui-redesign/c-chat-docked.html` | The conversation beside the tool on the right; the tool narrows; a resizable divider |
-| Workspaces | `design/ui-redesign/d-workspaces-open.html` | A drawer over the tool: New tool, My tools, recent work with search, Import, Connections, Trash, Setup and status |
+| Workspaces | `design/ui-redesign/d-workspaces-open.html` | A drawer over the tool: New tool, My tools, recent work with search, Import from a file, Trash and Settings (A101) |
 | A wide tool | `design/ui-redesign/g-wide-tool.html` | A board that declares wide uses the full width |
 | Phone | `design/ui-redesign/e-mobile.html`, `design/ui-redesign/f-mobile-chat.html` | The tool full screen; the conversation as a bottom sheet; the ask bar at the bottom |
 | First run | `design/ui-redesign/h-start.html`, `i-start-working.html`, `j-start-setup.html`, `k-start-mobile.html` | No workspaces yet: the invitation and a large field; the first request as a conversation; setup not ready; a phone (A100) |
