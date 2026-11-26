@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-26
+
+* **Changed**: The [UI redesign roadmap](roadmap/ui-redesign.md) records the phone slice and issue 416's slices as merged, and links the [closing report](../evals/reports/2026-11-25-ui-redesign-report.md), which waits for the owner's sign-off. Recorded by `claude-code/claude-opus-5-5` at 2026-11-26T00:12:27Z.
+
 ## 2026-11-25
 
 * **Fixed**: The [web host](code/web/package.md)'s docked divider shows the mockup's handle again, which PR 433 had removed; the Undo, History, full screen and More icons, the gap between a message's paragraphs, and the phone's icon colors and ask field text follow the mockups. The handle is darker than the mockup's, for contrast (decision [A99](decisions/decision-log.md); updated at 2026-11-25T22:24:11Z after Codex's review). Found by looking at the same-size pairs, not by measuring. Part of [issue 416](https://github.com/suredo/Tessera/issues/416), under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-25T21:40:58Z.
