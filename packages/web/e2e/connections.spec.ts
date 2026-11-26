@@ -41,13 +41,16 @@ const entry = (page: Page, name: string) =>
     .getByRole("listitem")
     .filter({ has: page.getByRole("heading", { name, exact: true }) });
 
-test("CAP-02: connections can be added from the first screen, before any tool", async ({
+test("CAP-02, APP-07: connections can be added from the first screen, before any tool, on Settings beside the setup (A101)", async ({
   page,
 }) => {
   await page.goto(app.url);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
   await openAppSection(page, en["nav.connections"]);
   await expect(section(page).getByText(en["connections.none"])).toBeVisible();
+  // One page: its heading, the setup and the connections together.
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["nav.settings"]);
+  await expect(page.getByRole("region", { name: en["setup.heading"] })).toBeVisible();
 });
 
 test("CAP-02 A71: the person adds a connection with a key, which reaches the service and is never shown", async ({
