@@ -2,6 +2,8 @@
 
 ## 2026-11-26
 
+* **Changed**: The [first-run screen](code/web/package.md) follows the redesign's `h-start`, `j-start-setup` and `k-start-mobile`: the header and Workspaces drawer, the invitation, a large field with a hint and a named Send, and Import from a file, Connections, Trash and Setup & status as quiet links; before setup, the notice says what is missing first and the field shows but is off. Decision [A103](decisions/decision-log.md) keeps the drawer and moves Details under the conversation. Slice 7a of [issue 440](https://github.com/suredo/Tessera/issues/440), compared under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-26T01:35:52Z.
+
 * **Changed**: The [UI redesign](roadmap/ui-redesign.md) gains a second design round in the same milestone, approved by the owner: the first-run screen, one Settings page in place of Setup & status and Connections, and My tools and Trash (decisions [A100 to A102](decisions/decision-log.md), issues 440 to 442), with ten new mockups in `design/ui-redesign/`. The drawers' bottom rows become Import from a file, Trash and Settings. The draft closing report waits for these slices. Recorded by `claude-code/claude-opus-5-5` at 2026-11-26T00:38:13Z.
 
 ## 2026-11-25

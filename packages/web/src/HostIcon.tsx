@@ -13,6 +13,11 @@ const paths = {
   leaf: "M5 19C2 8 10 3 20 4c0 11-7 17-15 15Zm0 0L16 8",
   plus: "M12 5v14M5 12h14",
   search: "M16 10a6 6 0 1 1-12 0 6 6 0 0 1 12 0Zm-1 5 5 5",
+  import: "M12 4v11m-4-4 4 4 4-4M5 19h14",
+  link: "M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1",
+  trash: "M5 7h14M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3",
+  alert: "M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM12 8v5M12 16h.01",
+  status: "M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0ZM8.5 12l2.5 2.5 4.5-5",
 } as const;
 
 export function HostIcon({ name }: { name: keyof typeof paths }) {

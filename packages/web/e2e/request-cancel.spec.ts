@@ -67,7 +67,8 @@ for (const { phase, screen } of runs) {
       await expect.poll(() => calls.includes(phase), { timeout: 30_000 }).toBe(true);
       await page
         .getByRole("button", {
-          name: screen === "status" ? en["setup.openStatus"] : en["home.connections"],
+          // The first run's links to the status screen and the connections (A100).
+          name: screen === "status" ? en["workspaces.setup"] : en["home.connections"],
         })
         .click();
       const cancel = page.getByRole("button", { name: en["request.cancel"] });
