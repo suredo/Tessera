@@ -5,6 +5,7 @@ import {
   type SetupReport,
 } from "@tessera/contracts";
 import { useState } from "react";
+import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 import { chosenCheck, formatBytes } from "./setup.ts";
 
@@ -195,10 +196,16 @@ export function SetupNotice({ report, problem = "", onOpen }: NoticeProps) {
   if (!failed) return null;
   return (
     <div className="setup-notice" role="alert">
-      <p>{t("setup.notReady", { message: failed })}</p>
-      <button type="button" onClick={onOpen}>
-        {t("setup.openStatus")}
-      </button>
+      <HostIcon name="alert" />
+      <div>
+        {/* What is wrong first, then why, as in the redesign's j-start-setup (A100). */}
+        <p>
+          <strong>{t("setup.notReady")}</strong> {failed}
+        </p>
+        <button type="button" onClick={onOpen}>
+          {t("setup.openStatus")}
+        </button>
+      </div>
     </div>
   );
 }

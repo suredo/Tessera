@@ -149,6 +149,8 @@ test("PLAT-03: on the first screen, each Claude Code problem is explained with i
     await page.goto(app.url);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
     await expect(page.getByRole("alert")).toContainText(`Tessera can't make tools yet. ${message}`);
+    // The field shows, but takes nothing until the check passes (A100).
+    await expect(page.getByRole("textbox", { name: en["request.label"] })).toBeDisabled();
     await page.getByRole("button", { name: en["setup.openStatus"] }).click();
     await expect(status(page).getByText(message, { exact: true })).toBeVisible();
     // Nothing that needs the model is offered until the check passes.

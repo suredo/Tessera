@@ -82,41 +82,63 @@ export function EmptyState({
   details,
   chat = [],
 }: EmptyProps) {
+  // Before setup passes the field shows but takes nothing, and the notice says what is missing
+  // (A100); while the check runs, it is only off.
+  const notReady = (setup !== null && !setup.ready) || (setup === null && setupProblem !== "");
   return (
-    <main className="empty">
-      <h1>{t("home.heading")}</h1>
-      <p>{t("home.intro")}</p>
-      {((onRequest && setup?.ready) || chat.length > 0) && (
-        <Chat messages={chat}>
-          {onRequest && setup?.ready && (
-            <RequestBox working={requesting} progress={progress} onRequest={onRequest} />
-          )}
-        </Chat>
-      )}
-      {/* Such as the trash notice after the last workspace is deleted. */}
-      <p role="status">{notice}</p>
-      {cancelControl}
-      {/* What was deleted can still come back from here (DATA-09). */}
-      {onTrash && (
-        <button type="button" onClick={onTrash}>
-          {t("home.trash")}
-        </button>
-      )}
-      {onConnections && (
-        <button type="button" onClick={onConnections}>
-          {t("home.connections")}
-        </button>
-      )}
-      {onImport && <ImportFile onImport={onImport} />}
-      {onStatus &&
-        ((setup && !setup.ready) || (!setup && setupProblem) ? (
+    <main className="first-run">
+      <div className="first-run-column">
+        <div className="first-run-welcome">
+          <span className="first-run-mark">
+            <HostIcon name="leaf" />
+          </span>
+          <h1>{t("home.heading")}</h1>
+          <p>{t("home.intro")}</p>
+        </div>
+        {/* What was asked here before any workspace existed (A62). */}
+        {chat.length > 0 && <Chat messages={chat} />}
+        {onStatus && notReady && (
           <SetupNotice report={setup} problem={setupProblem} onOpen={onStatus} />
-        ) : (
-          <button type="button" onClick={onStatus}>
-            {t("setup.openStatus")}
-          </button>
-        ))}
-      {details}
+        )}
+        {onRequest && (
+          <RequestBox
+            size="large"
+            working={requesting}
+            disabled={!setup?.ready}
+            progress={progress}
+            onRequest={onRequest}
+          />
+        )}
+        {/* Such as the trash notice after the last workspace is deleted. */}
+        <p role="status" className="first-run-notice">
+          {notice}
+        </p>
+        {cancelControl}
+        <nav className="first-run-places" aria-label={t("home.places")}>
+          {onImport && <ImportFile onImport={onImport} icon={<HostIcon name="import" />} />}
+          {onConnections && (
+            <button type="button" onClick={onConnections}>
+              <HostIcon name="link" />
+              {t("home.connections")}
+            </button>
+          )}
+          {/* What was deleted can still come back from here (DATA-09). */}
+          {onTrash && (
+            <button type="button" onClick={onTrash}>
+              <HostIcon name="trash" />
+              {t("home.trash")}
+            </button>
+          )}
+          {onStatus && (
+            <button type="button" onClick={onStatus}>
+              <HostIcon name="status" />
+              {t("workspaces.setup")}
+            </button>
+          )}
+        </nav>
+        {/* Once something was asked, its details, such as why a request failed (APP-09, A100). */}
+        {chat.length > 0 && details}
+      </div>
     </main>
   );
 }
@@ -126,7 +148,7 @@ export function EmptyState({
  * not on screen there, so a reply is said in the notice. One list for both, so they can't drift.
  */
 const outsideChat = (view: string) =>
-  view === "trash" || view === "status" || view === "connections";
+  view === "trash" || view === "status" || view === "connections" || view === "library";
 
 /** How long a request waits for the turn before it to be kept in the chat, at most (A62). */
 const KEEP_WAIT_MS = 3_000;
@@ -599,26 +621,6 @@ export function App() {
       </main>
     );
   }
-  if (workspaces.length === 0 && !outsideChat(view)) {
-    const inTrash = (trash?.entries.length ?? 0) > 0;
-    return (
-      <EmptyState
-        notice={shownNotice}
-        onTrash={inTrash ? () => setView("trash") : undefined}
-        onConnections={() => setView("connections")}
-        onImport={importFile}
-        setup={setup}
-        setupProblem={setupProblem}
-        onStatus={() => setView("status")}
-        onRequest={request}
-        requesting={requesting}
-        progress={progress}
-        cancelControl={cancelControl}
-        details={<Details workspace={null} changes={settledRequests} />}
-        chat={chat.messages(null)}
-      />
-    );
-  }
   const current = workspaces.find((w) => w.id === openId) ?? null;
 
   // Runs an action, then reloads the lists; says `done` when it worked, or why it didn't.
@@ -690,6 +692,90 @@ export function App() {
     </button>
   );
 
+  const workspaceDrawer = (
+    <WorkspaceDrawer
+      dialog={drawer}
+      view={view}
+      onClose={closeDrawer}
+      onNew={() => {
+        closeDrawer();
+        open(null);
+        setView("workspaces");
+      }}
+      onNavigate={(next) => {
+        closeDrawer();
+        setView(next);
+      }}
+      notice={drawerOpen ? shownNotice : ""}
+      footer={
+        <ImportFile
+          onImport={async (file) => {
+            closeDrawer();
+            await importFile(file);
+          }}
+        />
+      }
+    >
+      <Workspaces
+        workspaces={workspaces}
+        savedTools={savedTools}
+        lastUsed={lastUsed}
+        openId={openId}
+        onOpen={(id) => {
+          closeDrawer();
+          showWorkspace(id);
+        }}
+        onRename={(id, title) => act(() => ask("workspaces.rename", { id, title }))}
+        onSave={(id, name) =>
+          act(
+            () => ask("library.save", { workspaceId: id, name }),
+            t("workspaces.savedAs", { name }),
+          )
+        }
+        onDelete={async (id) => {
+          closeDrawer();
+          await deleteWorkspace(id);
+        }}
+        onExport={(id) =>
+          exportFile(
+            { exported: "workspace", id },
+            workspaces.find((w) => w.id === id)?.title ?? "",
+          )
+        }
+      />
+    </WorkspaceDrawer>
+  );
+  // The first run, with no workspaces (APP-02): the header and drawer as on every screen, and the
+  // invitation where the tool would be (A100).
+  if (workspaces.length === 0 && !outsideChat(view)) {
+    return (
+      <div className="app first-run-app">
+        <header className="tool-header page-header">
+          {drawerOpener}
+          <div className="tool-heading">
+            <p className="page-title">{t("app.title")}</p>
+            <p>{t("tool.kept")}</p>
+          </div>
+        </header>
+        {workspaceDrawer}
+        <EmptyState
+          notice={shownNotice}
+          onTrash={() => setView("trash")}
+          onConnections={() => setView("connections")}
+          onImport={importFile}
+          setup={setup}
+          setupProblem={setupProblem}
+          onStatus={() => setView("status")}
+          onRequest={request}
+          requesting={requesting}
+          progress={progress}
+          cancelControl={cancelControl}
+          details={<Details workspace={null} changes={settledRequests} />}
+          chat={chat.messages(null)}
+        />
+      </div>
+    );
+  }
   return (
     <div className={view === "workspaces" ? "app" : "app one-section"}>
       {!(view === "workspaces" && current) && (
@@ -703,57 +789,7 @@ export function App() {
           <SetupNotice report={setup} problem={setupProblem} onOpen={() => setView("status")} />
         </div>
       )}
-      <WorkspaceDrawer
-        dialog={drawer}
-        view={view}
-        onClose={closeDrawer}
-        onNew={() => {
-          closeDrawer();
-          open(null);
-          setView("workspaces");
-        }}
-        onNavigate={(next) => {
-          closeDrawer();
-          setView(next);
-        }}
-        notice={drawerOpen ? shownNotice : ""}
-        footer={
-          <ImportFile
-            onImport={async (file) => {
-              closeDrawer();
-              await importFile(file);
-            }}
-          />
-        }
-      >
-        <Workspaces
-          workspaces={workspaces}
-          savedTools={savedTools}
-          lastUsed={lastUsed}
-          openId={openId}
-          onOpen={(id) => {
-            closeDrawer();
-            showWorkspace(id);
-          }}
-          onRename={(id, title) => act(() => ask("workspaces.rename", { id, title }))}
-          onSave={(id, name) =>
-            act(
-              () => ask("library.save", { workspaceId: id, name }),
-              t("workspaces.savedAs", { name }),
-            )
-          }
-          onDelete={async (id) => {
-            closeDrawer();
-            await deleteWorkspace(id);
-          }}
-          onExport={(id) =>
-            exportFile(
-              { exported: "workspace", id },
-              workspaces.find((w) => w.id === id)?.title ?? "",
-            )
-          }
-        />
-      </WorkspaceDrawer>
+      {workspaceDrawer}
       {view === "workspaces" ? (
         <>
           <main>

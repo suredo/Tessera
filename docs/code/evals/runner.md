@@ -7,7 +7,7 @@ implements: [OBS-03, EVAL-01, EVAL-02, EVAL-07, TEST-04, OBS-04]
 tests: [../../../evals/test/runner.test.ts, ../../../evals/test/speed.test.ts, ../../../evals/test/metrics.test.ts, ../../../packages/web/e2e/scenario-replays.spec.ts, ../../../packages/web/e2e/scenario-do.spec.ts]
 tags: [code, evals, scenarios, live-evaluation]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-21T23:57:17Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T02:30:01Z }
 ---
 
 # Purpose
@@ -65,7 +65,7 @@ Depends on the [harness](harness.md), the [scenario files and host facts](scenar
 - **A big tool's request passes only with every feature in place** (`GEN-17`). `featuresMissed` reads, in the app's own words, a reply that says a feature wasn't added or may have been; the step fails with it, though the core stands and `outcomeOf` still reads the creation.
 - **A scenario's clock must start in the past** (L-83): the browser runs on the scenario's time and the server on its own, so a clock ahead of now makes every deadline look past to the browser. `runScenario` refuses it before anything starts, with the cap check.
 - **Speed is judged on what a run can time** (`OBS-04`). Each step's report records the ledger calls it asked for (`calls`, from the harness's `callsAsked`), so a request is matched to its own calls, an intent retry included, and timed as the person waited, staging included; one sent only to be cancelled isn't timed. A report from before that is matched in order, one intent call and the calls after it, only when its intent calls pair one to one with its requests; otherwise its requests are left untimed and the figures say so. With fewer than 20 samples, p95 is the slowest. The runner doesn't time the host's screens or a saved tool's mount, so those targets read as not measured.
-- **A move starts Tessera again** (`DATA-05`, P2). A `move` step exports the open workspace through the host's button, launches Tessera on `tessera-moved` beside the run's first data folder, with the same harness, clock and options, stops the first, and imports the file there; the step's facts read the first folder before and the new one after, and every later step the new one; `onStarted` is told the new store too, so replay's saved-tool lookup follows it. The scenario's fake services stay on the first, as connections are the person's, not the workspace's.
+- **A move starts Tessera again** (`DATA-05`, P2). A `move` step exports the open workspace through the host's button, launches Tessera on `tessera-moved` beside the run's first data folder, with the same harness, clock and options, stops the first, and imports the file there through the first screen's own Import link (its drawer, closed, holds the same field, A100); the step's facts read the first folder before and the new one after, and every later step the new one; `onStarted` is told the new store too, so replay's saved-tool lookup follows it. The scenario's fake services stay on the first, as connections are the person's, not the workspace's.
 - **A notice can be stale.** A step that shows no new message, such as `next-day`, reports the last one (Continue from my tools has its own since L-77); the facts never rely on a notice alone.
 
 # Symbols (generated)

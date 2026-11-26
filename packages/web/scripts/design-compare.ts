@@ -33,6 +33,8 @@ type State = {
   viewport: typeof DESKTOP;
   /** Puts the app, already open on its first screen, into this state. */
   reach(page: Page): Promise<void>;
+  /** The Tessera it needs: the one with the samples, an empty one, or one whose setup fails. */
+  app?: "samples" | "empty" | "notReady";
 };
 
 async function openTool(page: Page, name = LIST) {
@@ -89,6 +91,27 @@ const STATES: State[] = [
   },
   { id: "e-mobile", title: "Phone", viewport: PHONE, reach: (page) => openTool(page) },
   {
+    id: "h-start",
+    title: "First run",
+    viewport: DESKTOP,
+    app: "empty",
+    reach: (page) => page.getByRole("heading", { level: 1 }).waitFor(),
+  },
+  {
+    id: "j-start-setup",
+    title: "First run before setup",
+    viewport: DESKTOP,
+    app: "notReady",
+    reach: (page) => page.getByRole("alert").waitFor(),
+  },
+  {
+    id: "k-start-mobile",
+    title: "First run on a phone",
+    viewport: PHONE,
+    app: "empty",
+    reach: (page) => page.getByRole("heading", { level: 1 }).waitFor(),
+  },
+  {
     id: "f-mobile-chat",
     title: "Phone chat",
     viewport: PHONE,
@@ -127,15 +150,25 @@ const PARTS: Record<string, [string, string]> = {
   History: [".t-actions > details:not(.t-more) > summary", ".history-opener"],
   "Full screen": [".t-actions > [aria-label='Full screen tool']", ".full-screen-opener"],
   More: [".t-more > summary", ".tool-more"],
-  title: [".t-heading h1", ".tool-heading h1"],
-  "kept line": [".t-saving", ".tool-heading p"],
+  title: [".t-heading h1", ".tool-heading h1, .tool-heading .page-title"],
+  "kept line": [".t-saving, .t-heading p", ".tool-heading p:not(.page-title)"],
   Save: [".t-actions > .t-outline", ".save-tool > button"],
   card: [".t-canvas", ".tool-frame"],
   footer: [".t-footer", ".ask-footer"],
-  "ask bar": [".t-ask", ".ask-bar"],
-  "ask field": [".t-ask input", ".ask-bar textarea"],
-  "Open conversation": [".t-ask .t-open", ".ask-open"],
-  Send: [".t-ask .t-send", ".ask-send"],
+  "ask bar": [".t-footer .t-ask", ".ask-bar"],
+  "ask field": [".t-footer .t-ask input", ".ask-bar textarea"],
+  "Open conversation": [".t-footer .t-ask .t-open", ".ask-open"],
+  Send: [".t-footer .t-ask .t-send", ".ask-send"],
+  "first-run mark": [".t-mark", ".first-run-mark"],
+  "first-run heading": [".t-welcome h1", ".first-run-welcome h1"],
+  "first-run intro": [".t-welcome p", ".first-run-welcome p"],
+  "large field": [".t-column > .t-ask", ".ask-card"],
+  "large field text": [".t-column > .t-ask textarea", ".ask-card textarea"],
+  "large field hint": [".t-askfoot p", ".ask-card-foot p"],
+  "large Send": [".t-column > .t-ask .t-send", ".ask-card-send"],
+  "setup notice": [".t-notice", ".first-run .setup-notice"],
+  "other places": [".t-ways", ".first-run-places"],
+  "first place": [".t-ways > :first-child", ".first-run-places > :first-child label"],
   conversation: [".t-chat, .t-sheet", ".split-first"],
   "conversation head": [".t-chathead", ".conversation-head"],
   "conversation title": [".t-chathead h2", ".conversation-head h2"],
@@ -317,6 +350,16 @@ if (unknown.length) {
 }
 fs.mkdirSync(out, { recursive: true });
 const app = await startApp();
+// The first-run states: a Tessera with no workspaces, and one whose program isn't found.
+const empty = await startApp();
+const notReady = await startApp({
+  findClaude: () =>
+    Promise.resolve({
+      ok: false,
+      problem: "missing",
+      message: "Claude Code isn't installed on this computer.",
+    }),
+});
 let failed = false;
 // The app and its temporary folder are removed however the run ends, even when Chrome doesn't
 // start or doesn't close.
@@ -339,7 +382,9 @@ try {
   try {
     for (const state of STATES.filter((s) => !wanted.length || wanted.includes(s.id))) {
       try {
-        await shoot(browser, state, app.url);
+        const url =
+          state.app === "empty" ? empty.url : state.app === "notReady" ? notReady.url : app.url;
+        await shoot(browser, state, url);
       } catch (error) {
         failed = true;
         console.error(`${state.id}: couldn't reach this state: ${String(error).split("\n")[0]}`);
@@ -349,6 +394,6 @@ try {
     await browser.close();
   }
 } finally {
-  await app.close();
+  await Promise.all([app.close(), empty.close(), notReady.close()]);
 }
 if (failed) process.exitCode = 1;

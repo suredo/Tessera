@@ -62,6 +62,7 @@ export function Workspaces(props: Props) {
         />
       </div>
       {shown.length === 0 && wanted && <p>{t("workspaces.noMatch", { query: query.trim() })}</p>}
+      {workspaces.length === 0 && <p className="workspaces-none">{t("workspaces.none")}</p>}
       <ul>
         {shown.map((workspace) => {
           const name = workspace.title;

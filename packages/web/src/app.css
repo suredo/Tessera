@@ -872,8 +872,7 @@ button.primary {
 .setup-notice {
   flex-basis: 100%;
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--ui-space-3);
   padding: var(--ui-space-2) var(--ui-space-3);
   border: 1px solid var(--ui-accent);
@@ -882,6 +881,13 @@ button.primary {
 }
 .setup-notice p {
   margin: 0;
+}
+.setup-notice > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.setup-notice strong {
+  font-weight: 600;
 }
 /* The status screen (APP-07): long paths wrap instead of scrolling sideways at 320 px. */
 .status {
@@ -1598,4 +1604,257 @@ button.primary {
 .connection-form .problem {
   margin: 0;
   font-weight: 600;
+}
+
+/* The first run (APP-02, A100: h-start, j-start-setup, k-start-mobile): the header and drawer as
+   on every screen, then the invitation, a third of the way down, with a large field and the
+   other places as quiet links. */
+.first-run-app {
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: "header" "main";
+  background: var(--host-page);
+}
+.app > .page-header {
+  grid-area: header;
+  flex-wrap: nowrap;
+  gap: 1.375rem;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid var(--host-line);
+}
+.page-header .page-title {
+  margin: 0;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+.page-header .drawer-opener {
+  gap: 8px;
+  padding: 0 11px 0 0;
+  font-size: 0.875rem;
+  color: var(--ui-text);
+}
+.app > main.first-run {
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  background: var(--host-page);
+}
+.first-run-column {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 42.5rem;
+  padding: 0 1.5rem 2rem;
+}
+.first-run-welcome {
+  margin-top: 150px;
+  text-align: center;
+}
+.first-run-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: var(--host-bubble);
+  color: var(--ui-accent);
+}
+.first-run-mark svg {
+  width: 26px;
+  height: 26px;
+}
+.first-run-welcome h1 {
+  font-size: 1.875rem;
+  letter-spacing: -0.5px;
+}
+.first-run-welcome p {
+  margin: 8px 0 0;
+  color: var(--ui-text-secondary);
+}
+.first-run .chat {
+  margin-top: 2rem;
+}
+.first-run .request.large {
+  margin: 2rem 0 0;
+}
+/* The large field: three lines, a hint, a named Send; the controls' border, as the ask bar (A96). */
+.ask-card {
+  padding: 14px 14px 10px 18px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-control-border);
+  border-radius: 14px;
+}
+.ask-card:has(textarea:focus-visible) {
+  outline: 3px solid var(--ui-accent);
+  outline-offset: 2px;
+}
+.ask-card textarea {
+  display: block;
+  width: 100%;
+  height: 78px;
+  box-sizing: border-box;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  line-height: 1.6;
+  resize: none;
+}
+.ask-card textarea:focus-visible {
+  outline: none;
+}
+.ask-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+}
+.ask-card-foot p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ui-text-secondary);
+}
+.ask-card-send {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 15px;
+  font-size: 0.875rem;
+}
+.ask-card-send:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+/* Off before setup, or while a request runs: a paler edge says the field takes nothing. */
+.ask-card:has(textarea:disabled) {
+  border-color: #b9c0b3;
+}
+/* Before setup: what is missing, said before the field, with the way to fix it (j-start-setup). */
+.first-run .setup-notice {
+  flex-basis: auto;
+  margin-top: 2rem;
+  padding: 14px 16px;
+  border-color: #c9b98a;
+  border-radius: 12px;
+  background: #fbf7ea;
+  font-size: 0.875rem;
+}
+.first-run .setup-notice > svg {
+  color: #7a5d12;
+}
+.first-run .setup-notice button {
+  min-height: 44px;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.first-run-notice:empty {
+  display: none;
+}
+.first-run-notice {
+  margin: 1rem 0 0;
+  text-align: center;
+}
+.first-run-places {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 22px;
+}
+.first-run-places button,
+.first-run-places .import-file label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--ui-radius-control);
+  background: transparent;
+  color: var(--ui-text);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.first-run-places button:hover,
+.first-run-places .import-file label:hover {
+  background: var(--host-bubble);
+}
+.first-run-places .import-file {
+  margin: 0;
+}
+.first-run-places svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ui-accent);
+}
+.workspaces-none {
+  margin: 0;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--ui-text-secondary);
+}
+/* A phone: the header as e-mobile's, the same column 16 px in, the places as rows. */
+@media (max-width: 40rem) {
+  .app > .page-header {
+    min-height: 76px;
+    gap: 6px;
+    padding: 10px 16px;
+  }
+  .page-header .drawer-opener {
+    justify-content: center;
+    width: 44px;
+    padding: 0;
+    color: inherit;
+  }
+  .page-header .page-title {
+    font-size: 1.0625rem;
+  }
+  .page-header .tool-heading p:not(.page-title) {
+    font-size: 0.625rem;
+  }
+  .first-run-column {
+    padding: 0 16px 2rem;
+  }
+  .first-run-welcome {
+    margin-top: 64px;
+  }
+  .first-run-welcome h1 {
+    font-size: 1.5rem;
+  }
+  .first-run-welcome p,
+  .ask-card textarea {
+    font-size: 0.9375rem;
+  }
+  .first-run .request.large {
+    margin-top: 1.5rem;
+  }
+  .ask-card {
+    padding: 12px 12px 8px 14px;
+  }
+  .ask-card textarea {
+    height: 100px;
+  }
+  .first-run-places {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin-top: 18px;
+  }
+  .first-run-places button,
+  .first-run-places .import-file label {
+    box-sizing: border-box;
+    justify-content: flex-start;
+    width: 100%;
+  }
 }

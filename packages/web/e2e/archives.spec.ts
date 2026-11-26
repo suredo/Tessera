@@ -36,9 +36,9 @@ async function downloaded(page: Page, click: () => Promise<void>) {
   return { name: download.suggestedFilename(), bytes: fs.readFileSync(file) };
 }
 const importFrom = async (page: Page, name: string, bytes: Buffer) => {
-  if (await page.getByRole("button", { name: en["workspaces.heading"], exact: true }).count())
-    await openWorkspaces(page);
-  await page
+  // From the drawer, which every screen has, the first run too (A100).
+  const drawer = await openWorkspaces(page);
+  await drawer
     .getByLabel(en["archive.importLabel"])
     .setInputFiles({ name, mimeType: "application/octet-stream", buffer: bytes });
 };

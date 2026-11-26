@@ -1,10 +1,10 @@
 ---
 type: Decision Log
 title: "Decision log"
-description: "Every decision made so far (A1–A102), with its choice and reasons."
+description: "Every decision made so far (A1–A103), with its choice and reasons."
 tags: [decisions, decision-log]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T00:37:34Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T01:35:52Z }
 sources:
   - { id: agent-sdk, resource: https://code.claude.com/docs/en/agent-sdk/overview, title: "Claude Agent SDK overview" }
   - { id: okf-spec, resource: https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/SPEC.md, title: "Open Knowledge Format specification v0.2" }
@@ -117,6 +117,7 @@ Decided on 2026-10-11. This log stays the record for A1–A54; new decisions fro
 | A100 | The first-run screen | **With no workspaces, the screen has the tool screens' header (Workspaces, then "Tessera"), and in its middle the leaf, "Describe the tool you need", one line on what Tessera does, a large field with Send, and Import from a file, Trash and Settings as quiet links. After the first request it becomes that conversation, with progress and Cancel, the field at the bottom; once the tool is made it opens in Focus. Before setup, a notice says what is missing and links to Settings, and the field shows but is off. Still no example tools (A12)** | The owner's approval of 2026-11-25 of the second design round's mockups `h-start`, `i-start-working`, `j-start-setup` and `k-start-mobile`, after finding the first-run screen untouched by the redesign. Slice 7 of the UI redesign, [issue 440](https://github.com/suredo/Tessera/issues/440). |
 | A101 | One Settings page | **Setup & status and Connections become one Settings page: the AI program with its checks and the one-call test, Connections, and this computer's data folder and Node.js check. It opens from the Workspaces drawer, whose bottom rows become Import from a file, Trash and Settings; the setup notice links to it** | The owner's choice of 2026-11-25: everything that can be set in one place, kept in the drawer rather than the tool's header. Mockups `l-settings` and `m-settings-mobile`; the drawers in `d-workspaces-open`, `e-mobile` and `f-mobile-chat` were changed to match. Slice 8, [issue 441](https://github.com/suredo/Tessera/issues/441). |
 | A102 | My tools and Trash | **Both are one list with a line between rows. My tools: name, description and update date, with Continue and Use again as text actions and a More menu (Rename, Describe, Save as a new tool, Export, Move to trash); "Continue opens …" shows only when the workspace's name differs. Trash: each item's kind and both dates, Restore, and Empty the trash now, which still confirms. Their empty states, naming forms and confirmation take the same style without separate mockups** | The owner's approval of 2026-11-25 of mockups `n-library`, `o-library-mobile`, `p-trash` and `q-trash-mobile`, with Continue as plain text. Slice 9, [issue 442](https://github.com/suredo/Tessera/issues/442). |
+| A103 | Two first-run details the mockups leave open | **The first-run screen keeps the Workspaces button and drawer even with no workspaces, whose recent work then says there is nothing yet. Its Details (recent requests made with no workspace, such as why one failed, `APP-09`) shows as a quiet link under the conversation once something was asked, and not before** | The owner's choice of 2026-11-25, asked under `ENG-32` while building [issue 440](https://github.com/suredo/Tessera/issues/440): the way around stays the same on every screen, and no function goes. |
 
 [^agent-sdk]: Claude Agent SDK overview
 [^okf-spec]: Open Knowledge Format specification v0.2
