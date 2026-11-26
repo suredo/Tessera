@@ -32,6 +32,8 @@ type Props = {
   size?: "bar" | "large";
   /** Shown but off, such as before setup passes (A100); the field and Send take nothing. */
   disabled?: boolean;
+  /** False where the screen shows the progress itself, as the first run's conversation (A100). */
+  showProgress?: boolean;
 };
 
 export function RequestBox({
@@ -42,6 +44,7 @@ export function RequestBox({
   conversation,
   size = "bar",
   disabled = false,
+  showProgress = true,
 }: Props) {
   const [request, setRequest] = useState("");
   const off = working || disabled;
@@ -61,7 +64,11 @@ export function RequestBox({
       id="request"
       rows={size === "large" ? 3 : 1}
       value={request}
-      placeholder={placeholder ?? t("request.placeholder")}
+      placeholder={
+        working && size === "large"
+          ? t("request.workingPlaceholder")
+          : (placeholder ?? t("request.placeholder"))
+      }
       disabled={off}
       onChange={(event) => setRequest(event.target.value)}
       onKeyDown={(event) => {
@@ -110,10 +117,17 @@ export function RequestBox({
           </button>
         </div>
       )}
-      <div className="request-progress">
-        <p role="status">{working ? (progress?.status ?? t("request.working")) : ""}</p>
-        {working && progress && <p className="request-elapsed">{progress.elapsed}</p>}
-      </div>
+      {showProgress && <RequestProgress working={working} progress={progress} />}
+    </div>
+  );
+}
+
+/** The running request's stage, a status a screen reader announces, and its seconds beside it. */
+export function RequestProgress({ working, progress }: { working: boolean; progress?: Progress }) {
+  return (
+    <div className="request-progress">
+      <p role="status">{working ? (progress?.status ?? t("request.working")) : ""}</p>
+      {working && progress && <p className="request-elapsed">{progress.elapsed}</p>}
     </div>
   );
 }

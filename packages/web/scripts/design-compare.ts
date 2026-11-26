@@ -12,6 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, TOOL_START, workspaceWith } from "../e2e/support/app-host.ts";
 import { openWorkspaces, selectWorkspace } from "../e2e/support/workspace-actions.ts";
+import { ProviderError } from "../../server/src/providers/index.ts";
 import { addToChat } from "../../server/src/chat/chat.ts";
 import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { seedSamples } from "../../../scripts/seed.ts";
@@ -34,7 +35,7 @@ type State = {
   /** Puts the app, already open on its first screen, into this state. */
   reach(page: Page): Promise<void>;
   /** The Tessera it needs: the one with the samples, an empty one, or one whose setup fails. */
-  app?: "samples" | "empty" | "notReady";
+  app?: "samples" | "empty" | "notReady" | "working";
 };
 
 async function openTool(page: Page, name = LIST) {
@@ -96,6 +97,19 @@ const STATES: State[] = [
     viewport: DESKTOP,
     app: "empty",
     reach: (page) => page.getByRole("heading", { level: 1 }).waitFor(),
+  },
+  {
+    id: "i-start-working",
+    title: "First run, working on the first request",
+    viewport: DESKTOP,
+    app: "working",
+    reach: async (page) => {
+      await page
+        .getByRole("textbox", { name: en["request.label"] })
+        .fill("A shopping list I can tick off at the store, grouped by aisle");
+      await page.getByRole("button", { name: en["request.send"], exact: true }).click();
+      await page.getByRole("button", { name: en["request.cancel"] }).waitFor();
+    },
   },
   {
     id: "j-start-setup",
@@ -162,10 +176,10 @@ const PARTS: Record<string, [string, string]> = {
   "first-run mark": [".t-mark", ".first-run-mark"],
   "first-run heading": [".t-welcome h1", ".first-run-welcome h1"],
   "first-run intro": [".t-welcome p", ".first-run-welcome p"],
-  "large field": [".t-column > .t-ask", ".ask-card"],
-  "large field text": [".t-column > .t-ask textarea", ".ask-card textarea"],
+  "large field": [".t-column > .t-ask, .t-dock .t-ask", ".ask-card"],
+  "large field text": [".t-column > .t-ask textarea, .t-dock textarea", ".ask-card textarea"],
   "large field hint": [".t-askfoot p", ".ask-card-foot p"],
-  "large Send": [".t-column > .t-ask .t-send", ".ask-card-send"],
+  "large Send": [".t-column > .t-ask .t-send, .t-dock .t-send", ".ask-card-send"],
   "setup notice": [".t-notice", ".first-run .setup-notice"],
   "other places": [".t-ways", ".first-run-places"],
   "first place": [".t-ways > :first-child", ".first-run-places > :first-child label"],
@@ -178,8 +192,11 @@ const PARTS: Record<string, [string, string]> = {
     ".conversation-head > .icon-button:last-child",
   ],
   messages: [".t-messages", ".split-first .chat"],
-  "your message": [".person", ".from-person"],
-  speaker: [".speaker", ".chat-speaker"],
+  "your message": [".person, .t-person", ".from-person"],
+  speaker: [".speaker, .t-speaker", ".chat-speaker"],
+  progress: [".t-progress", ".first-run-working .request-progress"],
+  "Cancel request": [".t-cancel", ".first-run .request-control button"],
+  "field at the bottom": [".t-dock", ".first-run-dock"],
   hint: [".t-chatfoot", ".conversation-hint"],
   drawer: ["aside.t-drawer", ".workspace-drawer"],
   "drawer close": [".t-drawerhead .t-icononly", ".drawer-heading .icon-button"],
@@ -360,6 +377,19 @@ const notReady = await startApp({
       message: "Claude Code isn't installed on this computer.",
     }),
 });
+// One whose model never answers, so its first request stays in progress until it is cancelled.
+// Its open requests are ended before it closes, or closing would wait for them.
+const unanswered = new Set<() => void>();
+const working = await startApp(undefined, {
+  name: "never answers",
+  live: false,
+  run: (spec) =>
+    new Promise((_, reject) => {
+      const stop = () => reject(new ProviderError("cancelled", "Stopped"));
+      unanswered.add(stop);
+      spec.signal?.addEventListener("abort", stop, { once: true });
+    }),
+});
 let failed = false;
 // The app and its temporary folder are removed however the run ends, even when Chrome doesn't
 // start or doesn't close.
@@ -382,8 +412,7 @@ try {
   try {
     for (const state of STATES.filter((s) => !wanted.length || wanted.includes(s.id))) {
       try {
-        const url =
-          state.app === "empty" ? empty.url : state.app === "notReady" ? notReady.url : app.url;
+        const url = { empty, notReady, working, samples: app }[state.app ?? "samples"].url;
         await shoot(browser, state, url);
       } catch (error) {
         failed = true;
@@ -394,6 +423,8 @@ try {
     await browser.close();
   }
 } finally {
-  await Promise.all([app.close(), empty.close(), notReady.close()]);
+  for (const stop of unanswered) stop();
+  await Promise.all([app.close(), empty.close(), notReady.close(), working.close()]);
 }
-if (failed) process.exitCode = 1;
+// Everything is closed; a timer the cancelled request left would otherwise keep the run open.
+process.exit(failed ? 1 : 0);

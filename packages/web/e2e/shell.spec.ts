@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { ProviderError } from "../../server/src/providers/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
 import { clickWorkspaceAction, openWorkspaces } from "./support/workspace-actions.ts";
@@ -79,4 +80,45 @@ test("APP-03: deleting the last workspace comes back here, and says it is in the
   await expect(
     page.getByText("Only one is in the trash. You can restore it for 30 days."),
   ).toBeVisible();
+});
+
+test("APP-02, APP-01, APP-09: after the first request, the first run is that conversation, with the field at the bottom (A100, A103)", async ({
+  page,
+}) => {
+  // A model that never answers, so the request stays in progress until it is cancelled.
+  const working = await startApp(undefined, {
+    name: "never answers",
+    live: false,
+    run: (spec) =>
+      new Promise((_, reject) =>
+        spec.signal?.addEventListener(
+          "abort",
+          () => reject(new ProviderError("cancelled", "Stopped")),
+          { once: true },
+        ),
+      ),
+  });
+  try {
+    await page.goto(working.url);
+    const field = page.getByRole("textbox", { name: en["request.label"] });
+    await field.fill("A shopping list");
+    await page.getByRole("button", { name: en["request.send"], exact: true }).click();
+    // The invitation steps aside; the request and Tessera's progress show, with Cancel.
+    await expect(page.locator(".first-run-welcome")).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
+    await expect(page.locator(".chat-log .from-person")).toContainText("A shopping list");
+    await expect(page.locator(".first-run-working [role=status]")).toBeVisible();
+    // The field waits at the bottom of the window, off while Tessera works.
+    await expect(field).toBeDisabled();
+    await expect(field).toHaveAttribute("placeholder", en["request.workingPlaceholder"]);
+    const dock = (await page.locator(".first-run-dock").boundingBox())!;
+    expect(Math.round(dock.y + dock.height)).toBe(page.viewportSize()!.height);
+    // Details is a quiet link once something was asked (A103).
+    await expect(page.getByRole("button", { name: en["details.show"] })).toBeVisible();
+    await page.getByRole("button", { name: en["request.cancel"] }).click();
+    await expect(page.getByText(/The request was stopped\./)).toBeVisible();
+    await expect(field).toBeEnabled();
+  } finally {
+    await working.close();
+  }
 });

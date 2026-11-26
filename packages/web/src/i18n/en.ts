@@ -43,6 +43,7 @@ export const en = {
   "request.requestUnknown":
     "Tessera couldn't confirm the result. Changes may have been saved. Check the tool and its history before asking again.",
   "request.working": "Working on your request. This can take a few minutes.",
+  "request.workingPlaceholder": "Tessera is working on your request…",
   "request.stage.waiting": "Waiting for another request to finish…",
   "request.stage.intent": "Reading your request…",
   "request.stage.create": "Making your tool…",

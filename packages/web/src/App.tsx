@@ -26,7 +26,7 @@ import {
 import { DataChangeOffer } from "./DataChangeOffer.tsx";
 import { Details } from "./Details.tsx";
 import { RequestControl, settleWithin } from "./request-control.ts";
-import { RequestBox } from "./RequestBox.tsx";
+import { RequestBox, RequestProgress } from "./RequestBox.tsx";
 import { Split } from "./Split.tsx";
 import { useRequestProgress, type Progress } from "./progress.ts";
 import { ToolPanel } from "./ToolPanel.tsx";
@@ -85,6 +85,48 @@ export function EmptyState({
   // Before setup passes the field shows but takes nothing, and the notice says what is missing
   // (A100); while the check runs, it is only off.
   const notReady = (setup !== null && !setup.ready) || (setup === null && setupProblem !== "");
+  // Once something was asked here, the screen is that conversation, the field at the bottom
+  // (i-start-working, A100); the invitation and the other places step aside, as the drawer has them.
+  const talking = chat.length > 0 || requesting;
+  const field = onRequest && (
+    <RequestBox
+      size="large"
+      working={requesting}
+      disabled={!setup?.ready}
+      progress={progress}
+      onRequest={onRequest}
+      showProgress={!talking}
+    />
+  );
+  if (talking) {
+    return (
+      <main className="first-run talking">
+        <div className="first-run-column">
+          <h1 className="visually-hidden">{t("home.heading")}</h1>
+          <Chat messages={chat}>
+            {requesting && (
+              <div className="first-run-working">
+                <span className="chat-speaker">{t("chat.tessera")}</span>
+                <RequestProgress working progress={progress} />
+              </div>
+            )}
+            {cancelControl}
+            {/* Its details, such as why a request failed, as a quiet link (APP-09, A103). */}
+            {details}
+          </Chat>
+          <p role="status" className="first-run-notice">
+            {notice}
+          </p>
+          <div className="first-run-dock">
+            {onStatus && notReady && (
+              <SetupNotice report={setup} problem={setupProblem} onOpen={onStatus} />
+            )}
+            {field}
+          </div>
+        </div>
+      </main>
+    );
+  }
   return (
     <main className="first-run">
       <div className="first-run-column">
@@ -95,20 +137,10 @@ export function EmptyState({
           <h1>{t("home.heading")}</h1>
           <p>{t("home.intro")}</p>
         </div>
-        {/* What was asked here before any workspace existed (A62). */}
-        {chat.length > 0 && <Chat messages={chat} />}
         {onStatus && notReady && (
           <SetupNotice report={setup} problem={setupProblem} onOpen={onStatus} />
         )}
-        {onRequest && (
-          <RequestBox
-            size="large"
-            working={requesting}
-            disabled={!setup?.ready}
-            progress={progress}
-            onRequest={onRequest}
-          />
-        )}
+        {field}
         {/* Such as the trash notice after the last workspace is deleted. */}
         <p role="status" className="first-run-notice">
           {notice}
@@ -136,8 +168,6 @@ export function EmptyState({
             </button>
           )}
         </nav>
-        {/* Once something was asked, its details, such as why a request failed (APP-09, A100). */}
-        {chat.length > 0 && details}
       </div>
     </main>
   );
