@@ -785,7 +785,9 @@ async function play(page: Page, s: Step, run: Play): Promise<StepOutcome> {
     };
     await run.move();
     await requestBox(page).waitFor();
+    // The first screen's own link: the drawer, closed, has the same field (A100).
     await page
+      .getByRole("navigation", { name: say("home.places") })
       .getByLabel(say("archive.importLabel"))
       .setInputFiles({ name: file.name, mimeType: "application/octet-stream", buffer: file.bytes });
     await page
