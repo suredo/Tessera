@@ -193,7 +193,7 @@ test("PLAT-03: the main screen says what is wrong and reaches the status screen;
   await alert.getByRole("button", { name: en["setup.openStatus"] }).click();
   await expect(status(page)).toBeVisible();
   await openWorkspaces(page);
-  await expect(page.getByRole("button", { name: en["nav.status"] })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: en["nav.settings"] })).toHaveAttribute(
     "aria-current",
     "page",
   );

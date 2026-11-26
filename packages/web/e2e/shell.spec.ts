@@ -60,7 +60,7 @@ test("APP-02, APP-01, APP-11: the first run has the header and drawer, a large f
   }
   // The other places, each a 44 px target; the trash is there even when it is empty.
   const places = page.getByRole("navigation", { name: en["home.places"] });
-  for (const name of [en["home.connections"], en["home.trash"], en["workspaces.setup"]]) {
+  for (const name of [en["home.trash"], en["nav.settings"]]) {
     const box = (await places.getByRole("button", { name, exact: true }).boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(44);
   }

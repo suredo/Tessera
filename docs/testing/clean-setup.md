@@ -4,7 +4,7 @@ title: "Clean setup in Windows Sandbox (P1)"
 description: "How to run the clean-setup scenario P1 (A43, J0): start a throwaway Windows with Tessera downloaded and built but no Claude Code or Codex, then follow Tessera's setup check from 'missing' through 'not signed in' to 'ready', and make T1's first tool with each program."
 tags: [testing, platform, setup]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-10T20:30:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T13:42:59Z }
 ---
 
 # Clean setup in Windows Sandbox (P1)
@@ -31,7 +31,7 @@ Then restart Windows. The sandbox takes about 4 GB of memory while it runs, so c
 4. **Not signed in.** Once Claude Code is installed, check again. It should say Claude Code isn't signed in, with the fix. Sign in as it says.
 5. **Ready.** Check again: Claude Code is ready, and the setup check offers making a tool.
 6. **First tool, Claude Code.** Ask T1's opening request: "I need a shopping list I can tick off at the store. We need milk, eggs, bread and apples." Note what happens and whether the tool works.
-7. **Codex, the same way.** On the status screen, choose Codex. Follow the check from missing through not signed in to ready. Codex keeps a sign-in of its own for Tessera, which the fix names. Then ask the same request in a new workspace.
+7. **Codex, the same way.** In Settings, choose Codex. Follow the check from missing through not signed in to ready. Codex keeps a sign-in of its own for Tessera, which the fix names. Then ask the same request in a new workspace.
 8. **Close the sandbox.** Everything in it is discarded, including both sign-ins.
 
 At each step, take a screenshot (Win+Shift+S, then paste it into a file on the host through the clipboard) or write down what the screen said. Never ask a request twice: one that fails is recorded as failed.
@@ -39,7 +39,7 @@ At each step, take a screenshot (Win+Shift+S, then paste it into a file on the h
 # What to record
 
 - Each setup-check screen's words, and whether its fix was enough to go on without looking anything up.
-- Each first request's outcome, its call count and time, from the status screen or the request's details, and your verdict on the tool.
+- Each first request's outcome, its call count and time, from Settings or the request's details, and your verdict on the tool.
 - Anything confusing, with the step it happened at. Each defect gets a lessons entry and a fix (`ENG-13`).
 
 The results go in a report in `evals/reports/`.

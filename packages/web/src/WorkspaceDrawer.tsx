@@ -8,8 +8,8 @@ type Props = {
   dialog: RefObject<HTMLDialogElement | null>;
   onClose: () => void;
   onNew: () => void;
-  onNavigate: (view: "library" | "trash" | "status" | "connections") => void;
-  view: "workspaces" | "library" | "trash" | "status" | "connections";
+  onNavigate: (view: "library" | "trash" | "settings") => void;
+  view: "workspaces" | "library" | "trash" | "settings";
   children: ReactNode;
   footer: ReactNode;
   notice: string;
@@ -87,25 +87,18 @@ export function WorkspaceDrawer({
         <nav aria-label={t("nav.label")}>
           <button
             type="button"
-            aria-current={view === "connections" ? "page" : undefined}
-            onClick={() => onNavigate("connections")}
-          >
-            {t("nav.connections")}
-          </button>
-          <button
-            type="button"
             aria-current={view === "trash" ? "page" : undefined}
             onClick={() => onNavigate("trash")}
           >
             {t("nav.trash")}
           </button>
+          {/* The AI program, the connections and this computer, on one page (A101). */}
           <button
             type="button"
-            aria-label={t("nav.status")}
-            aria-current={view === "status" ? "page" : undefined}
-            onClick={() => onNavigate("status")}
+            aria-current={view === "settings" ? "page" : undefined}
+            onClick={() => onNavigate("settings")}
           >
-            {t("workspaces.setup")}
+            {t("nav.settings")}
           </button>
         </nav>
         <p className="detail">{t("tool.kept")}</p>

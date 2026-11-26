@@ -7,12 +7,12 @@ implements: [PLAT-03, CLI-02]
 tests: [../../../packages/server/test/setup.test.ts]
 tags: [code, server, setup, cli]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-08T01:50:00Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T13:42:59Z }
 ---
 
 # Purpose
 
-Guides a fresh machine to a working connection (`PLAT-03`): Tessera checks what it needs on start and for the status screen (`APP-07`), and explains each failure in plain words with its fix. The probe (`CLI-02`) is the one check that calls a model, so it costs a call and runs only when the person asks.
+Guides a fresh machine to a working connection (`PLAT-03`): Tessera checks what it needs on start and for Settings (`APP-07`), and explains each failure in plain words with its fix. The probe (`CLI-02`) is the one check that calls a model, so it costs a call and runs only when the person asks.
 
 # Entry points
 
@@ -41,7 +41,7 @@ The [provider adapters](providers.md) (`findClaude`, `createClaudeProvider`, rou
 # Pitfalls
 
 - **The probe is a live call** when the real Claude Code is used. Run for an evaluation, it counts against the milestone's budget (`TEST-05`). It isn't in the ledger yet (#151).
-- **`folderBytes` walks the whole data folder** for each check, which is fine for the sizes M2 expects; a very large folder would make the status screen slower.
+- **`folderBytes` walks the whole data folder** for each check, which is fine for the sizes M2 expects; a very large folder would make Settings slower.
 
 # Symbols (generated)
 

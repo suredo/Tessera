@@ -115,7 +115,6 @@ export const en = {
   "request.activationUnknown":
     "Tessera couldn't confirm whether the tool was put in place. Check the workspace before asking again.",
   "home.trash": "Trash",
-  "home.connections": "Connections",
   "home.places": "Other places in Tessera",
   "workspaces.heading": "Workspaces",
   "workspaces.close": "Close workspaces",
@@ -150,11 +149,12 @@ export const en = {
   "nav.trash": "Trash",
   "nav.status": "Status",
   "nav.connections": "Connections",
+  "nav.settings": "Settings",
   "setup.heading": "Status",
   "setup.checking": "Checking what Tessera needs…",
   "setup.unreadable": "Tessera couldn't check its setup. Check again, or reload the page.",
   "setup.notReady": "Tessera can't make tools yet.",
-  "setup.openStatus": "Open the status screen",
+  "setup.openStatus": "Open Settings",
   "setup.recheck": "Check again",
   "setup.provider.heading": "Program",
   "setup.provider.intro":

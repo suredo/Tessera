@@ -45,15 +45,14 @@ import { HostIcon } from "./HostIcon.tsx";
 type EmptyProps = {
   notice?: string;
   onTrash?: () => void;
-  /** Opens the connections, which can be added before any tool (CAP-02). */
-  onConnections?: () => void;
   /** Imports a file, such as work brought from another computer (APP-06). */
   onImport?: (file: File) => Promise<void>;
   /** The setup check, and opening the status screen (PLAT-03, APP-07). */
   setup?: SetupReport | null;
   /** Why the check couldn't be made, or "". */
   setupProblem?: string;
-  onStatus?: () => void;
+  /** Opens Settings: the setup check and the connections, which can be added before any tool (CAP-02, A101). */
+  onSettings?: () => void;
   /** Carries out a request; offered only once the setup check passes (PLAT-03). */
   onRequest?: (request: string) => Promise<void>;
   /** True while a request runs. */
@@ -70,11 +69,10 @@ type EmptyProps = {
 export function EmptyState({
   notice = "",
   onTrash,
-  onConnections,
   onImport,
   setup = null,
   setupProblem = "",
-  onStatus,
+  onSettings,
   onRequest,
   requesting = false,
   progress,
@@ -118,8 +116,8 @@ export function EmptyState({
             {notice}
           </p>
           <div className="first-run-dock">
-            {onStatus && notReady && (
-              <SetupNotice report={setup} problem={setupProblem} onOpen={onStatus} />
+            {onSettings && notReady && (
+              <SetupNotice report={setup} problem={setupProblem} onOpen={onSettings} />
             )}
             {field}
           </div>
@@ -137,8 +135,8 @@ export function EmptyState({
           <h1>{t("home.heading")}</h1>
           <p>{t("home.intro")}</p>
         </div>
-        {onStatus && notReady && (
-          <SetupNotice report={setup} problem={setupProblem} onOpen={onStatus} />
+        {onSettings && notReady && (
+          <SetupNotice report={setup} problem={setupProblem} onOpen={onSettings} />
         )}
         {field}
         {/* Such as the trash notice after the last workspace is deleted. */}
@@ -148,12 +146,6 @@ export function EmptyState({
         {cancelControl}
         <nav className="first-run-places" aria-label={t("home.places")}>
           {onImport && <ImportFile onImport={onImport} icon={<HostIcon name="import" />} />}
-          {onConnections && (
-            <button type="button" onClick={onConnections}>
-              <HostIcon name="link" />
-              {t("home.connections")}
-            </button>
-          )}
           {/* What was deleted can still come back from here (DATA-09). */}
           {onTrash && (
             <button type="button" onClick={onTrash}>
@@ -161,10 +153,10 @@ export function EmptyState({
               {t("home.trash")}
             </button>
           )}
-          {onStatus && (
-            <button type="button" onClick={onStatus}>
-              <HostIcon name="status" />
-              {t("workspaces.setup")}
+          {onSettings && (
+            <button type="button" onClick={onSettings}>
+              <HostIcon name="settings" />
+              {t("nav.settings")}
             </button>
           )}
         </nav>
@@ -177,8 +169,7 @@ export function EmptyState({
  * The sections shown in place of the first-run screen when there are no workspaces: its chat is
  * not on screen there, so a reply is said in the notice. One list for both, so they can't drift.
  */
-const outsideChat = (view: string) =>
-  view === "trash" || view === "status" || view === "connections" || view === "library";
+const outsideChat = (view: string) => view === "trash" || view === "settings" || view === "library";
 
 /** How long a request waits for the turn before it to be kept in the chat, at most (A62). */
 const KEEP_WAIT_MS = 3_000;
@@ -230,9 +221,7 @@ export function App() {
   const [notice, setNotice] = useState("");
   // The open workspace's chat, and what was said with none open (APP-01, APP-03).
   const chat = useChat(openId);
-  const [view, showView] = useState<"workspaces" | "library" | "trash" | "status" | "connections">(
-    "workspaces",
-  );
+  const [view, showView] = useState<"workspaces" | "library" | "trash" | "settings">("workspaces");
   // The connections, loaded each time their section opens (CAP-02); null until they are.
   const [connections, setConnections] = useState<Connection[] | null>(null);
   // The tool taking the chat's place too (APP-01); only an open tool can, and only beside a chat.
@@ -286,8 +275,8 @@ export function App() {
   const setView = (next: typeof view) => {
     movingOn();
     showView(next);
-    // The connections are loaded each time their section opens; adding and removing reload them.
-    if (next === "connections") void loadConnections();
+    // The connections are loaded each time Settings opens; adding and removing reload them.
+    if (next === "settings") void loadConnections();
   };
   const tellReply = (text: string, target: string | null) => {
     setNotice(text);
@@ -791,11 +780,10 @@ export function App() {
         <EmptyState
           notice={shownNotice}
           onTrash={() => setView("trash")}
-          onConnections={() => setView("connections")}
           onImport={importFile}
           setup={setup}
           setupProblem={setupProblem}
-          onStatus={() => setView("status")}
+          onSettings={() => setView("settings")}
           onRequest={request}
           requesting={requesting}
           progress={progress}
@@ -808,15 +796,26 @@ export function App() {
   }
   return (
     <div className={view === "workspaces" ? "app" : "app one-section"}>
-      {!(view === "workspaces" && current) && (
-        <header>
-          <h1>{t("app.title")}</h1>
+      {view === "settings" ? (
+        // Settings has the header of the redesign's pages: Workspaces, then its name (l-settings).
+        <header className="tool-header page-header">
           {drawerOpener}
+          <div className="tool-heading">
+            <h1 className="page-title">{t("nav.settings")}</h1>
+            <p>{t("tool.kept")}</p>
+          </div>
         </header>
+      ) : (
+        !(view === "workspaces" && current) && (
+          <header>
+            <h1>{t("app.title")}</h1>
+            {drawerOpener}
+          </header>
+        )
       )}
-      {view !== "status" && (
+      {view !== "settings" && (
         <div className="setup-banner">
-          <SetupNotice report={setup} problem={setupProblem} onOpen={() => setView("status")} />
+          <SetupNotice report={setup} problem={setupProblem} onOpen={() => setView("settings")} />
         </div>
       )}
       {workspaceDrawer}
@@ -930,8 +929,8 @@ export function App() {
             })()}
           </main>
         </>
-      ) : view === "status" ? (
-        <main>
+      ) : view === "settings" ? (
+        <main className="settings">
           <Status
             report={setup}
             problem={setupProblem}
@@ -945,9 +944,6 @@ export function App() {
             onProbe={() => runProbe()}
             onChoose={(provider) => newestSetup(() => chooseProvider(provider))}
           />
-        </main>
-      ) : view === "connections" ? (
-        <main>
           <Connections
             connections={connections}
             onAdd={async (connection) => {

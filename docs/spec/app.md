@@ -4,7 +4,7 @@ title: "Host app"
 description: "What the person sees and can do: main screen, workspaces, library, versions, trash, details (APP-01 to APP-11)."
 tags: [spec, host-app, ui]
 status: draft
-generated: { by: codex/gpt-6, at: 2026-11-21T12:47:40Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T13:42:59Z }
 ---
 # Host app (`APP`)
 
@@ -18,7 +18,7 @@ What the person sees and can do. Visual design follows the same UI standard as g
 | APP-04 | **Saved tools library.** The person's saved tools with name, short description, last update and search. Each entry offers **Continue** and **Use again** (`DATA-07`), plus rename, **Save as a new tool**, and delete to the trash. |
 | APP-05 | **Versions.** For the current tool: versions with the change summary, time and verification results. **Restore** brings back older interface code as a new version while preserving current data. If compatibility conversion would lose information, show the affected fields/records and obtain confirmation before proceeding; retain a recovery snapshot. Cancel keeps the current version and data (`DATA-10`). **Undo** steps back one change at a time, for interface or data changes (`DATA-04`). |
 | APP-06 | **Export and import** of a workspace or a saved tool to and from a file (`DATA-05`), with validation and a plain report of what was imported. |
-| APP-07 | **Setup and status screen.** Claude Code status (installed, version, signed in), the data folder, storage size, and the probe (`CLI-02`, `PLAT-03`). |
+| APP-07 | **Setup and status, on the Settings page** (A101). Claude Code status (installed, version, signed in), the data folder, storage size, and the probe (`CLI-02`, `PLAT-03`). |
 | APP-08 | **Trash.** Deleted workspaces and saved tools, with restore and the date each will be removed. Emptying the trash early asks for confirmation and names what will be removed (`DATA-09`). |
 | APP-09 | **Details view.** Source, versions, checks, the ledger and diagnostics, behind a "details" control and out of the person's way (`UX-06`, `OBS-01`). |
 | APP-10 | **Progress and cancel** for running requests (`GEN-16`, `UX-02`). |

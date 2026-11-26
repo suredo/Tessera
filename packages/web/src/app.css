@@ -1950,3 +1950,23 @@ button.primary {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Settings (A101, l-settings): the AI program and this computer, then the connections, in one
+   column under the page's header; slice 8b gives each section the mockup's look. */
+.app > main.settings {
+  width: 100%;
+  max-width: 47.5rem;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+.settings > section + section {
+  margin-top: 2rem;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--host-line);
+}
+@media (max-width: 40rem) {
+  .app > main.settings {
+    padding: 1.5rem 16px 3rem;
+  }
+}

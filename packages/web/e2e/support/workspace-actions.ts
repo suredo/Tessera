@@ -39,7 +39,12 @@ export async function selectWorkspace(page: Page, name: string) {
   await clickWorkspaceAction(page, new RegExp(`^(Open ${escaped}|${escaped}, open)$`));
 }
 
-export async function openAppSection(page: Page, name: string) {
+export async function openAppSection(page: Page, section: string) {
+  // The status screen and the connections are both on Settings now (A101).
+  const name =
+    section === en["nav.status"] || section === en["nav.connections"]
+      ? en["nav.settings"]
+      : section;
   // Every screen has the drawer, the first run too (A100).
   await expect(page.locator(".app")).toBeVisible();
   if (name !== en["nav.workspaces"]) {

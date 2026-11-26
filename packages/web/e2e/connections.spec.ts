@@ -46,7 +46,7 @@ test("CAP-02: connections can be added from the first screen, before any tool", 
 }) => {
   await page.goto(app.url);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
-  await page.getByRole("button", { name: en["home.connections"] }).click();
+  await openAppSection(page, en["nav.connections"]);
   await expect(section(page).getByText(en["connections.none"])).toBeVisible();
 });
 
@@ -54,7 +54,7 @@ test("CAP-02 A71: the person adds a connection with a key, which reaches the ser
   page,
 }) => {
   await page.goto(app.url);
-  await page.getByRole("button", { name: en["home.connections"] }).click();
+  await openAppSection(page, en["nav.connections"]);
   await page.getByRole("button", { name: en["connections.addOne"] }).click();
 
   // A header key is chosen at first, as Authorization: Bearer.
@@ -117,9 +117,10 @@ test("CAP-02: removing a connection is confirmed first, and its key goes with it
   await page.goto(app.url);
   await openAppSection(page, en["nav.connections"]);
   await openWorkspaces(page);
-  await expect(
-    page.getByRole("button", { name: en["nav.connections"], exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("button", { name: en["nav.settings"], exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   await closeWorkspaces(page);
   await entry(page, "movies").getByRole("button", { name: "Remove movies" }).click();
   const confirm = entry(page, "movies").getByRole("group");
