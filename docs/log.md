@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-26
+
+* **Changed**: The [UI redesign](roadmap/ui-redesign.md) gains a second design round in the same milestone, approved by the owner: the first-run screen, one Settings page in place of Setup & status and Connections, and My tools and Trash (decisions [A100 to A102](decisions/decision-log.md), issues 440 to 442), with ten new mockups in `design/ui-redesign/`. The drawers' bottom rows become Import from a file, Trash and Settings. The draft closing report waits for these slices. Recorded by `claude-code/claude-opus-5-5` at 2026-11-26T00:38:13Z.
+
 ## 2026-11-25
 
 * **Fixed**: The [web host](code/web/package.md)'s docked divider shows the mockup's handle again, which PR 433 had removed; the Undo, History, full screen and More icons, the gap between a message's paragraphs, and the phone's icon colors and ask field text follow the mockups. The handle is darker than the mockup's, for contrast (decision [A99](decisions/decision-log.md); updated at 2026-11-25T22:24:11Z after Codex's review). Found by looking at the same-size pairs, not by measuring. Part of [issue 416](https://github.com/suredo/Tessera/issues/416), under `ENG-32`. Recorded by `claude-code/claude-opus-5-5` at 2026-11-25T21:40:58Z.

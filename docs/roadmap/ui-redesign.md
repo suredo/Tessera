@@ -4,11 +4,11 @@ title: "UI redesign: the tool comes first"
 description: "The separate UI redesign milestone: the tool at its declared width with chat and workspaces hidden by default, chat floating or docked on the right, one ask bar, a 64 px header, and a phone layout."
 tags: [roadmap, ux, app, redesign]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-22T01:45:04Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T00:47:07Z }
 ---
 # UI redesign: the tool comes first
 
-The owner approved this scope on 2026-11-20 as a separate **UI redesign** milestone. It changes how the host app frames tools (`APP-01` to `APP-11`), not how tools are generated, except for one new declaration (below). The mockups are in `design/ui-redesign/` (`overview.html` first). Render all seven states and the overview offline with `node design/ui-redesign/render.mjs design/ui-redesign test-output/ui-redesign`; an optional third argument selects a JSON job list, for example `'[["a-focus.html",1440,900]]'`.
+The owner approved this scope on 2026-11-20 as a separate **UI redesign** milestone. It changes how the host app frames tools (`APP-01` to `APP-11`), not how tools are generated, except for one new declaration (below). The mockups are in `design/ui-redesign/` (`overview.html` first). Render all 17 states and the overview offline with `node design/ui-redesign/render.mjs design/ui-redesign test-output/ui-redesign`; an optional third argument selects a JSON job list, for example `'[["a-focus.html",1440,900]]'`.
 
 ## Why
 
@@ -21,9 +21,12 @@ A review of the current app (ten screenshots, three design rounds) found: the to
 | Focus, the default | `design/ui-redesign/a-focus.html` | Workspaces closed, chat hidden, the tool at its declared width, an ask bar in a footer |
 | Floating chat | `design/ui-redesign/b-chat-floating.html` | The conversation over the tool on the right, about 380 px, movable, with a position menu |
 | Docked chat | `design/ui-redesign/c-chat-docked.html` | The conversation beside the tool on the right; the tool narrows; a resizable divider |
-| Workspaces | `design/ui-redesign/d-workspaces-open.html` | A drawer over the tool: New tool, My tools, recent work with search, Import, Connections, Trash, Setup and status |
+| Workspaces | `design/ui-redesign/d-workspaces-open.html` | A drawer over the tool: New tool, My tools, recent work with search, Import from a file, Trash and Settings (A101) |
 | A wide tool | `design/ui-redesign/g-wide-tool.html` | A board that declares wide uses the full width |
 | Phone | `design/ui-redesign/e-mobile.html`, `design/ui-redesign/f-mobile-chat.html` | The tool full screen; the conversation as a bottom sheet; the ask bar at the bottom |
+| First run | `design/ui-redesign/h-start.html`, `i-start-working.html`, `j-start-setup.html`, `k-start-mobile.html` | No workspaces yet: the invitation and a large field; the first request as a conversation; setup not ready; a phone (A100) |
+| Settings | `design/ui-redesign/l-settings.html`, `m-settings-mobile.html` | One page for the AI program, connections and this computer, from the drawer (A101) |
+| My tools and Trash | `design/ui-redesign/n-library.html`, `o-library-mobile.html`, `p-trash.html`, `q-trash-mobile.html` | One list each, text actions, More for the rest (A102) |
 
 - **Header, about 64 px:** a Workspaces control, the tool's name with a quiet "Changes kept on this computer" (and "In My tools" only when it is), Undo, History, an outlined Save to My tools, full screen, and one More menu (Rename, Save as a new tool, Export, Details, Minimize, Expand, Move to trash). No "YOUR TOOL" row and no second menu. On a phone: Workspaces, the title, Undo and More only.
 - **Tool width:** each tool declares `comfortable` (centred, about 1,100 px at most; the default) or `wide` (the full width), as part of what generation produces, beside its UI mode. Expand always gives the full width.
@@ -43,7 +46,7 @@ A review of the current app (ten screenshots, three design rounds) found: the to
 
 Width evidence: the [2026-11-20 live check](../../evals/reports/2026-11-20-ui-width.md) passed both declarations and server candidate checks in two of the separately approved four calls, with no repair. This does not verify the pending host layout or close the milestone.
 
-- All seven mockup states work at the relevant desktop or phone width, with the host retaining its existing workspace, library, version, import, trash and setup actions (`APP-01` to `APP-10`).
+- All the mockup states work at the relevant desktop or phone width, with the host retaining its existing workspace, library, version, import, trash and setup actions (`APP-01` to `APP-10`).
 - Switching chat or drawer state preserves the running tool, its scroll position and in-progress input (`RUN-02`, `APP-01`).
 - The width declaration is validated from one contract definition, generated schemas agree, and earlier stored tools remain readable (`CON-01`, `CON-04`).
 - Browser checks cover the desktop states at 1280 px and phone states at 320 px, keyboard operation, modal focus containment and return, and automated accessibility (`APP-11`).
@@ -51,7 +54,7 @@ Width evidence: the [2026-11-20 live check](../../evals/reports/2026-11-20-ui-wi
 
 ## Suggested pull requests
 
-Tracked in the [UI redesign milestone](https://github.com/suredo/Tessera/milestone/8). The approved foundation is merged in [PR 409](https://github.com/suredo/Tessera/pull/409), the width contract in [PR 410](https://github.com/suredo/Tessera/pull/410), the header in [PR 417](https://github.com/suredo/Tessera/pull/417), the workspace drawer in [PR 419](https://github.com/suredo/Tessera/pull/419), and Focus, host width consumption, the footer ask bar and floating/right-docked conversation in [PR 421](https://github.com/suredo/Tessera/pull/421), which closed [issue 414](https://github.com/suredo/Tessera/issues/414). Each merged after independent review and green exact-head CI. The phone modal sheet remains issue 415. Issue 416, the final visual and accessibility acceptance across all seven states, is in progress in the slices planned on the issue; each PR compares its states with the mockups (`ENG-32`). Current implementation checks do not close those later slices or the milestone. The owner separately approved at most four live width-check calls on 2026-11-20: a focused list and a wide board, with one repair reserve each. The completed check used two calls, with no repair. The [stage check](../code/evals/ui-width.md) has a free fake-CLI rehearsal (`ENG-07`, `ENG-16`). This approval does not authorize further live runs.
+Tracked in the [UI redesign milestone](https://github.com/suredo/Tessera/milestone/8). The approved foundation is merged in [PR 409](https://github.com/suredo/Tessera/pull/409), the width contract in [PR 410](https://github.com/suredo/Tessera/pull/410), the header in [PR 417](https://github.com/suredo/Tessera/pull/417), the workspace drawer in [PR 419](https://github.com/suredo/Tessera/pull/419), and Focus, host width consumption, the footer ask bar and floating/right-docked conversation in [PR 421](https://github.com/suredo/Tessera/pull/421), which closed [issue 414](https://github.com/suredo/Tessera/issues/414). Each merged after independent review and green exact-head CI. The phone layout and sheet merged in [PR 431](https://github.com/suredo/Tessera/pull/431) and [PR 432](https://github.com/suredo/Tessera/pull/432), closing issue 415. Issue 416's slices, PRs 423 to 436, brought the first seven states to their mockups under `ENG-32`, with the departures the owner approved (A94 to A99). On 2026-11-25 the owner added a second design round to this milestone: the first-run screen, one Settings page, and My tools and Trash (A100 to A102, issues 440 to 442). A draft [closing report](https://github.com/suredo/Tessera/pull/439) waits for those slices; the milestone closes after them and a final check of every state. The owner separately approved at most four live width-check calls on 2026-11-20: a focused list and a wide board, with one repair reserve each. The completed check used two calls, with no repair. The [stage check](../code/evals/ui-width.md) has a free fake-CLI rehearsal (`ENG-07`, `ENG-16`). This approval does not authorize further live runs.
 
 1. [Issue 411](https://github.com/suredo/Tessera/issues/411): the width declaration in the contract, prompt and check, with compatibility tests. The approved `APP-01` target is recorded in this foundation.
 2. [Issue 412](https://github.com/suredo/Tessera/issues/412): the header and the single More menu; Undo and History in it; history as a panel.
@@ -59,3 +62,6 @@ Tracked in the [UI redesign milestone](https://github.com/suredo/Tessera/milesto
 4. [Issue 414](https://github.com/suredo/Tessera/issues/414): the ask bar and the conversation panel, floating and docked, with the position menu and its memory.
 5. [Issue 415](https://github.com/suredo/Tessera/issues/415): the phone layout with the bottom sheet.
 6. [Issue 416](https://github.com/suredo/Tessera/issues/416): visual polish, and browser tests at 1280 and 320 px for each state, with an accessibility pass (`APP-11`).
+7. [Issue 440](https://github.com/suredo/Tessera/issues/440): the first-run screen (A100).
+8. [Issue 441](https://github.com/suredo/Tessera/issues/441): one Settings page, in place of Setup & status and Connections (A101).
+9. [Issue 442](https://github.com/suredo/Tessera/issues/442): My tools and Trash (A102).
