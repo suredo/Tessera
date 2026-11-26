@@ -1861,7 +1861,13 @@ button.primary {
 
 /* The first run once something was asked (i-start-working, A100): the conversation, newest last,
    then the field kept at the bottom of the window; the page scrolls under it. */
+/* The window's height, so the conversation scrolls inside it and the field stays at its bottom. */
+.first-run-app:has(.first-run.talking) {
+  height: 100dvh;
+  min-height: 0;
+}
 .app > main.first-run.talking {
+  min-height: 0;
   overflow: auto;
 }
 .first-run.talking .first-run-column {

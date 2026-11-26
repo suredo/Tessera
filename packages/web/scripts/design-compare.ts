@@ -2,8 +2,8 @@
 // `pnpm design:compare [state ...]`: each UI redesign mockup beside the app in the same state, at the
 // mockup's window size and at the browser tests', with the differences measured at the mockup's, in
 // test-output/design-compare/ (ENG-32). After `pnpm build`. It starts its own
-// Tessera on a temporary folder with the sample tools (ENG-19), and sends no request, so no model is
-// ever called.
+// Tessera on a temporary folder with the sample tools (ENG-19). Only `i-start-working` sends a
+// request, to a fake model that never answers, so no model is ever called.
 
 import { chromium, type Browser, type Page } from "@playwright/test";
 import fs from "node:fs";

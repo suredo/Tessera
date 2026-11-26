@@ -1,4 +1,6 @@
+import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
+import { addToChat } from "../../server/src/chat/chat.ts";
 import { ProviderError } from "../../server/src/providers/index.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, workspaceWith, type AppHost } from "./support/app-host.ts";
@@ -115,10 +117,46 @@ test("APP-02, APP-01, APP-09: after the first request, the first run is that con
     expect(Math.round(dock.y + dock.height)).toBe(page.viewportSize()!.height);
     // Details is a quiet link once something was asked (A103).
     await expect(page.getByRole("button", { name: en["details.show"] })).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     await page.getByRole("button", { name: en["request.cancel"] }).click();
     await expect(page.getByText(/The request was stopped\./)).toBeVisible();
     await expect(field).toBeEnabled();
   } finally {
     await working.close();
+  }
+});
+
+test("APP-02, APP-01: a long first-run conversation scrolls in the window, and the field stays at its bottom (A100)", async ({
+  page,
+}) => {
+  const long = await startApp();
+  try {
+    // More than a window of messages, kept with no workspace (A62).
+    const said = Array.from({ length: 8 }, (_, n) => n);
+    addToChat(
+      long.folder,
+      null,
+      said.flatMap((n) => [
+        { from: "person" as const, text: `Request ${n}: a list with more than one line.` },
+        { from: "tessera" as const, text: `Reply ${n}.\n\nIt said what it could, at length.` },
+      ]),
+    );
+    await page.goto(long.url);
+    const height = page.viewportSize()!.height;
+    const dock = page.locator(".first-run-dock");
+    const bottom = async () => {
+      const box = (await dock.boundingBox())!;
+      return Math.round(box.y + box.height);
+    };
+    expect(await bottom()).toBe(height);
+    const main = page.locator("main.first-run");
+    expect(await main.evaluate((node) => node.scrollHeight > node.clientHeight)).toBe(true);
+    await main.evaluate((node) => {
+      node.scrollTop = node.scrollHeight;
+    });
+    expect(await bottom()).toBe(height);
+    await expect(page.getByText("Reply 7.", { exact: false })).toBeInViewport();
+  } finally {
+    await long.close();
   }
 });
