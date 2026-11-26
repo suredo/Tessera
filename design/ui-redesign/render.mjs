@@ -13,6 +13,16 @@ const defaults = [
   ["g-wide-tool.html", 1440, 900],
   ["e-mobile.html", 390, 844],
   ["f-mobile-chat.html", 390, 844],
+  ["h-start.html", 1440, 900],
+  ["i-start-working.html", 1440, 900],
+  ["j-start-setup.html", 1440, 900],
+  ["k-start-mobile.html", 390, 844],
+  ["l-settings.html", 1440, 900],
+  ["m-settings-mobile.html", 390, 844],
+  ["n-library.html", 1440, 900],
+  ["o-library-mobile.html", 390, 844],
+  ["p-trash.html", 1440, 900],
+  ["q-trash-mobile.html", 390, 844],
   ["overview.html", 1600, 1000],
 ];
 const jobs = list ? JSON.parse(list) : defaults;
