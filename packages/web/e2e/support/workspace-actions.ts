@@ -40,19 +40,8 @@ export async function selectWorkspace(page: Page, name: string) {
 }
 
 export async function openAppSection(page: Page, name: string) {
-  await expect(page.locator(".empty, .app")).toBeVisible();
-  if (await page.locator(".empty").isVisible()) {
-    const label =
-      name === en["nav.status"]
-        ? en["setup.openStatus"]
-        : name === en["nav.connections"]
-          ? en["home.connections"]
-          : name === en["nav.trash"]
-            ? en["home.trash"]
-            : name;
-    await page.getByRole("button", { name: label, exact: true }).click();
-    return;
-  }
+  // Every screen has the drawer, the first run too (A100).
+  await expect(page.locator(".app")).toBeVisible();
   if (name !== en["nav.workspaces"]) {
     const firstScreen = page.getByRole("button", { name, exact: true });
     if (await firstScreen.isVisible()) return firstScreen.click();

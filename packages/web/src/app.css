@@ -1858,3 +1858,95 @@ button.primary {
     width: 100%;
   }
 }
+
+/* The first run once something was asked (i-start-working, A100): the conversation, newest last,
+   then the field kept at the bottom of the window; the page scrolls under it. */
+/* The window's height, so the conversation scrolls inside it and the field stays at its bottom. */
+.first-run-app:has(.first-run.talking) {
+  height: 100dvh;
+  min-height: 0;
+}
+.app > main.first-run.talking {
+  min-height: 0;
+  overflow: auto;
+}
+.first-run.talking .first-run-column {
+  min-height: 100%;
+}
+.first-run.talking .chat {
+  flex: 1;
+  margin-top: 2rem;
+}
+.first-run.talking .chat-log {
+  max-height: none;
+  overflow: visible;
+  margin-bottom: 1.625rem;
+}
+.first-run.talking .from-person {
+  margin-left: 64px;
+}
+.first-run-working .request-progress {
+  align-items: center;
+  gap: 10px;
+  color: #3b4a3f;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+/* A dot that breathes while Tessera works; still for reduced motion, which the app sets globally. */
+.first-run-working .request-progress::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+  animation: first-run-pulse 1.4s infinite;
+}
+@keyframes first-run-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.first-run.talking .request-control {
+  margin-top: 0;
+}
+.first-run.talking .request-control button,
+.first-run.talking .details > button {
+  min-height: 44px;
+  margin-left: -12px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.first-run-dock {
+  position: sticky;
+  bottom: 0;
+  padding: 16px 0 24px;
+  background: linear-gradient(#f4f6f000, var(--host-page) 24px);
+}
+.first-run-dock .request.large {
+  margin: 0;
+}
+.first-run-dock .setup-notice {
+  margin: 0 0 12px;
+}
+.first-run-dock .ask-card textarea {
+  height: 52px;
+}
+.first-run.talking .first-run-column {
+  padding-bottom: 0;
+}
+.first-run.talking .details {
+  margin-top: 0;
+}
+/* The quiet link's own heading is read out, not shown. */
+.first-run.talking .details > h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

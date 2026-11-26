@@ -9,6 +9,7 @@ import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { editFixture } from "../../server/test/fixtures/edit-tool.ts";
 import { en } from "../src/i18n/en.ts";
 import { startApp, newestReply } from "./support/app-host.ts";
+import { openAppSection } from "./support/workspace-actions.ts";
 
 const intent = {
   kind: "create",
@@ -65,12 +66,8 @@ for (const { phase, screen } of runs) {
       await page.getByRole("button", { name: en["request.send"] }).click();
       // Reaching repair needs a first staging and smoke check, slower under parallel browsers.
       await expect.poll(() => calls.includes(phase), { timeout: 30_000 }).toBe(true);
-      await page
-        .getByRole("button", {
-          // The first run's links to the status screen and the connections (A100).
-          name: screen === "status" ? en["workspaces.setup"] : en["home.connections"],
-        })
-        .click();
+      // Through the drawer: once a request runs, the first run is its conversation (A100).
+      await openAppSection(page, screen === "status" ? en["nav.status"] : en["nav.connections"]);
       const cancel = page.getByRole("button", { name: en["request.cancel"] });
       await expect(cancel).toBeVisible();
       await cancel.focus();
