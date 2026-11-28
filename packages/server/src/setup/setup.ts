@@ -191,7 +191,7 @@ export async function runProbe(
     if (error instanceof ProviderError || error instanceof RoutesError) {
       return { ok: false, message: error.message };
     }
-    return { ok: false, message: "The probe didn't work, for a reason Tessera doesn't recognize." };
+    return { ok: false, message: "Tessera doesn't recognize what went wrong." };
   }
 }
 

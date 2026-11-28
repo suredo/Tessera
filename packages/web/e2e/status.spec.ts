@@ -120,6 +120,7 @@ test.afterAll(async () => {
 
 const probesMade = () => (fs.existsSync(calls) ? fs.readdirSync(calls).length : 0);
 const status = (page: Page) => page.getByRole("region", { name: en["setup.heading"] });
+const computer = (page: Page) => page.getByRole("region", { name: en["setup.computer.heading"] });
 const probeButton = (page: Page) => page.getByRole("button", { name: en["setup.probe.run"] });
 // Each probe starts the fake CLI as a real process: about 0.3 s idle, but 3-4 s with every core
 // busy, which the default 5 s wait for its answer then measures instead of the probe (#205).
@@ -174,11 +175,13 @@ test("APP-07: the status screen shows Claude Code, Node.js and the data folder, 
   await expect(
     status(page).getByText(`Claude Code 2.1.310 is ready, at ${ready.executable}.`),
   ).toBeVisible();
-  await expect(status(page).getByText(`Node.js ${process.versions.node} is ready.`)).toBeVisible();
+  // Node.js and the data folder are in This computer, under the connections (A101).
   await expect(
-    status(page).getByText(new RegExp(`^Your work is kept in .+, which holds \\d`)),
+    computer(page).getByText(`Node.js ${process.versions.node} is ready.`),
   ).toBeVisible();
-  await expect(status(page).getByText(app.dataDir, { exact: false })).toBeVisible();
+  await expect(
+    computer(page).getByText(new RegExp(` · \\d+(\\.\\d+)? (bytes|KB|MB|GB)$`)),
+  ).toContainText(app.dataDir);
   await expect(probeButton(page)).toBeVisible();
   expect(await violations(page)).toEqual([]);
 });
@@ -213,7 +216,7 @@ test("CLI-02: the probe says it costs a call, runs only when asked, and says how
   state = "ready";
   await page.goto(app.url);
   await openAppSection(page, en["nav.status"]);
-  await expect(status(page).getByText(en["setup.probe.intro"])).toBeVisible();
+  await expect(probeButton(page)).toHaveText(/costs one call/);
   expect(probesMade()).toBe(0);
   await probeButton(page).click();
   await expect(
@@ -222,7 +225,7 @@ test("CLI-02: the probe says it costs a call, runs only when asked, and says how
   expect(probesMade()).toBe(1);
   await probeButton(page).click();
   await expect(
-    status(page).getByText(`The probe didn't work. ${FAILURE_MESSAGES.sign_in}`),
+    status(page).getByText(`The test didn't work. ${FAILURE_MESSAGES.sign_in}`),
   ).toBeVisible(PROBE_ANSWER);
   expect(probesMade()).toBe(2);
 });
@@ -238,6 +241,7 @@ test("PLAT-03: a Node.js older than Tessera needs is explained with its fix", as
       "Tessera needs Node.js 22.12.0 or later, and this computer has 20.11.0. Install Node.js 22 from nodejs.org, then start Tessera again.",
     );
     await page.getByRole("button", { name: en["setup.openStatus"] }).click();
+    await expect(computer(page)).toContainText("this computer has 20.11.0");
     await expect(probeButton(page)).toHaveCount(0);
   } finally {
     await old.close();
@@ -284,7 +288,7 @@ test("CLI-01: chooses the program on the status screen, keeps the choice, and th
     // Claude Code is chosen until a choice is made, and it is ready: no notice.
     await expect(page.getByRole("alert")).toHaveCount(0);
     await openAppSection(page, en["nav.status"]);
-    const programs = status(page).getByRole("group", { name: en["setup.provider.heading"] });
+    const programs = status(page).getByRole("group", { name: en["setup.heading"] });
     const claude = programs.getByRole("radio", { name: en["setup.provider.claude"] });
     const codexChoice = programs.getByRole("radio", { name: en["setup.provider.codex"] });
     await expect(claude).toBeChecked();
@@ -292,7 +296,8 @@ test("CLI-01: chooses the program on the status screen, keeps the choice, and th
     await expect(programs.getByText(codexSignedOut.message)).toBeVisible();
     // Clicked, not checked: the radio follows the kept choice, so it changes only once the
     // server has kept it, which on a busy machine is later than check() waits (CI on #271).
-    await codexChoice.click();
+    // The click is on the card's status, not the radio: the whole card chooses (l-settings).
+    await programs.getByText(codexSignedOut.message).click();
     await expect(codexChoice).toBeChecked();
     // Codex can't reach a model yet, so the probe waits, and the main screens say why.
     await expect(probeButton(page)).toHaveCount(0);
@@ -327,7 +332,7 @@ test("CLI-01: a check and a choice never overlap, so an old check can't put the 
   try {
     await page.goto(host.url);
     await openAppSection(page, en["nav.status"]);
-    const programs = status(page).getByRole("group", { name: en["setup.provider.heading"] });
+    const programs = status(page).getByRole("group", { name: en["setup.heading"] });
     const codexChoice = programs.getByRole("radio", { name: en["setup.provider.codex"] });
     const recheck = status(page).getByRole("button", { name: en["setup.recheck"] });
     await expect(codexChoice).toBeEnabled();
@@ -340,6 +345,10 @@ test("CLI-01: a check and a choice never overlap, so an old check can't put the 
     });
     await recheck.click();
     await expect(codexChoice).toBeDisabled();
+    // Nor does a click on its card choose it then; forced, as Playwright otherwise waits for the
+    // disabled radio's label to be enabled.
+    await programs.getByText("Codex isn't signed in.").click({ force: true });
+    await expect(codexChoice).not.toBeChecked();
     releaseCheck();
     await expect(codexChoice).toBeEnabled();
     await page.unroute("**/api/setup");

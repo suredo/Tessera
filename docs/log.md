@@ -1,5 +1,9 @@
 # Documentation log
 
+## 2026-11-27
+
+* **Changed**: The [Settings page](code/web/package.md)'s sections follow the redesign's `l-settings` and `m-settings-mobile`: AI program, with each program a radio card, then Check again and Test with one request (costs one call), the probe's new name; Connections, one row each with Remove and Add a connection; and This computer, the data folder and Node.js, now a section of their own. `pnpm design:compare` gains both states, with a Tessera whose one-request test a script answers, so no model is called. The [setup check](code/server/setup.md) doc says Settings. Slice 8b of [issue 441](https://github.com/suredo/Tessera/issues/441), compared under `ENG-32`. After Codex's review, each program's whole card is its radio's label, as in the mockups. Recorded by `claude-code/claude-opus-5-5` at 2026-11-27T00:20:00Z.
+
 ## 2026-11-26
 
 * **Changed**: Setup & status and Connections are one [Settings page](code/web/package.md), with the redesign's page header, opened from the drawer, whose bottom rows become Import from a file, Trash and Settings, and from the first run's links; the setup notice says Open Settings (decision A101). The spec's `APP-07` and `PLAT-03`/`PLAT-04` and the code and testing docs say Settings. Slice 8a of [issue 441](https://github.com/suredo/Tessera/issues/441); 8b gives its sections the mockup's look. The web code doc's remaining section descriptions were updated at 2026-11-26T14:21:14Z after Codex's review. Recorded by `claude-code/claude-opus-5-5` at 2026-11-26T13:42:59Z.

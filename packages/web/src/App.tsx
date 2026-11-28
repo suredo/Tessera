@@ -16,7 +16,7 @@ import { History } from "./History.tsx";
 import { ImportFile } from "./ImportFile.tsx";
 import { Library } from "./Library.tsx";
 import { checkSetup, chooseProvider, runProbe } from "./setup.ts";
-import { SetupNotice, Status } from "./Status.tsx";
+import { SetupNotice, Status, ThisComputer } from "./Status.tsx";
 import {
   carryOut,
   confirmDataChoice,
@@ -970,6 +970,7 @@ export function App() {
               await loadConnections();
             }}
           />
+          <ThisComputer report={setup} />
         </main>
       ) : view === "trash" ? (
         <main>

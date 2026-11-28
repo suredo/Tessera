@@ -48,9 +48,13 @@ test("CAP-02, APP-07: connections can be added from the first screen, before any
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["home.heading"]);
   await openAppSection(page, en["nav.connections"]);
   await expect(section(page).getByText(en["connections.none"])).toBeVisible();
-  // One page: its heading, the setup and the connections together.
+  // One page: its heading, then the AI program, the connections and this computer, in that order.
   await expect(page.getByRole("heading", { level: 1 })).toHaveText(en["nav.settings"]);
-  await expect(page.getByRole("region", { name: en["setup.heading"] })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText([
+    en["setup.heading"],
+    en["connections.heading"],
+    en["setup.computer.heading"],
+  ]);
 });
 
 test("CAP-02 A71: the person adds a connection with a key, which reaches the service and is never shown", async ({

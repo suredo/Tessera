@@ -9,10 +9,11 @@ import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 import { chosenCheck, formatBytes } from "./setup.ts";
 
-// The status screen (APP-07): the program Tessera reaches a model through, Claude Code or Codex,
-// chosen here with each one's status (CLI-01), Node.js, the data folder and its size, each failure
-// in plain words with its fix (PLAT-03), and the probe, which costs a call, so it is run only when
-// asked and offered only once the checks pass (CLI-02).
+// The setup on Settings (APP-07, A101, l-settings), in two of its sections. The AI program: the
+// program Tessera reaches a model through, Claude Code or Codex, chosen here with each one's status
+// (CLI-01), each failure in plain words with its fix (PLAT-03), Check again, and the test with one
+// request, which costs a call, so it is run only when asked and offered only once the checks pass
+// (CLI-02). This computer: the data folder and its size, and Node.js.
 
 type Props = {
   /** The last check's report; null until one has come. */
@@ -50,6 +51,28 @@ const probeText = (result: ProbeResult) =>
           seconds: (result.durationMs / 1000).toFixed(1),
           model: result.model,
         });
+
+/** A check's outcome: a passed one with a tick, a failed one in the problem's colour. */
+function Outcome({
+  ok,
+  text,
+  id,
+  inline = false,
+}: {
+  ok: boolean;
+  text: string;
+  id?: string;
+  /** A span, for inside a label, where a paragraph can't go. */
+  inline?: boolean;
+}) {
+  const Tag = inline ? "span" : "p";
+  return (
+    <Tag id={id} className={ok ? "check-ok" : "check-problem"}>
+      {ok && <HostIcon name="check" />}
+      {text}
+    </Tag>
+  );
+}
 
 export function Status({ report, problem, onRecheck, onProbe, onChoose }: Props) {
   const [checking, setChecking] = useState(false);
@@ -101,76 +124,94 @@ export function Status({ report, problem, onRecheck, onProbe, onChoose }: Props)
   return (
     <section aria-labelledby="status-heading" className="status">
       <h2 id="status-heading">{t("setup.heading")}</h2>
+      <p id="programs-intro">{t("setup.provider.intro")}</p>
       {/* A check that couldn't be made says so, and can be tried again; it never looks endless. */}
       {problem && <p className="check-problem">{problem}</p>}
       {report === null ? (
         !problem && <p role="status">{t("setup.checking")}</p>
       ) : (
-        <>
-          {/* One at a time: a choice while a check runs, or a check while a choice is saved,
-              would race to the screen. */}
-          <fieldset className="programs" disabled={choosing || checking}>
-            <legend>
-              <h3>{t("setup.provider.heading")}</h3>
-            </legend>
-            <p id="programs-intro">{t("setup.provider.intro")}</p>
-            {PROVIDERS.map((provider) => {
-              const ok = (provider === "codex" ? report.codex : report.claude).ok;
-              return (
-                <div key={provider} className="program">
-                  <label>
-                    <input
-                      type="radio"
-                      name="program"
-                      value={provider}
-                      checked={report.provider === provider}
-                      aria-describedby={`program-${provider}`}
-                      onChange={() => void choose(provider)}
-                    />
-                    {t(PROGRAM_NAMES[provider])}
-                  </label>
-                  <p id={`program-${provider}`} className={ok ? "check-ok" : "check-problem"}>
-                    {programStatus(report, provider)}
-                  </p>
-                </div>
-              );
-            })}
-            {chooseProblem && <p className="check-problem">{chooseProblem}</p>}
-          </fieldset>
-          <h3>{t("setup.node.heading")}</h3>
-          <p className={report.node.ok ? "check-ok" : "check-problem"}>
-            {report.node.ok
-              ? t("setup.node.ok", { version: report.node.version })
-              : report.node.message}
-          </p>
-          <h3>{t("setup.folder.heading")}</h3>
-          <p>
-            {t("setup.folder.where", {
-              path: report.dataFolder.path,
-              size: formatBytes(report.dataFolder.bytes),
-            })}
-          </p>
-        </>
+        // One at a time: a choice while a check runs, or a check while a choice is saved,
+        // would race to the screen.
+        <fieldset
+          className="programs"
+          aria-labelledby="status-heading"
+          aria-describedby="programs-intro"
+          disabled={choosing || checking}
+        >
+          {PROVIDERS.map((provider) => {
+            const ok = (provider === "codex" ? report.codex : report.claude).ok;
+            return (
+              // The whole card is the radio's label, so a click anywhere on it chooses the program,
+              // as in l-settings; the radio is named by the program alone, its status describes it.
+              <label key={provider} className="program">
+                <input
+                  type="radio"
+                  name="program"
+                  value={provider}
+                  checked={report.provider === provider}
+                  aria-labelledby={`program-${provider}-name`}
+                  aria-describedby={`program-${provider}`}
+                  onChange={() => void choose(provider)}
+                />
+                <span>
+                  <strong id={`program-${provider}-name`}>{t(PROGRAM_NAMES[provider])}</strong>
+                  <Outcome
+                    inline
+                    id={`program-${provider}`}
+                    ok={ok}
+                    text={programStatus(report, provider)}
+                  />
+                </span>
+              </label>
+            );
+          })}
+          {chooseProblem && <p className="check-problem">{chooseProblem}</p>}
+        </fieldset>
       )}
       {(report !== null || problem) && (
-        <button type="button" disabled={checking || choosing} onClick={() => void recheck()}>
-          {t("setup.recheck")}
-        </button>
-      )}
-      {report !== null && (
-        <>
-          <h3>{t("setup.probe.heading")}</h3>
-          <p>{t("setup.probe.intro")}</p>
-          {report.ready ? (
+        <div className="status-actions">
+          <button type="button" disabled={checking || choosing} onClick={() => void recheck()}>
+            {t("setup.recheck")}
+          </button>
+          {report?.ready && (
             <button type="button" disabled={probing} onClick={() => void probe()}>
               {t("setup.probe.run")}
             </button>
-          ) : (
-            <p>{t("setup.probe.waits")}</p>
           )}
-          <p role="status">{probed}</p>
-        </>
+        </div>
       )}
+      {report !== null && !report.ready && <p className="detail">{t("setup.probe.waits")}</p>}
+      <p role="status">{probed}</p>
+    </section>
+  );
+}
+
+/** This computer's part of the setup: where the data is kept, and Node.js (PLAT-03, A101). */
+export function ThisComputer({ report }: { report: SetupReport | null }) {
+  if (report === null) return null;
+  return (
+    <section aria-labelledby="computer-heading" className="this-computer">
+      <h2 id="computer-heading">{t("setup.computer.heading")}</h2>
+      <dl>
+        <dt>{t("setup.folder.heading")}</dt>
+        <dd>
+          {t("setup.folder.where", {
+            path: report.dataFolder.path,
+            size: formatBytes(report.dataFolder.bytes),
+          })}
+        </dd>
+        <dt>{t("setup.node.heading")}</dt>
+        <dd>
+          <Outcome
+            ok={report.node.ok}
+            text={
+              report.node.ok
+                ? t("setup.node.ok", { version: report.node.version })
+                : report.node.message
+            }
+          />
+        </dd>
+      </dl>
     </section>
   );
 }
