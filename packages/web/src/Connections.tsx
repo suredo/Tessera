@@ -9,15 +9,20 @@ import {
   type ConnectionInput,
 } from "@tessera/contracts";
 import { useId, useState } from "react";
+import { HostIcon } from "./HostIcon.tsx";
 import { t } from "./i18n/translate.ts";
 
-// The connections the person adds (CAP-02, ADR 0015 point 1, A71): a section of its own, listing
-// each connection with its addresses and whether a key is kept, never the key; adding one names
+// The connections the person adds (CAP-02, ADR 0015 point 1, A71): a section of Settings (A101),
+// listing each connection on one row with its addresses and whether a key is kept, never the key; adding one names
 // it, its addresses and how its key is sent, in three plain choices with a header first; removing
 // one is confirmed, since its key goes with it. The form checks what it can in plain words before
 // asking the host, which checks it all again (CON-01).
 
-const day = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
+// The day it was added as the drawer says a day: "Nov 12", with the year only when not this year.
+const thisYear = new Intl.DateTimeFormat("en", { month: "short", day: "numeric" });
+const otherYear = new Intl.DateTimeFormat("en", { dateStyle: "medium" });
+const addedDay = (when: Date, now = new Date()) =>
+  (when.getFullYear() === now.getFullYear() ? thisYear : otherYear).format(when);
 
 type KeyWay = "none" | "header" | "query";
 
@@ -321,19 +326,18 @@ export function Connections({ connections, onAdd, onRemove, adding = false }: Pr
       <ul>
         {(connections ?? []).map((connection) => (
           <li key={connection.name} className="connection">
-            <h3>{connection.name}</h3>
-            <ul
-              className="detail"
-              aria-label={t("connections.addressesOf", { name: connection.name })}
-            >
-              {connection.origins.map((each) => (
-                <li key={each}>{each}</li>
-              ))}
-            </ul>
-            <p className="detail">{keyText(connection)}</p>
-            <p className="detail">
-              {t("connections.added", { date: day.format(new Date(connection.addedAt)) })}
-            </p>
+            {/* One row, as in l-settings: the name over its addresses, how its key is sent and
+                when it was added, then Remove. */}
+            <div>
+              <h3>{connection.name}</h3>
+              <p className="detail">
+                {[
+                  ...connection.origins,
+                  keyText(connection),
+                  t("connections.added", { date: addedDay(new Date(connection.addedAt)) }),
+                ].join(" · ")}
+              </p>
+            </div>
             {removing === connection.name ? (
               <div role="group" aria-labelledby={`remove-${connection.name}`} className="confirm">
                 <p id={`remove-${connection.name}`}>
@@ -365,7 +369,8 @@ export function Connections({ connections, onAdd, onRemove, adding = false }: Pr
       {formOpen ? (
         <AddForm onAdd={onAdd} onCancel={() => setFormOpen(false)} />
       ) : (
-        <button type="button" onClick={() => setFormOpen(true)}>
+        <button type="button" className="add-connection" onClick={() => setFormOpen(true)}>
+          <HostIcon name="plus" />
           {t("connections.addOne")}
         </button>
       )}

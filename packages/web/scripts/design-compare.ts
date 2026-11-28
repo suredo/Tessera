@@ -3,7 +3,8 @@
 // mockup's window size and at the browser tests', with the differences measured at the mockup's, in
 // test-output/design-compare/ (ENG-32). After `pnpm build`. It starts its own
 // Tessera on a temporary folder with the sample tools (ENG-19). Only `i-start-working` sends a
-// request, to a fake model that never answers, so no model is ever called.
+// request, to a fake model that never answers, and the Settings states' one-request test is
+// answered by a script, so no model is ever called.
 
 import { chromium, type Browser, type Page } from "@playwright/test";
 import fs from "node:fs";
@@ -11,8 +12,13 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { en } from "../src/i18n/en.ts";
 import { startApp, testTool, TOOL_START, workspaceWith } from "../e2e/support/app-host.ts";
-import { openWorkspaces, selectWorkspace } from "../e2e/support/workspace-actions.ts";
-import { ProviderError } from "../../server/src/providers/index.ts";
+import {
+  openAppSection,
+  openWorkspaces,
+  selectWorkspace,
+} from "../e2e/support/workspace-actions.ts";
+import { addConnection } from "../../server/src/connections/index.ts";
+import { createScriptedProvider, ProviderError } from "../../server/src/providers/index.ts";
 import { addToChat } from "../../server/src/chat/chat.ts";
 import { listWorkspaces } from "../../server/src/workspaces/index.ts";
 import { seedSamples } from "../../../scripts/seed.ts";
@@ -34,8 +40,11 @@ type State = {
   viewport: typeof DESKTOP;
   /** Puts the app, already open on its first screen, into this state. */
   reach(page: Page): Promise<void>;
-  /** The Tessera it needs: the one with the samples, an empty one, or one whose setup fails. */
-  app?: "samples" | "empty" | "notReady" | "working";
+  /**
+   * The Tessera it needs: the one with the samples, an empty one, one whose setup fails, one whose
+   * model never answers, or one set up as l-settings shows.
+   */
+  app?: "samples" | "empty" | "notReady" | "working" | "settings";
 };
 
 async function openTool(page: Page, name = LIST) {
@@ -52,6 +61,13 @@ async function openConversation(page: Page, position?: "float" | "dock") {
       .check();
     await page.keyboard.press("Escape");
   }
+}
+
+/** Settings after the one-request test, as l-settings shows it; the test's model is a script. */
+async function openSettings(page: Page) {
+  await openAppSection(page, en["nav.settings"]);
+  await page.getByRole("button", { name: en["setup.probe.run"] }).click();
+  await page.getByText(/^The model answered/).waitFor();
 }
 
 /** The mockup states of docs/roadmap/ui-redesign.md, at the widths the browser tests use. */
@@ -124,6 +140,14 @@ const STATES: State[] = [
     viewport: PHONE,
     app: "empty",
     reach: (page) => page.getByRole("heading", { level: 1 }).waitFor(),
+  },
+  { id: "l-settings", title: "Settings", viewport: DESKTOP, app: "settings", reach: openSettings },
+  {
+    id: "m-settings-mobile",
+    title: "Settings on a phone",
+    viewport: PHONE,
+    app: "settings",
+    reach: openSettings,
   },
   {
     id: "f-mobile-chat",
@@ -390,6 +414,47 @@ const working = await startApp(undefined, {
       spec.signal?.addEventListener("abort", stop, { once: true });
     }),
 });
+// Settings as l-settings shows it: Claude Code ready, Codex not installed, a test whose model is a
+// script that answers in 3.2 seconds, and two connections; no model is called.
+const settings = await startApp({
+  findClaude: () =>
+    Promise.resolve({ ok: true, executable: "C:\\Tools\\claude.exe", version: "2.1.327" }),
+  findCodex: () =>
+    Promise.resolve({
+      ok: false,
+      problem: "missing",
+      message: "Codex isn't installed on this computer.",
+    }),
+  probeProvider: () =>
+    createScriptedProvider({
+      name: "one-request test",
+      replies: [
+        {
+          kind: "value",
+          stage: "intent",
+          value: { connected: true },
+          usage: {
+            inputTokens: null,
+            cachedInputTokens: null,
+            outputTokens: null,
+            durationMs: 3200,
+          },
+        },
+      ],
+    }),
+});
+addConnection(settings.folder, {
+  name: "movies",
+  origins: ["https://api.themoviedb.org"],
+  auth: { kind: "header", name: "Authorization", prefix: "Bearer " },
+  key: "not-a-real-key",
+});
+addConnection(settings.folder, {
+  name: "weather",
+  origins: ["https://api.open-meteo.com"],
+  auth: { kind: "none" },
+  key: null,
+});
 let failed = false;
 // The app and its temporary folder are removed however the run ends, even when Chrome doesn't
 // start or doesn't close.
@@ -412,7 +477,8 @@ try {
   try {
     for (const state of STATES.filter((s) => !wanted.length || wanted.includes(s.id))) {
       try {
-        const url = { empty, notReady, working, samples: app }[state.app ?? "samples"].url;
+        const url = { empty, notReady, working, settings, samples: app }[state.app ?? "samples"]
+          .url;
         await shoot(browser, state, url);
       } catch (error) {
         failed = true;
@@ -424,7 +490,13 @@ try {
   }
 } finally {
   for (const stop of unanswered) stop();
-  await Promise.all([app.close(), empty.close(), notReady.close(), working.close()]);
+  await Promise.all([
+    app.close(),
+    empty.close(),
+    notReady.close(),
+    working.close(),
+    settings.close(),
+  ]);
 }
 // Everything is closed; a timer the cancelled request left would otherwise keep the run open.
 process.exit(failed ? 1 : 0);

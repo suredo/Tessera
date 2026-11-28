@@ -7,7 +7,7 @@ implements: [PLAT-03, CLI-02]
 tests: [../../../packages/server/test/setup.test.ts]
 tags: [code, server, setup, cli]
 status: draft
-generated: { by: claude-code/claude-opus-5-5, at: 2026-11-26T13:42:59Z }
+generated: { by: claude-code/claude-opus-5-5, at: 2026-11-27T00:20:00Z }
 ---
 
 # Purpose
@@ -36,7 +36,7 @@ Guides a fresh machine to a working connection (`PLAT-03`): Tessera checks what 
 
 # Depends on / used by
 
-The [provider adapters](providers.md) (`findClaude`, `createClaudeProvider`, routing) and the [local server](local-server.md)'s helpers. The [launcher](launcher.md) mounts the routes, and its entry point prints the check's failures on start. The [web app](../web/package.md)'s status screen shows the report and offers the probe, and its first-run and main screens say when the check fails.
+The [provider adapters](providers.md) (`findClaude`, `createClaudeProvider`, routing) and the [local server](local-server.md)'s helpers. The [launcher](launcher.md) mounts the routes, and its entry point prints the check's failures on start. The [web app](../web/package.md)'s Settings page shows the report and offers the probe, as Test with one request, and its first-run and main screens say when the check fails.
 
 # Pitfalls
 
