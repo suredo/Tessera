@@ -1974,6 +1974,10 @@ button.primary {
   border: 1px solid var(--host-card-border);
   border-radius: 12px;
   background: var(--ui-surface);
+  cursor: pointer;
+}
+.programs:disabled .program {
+  cursor: default;
 }
 .program:has(:checked) {
   border-color: var(--ui-accent);
@@ -1987,12 +1991,11 @@ button.primary {
   margin: 3px 0 0;
   accent-color: var(--ui-accent);
 }
-.program label {
+.program strong {
   display: block;
   font-weight: 600;
-  cursor: pointer;
 }
-.program > div {
+.program > span {
   min-width: 0;
 }
 /* Check again and the test: quiet underlined buttons, as in l-settings. */

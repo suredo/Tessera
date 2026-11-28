@@ -53,12 +53,24 @@ const probeText = (result: ProbeResult) =>
         });
 
 /** A check's outcome: a passed one with a tick, a failed one in the problem's colour. */
-function Outcome({ ok, text, id }: { ok: boolean; text: string; id?: string }) {
+function Outcome({
+  ok,
+  text,
+  id,
+  inline = false,
+}: {
+  ok: boolean;
+  text: string;
+  id?: string;
+  /** A span, for inside a label, where a paragraph can't go. */
+  inline?: boolean;
+}) {
+  const Tag = inline ? "span" : "p";
   return (
-    <p id={id} className={ok ? "check-ok" : "check-problem"}>
+    <Tag id={id} className={ok ? "check-ok" : "check-problem"}>
       {ok && <HostIcon name="check" />}
       {text}
-    </p>
+    </Tag>
   );
 }
 
@@ -129,25 +141,28 @@ export function Status({ report, problem, onRecheck, onProbe, onChoose }: Props)
           {PROVIDERS.map((provider) => {
             const ok = (provider === "codex" ? report.codex : report.claude).ok;
             return (
-              <div key={provider} className="program">
+              // The whole card is the radio's label, so a click anywhere on it chooses the program,
+              // as in l-settings; the radio is named by the program alone, its status describes it.
+              <label key={provider} className="program">
                 <input
-                  id={`program-${provider}-choice`}
                   type="radio"
                   name="program"
                   value={provider}
                   checked={report.provider === provider}
+                  aria-labelledby={`program-${provider}-name`}
                   aria-describedby={`program-${provider}`}
                   onChange={() => void choose(provider)}
                 />
-                <div>
-                  <label htmlFor={`program-${provider}-choice`}>{t(PROGRAM_NAMES[provider])}</label>
+                <span>
+                  <strong id={`program-${provider}-name`}>{t(PROGRAM_NAMES[provider])}</strong>
                   <Outcome
+                    inline
                     id={`program-${provider}`}
                     ok={ok}
                     text={programStatus(report, provider)}
                   />
-                </div>
-              </div>
+                </span>
+              </label>
             );
           })}
           {chooseProblem && <p className="check-problem">{chooseProblem}</p>}

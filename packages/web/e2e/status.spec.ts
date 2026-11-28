@@ -296,7 +296,8 @@ test("CLI-01: chooses the program on the status screen, keeps the choice, and th
     await expect(programs.getByText(codexSignedOut.message)).toBeVisible();
     // Clicked, not checked: the radio follows the kept choice, so it changes only once the
     // server has kept it, which on a busy machine is later than check() waits (CI on #271).
-    await codexChoice.click();
+    // The click is on the card's status, not the radio: the whole card chooses (l-settings).
+    await programs.getByText(codexSignedOut.message).click();
     await expect(codexChoice).toBeChecked();
     // Codex can't reach a model yet, so the probe waits, and the main screens say why.
     await expect(probeButton(page)).toHaveCount(0);
@@ -344,6 +345,10 @@ test("CLI-01: a check and a choice never overlap, so an old check can't put the 
     });
     await recheck.click();
     await expect(codexChoice).toBeDisabled();
+    // Nor does a click on its card choose it then; forced, as Playwright otherwise waits for the
+    // disabled radio's label to be enabled.
+    await programs.getByText("Codex isn't signed in.").click({ force: true });
+    await expect(codexChoice).not.toBeChecked();
     releaseCheck();
     await expect(codexChoice).toBeEnabled();
     await page.unroute("**/api/setup");
